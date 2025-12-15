@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop Test Production</title>
+
+    <script>
+        window.trac = window.trac || function () { (window.trac.q = window.trac.q || []).push(arguments); };
+    </script>
+
+    <script src="/pixel.js" async></script>
+</head>
+
+<body style="font-family: sans-serif; padding: 40px; text-align: center; background-color: #f4f4f5;">
+
+    <div
+        style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); max-width: 400px; margin: 0 auto;">
+        <h1 style="margin-top: 0;">🛍️ Vrai Test Vercel</h1>
+        <p style="color: #666;">Si le cookie s'écrit ici, c'est gagné.</p>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+            <button id="btn-lead" onclick="trac('capture', 'lead')"
+                style="background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                Simuler Lead
+            </button>
+            <button id="btn-sale" onclick="trac('capture', 'sale', { amount: 89, currency: 'EUR' })"
+                style="background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                Simuler Vente (89€)
+            </button>
+        </div>
+
+        <div id="status"
+            style="margin-top: 20px; font-size: 12px; color: #888; text-align: left; background: #eee; padding: 10px; border-radius: 4px; overflow: hidden;">
+            En attente d'action...
+        </div>
+    </div>
+
+    <script>
+        // FONCTION DE TEST AUTO
+        (function () {
+            const statusDiv = document.getElementById('status');
+            function log(msg) { statusDiv.innerHTML += '<br> > ' + msg; console.log(msg); }
+
+            // 1. Simulation URL Pub
+            const fakeId = "VERCEL-TEST-" + Math.floor(Math.random() * 10000);
+            if (!window.location.search.includes('ref_id')) {
+                const newUrl = window.location.href + '?ref_id=' + fakeId;
+                window.history.replaceState(null, '', newUrl);
+                log("🔗 URL simulée avec ID: " + fakeId);
+            } else {
+                log("ℹ️ ID déjà présent dans l'URL");
+            }
+
+            // 2. Vérification Cookie après 1 seconde
+            setTimeout(() => {
+                if (document.cookie.includes('trac_click_id')) {
+                    log("✅ SUCCÈS : Cookie trouvé !");
+                    statusDiv.style.background = "#dcfce7"; // Vert clair
+                    statusDiv.style.color = "#166534";
+                } else {
+                    log("❌ ÉCHEC : Pas de cookie trouvé.");
+                    statusDiv.style.background = "#fee2e2"; // Rouge clair
+                    statusDiv.style.color = "#991b1b";
+                }
+            }, 1000);
+        })();
+    </script>
+</body>
+
+</html>
