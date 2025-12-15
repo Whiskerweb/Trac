@@ -10,12 +10,19 @@
     console.log("🚀 [Tracker] Script chargé et démarré !");
 
     // Configuration from script tag attributes
-    var scriptTag = document.currentScript || document.querySelector('script[src*="tracker.js"]');
+    var scriptTag = document.currentScript || document.querySelector('script[src*="pixel.js"]');
     var config = {
         apiEndpoint: (scriptTag && scriptTag.getAttribute('data-endpoint')) || '/api/events',
         domain: scriptTag && scriptTag.getAttribute('data-domain'),
         token: scriptTag && scriptTag.getAttribute('data-token')
     };
+
+    // Validation du token multi-tenant
+    if (!config.token) {
+        console.warn("⚠️ [Trac] Missing data-token - Les événements ne seront pas authentifiés");
+    } else {
+        console.log("🔑 [Tracker] Token détecté:", config.token.substring(0, 10) + "...");
+    }
 
     // Constants
     var COOKIE_NAME = 'trac_click_id';
@@ -183,23 +190,23 @@
         var data = JSON.stringify(payload);
         var url = config.apiEndpoint;
 
-        // Prefer sendBeacon for reliability (works even when page is closing)
-        if (navigator.sendBeacon) {
-            var blob = new Blob([data], { type: 'application/json' });
-            var sent = navigator.sendBeacon(url, blob);
+        // Note: sendBeacon ne supporte pas les headers custom, donc on utilise fetch avec keepalive
+        // Cela permet d'envoyer le x-publishable-key pour l'authentification multi-tenant
 
-            if (sent) {
-                console.log('[Trac] Event sent via beacon:', eventName);
-                return;
-            }
+        // Envoi avec fetch (supporte les headers custom pour l'auth)
+        var headers = {
+            'Content-Type': 'application/json'
+        };
+
+        // Ajouter le token d'authentification si présent
+        if (config.token) {
+            headers['x-publishable-key'] = config.token;
+            console.log("🔐 [Tracker] Header x-publishable-key ajouté");
         }
 
-        // Fallback to fetch
         fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: headers,
             body: data,
             keepalive: true // Keep request alive even if page unloads
         })

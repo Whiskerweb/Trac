@@ -20,6 +20,11 @@ export async function POST(request: Request) {
     // 🔍 DEBUG: Vérification de la variable d'environnement
     console.log("🔍 DEBUG ENV VAR TINYBIRD_ADMIN_TOKEN:", process.env.TINYBIRD_ADMIN_TOKEN ? "✅ Présent" : "❌ Manquant")
 
+    // 🔑 Récupération de l'API Key multi-tenant
+    const publishableKey = request.headers.get('x-publishable-key');
+    console.log("🔑 API Key reçue:", publishableKey || "❌ Aucune clé fournie");
+    // TODO: Vérifier la clé en base de données au prochain sprint
+
     try {
         const body = await request.json()
         const { click_id, event_name, amount, currency, external_id } = body
