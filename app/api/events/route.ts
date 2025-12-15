@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { recordEvent } from '@/lib/tinybird'
+import { prisma } from '@/lib/db'
 
 // CORS Headers for public tracking API
 const corsHeaders = {
@@ -20,10 +21,34 @@ export async function POST(request: Request) {
     // 🔍 DEBUG: Vérification de la variable d'environnement
     console.log("🔍 DEBUG ENV VAR TINYBIRD_ADMIN_TOKEN:", process.env.TINYBIRD_ADMIN_TOKEN ? "✅ Présent" : "❌ Manquant")
 
-    // 🔑 Récupération de l'API Key multi-tenant
+    // 🔑 Récupération et validation de l'API Key multi-tenant
     const publishableKey = request.headers.get('x-publishable-key');
-    console.log("🔑 API Key reçue:", publishableKey || "❌ Aucune clé fournie");
-    // TODO: Vérifier la clé en base de données au prochain sprint
+
+    // A. Si absente -> 401
+    if (!publishableKey) {
+        console.warn("⚠️ [API] Requête sans API Key");
+        return NextResponse.json(
+            { success: false, error: 'Missing API Key' },
+            { status: 401, headers: corsHeaders }
+        )
+    }
+
+    // B. Vérification en base de données
+    const project = await prisma.project.findUnique({
+        where: { public_key: publishableKey }
+    });
+
+    // C. Si projet inconnu -> 403
+    if (!project) {
+        console.warn("❌ [API] Clé invalide:", publishableKey);
+        return NextResponse.json(
+            { success: false, error: 'Invalid API Key' },
+            { status: 403, headers: corsHeaders }
+        )
+    }
+
+    // D. Clé valide -> Continue
+    console.log("✅ Projet identifié:", project.name, "(", project.public_key, ")");
 
     try {
         const body = await request.json()

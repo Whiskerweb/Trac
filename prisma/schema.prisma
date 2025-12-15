@@ -18,3 +18,13 @@ model Link {
   
   @@index([slug])
 }
+
+model Project {
+  id         String   @id @default(uuid())
+  name       String
+  public_key String   @unique
+  created_at DateTime @default(now())
+  website    String?
+  
+  @@index([public_key])
+}
