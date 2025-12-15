@@ -11,12 +11,18 @@ datasource db {
 }
 
 model Link {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  url       String
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  destination_url String
+  project_id      String
+  user_id         String   // Affiliate ID (no User table yet)
+  name            String?  // Optional nickname
+  created_at      DateTime @default(now())
   
-  @@index([slug])
+  // Relation to Project
+  project         Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  
+  @@index([project_id])
+  @@index([user_id])
 }
 
 model Project {
@@ -25,6 +31,9 @@ model Project {
   public_key String   @unique
   created_at DateTime @default(now())
   website    String?
+  
+  // Relation to Links
+  links      Link[]
   
   @@index([public_key])
 }
