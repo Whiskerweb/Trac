@@ -1,0 +1,10 @@
+DESCRIPTION "Raw clicks log"
+SCHEMA >
+    `timestamp` DateTime `json:$.timestamp`,
+    `click_id` String `json:$.click_id`,
+    `link_id` String `json:$.link_id`,
+    `url` String `json:$.url`,
+    `country` String `json:$.country`,
+    `user_agent` String `json:$.user_agent`
+ENGINE "MergeTree"
+ENGINE_SORTING_KEY "timestamp"

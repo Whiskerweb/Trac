@@ -1,0 +1,9 @@
+NODE stats
+SQL >
+SELECT 
+  (SELECT count() FROM clicks) as total_clicks,
+  (SELECT count() FROM events WHERE event_name = 'lead') as total_leads,
+  (SELECT count() FROM events WHERE event_name = 'sale') as total_sales,
+  (SELECT sum(amount) FROM events WHERE event_name = 'sale') as total_revenue
+
+TYPE endpoint

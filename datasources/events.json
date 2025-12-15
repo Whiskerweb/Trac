@@ -1,0 +1,8 @@
+{
+    "timestamp": "$.timestamp",
+    "click_id": "$.click_id",
+    "event_name": "$.event_name",
+    "amount": "$.amount",
+    "currency": "$.currency",
+    "external_id": "$.external_id"
+}

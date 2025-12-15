@@ -1,0 +1,16 @@
+Tinybird Local and Tinybird CLI on your machine
+Follow these steps to build your first data project and deploy it to Tinybird Cloud.
+
+curl https://tinybird.co | sh -s hijbJS
+
+> Authenticate in your project directory
+tb login --host https://api.europe-west2.gcp.tinybird.co
+
+> Create your first data source defining the schema
+tb datasource create
+
+> Build the project
+tb build
+
+> Deploy to production
+tb --cloud deploy

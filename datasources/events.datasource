@@ -1,0 +1,10 @@
+DESCRIPTION "Conversion events (Leads, Sales)"
+SCHEMA >
+    `timestamp` DateTime `json:$.timestamp`,
+    `click_id` String `json:$.click_id`,
+    `event_name` String `json:$.event_name`,
+    `amount` Float32 `json:$.amount`,
+    `currency` String `json:$.currency`,
+    `external_id` String `json:$.external_id`
+ENGINE "MergeTree"
+ENGINE_SORTING_KEY "timestamp"

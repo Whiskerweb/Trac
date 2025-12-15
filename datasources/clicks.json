@@ -1,0 +1,8 @@
+{
+    "timestamp": "$.timestamp",
+    "click_id": "$.click_id",
+    "link_id": "$.link_id",
+    "url": "$.url",
+    "country": "$.country",
+    "user_agent": "$.user_agent"
+}
