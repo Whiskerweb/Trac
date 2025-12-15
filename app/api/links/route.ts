@@ -36,7 +36,8 @@ export async function POST(request: Request) {
         })
 
         // Save to Redis (Upstash) for fast lookup
-        await redis.set(`link:${slug}`, url)
+        // Store both URL and ID for click tracking
+        await redis.set(`link:${slug}`, { url, id: link.id })
 
         return NextResponse.json(link, { status: 201 })
     } catch (error) {

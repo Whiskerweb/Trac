@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { Redis } from '@upstash/redis'
+import { recordClick } from '@/lib/tinybird'
 
 const redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL!,
@@ -30,22 +31,33 @@ export async function middleware(request: NextRequest) {
 
     try {
         // Look up the destination URL in Redis
-        const destinationUrl = await redis.get<string>(`link:${slug}`)
+        const cachedData = await redis.get<{ url: string; id: string }>(`link:${slug}`)
 
-        if (!destinationUrl) {
+        if (!cachedData) {
             return NextResponse.next()
         }
+
+        const { url: destinationUrl, id: linkId } = cachedData
 
         // Generate unique click_id for conversion tracking
         const clickId = crypto.randomUUID()
 
+        // Get tracking data from request headers
+        const userAgent = request.headers.get('user-agent') || 'unknown'
+        const country = request.headers.get('x-vercel-ip-country') || 'unknown'
+
+        // CRITICAL: Use await to ensure click is recorded before redirect on Vercel serverless
+        await recordClick({
+            click_id: clickId,
+            link_id: linkId,
+            url: destinationUrl,
+            country,
+            user_agent: userAgent,
+        })
+
         // Build redirect URL with ref_id for tracking
         const redirectUrl = new URL(destinationUrl)
         redirectUrl.searchParams.set('ref_id', clickId)
-
-        // TODO: Log click to Tinybird asynchronously
-        // This would be done via fetch to Tinybird Events API
-        // We'll implement this in the next sprint
 
         return NextResponse.redirect(redirectUrl.toString())
     } catch (error) {
