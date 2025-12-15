@@ -3,19 +3,19 @@
 
 <script>
   // Initialize queue before tracker loads (async support)
-  window.trac = window.trac || function() {
+  window.trac = window.trac || function () {
     (window.trac.q = window.trac.q || []).push(arguments);
   };
 </script>
 
-<!-- Load tracker (async) -->
-<script src="https://yourdomain.com/tracker.js" async></script>
+<!-- Load tracker (async) - Using neutral filename to bypass AdBlockers -->
+<script src="https://yourdomain.com/pixel.js" async></script>
 
 <!-- Optional: Send conversion events -->
 <script>
   // Example: Track a lead
   trac('capture', 'lead');
-  
+
   // Example: Track a sale with amount
   trac('capture', 'sale', {
     amount: 49.99,
