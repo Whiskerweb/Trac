@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { getCurrentUser } from '@/lib/auth'
+import { nanoid } from 'nanoid'
 
 // CORS Headers for public API
 const corsHeaders = {
@@ -18,13 +20,31 @@ export async function OPTIONS() {
 
 export async function POST(request: Request) {
     try {
+        // Get authenticated user
+        const currentUser = await getCurrentUser()
+
+        if (!currentUser) {
+            return NextResponse.json(
+                { success: false, error: 'Authentication required' },
+                { status: 401, headers: corsHeaders }
+            )
+        }
+
+        // Only affiliates can claim links
+        if (currentUser.role !== 'AFFILIATE') {
+            return NextResponse.json(
+                { success: false, error: 'Only affiliates can claim links' },
+                { status: 403, headers: corsHeaders }
+            )
+        }
+
         const body = await request.json()
-        const { projectId, destinationUrl, userId, name } = body
+        const { projectId, destinationUrl, name } = body
 
         // Validation
-        if (!projectId || !destinationUrl || !userId) {
+        if (!projectId || !destinationUrl) {
             return NextResponse.json(
-                { success: false, error: 'Missing required fields: projectId, destinationUrl, userId' },
+                { success: false, error: 'Missing required fields: projectId, destinationUrl' },
                 { status: 400, headers: corsHeaders }
             )
         }
@@ -51,12 +71,39 @@ export async function POST(request: Request) {
             )
         }
 
-        // Create the link
+        // Generate unique NanoID (with retry on collision)
+        let linkId: string = ''
+        let attempts = 0
+        const maxAttempts = 3
+
+        while (attempts < maxAttempts) {
+            linkId = nanoid(7)
+
+            // Check for collision
+            const existing = await prisma.link.findUnique({
+                where: { id: linkId }
+            })
+
+            if (!existing) break // No collision, we can use this ID
+
+            attempts++
+            console.warn(`⚠️ NanoID collision detected: ${linkId}. Retrying (${attempts}/${maxAttempts})`)
+        }
+
+        if (attempts === maxAttempts) {
+            return NextResponse.json(
+                { success: false, error: 'Failed to generate unique link ID. Please try again.' },
+                { status: 500, headers: corsHeaders }
+            )
+        }
+
+        // Create the link with manual ID
         const link = await prisma.link.create({
             data: {
+                id: linkId, // Manually set NanoID
                 destination_url: destinationUrl,
                 project_id: projectId,
-                user_id: userId,
+                user_id: currentUser.userId,
                 name: name || null,
             },
         })
@@ -66,7 +113,7 @@ export async function POST(request: Request) {
 
         console.log('✅ Link claimed:', {
             linkId: link.id,
-            userId: link.user_id,
+            userId: currentUser.email,
             projectName: project.name
         })
 
@@ -109,3 +156,4 @@ function buildTrackingUrl(destinationUrl: string, refId: string): string {
         return `${destinationUrl}${separator}ref_id=${refId}`
     }
 }
+

@@ -10,16 +10,37 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  STARTUP
+  AFFILIATE
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password_hash String
+  name          String
+  role          UserRole
+  created_at    DateTime @default(now())
+  
+  // Relations
+  owned_projects Project[] @relation("ProjectOwner")
+  claimed_links  Link[]    @relation("LinkClaimer")
+  
+  @@index([email])
+}
+
 model Link {
-  id              String   @id @default(uuid())
+  id              String   @id @unique  // NanoID - manually generated
   destination_url String
   project_id      String
-  user_id         String   // Affiliate ID (no User table yet)
-  name            String?  // Optional nickname
+  user_id         String   // Claimer (Affiliate)
+  name            String?
   created_at      DateTime @default(now())
   
-  // Relation to Project
+  // Relations
   project         Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  claimer         User     @relation("LinkClaimer", fields: [user_id], references: [id])
   
   @@index([project_id])
   @@index([user_id])
@@ -31,9 +52,12 @@ model Project {
   public_key String   @unique
   created_at DateTime @default(now())
   website    String?
+  user_id    String   // Owner (Startup)
   
-  // Relation to Links
+  // Relations
+  owner      User     @relation("ProjectOwner", fields: [user_id], references: [id])
   links      Link[]
   
   @@index([public_key])
+  @@index([user_id])
 }
