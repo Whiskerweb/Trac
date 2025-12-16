@@ -148,7 +148,11 @@ export function StartupDashboardClient({
                                     <div>
                                         <div className="text-xs text-zinc-500">Created</div>
                                         <div className="text-sm text-zinc-300">
-                                            {new Date(project.created_at).toLocaleDateString()}
+                                            {new Date(project.created_at).toLocaleDateString('fr-FR', {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric'
+                                            })}
                                         </div>
                                     </div>
                                 </div>
