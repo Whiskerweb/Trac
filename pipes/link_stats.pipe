@@ -1,0 +1,15 @@
+DESCRIPTION "Get stats per link ID"
+
+NODE stats_output
+SQL >
+    %
+    SELECT 
+        click_id,
+        count() as total_clicks,
+        countIf(event_name = 'sale') as total_sales,
+        sumIf(amount, event_name = 'sale') as total_revenue
+    FROM events
+    WHERE click_id IN {{Array(link_ids, 'String', default='[]')}}
+    GROUP BY click_id
+
+TYPE endpoint

@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation'
 import { ProjectCreateModal } from './ProjectCreateModal'
 import { CopyButton } from './CopyButton'
 
+interface LinkStats {
+    clicks: number
+    sales: number
+    revenue: number
+}
+
 interface Project {
     id: string
     name: string
@@ -24,28 +30,39 @@ interface Project {
 interface StartupDashboardClientProps {
     email: string
     initialProjects: Project[]
+    linkStats: Record<string, LinkStats>
+    totalStats: LinkStats
 }
 
-export function StartupDashboardClient({ email, initialProjects }: StartupDashboardClientProps) {
+export function StartupDashboardClient({
+    email,
+    initialProjects,
+    linkStats,
+    totalStats
+}: StartupDashboardClientProps) {
     const [projects, setProjects] = useState<Project[]>(initialProjects)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const router = useRouter()
 
-    // Calculate stats
+    // Calculate total links
     const totalLinks = projects.reduce((acc, p) => acc + p.links.length, 0)
 
     const handleProjectCreated = () => {
-        // Refresh page to get updated data from server
         router.refresh()
-        // Also refresh local state by fetching
         fetch('/api/projects')
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.projects) {
-                    // We need full project data with links, so just refresh
                     router.refresh()
                 }
             })
+    }
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'EUR',
+        }).format(amount)
     }
 
     return (
@@ -67,6 +84,28 @@ export function StartupDashboardClient({ email, initialProjects }: StartupDashbo
                             Logout
                         </button>
                     </form>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/30 rounded-xl p-6">
+                        <div className="text-sm text-green-400 font-medium">Total Revenue</div>
+                        <div className="text-3xl font-bold text-white mt-2">
+                            {formatCurrency(totalStats.revenue)}
+                        </div>
+                    </div>
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                        <div className="text-sm text-zinc-400">Total Events</div>
+                        <div className="text-3xl font-bold text-white mt-2">{totalStats.clicks}</div>
+                    </div>
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                        <div className="text-sm text-zinc-400">Sales</div>
+                        <div className="text-3xl font-bold text-white mt-2">{totalStats.sales}</div>
+                    </div>
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                        <div className="text-sm text-zinc-400">Active Links</div>
+                        <div className="text-3xl font-bold text-white mt-2">{totalLinks}</div>
+                    </div>
                 </div>
 
                 {/* My Projects */}
@@ -141,32 +180,41 @@ export function StartupDashboardClient({ email, initialProjects }: StartupDashbo
                                         <th className="text-left px-6 py-3 text-sm font-semibold text-zinc-300">Link ID</th>
                                         <th className="text-left px-6 py-3 text-sm font-semibold text-zinc-300">Affiliate</th>
                                         <th className="text-left px-6 py-3 text-sm font-semibold text-zinc-300">Project</th>
-                                        <th className="text-left px-6 py-3 text-sm font-semibold text-zinc-300">Created</th>
-                                        <th className="text-left px-6 py-3 text-sm font-semibold text-zinc-300">Clicks</th>
+                                        <th className="text-right px-6 py-3 text-sm font-semibold text-zinc-300">Events</th>
+                                        <th className="text-right px-6 py-3 text-sm font-semibold text-zinc-300">Sales</th>
+                                        <th className="text-right px-6 py-3 text-sm font-semibold text-zinc-300">Revenue</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-800">
                                     {projects.flatMap((project) =>
-                                        project.links.map((link) => (
-                                            <tr key={link.id} className="hover:bg-zinc-800/30">
-                                                <td className="px-6 py-4">
-                                                    <code className="text-blue-400 bg-zinc-800 px-2 py-1 rounded text-sm">
-                                                        {link.id}
-                                                    </code>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-zinc-300">
-                                                    <div>{link.claimer.name}</div>
-                                                    <div className="text-xs text-zinc-500">{link.claimer.email}</div>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-zinc-300">{project.name}</td>
-                                                <td className="px-6 py-4 text-sm text-zinc-400">
-                                                    {new Date(link.created_at).toLocaleDateString()}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-zinc-400">
-                                                    <span className="text-zinc-500">Coming soon</span>
-                                                </td>
-                                            </tr>
-                                        ))
+                                        project.links.map((link) => {
+                                            const stats = linkStats[link.id] || { clicks: 0, sales: 0, revenue: 0 }
+                                            return (
+                                                <tr key={link.id} className="hover:bg-zinc-800/30">
+                                                    <td className="px-6 py-4">
+                                                        <code className="text-blue-400 bg-zinc-800 px-2 py-1 rounded text-sm">
+                                                            {link.id}
+                                                        </code>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-zinc-300">
+                                                        <div>{link.claimer.name}</div>
+                                                        <div className="text-xs text-zinc-500">{link.claimer.email}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-zinc-300">{project.name}</td>
+                                                    <td className="px-6 py-4 text-sm text-right">
+                                                        <span className="text-zinc-300">{stats.clicks}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-right">
+                                                        <span className="text-zinc-300">{stats.sales}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-right">
+                                                        <span className={stats.revenue > 0 ? 'text-green-400 font-medium' : 'text-zinc-500'}>
+                                                            {formatCurrency(stats.revenue)}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })
                                     )}
                                 </tbody>
                             </table>

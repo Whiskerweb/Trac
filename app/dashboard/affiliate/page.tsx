@@ -1,8 +1,8 @@
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import ClaimForm from '@/components/claim-form'
+import { getLinkStats, aggregateStats } from '@/lib/stats'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,6 +45,18 @@ export default async function AffiliateDashboard() {
         },
     })
 
+    // Get stats for user's links
+    const linkIds = myLinks.map(l => l.id)
+    const linkStats = await getLinkStats(linkIds)
+    const totalStats = aggregateStats(linkStats)
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'EUR',
+        }).format(amount)
+    }
+
     return (
         <div className="min-h-screen bg-zinc-950 text-white p-8">
             <div className="max-w-6xl mx-auto">
@@ -64,6 +76,28 @@ export default async function AffiliateDashboard() {
                             Logout
                         </button>
                     </form>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/30 rounded-xl p-6">
+                        <div className="text-sm text-green-400 font-medium">My Earnings</div>
+                        <div className="text-3xl font-bold text-white mt-2">
+                            {formatCurrency(totalStats.revenue)}
+                        </div>
+                    </div>
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                        <div className="text-sm text-zinc-400">Total Events</div>
+                        <div className="text-3xl font-bold text-white mt-2">{totalStats.clicks}</div>
+                    </div>
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                        <div className="text-sm text-zinc-400">Conversions</div>
+                        <div className="text-3xl font-bold text-white mt-2">{totalStats.sales}</div>
+                    </div>
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                        <div className="text-sm text-zinc-400">My Links</div>
+                        <div className="text-3xl font-bold text-white mt-2">{myLinks.length}</div>
+                    </div>
                 </div>
 
                 {/* Available Missions */}
@@ -115,28 +149,37 @@ export default async function AffiliateDashboard() {
                                         <th className="text-left px-6 py-3 text-sm font-semibold text-zinc-300">Link ID</th>
                                         <th className="text-left px-6 py-3 text-sm font-semibold text-zinc-300">Project</th>
                                         <th className="text-left px-6 py-3 text-sm font-semibold text-zinc-300">Name</th>
-                                        <th className="text-left px-6 py-3 text-sm font-semibold text-zinc-300">Created</th>
-                                        <th className="text-left px-6 py-3 text-sm font-semibold text-zinc-300">Clicks</th>
+                                        <th className="text-right px-6 py-3 text-sm font-semibold text-zinc-300">Events</th>
+                                        <th className="text-right px-6 py-3 text-sm font-semibold text-zinc-300">Sales</th>
+                                        <th className="text-right px-6 py-3 text-sm font-semibold text-zinc-300">Revenue</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-800">
-                                    {myLinks.map((link) => (
-                                        <tr key={link.id} className="hover:bg-zinc-800/30">
-                                            <td className="px-6 py-4">
-                                                <code className="text-blue-400 bg-zinc-800 px-2 py-1 rounded text-sm">
-                                                    {link.id}
-                                                </code>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-zinc-300">{link.project.name}</td>
-                                            <td className="px-6 py-4 text-sm text-zinc-400">{link.name || '-'}</td>
-                                            <td className="px-6 py-4 text-sm text-zinc-400">
-                                                {new Date(link.created_at).toLocaleDateString()}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-zinc-400">
-                                                <span className="text-zinc-500">Coming soon</span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {myLinks.map((link) => {
+                                        const stats = linkStats[link.id] || { clicks: 0, sales: 0, revenue: 0 }
+                                        return (
+                                            <tr key={link.id} className="hover:bg-zinc-800/30">
+                                                <td className="px-6 py-4">
+                                                    <code className="text-blue-400 bg-zinc-800 px-2 py-1 rounded text-sm">
+                                                        {link.id}
+                                                    </code>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-zinc-300">{link.project.name}</td>
+                                                <td className="px-6 py-4 text-sm text-zinc-400">{link.name || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-right">
+                                                    <span className="text-zinc-300">{stats.clicks}</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-right">
+                                                    <span className="text-zinc-300">{stats.sales}</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-right">
+                                                    <span className={stats.revenue > 0 ? 'text-green-400 font-medium' : 'text-zinc-500'}>
+                                                        {formatCurrency(stats.revenue)}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         ) : (

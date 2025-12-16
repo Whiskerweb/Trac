@@ -2,6 +2,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { StartupDashboardClient } from '@/components/StartupDashboardClient'
+import { getLinkStats, aggregateStats } from '@/lib/stats'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,6 +42,13 @@ export default async function StartupDashboard() {
         },
     })
 
+    // Get all link IDs across all projects
+    const allLinkIds = projects.flatMap(p => p.links.map(l => l.id))
+
+    // Fetch stats from Tinybird
+    const linkStats = await getLinkStats(allLinkIds)
+    const totalStats = aggregateStats(linkStats)
+
     // Serialize dates for client component
     const serializedProjects = projects.map((p: typeof projects[number]) => ({
         ...p,
@@ -55,6 +63,8 @@ export default async function StartupDashboard() {
         <StartupDashboardClient
             email={user.email}
             initialProjects={serializedProjects}
+            linkStats={linkStats}
+            totalStats={totalStats}
         />
     )
 }
