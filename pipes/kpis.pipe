@@ -1,9 +1,42 @@
-NODE stats
+DESCRIPTION >
+    Global KPIs for analytics dashboard
+    Returns clicks, sales, revenue and conversion rate
+
+TOKEN "dashboard_endpoint" READ
+
+NODE sales_stats
 SQL >
-SELECT 
-  (SELECT count() FROM clicks) as total_clicks,
-  (SELECT count() FROM events WHERE event_name = 'lead') as total_leads,
-  (SELECT count() FROM events WHERE event_name = 'sale') as total_sales,
-  (SELECT sum(amount) FROM events WHERE event_name = 'sale') as total_revenue
+    %
+    SELECT 
+        count() as total_sales,
+        sum(amount) as total_revenue
+    FROM sales
+    WHERE 
+        timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+
+NODE clicks_stats
+SQL >
+    %
+    SELECT 
+        count() as total_clicks
+    FROM clicks
+    WHERE 
+        timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+
+NODE endpoint
+SQL >
+    %
+    SELECT 
+        c.total_clicks as clicks,
+        s.total_sales as sales,
+        s.total_revenue as revenue,
+        if(c.total_clicks > 0, 
+            round((s.total_sales / c.total_clicks) * 100, 2), 
+            0
+        ) as conversion_rate
+    FROM clicks_stats c
+    CROSS JOIN sales_stats s
 
 TYPE endpoint

@@ -1,10 +1,17 @@
-DESCRIPTION "Raw clicks log"
+DESCRIPTION "Raw clicks log - Tracks all affiliate link visits for attribution"
+
 SCHEMA >
     `timestamp` DateTime `json:$.timestamp`,
     `click_id` String `json:$.click_id`,
     `link_id` String `json:$.link_id`,
     `url` String `json:$.url`,
-    `country` String `json:$.country`,
-    `user_agent` String `json:$.user_agent`
+    `user_agent` String `json:$.user_agent`,
+    `ip` String `json:$.ip`,
+    `country` LowCardinality(String) `json:$.country`,
+    `city` String `json:$.city`,
+    `referrer` String `json:$.referrer`,
+    `device` LowCardinality(String) `json:$.device`
+
 ENGINE "MergeTree"
 ENGINE_SORTING_KEY "timestamp"
+ENGINE_TTL "timestamp + toIntervalYear(1)"

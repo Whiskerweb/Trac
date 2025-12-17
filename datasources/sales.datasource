@@ -1,0 +1,15 @@
+DESCRIPTION "Sales events from payment processors (Stripe, etc.) for affiliate commission tracking"
+
+SCHEMA >
+    `timestamp` DateTime `json:$.timestamp`,
+    `event_id` String `json:$.event_id` DEFAULT generateUUIDv4(),
+    `invoice_id` String `json:$.invoice_id`,
+    `workspace_id` String `json:$.workspace_id`,
+    `click_id` Nullable(String) `json:$.click_id`,
+    `customer_external_id` String `json:$.customer_external_id`,
+    `amount` Int32 `json:$.amount`,
+    `currency` LowCardinality(String) `json:$.currency`,
+    `payment_processor` LowCardinality(String) `json:$.payment_processor`
+
+ENGINE "ReplacingMergeTree"
+ENGINE_SORTING_KEY "invoice_id, workspace_id"

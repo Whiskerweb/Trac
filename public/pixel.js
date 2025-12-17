@@ -12,7 +12,7 @@
     // Configuration from script tag attributes
     var scriptTag = document.currentScript || document.querySelector('script[src*="pixel.js"]');
     var config = {
-        apiEndpoint: (scriptTag && scriptTag.getAttribute('data-endpoint')) || '/api/events',
+        apiEndpoint: (scriptTag && scriptTag.getAttribute('data-endpoint')) || '/api/analytics/v0/events',
         domain: scriptTag && scriptTag.getAttribute('data-domain'),
         token: scriptTag && scriptTag.getAttribute('data-token')
     };
