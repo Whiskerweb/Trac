@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
             timestamp: new Date().toISOString(),
             event_id: crypto.randomUUID(),
             invoice_id: (session.invoice as string) || session.id,
-            workspace_id: session.metadata?.workspace_id || 'default',
+            workspace_id: 'ws_dev_001',
             click_id: session.client_reference_id || null,
             customer_external_id: safeCustomerId,
             amount: safeAmount,

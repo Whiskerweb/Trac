@@ -29,6 +29,7 @@ function generateUUID(): string {
  * Send click event to Tinybird (fire-and-forget)
  */
 function logClickToTinybird(data: {
+    workspace_id: string
     click_id: string
     link_id: string
     url: string
@@ -108,6 +109,7 @@ export async function middleware(request: NextRequest) {
 
         // Log to Tinybird (non-blocking)
         logClickToTinybird({
+            workspace_id: 'ws_dev_001',
             click_id,
             link_id: linkConfig.link_id,
             url: request.url,
