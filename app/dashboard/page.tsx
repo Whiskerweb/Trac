@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import useSWR from 'swr'
 import {
     MousePointer2, CreditCard, DollarSign, BarChart3, AlertCircle,
-    Loader2, Copy, Check, Plus, Link2, ExternalLink, Trash2, Puzzle
+    Loader2, Copy, Check, Plus, Link2, ExternalLink, Trash2, Puzzle, Target, ShoppingBag
 } from 'lucide-react'
 import { CreateLinkModal } from '@/components/CreateLinkModal'
 import { deleteShortLink } from '@/app/actions/links'
@@ -242,6 +242,20 @@ export default function DashboardPage() {
                         <p className="text-gray-500 mt-1">Vue d&apos;ensemble de vos performances</p>
                     </div>
                     <div className="flex items-center gap-3">
+                        <Link
+                            href="/dashboard/marketplace"
+                            className="flex items-center gap-2 px-4 py-2.5 bg-green-100 hover:bg-green-200 text-green-700 font-medium rounded-lg transition-colors"
+                        >
+                            <ShoppingBag className="w-5 h-5" />
+                            Marketplace
+                        </Link>
+                        <Link
+                            href="/dashboard/missions"
+                            className="flex items-center gap-2 px-4 py-2.5 bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium rounded-lg transition-colors"
+                        >
+                            <Target className="w-5 h-5" />
+                            Missions
+                        </Link>
                         <Link
                             href="/dashboard/integration"
                             className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors"
