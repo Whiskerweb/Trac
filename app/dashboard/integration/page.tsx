@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { getOrCreateApiKey, regenerateApiKey } from '@/app/actions/settings'
+import { WebhookManager } from '@/components/WebhookManager'
 
 // =============================================
 // COPY BUTTON COMPONENT
@@ -224,42 +225,8 @@ export default function IntegrationPage() {
                         </div>
                     </IntegrationCard>
 
-                    {/* Card 2: Webhook Stripe */}
-                    <IntegrationCard
-                        icon={Webhook}
-                        iconColor="bg-purple-500"
-                        step={2}
-                        title="Configurez le Webhook Stripe"
-                        description="Pour suivre automatiquement vos ventes, ajoutez cet Endpoint URL dans Stripe."
-                    >
-                        <CodeBlock code={webhookUrl} />
-
-                        <div className="mt-4 space-y-3">
-                            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                                <p className="text-xs font-medium text-slate-700 mb-2">
-                                    Événements à écouter :
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                    <span className="px-2 py-1 bg-slate-200 text-slate-700 text-xs font-mono rounded">
-                                        checkout.session.completed
-                                    </span>
-                                    <span className="px-2 py-1 bg-slate-200 text-slate-700 text-xs font-mono rounded">
-                                        payment_intent.succeeded
-                                    </span>
-                                </div>
-                            </div>
-
-                            <a
-                                href="https://dashboard.stripe.com/webhooks"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 font-medium"
-                            >
-                                Ouvrir Stripe Dashboard
-                                <ExternalLink className="w-4 h-4" />
-                            </a>
-                        </div>
-                    </IntegrationCard>
+                    {/* Card 2: Webhook Stripe (Multi-Tenant) */}
+                    <WebhookManager />
 
                     {/* Card 3: Test Connection */}
                     <IntegrationCard

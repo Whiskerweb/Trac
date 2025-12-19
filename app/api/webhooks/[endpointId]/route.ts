@@ -188,26 +188,12 @@ export async function POST(
     }
 
     // ========================================
-    // 5. HANDLE: payment_intent.succeeded
+    // 5. IGNORE OTHER EVENTS
     // ========================================
-    if (event.type === 'payment_intent.succeeded') {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent
-
-        const workspaceId = endpoint.workspace_id
-        const clickId = paymentIntent.metadata?.click_id || null
-
-        console.log(`[Multi-Tenant Webhook] 💳 Payment Intent for Workspace ${workspaceId}`)
-
-        await logSaleToTinybird({
-            workspace_id: workspaceId,
-            invoice_id: paymentIntent.id,
-            click_id: clickId,
-            customer_external_id: typeof paymentIntent.customer === 'string'
-                ? paymentIntent.customer
-                : 'guest',
-            amount: paymentIntent.amount,
-            currency: paymentIntent.currency,
-        })
+    // Only checkout.session.completed is processed to avoid duplicates
+    // payment_intent.succeeded/created are ACKed but not logged
+    if (event.type !== 'checkout.session.completed') {
+        console.log(`[Multi-Tenant Webhook] ⏭️ Ignoring event ${event.type} (no duplicate logging)`)
     }
 
     return NextResponse.json({ received: true }, { status: 200 })
