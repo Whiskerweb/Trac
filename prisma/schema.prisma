@@ -77,3 +77,30 @@ model ShortLink {
   @@index([workspace_id])
 }
 
+// =============================================
+// API KEYS - For workspace authentication
+// =============================================
+model ApiKey {
+  id            String   @id @default(uuid())
+  workspace_id  String   @unique  // Supabase user ID (one key per user)
+  public_key    String   @unique  // Format: pk_trac_<nanoid>
+  created_at    DateTime @default(now())
+  last_used_at  DateTime?
+  
+  @@index([public_key])
+  @@index([workspace_id])
+}
+
+// =============================================
+// WEBHOOK ENDPOINTS - Multi-tenant Stripe webhooks
+// =============================================
+model WebhookEndpoint {
+  id            String   @id  // Format: whk_<nanoid> - no @default, generated in code
+  workspace_id  String   @unique  // One endpoint per workspace
+  description   String?  // e.g. "Stripe Production"
+  secret        String?  // whsec_... from Stripe (encrypted in prod)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  
+  @@index([workspace_id])
+}

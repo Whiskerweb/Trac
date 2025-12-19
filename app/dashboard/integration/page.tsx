@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import {
     Code2, Webhook, CheckCircle2, Copy, Check,
-    ExternalLink, Zap, AlertCircle, ArrowLeft
+    ExternalLink, Zap, AlertCircle, ArrowLeft, Key, RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
+import { getOrCreateApiKey, regenerateApiKey } from '@/app/actions/settings'
 
 // =============================================
 // COPY BUTTON COMPONENT
@@ -39,7 +40,7 @@ function CopyButton({ text }: { text: string }) {
 // CODE BLOCK COMPONENT
 // =============================================
 
-function CodeBlock({ code, language = 'html' }: { code: string; language?: string }) {
+function CodeBlock({ code }: { code: string }) {
     return (
         <div className="relative mt-4">
             <pre className="bg-slate-900 border border-slate-700 rounded-xl p-4 overflow-x-auto">
@@ -66,7 +67,7 @@ function IntegrationCard({
 }: {
     icon: React.ComponentType<{ className?: string }>
     iconColor: string
-    step: number
+    step?: number
     title: string
     description: string
     children: React.ReactNode
@@ -78,11 +79,13 @@ function IntegrationCard({
                     <Icon className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                            Étape {step}
-                        </span>
-                    </div>
+                    {step && (
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                                Étape {step}
+                            </span>
+                        </div>
+                    )}
                     <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
                     <p className="text-slate-600 text-sm leading-relaxed">{description}</p>
                     {children}
@@ -98,21 +101,45 @@ function IntegrationCard({
 
 export default function IntegrationPage() {
     const [origin, setOrigin] = useState('https://votre-domaine.com')
+    const [publicKey, setPublicKey] = useState<string | null>(null)
+    const [keyLoading, setKeyLoading] = useState(true)
+    const [regenerating, setRegenerating] = useState(false)
     const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
             setOrigin(window.location.origin)
         }
+
+        // Fetch API key on mount
+        async function loadApiKey() {
+            const result = await getOrCreateApiKey()
+            if (result.success && result.publicKey) {
+                setPublicKey(result.publicKey)
+            }
+            setKeyLoading(false)
+        }
+        loadApiKey()
     }, [])
 
-    const pixelCode = `<script src="${origin}/trac.js" defer></script>`
+    const handleRegenerate = async () => {
+        if (!confirm('Êtes-vous sûr ? Votre ancienne clé sera invalidée.')) return
+        setRegenerating(true)
+        const result = await regenerateApiKey()
+        if (result.success && result.publicKey) {
+            setPublicKey(result.publicKey)
+        }
+        setRegenerating(false)
+    }
+
+    const pixelCode = publicKey
+        ? `<script src="${origin}/trac.js" data-key="${publicKey}" defer></script>`
+        : `<script src="${origin}/trac.js" defer></script>`
     const webhookUrl = `${origin}/api/webhooks/stripe`
 
     const handleTestEvent = async () => {
         setTestStatus('loading')
         try {
-            // Simulate a test event
             await new Promise(resolve => setTimeout(resolve, 1500))
             setTestStatus('success')
             setTimeout(() => setTestStatus('idle'), 3000)
@@ -145,13 +172,48 @@ export default function IntegrationPage() {
 
                 {/* Cards */}
                 <div className="space-y-6">
+                    {/* Card 0: API Key */}
+                    <IntegrationCard
+                        icon={Key}
+                        iconColor="bg-emerald-500"
+                        title="Votre Clé Publique"
+                        description="Cette clé identifie votre workspace. Elle est requise pour le tracking."
+                    >
+                        <div className="mt-4">
+                            {keyLoading ? (
+                                <div className="h-12 bg-slate-100 rounded-lg animate-pulse" />
+                            ) : publicKey ? (
+                                <div className="relative">
+                                    <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 pr-24 font-mono text-sm text-emerald-400 break-all">
+                                        {publicKey}
+                                    </div>
+                                    <div className="absolute top-3 right-3 flex items-center gap-2">
+                                        <button
+                                            onClick={handleRegenerate}
+                                            disabled={regenerating}
+                                            className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors"
+                                            title="Régénérer la clé"
+                                        >
+                                            <RefreshCw className={`w-4 h-4 text-slate-400 ${regenerating ? 'animate-spin' : ''}`} />
+                                        </button>
+                                        <CopyButton text={publicKey} />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                                    Erreur lors du chargement de la clé
+                                </div>
+                            )}
+                        </div>
+                    </IntegrationCard>
+
                     {/* Card 1: Pixel */}
                     <IntegrationCard
                         icon={Code2}
                         iconColor="bg-blue-500"
                         step={1}
                         title="Installez le Pixel de Tracking"
-                        description="Ajoutez ce script dans la balise <head> de toutes les pages de votre site web. Il capturera automatiquement les visites provenant de vos liens Trac."
+                        description="Ajoutez ce script dans la balise <head> de toutes les pages de votre site web."
                     >
                         <CodeBlock code={pixelCode} />
                         <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-2">
@@ -168,7 +230,7 @@ export default function IntegrationPage() {
                         iconColor="bg-purple-500"
                         step={2}
                         title="Configurez le Webhook Stripe"
-                        description="Pour suivre automatiquement vos ventes, ajoutez cet Endpoint URL dans vos paramètres Webhooks Stripe."
+                        description="Pour suivre automatiquement vos ventes, ajoutez cet Endpoint URL dans Stripe."
                     >
                         <CodeBlock code={webhookUrl} />
 
@@ -205,7 +267,7 @@ export default function IntegrationPage() {
                         iconColor="bg-amber-500"
                         step={3}
                         title="Testez la Connexion"
-                        description="Envoyez un événement de test pour vérifier que tout fonctionne correctement."
+                        description="Envoyez un événement de test pour vérifier que tout fonctionne."
                     >
                         <div className="mt-4 flex items-center gap-4">
                             <button

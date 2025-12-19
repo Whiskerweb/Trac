@@ -1,0 +1,214 @@
+import { headers } from 'next/headers'
+import { NextRequest, NextResponse } from 'next/server'
+import Stripe from 'stripe'
+import { prisma } from '@/lib/db'
+
+export const dynamic = 'force-dynamic'
+
+// Initialize Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+
+// Tinybird configuration
+const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
+const TINYBIRD_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
+
+/**
+ * Send sale event to Tinybird
+ */
+async function logSaleToTinybird(data: {
+    workspace_id: string
+    invoice_id: string
+    click_id: string | null
+    customer_external_id: string
+    amount: number
+    currency: string
+}): Promise<boolean> {
+    if (!TINYBIRD_TOKEN) {
+        console.error('[Multi-Tenant Webhook] ❌ Missing TINYBIRD_ADMIN_TOKEN')
+        return false
+    }
+
+    const payload = {
+        timestamp: new Date().toISOString(),
+        event_id: crypto.randomUUID(),
+        workspace_id: data.workspace_id,
+        invoice_id: data.invoice_id,
+        click_id: data.click_id,
+        customer_external_id: data.customer_external_id,
+        amount: data.amount,
+        currency: data.currency.toUpperCase(),
+        payment_processor: 'stripe',
+    }
+
+    console.log('[Multi-Tenant Webhook] 📊 Sending to Tinybird:', {
+        workspace_id: payload.workspace_id,
+        amount: payload.amount,
+        currency: payload.currency,
+    })
+
+    try {
+        const response = await fetch(`${TINYBIRD_HOST}/v0/events?name=sales`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${TINYBIRD_TOKEN}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        })
+
+        if (response.ok) {
+            console.log('[Multi-Tenant Webhook] ✅ Sale logged to Tinybird')
+            return true
+        } else {
+            const errorText = await response.text()
+            console.error('[Multi-Tenant Webhook] ❌ Tinybird error:', errorText)
+            return false
+        }
+    } catch (error) {
+        console.error('[Multi-Tenant Webhook] ❌ Network error:', error)
+        return false
+    }
+}
+
+/**
+ * Multi-Tenant Stripe Webhook Handler
+ * POST /api/webhooks/[endpointId]
+ * 
+ * Each workspace has its own webhook endpoint with its own secret.
+ * The workspace_id for attribution comes from the endpoint config, not Stripe.
+ */
+export async function POST(
+    req: NextRequest,
+    { params }: { params: Promise<{ endpointId: string }> }
+) {
+    const { endpointId } = await params
+    const headersList = await headers()
+    const signature = headersList.get('stripe-signature')
+
+    // ========================================
+    // 1. LOOKUP ENDPOINT CONFIG
+    // ========================================
+    const endpoint = await prisma.webhookEndpoint.findUnique({
+        where: { id: endpointId }
+    })
+
+    if (!endpoint) {
+        console.log('[Multi-Tenant Webhook] ❌ Endpoint not found:', endpointId)
+        return NextResponse.json(
+            { error: 'Webhook endpoint not found' },
+            { status: 404 }
+        )
+    }
+
+    // ========================================
+    // 2. VALIDATE CONFIGURATION
+    // ========================================
+    if (!endpoint.secret) {
+        console.log('[Multi-Tenant Webhook] ⚠️ Endpoint not configured:', endpointId)
+        return NextResponse.json(
+            { error: 'Endpoint not configured. Please add your Stripe webhook secret.' },
+            { status: 400 }
+        )
+    }
+
+    if (!signature) {
+        console.error('[Multi-Tenant Webhook] ❌ Missing stripe-signature header')
+        return NextResponse.json(
+            { error: 'Missing signature' },
+            { status: 400 }
+        )
+    }
+
+    // ========================================
+    // 3. VERIFY STRIPE SIGNATURE
+    // ========================================
+    const body = await req.text()
+    let event: Stripe.Event
+
+    try {
+        // Use the SECRET FROM DATABASE, not env variable
+        event = stripe.webhooks.constructEvent(
+            body,
+            signature,
+            endpoint.secret  // ← Secret from DB per-workspace
+        )
+    } catch (err) {
+        console.error('[Multi-Tenant Webhook] ❌ Signature verification failed:', err)
+        return NextResponse.json(
+            { error: 'Invalid signature' },
+            { status: 400 }
+        )
+    }
+
+    console.log(`[Multi-Tenant Webhook] 📥 Event ${event.type} for Workspace ${endpoint.workspace_id}`)
+
+    // ========================================
+    // 4. HANDLE: checkout.session.completed
+    // ========================================
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object as Stripe.Checkout.Session
+
+        // CRITICAL: workspace_id comes from the webhook endpoint config
+        // This is the source of truth (owner of the Stripe account)
+        const workspaceId = endpoint.workspace_id
+
+        // click_id is metadata for traffic attribution (optional)
+        const clickId = session.client_reference_id || session.metadata?.click_id || null
+
+        // Customer identification
+        const customerExternalId = typeof session.customer === 'string'
+            ? session.customer
+            : session.customer_details?.email || 'guest'
+
+        // Amount
+        const amount = session.amount_total || 0
+        const currency = session.currency || 'eur'
+
+        // Invoice ID for deduplication
+        const invoiceId = typeof session.invoice === 'string'
+            ? session.invoice
+            : session.id
+
+        console.log(`[Multi-Tenant Webhook] 💰 Sale for Workspace ${workspaceId} verified via Endpoint ${endpointId}`)
+        console.log('[Multi-Tenant Webhook] 📦 Details:', {
+            amount: `${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`,
+            customer: customerExternalId,
+            click_id: clickId,
+        })
+
+        // Log to Tinybird
+        await logSaleToTinybird({
+            workspace_id: workspaceId,
+            invoice_id: invoiceId,
+            click_id: clickId,
+            customer_external_id: customerExternalId,
+            amount,
+            currency,
+        })
+    }
+
+    // ========================================
+    // 5. HANDLE: payment_intent.succeeded
+    // ========================================
+    if (event.type === 'payment_intent.succeeded') {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent
+
+        const workspaceId = endpoint.workspace_id
+        const clickId = paymentIntent.metadata?.click_id || null
+
+        console.log(`[Multi-Tenant Webhook] 💳 Payment Intent for Workspace ${workspaceId}`)
+
+        await logSaleToTinybird({
+            workspace_id: workspaceId,
+            invoice_id: paymentIntent.id,
+            click_id: clickId,
+            customer_external_id: typeof paymentIntent.customer === 'string'
+                ? paymentIntent.customer
+                : 'guest',
+            amount: paymentIntent.amount,
+            currency: paymentIntent.currency,
+        })
+    }
+
+    return NextResponse.json({ received: true }, { status: 200 })
+}
