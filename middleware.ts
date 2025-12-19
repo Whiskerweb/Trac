@@ -1,18 +1,10 @@
 import { NextResponse, userAgent } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifyToken } from './lib/auth'
+import { updateSession } from '@/utils/supabase/middleware'
 
 // Tinybird configuration
 const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
 const TINYBIRD_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
-
-// Test link mapping (will be replaced by DB lookup)
-const TEST_LINKS: Record<string, { url: string; link_id: string }> = {
-    'test': {
-        url: 'https://buy.stripe.com/test_bJe5kE1CB5oS9n63Ev2ZO00',
-        link_id: 'link_test_001',
-    },
-}
 
 /**
  * Generate a simple UUID v4
@@ -50,6 +42,8 @@ function logClickToTinybird(data: {
         ...data,
     }
 
+    console.log('[Middleware] 📊 Logging click with workspace_id:', data.workspace_id)
+
     // Fire-and-forget - don't await
     fetch(`${TINYBIRD_HOST}/v0/events?name=clicks`, {
         method: 'POST',
@@ -60,13 +54,36 @@ function logClickToTinybird(data: {
         body: JSON.stringify(payload),
     }).then(res => {
         if (res.ok) {
-            console.log('[Middleware] ✅ Click logged:', data.click_id)
+            console.log('[Middleware] ✅ Click logged:', data.click_id, 'for workspace:', data.workspace_id)
         } else {
             res.text().then(t => console.error('[Middleware] ❌ Tinybird error:', t))
         }
     }).catch(err => {
         console.error('[Middleware] ❌ Click logging failed:', err.message)
     })
+}
+
+/**
+ * Fetch link data from database via API
+ * Returns workspace_id (project owner) and link_id
+ */
+async function getLinkData(slug: string, baseUrl: string): Promise<{
+    workspace_id: string
+    link_id: string
+    destination_url: string
+} | null> {
+    try {
+        const res = await fetch(`${baseUrl}/api/links/lookup?slug=${slug}`, {
+            cache: 'no-store',
+        })
+        if (res.ok) {
+            const data = await res.json()
+            return data
+        }
+    } catch (e) {
+        console.error('[Middleware] ❌ Failed to lookup link:', e)
+    }
+    return null
 }
 
 export async function middleware(request: NextRequest) {
@@ -77,10 +94,12 @@ export async function middleware(request: NextRequest) {
     // ============================================
     if (pathname.startsWith('/c/')) {
         const slug = pathname.replace('/c/', '')
-        const linkConfig = TEST_LINKS[slug]
 
-        if (!linkConfig) {
-            // Link not found - return 404
+        // Get link data including workspace_id from the project owner
+        const linkData = await getLinkData(slug, request.nextUrl.origin)
+
+        if (!linkData) {
+            console.log('[Middleware] ❌ Link not found:', slug)
             return NextResponse.redirect(new URL('/404', request.url))
         }
 
@@ -89,9 +108,9 @@ export async function middleware(request: NextRequest) {
 
         // Extract user data
         const ua = userAgent(request)
-        const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.ip || 'unknown'
-        const country = request.geo?.country || ''
-        const city = request.geo?.city || ''
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown'
+        const country = request.headers.get('x-vercel-ip-country') || ''
+        const city = request.headers.get('x-vercel-ip-city') || ''
         const referrer = request.headers.get('referer') || ''
 
         // Determine device type
@@ -102,16 +121,17 @@ export async function middleware(request: NextRequest) {
         console.log('[Middleware] 🔗 Affiliate click:', {
             slug,
             click_id,
+            workspace_id: linkData.workspace_id,
             ip,
             country,
             device,
         })
 
-        // Log to Tinybird (non-blocking)
+        // Log to Tinybird with DYNAMIC workspace_id from project owner
         logClickToTinybird({
-            workspace_id: 'ws_dev_001',
+            workspace_id: linkData.workspace_id,  // ✅ DYNAMIC from link owner
             click_id,
-            link_id: linkConfig.link_id,
+            link_id: linkData.link_id,
             url: request.url,
             user_agent: ua.ua || '',
             ip,
@@ -122,46 +142,39 @@ export async function middleware(request: NextRequest) {
         })
 
         // Build destination URL with tracking params
-        const destinationUrl = new URL(linkConfig.url)
+        const destinationUrl = new URL(linkData.destination_url)
         destinationUrl.searchParams.set('client_reference_id', click_id)
-        destinationUrl.searchParams.set('prefilled_email', 'test@example.com')
 
         // Redirect to destination
         return NextResponse.redirect(destinationUrl.toString())
     }
 
     // ============================================
-    // DASHBOARD AUTHENTICATION
+    // SUPABASE SESSION REFRESH & AUTH
     // ============================================
+    const { user, supabaseResponse } = await updateSession(request)
+
+    // Protected routes - redirect to login if not authenticated
     if (pathname.startsWith('/dashboard')) {
-        const token = request.cookies.get('auth_token')?.value
-
-        if (!token) {
-            return NextResponse.redirect(new URL('/login', request.url))
-        }
-
-        const payload = await verifyToken(token)
-
-        if (!payload) {
-            return NextResponse.redirect(new URL('/login', request.url))
-        }
-
-        // Role-based access control
-        if (pathname.startsWith('/dashboard/startup') && payload.role !== 'STARTUP') {
-            return NextResponse.redirect(new URL('/dashboard/affiliate', request.url))
-        }
-
-        if (pathname.startsWith('/dashboard/affiliate') && payload.role !== 'AFFILIATE') {
-            return NextResponse.redirect(new URL('/dashboard/startup', request.url))
+        if (!user) {
+            const loginUrl = new URL('/login', request.url)
+            loginUrl.searchParams.set('redirectTo', pathname)
+            return NextResponse.redirect(loginUrl)
         }
     }
 
-    return NextResponse.next()
+    return supabaseResponse
 }
 
 export const config = {
     matcher: [
-        '/dashboard/:path*',
-        '/c/:path*',  // Affiliate tracking links
+        /*
+         * Match all request paths except for the ones starting with:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * - public folder
+         */
+        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }

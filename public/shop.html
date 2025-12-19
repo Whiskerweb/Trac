@@ -4,69 +4,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shop Test Production</title>
+    <title>Mon Super SaaS - Boutique</title>
 
-    <script>
-        window.trac = window.trac || function () { (window.trac.q = window.trac.q || []).push(arguments); };
-    </script>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    <script src="/pixel.js" data-token="pk_live_jEXUaTpyMlQgo4bcJeEX" async></script>
+    <!-- Trac Analytics SDK -->
+    <script src="/trac.js" defer></script>
 </head>
 
-<body style="font-family: sans-serif; padding: 40px; text-align: center; background-color: #f4f4f5;">
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
 
-    <div
-        style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); max-width: 400px; margin: 0 auto;">
-        <h1 style="margin-top: 0;">🛍️ Vrai Test Vercel</h1>
-        <p style="color: #666;">Si le cookie s'écrit ici, c'est gagné.</p>
+    <!-- Navigation -->
+    <nav class="border-b border-white/10 backdrop-blur-sm">
+        <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="text-xl font-bold text-white">🚀 SuperSaaS</div>
+            <div class="text-sm text-slate-400">Demo Shop</div>
+        </div>
+    </nav>
 
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
-            <button id="btn-lead" onclick="trac('capture', 'lead')"
-                style="background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">
-                Simuler Lead
-            </button>
-            <button id="btn-sale" onclick="trac('capture', 'sale', { amount: 89, currency: 'EUR' })"
-                style="background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">
-                Simuler Vente (89€)
-            </button>
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto px-6 py-16">
+        <div class="grid md:grid-cols-2 gap-12 items-center">
+
+            <!-- Product Image -->
+            <div
+                class="aspect-square bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-2xl border border-white/10 flex items-center justify-center">
+                <div class="text-center">
+                    <div class="text-8xl mb-4">💎</div>
+                    <div class="text-slate-400 text-sm">Premium SaaS Product</div>
+                </div>
+            </div>
+
+            <!-- Product Info -->
+            <div class="space-y-6">
+                <div>
+                    <div class="text-sm font-medium text-purple-400 uppercase tracking-wider mb-2">
+                        Nouveau
+                    </div>
+                    <h1 class="text-4xl font-bold text-white">
+                        Mon Super SaaS
+                    </h1>
+                </div>
+
+                <p class="text-slate-300 text-lg leading-relaxed">
+                    La solution tout-en-un pour booster votre productivité.
+                    Analytics, tracking, et bien plus encore.
+                </p>
+
+                <div class="flex items-baseline gap-3">
+                    <span class="text-5xl font-bold text-white">10€</span>
+                    <span class="text-slate-400 line-through">19€</span>
+                    <span class="bg-green-500/20 text-green-400 text-sm font-medium px-2 py-1 rounded">
+                        -47%
+                    </span>
+                </div>
+
+                <ul class="space-y-2 text-slate-300">
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-400">✓</span> Accès à vie
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-400">✓</span> Support prioritaire
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-400">✓</span> Mises à jour gratuites
+                    </li>
+                </ul>
+
+                <!-- BUY BUTTON - CRITICAL -->
+                <a id="buy-btn" href="https://buy.stripe.com/test_bJe5kE1CB5oS9n63Ev2ZO00"
+                    class="block w-full py-4 px-8 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-lg rounded-xl text-center transition-all shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40">
+                    Acheter maintenant →
+                </a>
+
+                <p class="text-center text-sm text-slate-500">
+                    Paiement sécurisé via Stripe 🔒
+                </p>
+            </div>
         </div>
 
-        <div id="status"
-            style="margin-top: 20px; font-size: 12px; color: #888; text-align: left; background: #eee; padding: 10px; border-radius: 4px; overflow: hidden;">
-            En attente d'action...
+        <!-- Debug Panel -->
+        <div class="mt-16 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
+            <h3 class="text-lg font-semibold text-white mb-4">🔍 Debug - Trac Attribution</h3>
+            <div class="grid gap-4 text-sm font-mono">
+                <div class="flex items-center gap-3">
+                    <span class="text-slate-400">Click ID:</span>
+                    <span id="debug-click-id" class="text-green-400">-</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-slate-400">Stripe Link:</span>
+                    <span id="debug-stripe-link" class="text-blue-400 break-all">-</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-slate-400">Status:</span>
+                    <span id="debug-status" class="text-yellow-400">⏳ Loading...</span>
+                </div>
+            </div>
         </div>
-    </div>
+    </main>
 
+    <!-- Footer -->
+    <footer class="border-t border-white/10 mt-16">
+        <div class="max-w-5xl mx-auto px-6 py-8 text-center text-slate-500 text-sm">
+            Demo pour tester le tracking Trac Analytics
+        </div>
+    </footer>
+
+    <!-- INJECTION SCRIPT - THE GLUE -->
     <script>
-        // FONCTION DE TEST AUTO
-        (function () {
-            const statusDiv = document.getElementById('status');
-            function log(msg) { statusDiv.innerHTML += '<br> > ' + msg; console.log(msg); }
+        document.addEventListener('DOMContentLoaded', function () {
+            // Wait a bit for Trac SDK to initialize
+            setTimeout(function () {
+                var clickId = window.Trac ? window.Trac.getClickId() : null;
+                var buyBtn = document.getElementById('buy-btn');
+                var debugClickId = document.getElementById('debug-click-id');
+                var debugStripeLink = document.getElementById('debug-stripe-link');
+                var debugStatus = document.getElementById('debug-status');
 
-            // 1. Simulation URL Pub
-            const fakeId = "VERCEL-TEST-" + Math.floor(Math.random() * 10000);
-            if (!window.location.search.includes('ref_id')) {
-                const newUrl = window.location.href + '?ref_id=' + fakeId;
-                window.history.replaceState(null, '', newUrl);
-                log("🔗 URL simulée avec ID: " + fakeId);
-            } else {
-                log("ℹ️ ID déjà présent dans l'URL");
-            }
+                if (clickId && buyBtn) {
+                    // Get current href
+                    var originalHref = buyBtn.getAttribute('href');
 
-            // 2. Vérification Cookie après 1 seconde
-            setTimeout(() => {
-                if (document.cookie.includes('trac_click_id')) {
-                    log("✅ SUCCÈS : Cookie trouvé !");
-                    statusDiv.style.background = "#dcfce7"; // Vert clair
-                    statusDiv.style.color = "#166534";
+                    // Build new URL with client_reference_id
+                    var url = new URL(originalHref);
+                    url.searchParams.set('client_reference_id', clickId);
+                    var newHref = url.toString();
+
+                    // Update the button
+                    buyBtn.setAttribute('href', newHref);
+
+                    // Log
+                    console.log('[Shop] 🔗 Injecting ID into Stripe Link:', clickId);
+                    console.log('[Shop] 📎 New URL:', newHref);
+
+                    // Update debug panel
+                    debugClickId.textContent = clickId;
+                    debugClickId.className = 'text-green-400';
+                    debugStripeLink.textContent = newHref;
+                    debugStatus.textContent = '✅ Attribution active';
+                    debugStatus.className = 'text-green-400';
+
                 } else {
-                    log("❌ ÉCHEC : Pas de cookie trouvé.");
-                    statusDiv.style.background = "#fee2e2"; // Rouge clair
-                    statusDiv.style.color = "#991b1b";
+                    console.log('[Shop] ⚠️ No click ID found - direct visit');
+
+                    // Update debug panel
+                    debugClickId.textContent = 'None (direct visit)';
+                    debugClickId.className = 'text-yellow-400';
+                    debugStripeLink.textContent = buyBtn ? buyBtn.getAttribute('href') : '-';
+                    debugStatus.textContent = '⚠️ No attribution (direct visit)';
+                    debugStatus.className = 'text-yellow-400';
                 }
-            }, 1000);
-        })();
+            }, 100);
+        });
     </script>
+
 </body>
 
 </html>

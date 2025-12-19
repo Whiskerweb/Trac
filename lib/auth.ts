@@ -1,71 +1,33 @@
-import * as jose from 'jose'
-import { cookies } from 'next/headers'
+import { createClient } from '@/utils/supabase/server'
 
-const JWT_SECRET = new TextEncoder().encode(
-    process.env.JWT_SECRET || 'default-secret-change-in-production'
-)
-
-export interface JWTPayload {
+export interface CurrentUser {
     userId: string
     email: string
-    role: 'STARTUP' | 'AFFILIATE'
+    role: 'STARTUP' | 'AFFILIATE' | null
 }
 
 /**
- * Create a JWT token
+ * Get the current authenticated user from Supabase
+ * Returns user info or null if not authenticated
+ * 
+ * Note: Role is fetched from user_metadata or defaults based on context.
+ * For a proper role system, you should store roles in a database table.
  */
-export async function createToken(payload: JWTPayload): Promise<string> {
-    const token = await new jose.SignJWT(payload as any)
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('7d')
-        .sign(JWT_SECRET)
+export async function getCurrentUser(): Promise<CurrentUser | null> {
+    const supabase = await createClient()
+    const { data: { user }, error } = await supabase.auth.getUser()
 
-    return token
-}
-
-/**
- * Verify and decode a JWT token
- */
-export async function verifyToken(token: string): Promise<JWTPayload | null> {
-    try {
-        const { payload } = await jose.jwtVerify(token, JWT_SECRET)
-        return payload as unknown as JWTPayload
-    } catch {
+    if (error || !user) {
         return null
     }
-}
 
-/**
- * Get current user from cookie
- */
-export async function getCurrentUser(): Promise<JWTPayload | null> {
-    const cookieStore = await cookies()
-    const token = cookieStore.get('auth_token')?.value
+    // Get role from user metadata (set during signup or in Supabase dashboard)
+    // Default to STARTUP if not set
+    const role = (user.user_metadata?.role as 'STARTUP' | 'AFFILIATE') || 'STARTUP'
 
-    if (!token) return null
-
-    return verifyToken(token)
-}
-
-/**
- * Set auth cookie
- */
-export async function setAuthCookie(token: string) {
-    const cookieStore = await cookies()
-    cookieStore.set('auth_token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        path: '/',
-    })
-}
-
-/**
- * Clear auth cookie
- */
-export async function clearAuthCookie() {
-    const cookieStore = await cookies()
-    cookieStore.delete('auth_token')
+    return {
+        userId: user.id,
+        email: user.email || '',
+        role: role,
+    }
 }

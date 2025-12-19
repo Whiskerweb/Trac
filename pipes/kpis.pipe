@@ -12,7 +12,8 @@ SQL >
         sum(amount) as total_revenue
     FROM sales
     WHERE 
-        timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        workspace_id = {{ String(workspace_id, '') }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
         AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
 
 NODE clicks_stats
@@ -22,7 +23,8 @@ SQL >
         count() as total_clicks
     FROM clicks
     WHERE 
-        timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        workspace_id = {{ String(workspace_id, '') }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
         AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
 
 NODE endpoint

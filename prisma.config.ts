@@ -1,5 +1,5 @@
 // Prisma 7 Config - https://pris.ly/d/config-datasource
-require('dotenv').config({ path: '.env' });
+require('dotenv').config({ path: '.env.local' });
 
 import { defineConfig } from "prisma/config";
 

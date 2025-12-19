@@ -1,0 +1,18 @@
+DESCRIPTION >
+    Attribution Lookup - Resolves click_id to workspace_id
+    Used by Stripe webhook to properly attribute sales to users
+
+TOKEN "attribution_endpoint" READ
+
+NODE attribution_node
+SQL >
+    %
+    SELECT 
+        workspace_id,
+        link_id,
+        timestamp as click_timestamp
+    FROM clicks 
+    WHERE click_id = {{ String(click_id, '') }}
+    LIMIT 1
+
+TYPE endpoint

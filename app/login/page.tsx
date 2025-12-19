@@ -1,42 +1,27 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { login, signup } from './actions'
 
 export default function LoginPage() {
-    const router = useRouter()
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [loading, setLoading] = useState(false)
+    const [mode, setMode] = useState<'login' | 'signup'>('login')
     const [error, setError] = useState('')
+    const [loading, setLoading] = useState(false)
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+    async function handleSubmit(formData: FormData) {
         setLoading(true)
         setError('')
 
         try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            })
+            const result = mode === 'login'
+                ? await login(formData)
+                : await signup(formData)
 
-            const data = await response.json()
-
-            if (response.ok) {
-                // Redirect based on role
-                if (data.user.role === 'STARTUP') {
-                    router.push('/dashboard/startup')
-                } else {
-                    router.push('/dashboard/affiliate')
-                }
-            } else {
-                setError(data.error || 'Login failed')
+            if (result?.error) {
+                setError(result.error)
             }
         } catch (err) {
-            setError('Network error. Please try again.')
+            setError('An unexpected error occurred')
         } finally {
             setLoading(false)
         }
@@ -49,11 +34,53 @@ export default function LoginPage() {
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
                         Trac
                     </h1>
-                    <p className="text-zinc-400 mt-2">Sign in to your account</p>
+                    <p className="text-zinc-400 mt-2">
+                        {mode === 'login' ? 'Sign in to your account' : 'Create your account'}
+                    </p>
+                </div>
+
+                {/* Mode Toggle */}
+                <div className="flex mb-6 bg-zinc-900 rounded-lg p-1">
+                    <button
+                        type="button"
+                        onClick={() => setMode('login')}
+                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === 'login'
+                                ? 'bg-zinc-800 text-white'
+                                : 'text-zinc-400 hover:text-white'
+                            }`}
+                    >
+                        Sign In
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMode('signup')}
+                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === 'signup'
+                                ? 'bg-zinc-800 text-white'
+                                : 'text-zinc-400 hover:text-white'
+                            }`}
+                    >
+                        Sign Up
+                    </button>
                 </div>
 
                 <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form action={handleSubmit} className="space-y-4">
+                        {mode === 'signup' && (
+                            <div>
+                                <label htmlFor="name" className="block text-sm font-medium text-zinc-300 mb-2">
+                                    Full Name
+                                </label>
+                                <input
+                                    type="text"
+                                    id="name"
+                                    name="name"
+                                    required={mode === 'signup'}
+                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="John Doe"
+                                />
+                            </div>
+                        )}
+
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-zinc-300 mb-2">
                                 Email
@@ -61,8 +88,7 @@ export default function LoginPage() {
                             <input
                                 type="email"
                                 id="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                name="email"
                                 required
                                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="you@example.com"
@@ -76,12 +102,15 @@ export default function LoginPage() {
                             <input
                                 type="password"
                                 id="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                name="password"
                                 required
+                                minLength={6}
                                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="••••••••"
                             />
+                            {mode === 'signup' && (
+                                <p className="text-xs text-zinc-500 mt-1">Minimum 6 characters</p>
+                            )}
                         </div>
 
                         {error && (
@@ -95,18 +124,12 @@ export default function LoginPage() {
                             disabled={loading}
                             className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-zinc-700 disabled:to-zinc-700 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200"
                         >
-                            {loading ? 'Signing in...' : 'Sign In'}
+                            {loading
+                                ? (mode === 'login' ? 'Signing in...' : 'Creating account...')
+                                : (mode === 'login' ? 'Sign In' : 'Sign Up')
+                            }
                         </button>
                     </form>
-
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-zinc-400">
-                            Don't have an account?{' '}
-                            <Link href="/register" className="text-blue-400 hover:text-blue-300">
-                                Sign up
-                            </Link>
-                        </p>
-                    </div>
                 </div>
             </div>
         </div>
