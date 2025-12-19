@@ -6,6 +6,8 @@ SCHEMA >
     `invoice_id` String `json:$.invoice_id`,
     `workspace_id` String `json:$.workspace_id`,
     `click_id` Nullable(String) `json:$.click_id`,
+    `link_id` Nullable(String) `json:$.link_id`,
+    `affiliate_id` Nullable(String) `json:$.affiliate_id`,
     `customer_external_id` String `json:$.customer_external_id`,
     `amount` Int32 `json:$.amount`,
     `currency` LowCardinality(String) `json:$.currency`,

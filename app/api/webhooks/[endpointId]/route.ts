@@ -13,12 +13,14 @@ const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.euro
 const TINYBIRD_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
 
 /**
- * Send sale event to Tinybird
+ * Send sale event to Tinybird with affiliate attribution
  */
 async function logSaleToTinybird(data: {
     workspace_id: string
     invoice_id: string
     click_id: string | null
+    link_id: string | null      // NEW: For affiliate stats
+    affiliate_id: string | null // NEW: For affiliate stats
     customer_external_id: string
     amount: number
     currency: string
@@ -34,6 +36,8 @@ async function logSaleToTinybird(data: {
         workspace_id: data.workspace_id,
         invoice_id: data.invoice_id,
         click_id: data.click_id,
+        link_id: data.link_id,          // NEW
+        affiliate_id: data.affiliate_id, // NEW
         customer_external_id: data.customer_external_id,
         amount: data.amount,
         currency: data.currency.toUpperCase(),
@@ -42,6 +46,8 @@ async function logSaleToTinybird(data: {
 
     console.log('[Multi-Tenant Webhook] 📊 Sending to Tinybird:', {
         workspace_id: payload.workspace_id,
+        link_id: payload.link_id,
+        affiliate_id: payload.affiliate_id,
         amount: payload.amount,
         currency: payload.currency,
     })
@@ -169,18 +175,51 @@ export async function POST(
             ? session.invoice
             : session.id
 
+        // ========================================
+        // 4.1 RESOLVE AFFILIATE FROM CLICK_ID
+        // ========================================
+        let linkId: string | null = null
+        let affiliateId: string | null = null
+
+        if (clickId) {
+            // Try to find the ShortLink from click_id slug pattern
+            // click_id format is typically: clk_<slug> or just the slug
+            const slug = clickId.startsWith('clk_') ? clickId.slice(4) : clickId
+
+            // Find ShortLink by slug and get its enrollment
+            const shortLink = await prisma.shortLink.findFirst({
+                where: { slug },
+                include: {
+                    enrollment: true  // Get the MissionEnrollment if exists
+                }
+            })
+
+            if (shortLink) {
+                linkId = shortLink.id
+                // If this link has an enrollment, get the affiliate (user_id)
+                if (shortLink.enrollment) {
+                    affiliateId = shortLink.enrollment.user_id
+                    console.log(`[Multi-Tenant Webhook] 🔗 Attribution: Link ${linkId} → Affiliate ${affiliateId}`)
+                }
+            }
+        }
+
         console.log(`[Multi-Tenant Webhook] 💰 Sale for Workspace ${workspaceId} verified via Endpoint ${endpointId}`)
         console.log('[Multi-Tenant Webhook] 📦 Details:', {
             amount: `${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`,
             customer: customerExternalId,
             click_id: clickId,
+            link_id: linkId,
+            affiliate_id: affiliateId,
         })
 
-        // Log to Tinybird
+        // Log to Tinybird with affiliate attribution
         await logSaleToTinybird({
             workspace_id: workspaceId,
             invoice_id: invoiceId,
             click_id: clickId,
+            link_id: linkId,
+            affiliate_id: affiliateId,
             customer_external_id: customerExternalId,
             amount,
             currency,
