@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { getAllMissions, joinMission } from '@/app/actions/marketplace'
+import { ActivityLog } from '@/components/ActivityLog'
 
 interface AffiliateStats {
     clicks: number
@@ -335,6 +336,11 @@ export default function MarketplacePage() {
                         </div>
                     </div>
                 )}
+
+                {/* Activity Log for debugging affiliate events */}
+                <div className="mt-8">
+                    <ActivityLog mode="affiliate" />
+                </div>
             </div>
         </div>
     )

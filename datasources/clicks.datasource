@@ -5,6 +5,7 @@ SCHEMA >
     `workspace_id` String `json:$.workspace_id`,
     `click_id` String `json:$.click_id`,
     `link_id` String `json:$.link_id`,
+    `affiliate_id` Nullable(String) `json:$.affiliate_id`,
     `url` String `json:$.url`,
     `user_agent` String `json:$.user_agent`,
     `ip` String `json:$.ip`,

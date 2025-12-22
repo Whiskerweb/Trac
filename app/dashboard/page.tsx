@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { CreateLinkModal } from '@/components/CreateLinkModal'
 import { deleteShortLink } from '@/app/actions/links'
+import { ActivityLog } from '@/components/ActivityLog'
 import Link from 'next/link'
 
 interface KPIData {
@@ -358,6 +359,11 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-400 mt-6 text-center">
                     Données actualisées automatiquement toutes les 30 secondes
                 </p>
+            </div>
+
+            {/* Activity Log for debugging */}
+            <div className="mt-8">
+                <ActivityLog mode="startup" />
             </div>
 
             {/* Create Link Modal */}
