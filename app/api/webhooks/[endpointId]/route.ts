@@ -176,31 +176,41 @@ export async function POST(
             : session.id
 
         // ========================================
-        // 4.1 RESOLVE AFFILIATE FROM CLICK_ID
+        // 4.1 RESOLVE AFFILIATE FROM CLICK_ID (FAIL-SAFE)
         // ========================================
+        // ⚠️ CRITICAL: This is OPTIONAL enrichment. If it fails, sale MUST still be logged.
         let linkId: string | null = null
         let affiliateId: string | null = null
 
         if (clickId) {
-            // Try to find the ShortLink from click_id slug pattern
-            // click_id format is typically: clk_<slug> or just the slug
-            const slug = clickId.startsWith('clk_') ? clickId.slice(4) : clickId
+            try {
+                // Try to find the ShortLink from click_id slug pattern
+                // click_id format is typically: clk_<slug> or just the slug
+                const slug = clickId.startsWith('clk_') ? clickId.slice(4) : clickId
 
-            // Find ShortLink by slug and get its enrollment
-            const shortLink = await prisma.shortLink.findFirst({
-                where: { slug },
-                include: {
-                    enrollment: true  // Get the MissionEnrollment if exists
-                }
-            })
+                // Find ShortLink by slug and get its enrollment
+                // This query is non-blocking - if it fails, we continue without attribution
+                const shortLink = await prisma.shortLink.findFirst({
+                    where: { slug },
+                    include: {
+                        enrollment: true  // Get the MissionEnrollment if exists
+                    }
+                })
 
-            if (shortLink) {
-                linkId = shortLink.id
-                // If this link has an enrollment, get the affiliate (user_id)
-                if (shortLink.enrollment) {
-                    affiliateId = shortLink.enrollment.user_id
-                    console.log(`[Multi-Tenant Webhook] 🔗 Attribution: Link ${linkId} → Affiliate ${affiliateId}`)
+                if (shortLink) {
+                    linkId = shortLink.id
+                    // If this link has an enrollment, get the affiliate (user_id)
+                    if (shortLink.enrollment) {
+                        affiliateId = shortLink.enrollment.user_id
+                        console.log(`[Multi-Tenant Webhook] 🔗 Attribution: Link ${linkId} → Affiliate ${affiliateId}`)
+                    }
+                } else {
+                    console.log(`[Multi-Tenant Webhook] ℹ️ No ShortLink found for slug: ${slug}`)
                 }
+            } catch (attributionError) {
+                // ⚠️ FAIL-SAFE: Attribution failed but sale MUST still be logged
+                console.error('[Multi-Tenant Webhook] ⚠️ Affiliate attribution failed (non-blocking):', attributionError)
+                // linkId and affiliateId remain null - sale continues without attribution
             }
         }
 
@@ -213,17 +223,25 @@ export async function POST(
             affiliate_id: affiliateId,
         })
 
-        // Log to Tinybird with affiliate attribution
-        await logSaleToTinybird({
-            workspace_id: workspaceId,
-            invoice_id: invoiceId,
-            click_id: clickId,
-            link_id: linkId,
-            affiliate_id: affiliateId,
-            customer_external_id: customerExternalId,
-            amount,
-            currency,
-        })
+        // ========================================
+        // 4.2 LOG TO TINYBIRD (PRIORITY #1)
+        // ========================================
+        // This is the CRITICAL path - must always execute
+        try {
+            await logSaleToTinybird({
+                workspace_id: workspaceId,
+                invoice_id: invoiceId,
+                click_id: clickId,
+                link_id: linkId,
+                affiliate_id: affiliateId,
+                customer_external_id: customerExternalId,
+                amount,
+                currency,
+            })
+        } catch (tinybirdError) {
+            // Log error but don't crash the webhook response
+            console.error('[Multi-Tenant Webhook] ❌ Tinybird logging failed:', tinybirdError)
+        }
     }
 
     // ========================================
