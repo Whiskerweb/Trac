@@ -47,7 +47,7 @@ interface MissionWithEnrollment {
 
 /**
  * Fetch affiliate stats from Tinybird for given link IDs
- * Returns clicks, sales count, and revenue for each link
+ * Returns clicks, sales count, and revenue for each link (properly attributed)
  */
 async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<string, AffiliateStats>> {
     const statsMap = new Map<string, AffiliateStats>()
@@ -62,10 +62,10 @@ async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<str
     })
 
     try {
-        // 1. GET CLICKS by link_id
         const linkIdList = linkIds.map(id => `'${id}'`).join(',')
-        const clicksQuery = `SELECT link_id, count() as clicks FROM clicks WHERE link_id IN (${linkIdList}) GROUP BY link_id`
 
+        // 1. GET CLICKS by link_id
+        const clicksQuery = `SELECT link_id, count() as clicks FROM clicks WHERE link_id IN (${linkIdList}) GROUP BY link_id`
         const clicksResponse = await fetch(
             `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
             { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
@@ -77,59 +77,50 @@ async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<str
             for (const line of lines) {
                 const [link_id, clicks] = line.split('\t')
                 if (link_id && statsMap.has(link_id)) {
-                    const stats = statsMap.get(link_id)!
-                    stats.clicks = parseInt(clicks) || 0
+                    statsMap.get(link_id)!.clicks = parseInt(clicks) || 0
                 }
             }
         }
 
-        // 2. GET SALES by matching click_ids that belong to affiliate's links
-        // First get the click_ids from affiliate's clicks
-        const clickIdsQuery = `SELECT DISTINCT click_id FROM clicks WHERE link_id IN (${linkIdList})`
-        const clickIdsResponse = await fetch(
-            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clickIdsQuery)}`,
+        // 2. Build click_id -> link_id map
+        const clickToLinkQuery = `SELECT click_id, link_id FROM clicks WHERE link_id IN (${linkIdList})`
+        const clickToLinkResponse = await fetch(
+            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clickToLinkQuery)}`,
             { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
         )
 
-        if (clickIdsResponse.ok) {
-            const clickIdsText = await clickIdsResponse.text()
-            const affiliateClickIds = clickIdsText.trim().split('\n').filter(id => id.trim())
+        const clickToLinkMap = new Map<string, string>()
 
-            if (affiliateClickIds.length > 0) {
-                // Now get sales that have these click_ids
-                const clickIdList = affiliateClickIds.map(id => `'${id}'`).join(',')
-                const salesQuery = `SELECT click_id, SUM(amount) as revenue FROM sales WHERE click_id IN (${clickIdList}) GROUP BY click_id`
+        if (clickToLinkResponse.ok) {
+            const text = await clickToLinkResponse.text()
+            for (const line of text.trim().split('\n').filter(l => l.trim())) {
+                const [click_id, link_id] = line.split('\t')
+                if (click_id && link_id) {
+                    clickToLinkMap.set(click_id, link_id)
+                }
+            }
+        }
 
-                const salesResponse = await fetch(
-                    `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
-                    { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-                )
+        // 3. GET SALES and attribute to links
+        if (clickToLinkMap.size > 0) {
+            const clickIdList = Array.from(clickToLinkMap.keys()).map(id => `'${id}'`).join(',')
+            const salesQuery = `SELECT click_id, amount FROM sales WHERE click_id IN (${clickIdList})`
 
-                if (salesResponse.ok) {
-                    const salesText = await salesResponse.text()
-                    const salesLines = salesText.trim().split('\n').filter(line => line.trim())
+            const salesResponse = await fetch(
+                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
+                { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+            )
 
-                    // We need to map click_id back to link_id
-                    // For now, aggregate all sales across all links (simplified)
-                    let totalSales = 0
-                    let totalRevenue = 0
+            if (salesResponse.ok) {
+                const salesText = await salesResponse.text()
+                for (const line of salesText.trim().split('\n').filter(l => l.trim())) {
+                    const [click_id, amount] = line.split('\t')
+                    const link_id = clickToLinkMap.get(click_id)
 
-                    for (const line of salesLines) {
-                        const [, revenue] = line.split('\t')
-                        if (revenue) {
-                            totalSales++
-                            totalRevenue += parseInt(revenue) || 0
-                        }
-                    }
-
-                    // Distribute to first link (simplified - in production we'd need proper link-level attribution)
-                    if (linkIds.length > 0 && (totalSales > 0 || totalRevenue > 0)) {
-                        // For now, show totals on all links
-                        linkIds.forEach(linkId => {
-                            const stats = statsMap.get(linkId)!
-                            stats.sales = totalSales
-                            stats.revenue = totalRevenue / 100 // Convert cents to euros
-                        })
+                    if (link_id && statsMap.has(link_id)) {
+                        const stats = statsMap.get(link_id)!
+                        stats.sales += 1
+                        stats.revenue += (parseInt(amount) || 0) / 100
                     }
                 }
             }
