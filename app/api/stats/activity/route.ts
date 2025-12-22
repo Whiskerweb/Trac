@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,7 @@ interface ActivityEvent {
     type: 'click' | 'sale'
     timestamp: string
     link_id: string | null
+    link_slug: string | null
     affiliate_id: string | null
     workspace_id: string
     amount?: number
@@ -21,7 +23,6 @@ interface ActivityEvent {
 
 /**
  * Parse Tinybird SQL response (TSV format by default)
- * First line is headers, subsequent lines are data
  */
 function parseTSVResponse(text: string, columns: string[]): Record<string, string>[] {
     if (!text || text.trim() === '') return []
@@ -29,7 +30,6 @@ function parseTSVResponse(text: string, columns: string[]): Record<string, strin
     const lines = text.trim().split('\n')
     const results: Record<string, string>[] = []
 
-    // Each line is tab-separated values matching our column order
     for (const line of lines) {
         const values = line.split('\t')
         if (values.length >= columns.length) {
@@ -47,6 +47,9 @@ function parseTSVResponse(text: string, columns: string[]): Record<string, strin
 /**
  * GET /api/stats/activity
  * Returns combined click and sale events for debugging
+ * 
+ * For AFFILIATES: We lookup their ShortLinks by affiliate_id from the DB,
+ * then filter Tinybird events by those link_ids.
  */
 export async function GET(req: NextRequest) {
     const supabase = await createClient()
@@ -67,91 +70,189 @@ export async function GET(req: NextRequest) {
     const events: ActivityEvent[] = []
 
     // ========================================
-    // FETCH CLICKS (filter by affiliate in affiliate mode)
+    // FOR AFFILIATES: Get their link_ids from DB
+    // ========================================
+    let affiliateLinkIds: string[] = []
+    let affiliateLinkMap: Map<string, string> = new Map() // link_id -> slug
+
+    if (viewMode === 'affiliate') {
+        const affiliateLinks = await prisma.shortLink.findMany({
+            where: { affiliate_id: user.id },
+            select: { id: true, slug: true }
+        })
+        affiliateLinkIds = affiliateLinks.map(l => l.id)
+        affiliateLinks.forEach(l => affiliateLinkMap.set(l.id, l.slug))
+
+        console.log(`[Activity API] Found ${affiliateLinkIds.length} links for affiliate ${user.id}`)
+    }
+
+    // ========================================
+    // FETCH CLICKS (use columns that exist in Tinybird Cloud)
     // ========================================
     try {
-        const clicksColumns = ['timestamp', 'workspace_id', 'click_id', 'link_id', 'affiliate_id', 'url', 'country', 'device']
+        // Only use columns that definitely exist
+        const clicksColumns = ['timestamp', 'workspace_id', 'click_id', 'link_id', 'url', 'country', 'device']
 
-        // FIX #2: Filter clicks by affiliate_id in affiliate mode
-        const clicksFilter = viewMode === 'affiliate'
-            ? `affiliate_id = '${user.id}'`  // Affiliate sees only their clicks
-            : `workspace_id = '${user.id}'`  // Startup sees all workspace clicks
+        let clicksQuery: string
+        if (viewMode === 'affiliate') {
+            if (affiliateLinkIds.length === 0) {
+                console.log('[Activity API] Affiliate has no links, skipping clicks')
+            } else {
+                // Filter clicks by link_ids owned by this affiliate
+                const linkIdList = affiliateLinkIds.map(id => `'${id}'`).join(',')
+                clicksQuery = `SELECT ${clicksColumns.join(', ')} FROM clicks WHERE link_id IN (${linkIdList}) ORDER BY timestamp DESC LIMIT ${limit}`
 
-        const clicksQuery = `SELECT ${clicksColumns.join(', ')} FROM clicks WHERE ${clicksFilter} ORDER BY timestamp DESC LIMIT ${limit}`
+                const clicksResponse = await fetch(
+                    `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
+                    { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+                )
 
-        const clicksResponse = await fetch(
-            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
-            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-        )
+                if (clicksResponse.ok) {
+                    const clicksText = await clicksResponse.text()
+                    const clicksData = parseTSVResponse(clicksText, clicksColumns)
+                    console.log(`[Activity API] Parsed ${clicksData.length} affiliate clicks`)
 
-        if (clicksResponse.ok) {
-            const clicksText = await clicksResponse.text()
-            const clicksData = parseTSVResponse(clicksText, clicksColumns)
-
-            console.log(`[Activity API] Parsed ${clicksData.length} clicks`)
-
-            for (const click of clicksData) {
-                events.push({
-                    type: 'click',
-                    timestamp: click.timestamp,
-                    link_id: click.link_id || null,
-                    affiliate_id: click.affiliate_id || null,  // FIX #2: Include affiliate_id
-                    workspace_id: click.workspace_id,
-                    click_id: click.click_id,
-                    country: click.country,
-                    device: click.device,
-                })
+                    for (const click of clicksData) {
+                        events.push({
+                            type: 'click',
+                            timestamp: click.timestamp,
+                            link_id: click.link_id || null,
+                            link_slug: affiliateLinkMap.get(click.link_id) || null,
+                            affiliate_id: user.id, // We know it's theirs
+                            workspace_id: click.workspace_id,
+                            click_id: click.click_id,
+                            country: click.country,
+                            device: click.device,
+                        })
+                    }
+                } else {
+                    const errorText = await clicksResponse.text()
+                    console.error(`[Activity API] Clicks error:`, errorText.slice(0, 200))
+                }
             }
         } else {
-            const errorText = await clicksResponse.text()
-            console.error(`[Activity API] Clicks error ${clicksResponse.status}:`, errorText.slice(0, 200))
+            // Startup mode: filter by workspace_id
+            clicksQuery = `SELECT ${clicksColumns.join(', ')} FROM clicks WHERE workspace_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
+
+            const clicksResponse = await fetch(
+                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
+                { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+            )
+
+            if (clicksResponse.ok) {
+                const clicksText = await clicksResponse.text()
+                const clicksData = parseTSVResponse(clicksText, clicksColumns)
+                console.log(`[Activity API] Parsed ${clicksData.length} startup clicks`)
+
+                for (const click of clicksData) {
+                    events.push({
+                        type: 'click',
+                        timestamp: click.timestamp,
+                        link_id: click.link_id || null,
+                        link_slug: null,
+                        affiliate_id: null,
+                        workspace_id: click.workspace_id,
+                        click_id: click.click_id,
+                        country: click.country,
+                        device: click.device,
+                    })
+                }
+            } else {
+                const errorText = await clicksResponse.text()
+                console.error(`[Activity API] Clicks error:`, errorText.slice(0, 200))
+            }
         }
     } catch (err) {
         console.error('[Activity API] Clicks exception:', err)
     }
 
     // ========================================
-    // FETCH SALES (use only columns that exist)
+    // FETCH SALES (use columns that exist in Tinybird Cloud)
     // ========================================
     try {
-        // Query columns - include link_id and affiliate_id if they exist
-        const salesColumns = ['timestamp', 'workspace_id', 'click_id', 'invoice_id', 'amount', 'currency', 'link_id', 'affiliate_id']
+        // Only use columns that definitely exist
+        const salesColumns = ['timestamp', 'workspace_id', 'click_id', 'invoice_id', 'amount', 'currency']
 
-        // Different filter based on view mode
-        const salesFilter = viewMode === 'affiliate'
-            ? `affiliate_id = '${user.id}'`  // Affiliate sees their own sales
-            : `workspace_id = '${user.id}'`  // Startup sees all workspace sales
+        let salesQuery: string
+        if (viewMode === 'affiliate') {
+            if (affiliateLinkIds.length === 0) {
+                console.log('[Activity API] Affiliate has no links, skipping sales')
+            } else {
+                // We need to find sales that came from clicks on affiliate links
+                // For now, we'll get all sales and match by click_id later
+                // This is a workaround until link_id column is added to sales in Tinybird
+                salesQuery = `SELECT ${salesColumns.join(', ')} FROM sales ORDER BY timestamp DESC LIMIT 100`
 
-        const salesQuery = `SELECT ${salesColumns.join(', ')} FROM sales WHERE ${salesFilter} ORDER BY timestamp DESC LIMIT ${limit}`
+                const salesResponse = await fetch(
+                    `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
+                    { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+                )
 
-        console.log(`[Activity API] Sales query (${viewMode}):`, salesQuery.slice(0, 100))
+                if (salesResponse.ok) {
+                    const salesText = await salesResponse.text()
+                    const salesData = parseTSVResponse(salesText, salesColumns)
 
-        const salesResponse = await fetch(
-            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
-            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-        )
+                    // Match sales to affiliate's clicks
+                    // Get click_ids from affiliate's clicks we just fetched
+                    const affiliateClickIds = events
+                        .filter(e => e.type === 'click' && e.click_id)
+                        .map(e => e.click_id)
 
-        if (salesResponse.ok) {
-            const salesText = await salesResponse.text()
-            const salesData = parseTSVResponse(salesText, salesColumns)
-
-            console.log(`[Activity API] Parsed ${salesData.length} sales`)
-
-            for (const sale of salesData) {
-                events.push({
-                    type: 'sale',
-                    timestamp: sale.timestamp,
-                    link_id: sale.link_id || null,
-                    affiliate_id: sale.affiliate_id || null,
-                    workspace_id: sale.workspace_id,
-                    amount: parseInt(sale.amount) || 0,
-                    currency: sale.currency || 'EUR',
-                    click_id: sale.click_id || undefined,
-                })
+                    let matchedSales = 0
+                    for (const sale of salesData) {
+                        // Match if click_id is in affiliate's clicks
+                        if (sale.click_id && affiliateClickIds.includes(sale.click_id)) {
+                            matchedSales++
+                            events.push({
+                                type: 'sale',
+                                timestamp: sale.timestamp,
+                                link_id: null, // Would need to lookup
+                                link_slug: null,
+                                affiliate_id: user.id,
+                                workspace_id: sale.workspace_id,
+                                amount: parseInt(sale.amount) || 0,
+                                currency: sale.currency || 'EUR',
+                                click_id: sale.click_id,
+                            })
+                        }
+                    }
+                    console.log(`[Activity API] Matched ${matchedSales} sales for affiliate`)
+                } else {
+                    const errorText = await salesResponse.text()
+                    console.error(`[Activity API] Sales error:`, errorText.slice(0, 200))
+                }
             }
         } else {
-            const errorText = await salesResponse.text()
-            console.error(`[Activity API] Sales error ${salesResponse.status}:`, errorText.slice(0, 200))
+            // Startup mode: filter by workspace_id
+            salesQuery = `SELECT ${salesColumns.join(', ')} FROM sales WHERE workspace_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
+
+            const salesResponse = await fetch(
+                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
+                { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+            )
+
+            if (salesResponse.ok) {
+                const salesText = await salesResponse.text()
+                const salesData = parseTSVResponse(salesText, salesColumns)
+                console.log(`[Activity API] Parsed ${salesData.length} startup sales`)
+
+                for (const sale of salesData) {
+                    events.push({
+                        type: 'sale',
+                        timestamp: sale.timestamp,
+                        link_id: null,
+                        link_slug: null,
+                        affiliate_id: null,
+                        workspace_id: sale.workspace_id,
+                        amount: parseInt(sale.amount) || 0,
+                        currency: sale.currency || 'EUR',
+                        click_id: sale.click_id,
+                    })
+                }
+            } else {
+                const errorText = await salesResponse.text()
+                console.error(`[Activity API] Sales error:`, errorText.slice(0, 200))
+            }
         }
     } catch (err) {
         console.error('[Activity API] Sales exception:', err)
@@ -169,6 +270,7 @@ export async function GET(req: NextRequest) {
         success: true,
         mode: viewMode,
         user_id: user.id,
+        affiliate_links_count: affiliateLinkIds.length,
         total: limitedEvents.length,
         events: limitedEvents,
     })
