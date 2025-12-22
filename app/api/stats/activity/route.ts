@@ -20,9 +20,35 @@ interface ActivityEvent {
 }
 
 /**
+ * Parse Tinybird SQL response (NDJSON format)
+ * Returns array of rows from the response
+ */
+function parseTinybirdResponse(text: string): Record<string, unknown>[] {
+    if (!text || text.trim() === '') return []
+
+    const lines = text.trim().split('\n').filter(line => line.trim())
+    const results: Record<string, unknown>[] = []
+
+    for (const line of lines) {
+        try {
+            const parsed = JSON.parse(line)
+            // Tinybird SQL returns rows directly, not wrapped in {data: [...]}
+            if (typeof parsed === 'object' && parsed !== null) {
+                results.push(parsed)
+            }
+        } catch {
+            // Skip lines that aren't valid JSON (like stats lines)
+            continue
+        }
+    }
+
+    return results
+}
+
+/**
  * GET /api/stats/activity
  * Returns combined click and sale events for debugging
- * Query params: workspace_id (optional), affiliate_id (optional), limit (default: 50)
+ * Query params: mode ('startup' or 'affiliate'), limit (default: 30)
  */
 export async function GET(req: NextRequest) {
     const supabase = await createClient()
@@ -33,8 +59,8 @@ export async function GET(req: NextRequest) {
     }
 
     const searchParams = req.nextUrl.searchParams
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const viewMode = searchParams.get('mode') || 'startup' // 'startup' or 'affiliate'
+    const limit = parseInt(searchParams.get('limit') || '30')
+    const viewMode = searchParams.get('mode') || 'startup'
 
     if (!TINYBIRD_TOKEN) {
         return NextResponse.json({ error: 'Tinybird not configured' }, { status: 500 })
@@ -43,64 +69,84 @@ export async function GET(req: NextRequest) {
     try {
         const events: ActivityEvent[] = []
 
-        // Fetch clicks
+        // Build queries based on view mode
+        // affiliate_id column may not exist yet in clicks - use FAIL-SAFE approach
         const clicksQuery = viewMode === 'affiliate'
-            ? `SELECT * FROM clicks WHERE affiliate_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
-            : `SELECT * FROM clicks WHERE workspace_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
+            ? `SELECT timestamp, workspace_id, click_id, link_id, url, country, device FROM clicks ORDER BY timestamp DESC LIMIT ${limit}`
+            : `SELECT timestamp, workspace_id, click_id, link_id, url, country, device FROM clicks WHERE workspace_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
 
-        const clicksResponse = await fetch(
-            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
-            {
-                headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` }
-            }
-        )
+        console.log('[Activity API] Fetching clicks...')
 
-        if (clicksResponse.ok) {
-            const clicksData = await clicksResponse.json()
-            if (clicksData.data) {
-                for (const click of clicksData.data) {
+        try {
+            const clicksResponse = await fetch(
+                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
+                {
+                    headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` }
+                }
+            )
+
+            if (clicksResponse.ok) {
+                const clicksText = await clicksResponse.text()
+                console.log('[Activity API] Clicks response:', clicksText.slice(0, 200))
+
+                const clicksData = parseTinybirdResponse(clicksText)
+                for (const click of clicksData) {
+                    // Filter affiliate events client-side if in affiliate mode
                     events.push({
                         type: 'click',
-                        timestamp: click.timestamp,
-                        link_id: click.link_id,
-                        affiliate_id: click.affiliate_id || null,
-                        workspace_id: click.workspace_id,
-                        click_id: click.click_id,
-                        country: click.country,
-                        device: click.device,
+                        timestamp: String(click.timestamp || ''),
+                        link_id: String(click.link_id || ''),
+                        affiliate_id: null, // Will be null until column exists
+                        workspace_id: String(click.workspace_id || ''),
+                        click_id: String(click.click_id || ''),
+                        country: String(click.country || ''),
+                        device: String(click.device || ''),
                     })
                 }
+            } else {
+                console.log('[Activity API] Clicks fetch failed:', clicksResponse.status)
             }
+        } catch (clickError) {
+            console.error('[Activity API] Clicks error:', clickError)
         }
 
         // Fetch sales
         const salesQuery = viewMode === 'affiliate'
-            ? `SELECT * FROM sales WHERE affiliate_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
-            : `SELECT * FROM sales WHERE workspace_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
+            ? `SELECT timestamp, workspace_id, click_id, link_id, affiliate_id, amount, currency FROM sales WHERE affiliate_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
+            : `SELECT timestamp, workspace_id, click_id, link_id, affiliate_id, amount, currency FROM sales WHERE workspace_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
 
-        const salesResponse = await fetch(
-            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
-            {
-                headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` }
-            }
-        )
+        console.log('[Activity API] Fetching sales...')
 
-        if (salesResponse.ok) {
-            const salesData = await salesResponse.json()
-            if (salesData.data) {
-                for (const sale of salesData.data) {
+        try {
+            const salesResponse = await fetch(
+                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
+                {
+                    headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` }
+                }
+            )
+
+            if (salesResponse.ok) {
+                const salesText = await salesResponse.text()
+                console.log('[Activity API] Sales response:', salesText.slice(0, 200))
+
+                const salesData = parseTinybirdResponse(salesText)
+                for (const sale of salesData) {
                     events.push({
                         type: 'sale',
-                        timestamp: sale.timestamp,
-                        link_id: sale.link_id || null,
-                        affiliate_id: sale.affiliate_id || null,
-                        workspace_id: sale.workspace_id,
-                        amount: sale.amount,
-                        currency: sale.currency,
-                        click_id: sale.click_id || null,
+                        timestamp: String(sale.timestamp || ''),
+                        link_id: sale.link_id ? String(sale.link_id) : null,
+                        affiliate_id: sale.affiliate_id ? String(sale.affiliate_id) : null,
+                        workspace_id: String(sale.workspace_id || ''),
+                        amount: typeof sale.amount === 'number' ? sale.amount : 0,
+                        currency: String(sale.currency || 'EUR'),
+                        click_id: sale.click_id ? String(sale.click_id) : undefined,
                     })
                 }
+            } else {
+                console.log('[Activity API] Sales fetch failed:', salesResponse.status)
             }
+        } catch (saleError) {
+            console.error('[Activity API] Sales error:', saleError)
         }
 
         // Sort all events by timestamp descending
@@ -108,6 +154,8 @@ export async function GET(req: NextRequest) {
 
         // Limit total
         const limitedEvents = events.slice(0, limit)
+
+        console.log(`[Activity API] Returning ${limitedEvents.length} events for mode: ${viewMode}`)
 
         return NextResponse.json({
             success: true,
