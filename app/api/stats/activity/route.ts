@@ -110,9 +110,17 @@ export async function GET(req: NextRequest) {
     // FETCH SALES (use only columns that exist)
     // ========================================
     try {
-        // Only query columns that exist in the current schema
-        const salesColumns = ['timestamp', 'workspace_id', 'click_id', 'invoice_id', 'amount', 'currency']
-        const salesQuery = `SELECT ${salesColumns.join(', ')} FROM sales WHERE workspace_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
+        // Query columns - include link_id and affiliate_id if they exist
+        const salesColumns = ['timestamp', 'workspace_id', 'click_id', 'invoice_id', 'amount', 'currency', 'link_id', 'affiliate_id']
+
+        // Different filter based on view mode
+        const salesFilter = viewMode === 'affiliate'
+            ? `affiliate_id = '${user.id}'`  // Affiliate sees their own sales
+            : `workspace_id = '${user.id}'`  // Startup sees all workspace sales
+
+        const salesQuery = `SELECT ${salesColumns.join(', ')} FROM sales WHERE ${salesFilter} ORDER BY timestamp DESC LIMIT ${limit}`
+
+        console.log(`[Activity API] Sales query (${viewMode}):`, salesQuery.slice(0, 100))
 
         const salesResponse = await fetch(
             `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
@@ -129,8 +137,8 @@ export async function GET(req: NextRequest) {
                 events.push({
                     type: 'sale',
                     timestamp: sale.timestamp,
-                    link_id: null, // Will add when column exists
-                    affiliate_id: null, // Will add when column exists
+                    link_id: sale.link_id || null,
+                    affiliate_id: sale.affiliate_id || null,
                     workspace_id: sale.workspace_id,
                     amount: parseInt(sale.amount) || 0,
                     currency: sale.currency || 'EUR',
