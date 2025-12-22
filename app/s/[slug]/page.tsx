@@ -77,6 +77,7 @@ function logClick(payload: {
     click_id: string
     workspace_id: string
     link_id: string
+    affiliate_id: string | null  // FIX #1: Include for affiliate filtering
     url: string
     user_agent: string
     ip: string
@@ -166,6 +167,7 @@ export default async function TracRedirect({
         click_id,
         workspace_id: link.workspace_id,
         link_id: link.id,  // Use actual UUID for attribution lookup
+        affiliate_id: link.affiliate_id || null,  // FIX #1: Include affiliate for filtering
         url: link.original_url,
         user_agent: userAgent,
         ip,

@@ -67,13 +67,17 @@ export async function GET(req: NextRequest) {
     const events: ActivityEvent[] = []
 
     // ========================================
-    // FETCH CLICKS (columns we know exist)
+    // FETCH CLICKS (filter by affiliate in affiliate mode)
     // ========================================
     try {
-        const clicksColumns = ['timestamp', 'workspace_id', 'click_id', 'link_id', 'url', 'country', 'device']
-        const clicksQuery = viewMode === 'affiliate'
-            ? `SELECT ${clicksColumns.join(', ')} FROM clicks ORDER BY timestamp DESC LIMIT ${limit}`
-            : `SELECT ${clicksColumns.join(', ')} FROM clicks WHERE workspace_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
+        const clicksColumns = ['timestamp', 'workspace_id', 'click_id', 'link_id', 'affiliate_id', 'url', 'country', 'device']
+
+        // FIX #2: Filter clicks by affiliate_id in affiliate mode
+        const clicksFilter = viewMode === 'affiliate'
+            ? `affiliate_id = '${user.id}'`  // Affiliate sees only their clicks
+            : `workspace_id = '${user.id}'`  // Startup sees all workspace clicks
+
+        const clicksQuery = `SELECT ${clicksColumns.join(', ')} FROM clicks WHERE ${clicksFilter} ORDER BY timestamp DESC LIMIT ${limit}`
 
         const clicksResponse = await fetch(
             `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
@@ -91,7 +95,7 @@ export async function GET(req: NextRequest) {
                     type: 'click',
                     timestamp: click.timestamp,
                     link_id: click.link_id || null,
-                    affiliate_id: null, // Not in clicks table yet
+                    affiliate_id: click.affiliate_id || null,  // FIX #2: Include affiliate_id
                     workspace_id: click.workspace_id,
                     click_id: click.click_id,
                     country: click.country,
