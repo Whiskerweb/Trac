@@ -184,28 +184,40 @@ export async function POST(
 
         if (clickId) {
             try {
-                // Try to find the ShortLink from click_id slug pattern
-                // click_id format is typically: clk_<slug> or just the slug
-                const slug = clickId.startsWith('clk_') ? clickId.slice(4) : clickId
+                // Step 1: Query Tinybird to get link_id from click_id
+                console.log(`[Multi-Tenant Webhook] 🔍 Looking up click_id: ${clickId}`)
 
-                // Find ShortLink by slug and get its enrollment
-                // This query is non-blocking - if it fails, we continue without attribution
-                const shortLink = await prisma.shortLink.findFirst({
-                    where: { slug },
-                    include: {
-                        enrollment: true  // Get the MissionEnrollment if exists
-                    }
-                })
+                const tinybirdQuery = `SELECT link_id FROM clicks WHERE click_id = '${clickId}' LIMIT 1`
+                const tinybirdResponse = await fetch(
+                    `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(tinybirdQuery)}`,
+                    { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+                )
 
-                if (shortLink) {
-                    linkId = shortLink.id
-                    // If this link has an enrollment, get the affiliate (user_id)
-                    if (shortLink.enrollment) {
-                        affiliateId = shortLink.enrollment.user_id
-                        console.log(`[Multi-Tenant Webhook] 🔗 Attribution: Link ${linkId} → Affiliate ${affiliateId}`)
+                if (tinybirdResponse.ok) {
+                    const tinybirdText = await tinybirdResponse.text()
+                    // TSV format: first line is the link_id value
+                    const lines = tinybirdText.trim().split('\n')
+                    if (lines.length > 0 && lines[0].trim()) {
+                        linkId = lines[0].trim()
+                        console.log(`[Multi-Tenant Webhook] ✅ Found link_id from Tinybird: ${linkId}`)
+
+                        // Step 2: Find ShortLink by ID to get affiliate
+                        const shortLink = await prisma.shortLink.findFirst({
+                            where: { id: linkId },
+                            include: { enrollment: true }
+                        })
+
+                        if (shortLink?.enrollment) {
+                            affiliateId = shortLink.enrollment.user_id
+                            console.log(`[Multi-Tenant Webhook] 🔗 Attribution: Link ${linkId} → Affiliate ${affiliateId}`)
+                        } else if (shortLink?.affiliate_id) {
+                            // Fallback: use affiliate_id from ShortLink directly
+                            affiliateId = shortLink.affiliate_id
+                            console.log(`[Multi-Tenant Webhook] 🔗 Attribution (direct): Link ${linkId} → Affiliate ${affiliateId}`)
+                        }
                     }
                 } else {
-                    console.log(`[Multi-Tenant Webhook] ℹ️ No ShortLink found for slug: ${slug}`)
+                    console.log(`[Multi-Tenant Webhook] ℹ️ Tinybird lookup failed: ${tinybirdResponse.status}`)
                 }
             } catch (attributionError) {
                 // ⚠️ FAIL-SAFE: Attribution failed but sale MUST still be logged

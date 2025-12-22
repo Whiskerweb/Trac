@@ -165,7 +165,7 @@ export default async function TracRedirect({
         timestamp: new Date().toISOString(),
         click_id,
         workspace_id: link.workspace_id,
-        link_id: link.slug,
+        link_id: link.id,  // Use actual UUID for attribution lookup
         url: link.original_url,
         user_agent: userAgent,
         ip,
