@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import useSWR from 'swr'
 import {
     MousePointer2, CreditCard, DollarSign, BarChart3, AlertCircle,
-    Loader2, Copy, Check, Plus, Link2, ExternalLink, Trash2, Puzzle, Target, ShoppingBag
+    Loader2, Copy, Check, Plus, Link2, ExternalLink, Trash2, Puzzle, Target, ShoppingBag, RefreshCw
 } from 'lucide-react'
 import { CreateLinkModal } from '@/components/CreateLinkModal'
 import { deleteShortLink } from '@/app/actions/links'
@@ -183,18 +183,17 @@ export default function DashboardPage() {
             .catch(() => { })
     }, [])
 
-    // Fetch KPIs
-    const { data: kpiData, error: kpiError, isLoading: kpiLoading } = useSWR<KPIResponse>('/api/stats/kpi', kpiFetcher, {
-        refreshInterval: 30000,
-        revalidateOnFocus: true,
-        dedupingInterval: 0,
+    // Fetch KPIs (manual refresh only to save Tinybird quota)
+    const { data: kpiData, error: kpiError, isLoading: kpiLoading, mutate: mutateKpi } = useSWR<KPIResponse>('/api/stats/kpi', kpiFetcher, {
+        revalidateOnFocus: false,
+        dedupingInterval: 5000,
     })
 
-    // Fetch user's short links
+    // Fetch user's short links (manual refresh only)
     const { data: links, error: linksError, isLoading: linksLoading, mutate: mutateLinks } = useSWR<ShortLink[]>(
         '/api/links/short',
         linksFetcher,
-        { refreshInterval: 30000 }
+        { revalidateOnFocus: false }
     )
 
     if (kpiLoading) {
@@ -243,6 +242,16 @@ export default function DashboardPage() {
                         <p className="text-gray-500 mt-1">Vue d&apos;ensemble de vos performances</p>
                     </div>
                     <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => {
+                                mutateKpi()
+                                mutateLinks()
+                            }}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+                        >
+                            <RefreshCw className="w-5 h-5" />
+                            Rafraîchir
+                        </button>
                         <Link
                             href="/dashboard/marketplace"
                             className="flex items-center gap-2 px-4 py-2.5 bg-green-100 hover:bg-green-200 text-green-700 font-medium rounded-lg transition-colors"
