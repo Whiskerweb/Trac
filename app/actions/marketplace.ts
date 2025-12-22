@@ -155,12 +155,13 @@ export async function joinMission(missionId: string): Promise<{
         // 3. Generate unique short link slug
         const slug = nanoid(7)
 
-        // 4. Create the ShortLink
+        // 4. Create the ShortLink with DUAL ATTRIBUTION
         const shortLink = await prisma.shortLink.create({
             data: {
                 slug,
                 original_url: mission.target_url,
-                workspace_id: mission.workspace_id, // Belongs to the Startup's workspace for attribution
+                workspace_id: mission.workspace_id, // Startup owner (for API/analytics)
+                affiliate_id: user.id,               // Affiliate owner (for commission tracking)
                 clicks: 0,
             }
         })
