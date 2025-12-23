@@ -143,10 +143,22 @@ export async function middleware(request: NextRequest) {
 
         // Build destination URL with tracking params
         const destinationUrl = new URL(linkData.destination_url)
+        // Use trac_id (matches SDK expectation) + client_reference_id for Stripe
+        destinationUrl.searchParams.set('trac_id', click_id)
         destinationUrl.searchParams.set('client_reference_id', click_id)
 
-        // Redirect to destination
-        return NextResponse.redirect(destinationUrl.toString())
+        // Create redirect response with HTTPOnly cookie fallback
+        // This cookie survives URL parameter stripping by privacy browsers
+        const response = NextResponse.redirect(destinationUrl.toString())
+        response.cookies.set('trac_click_id', click_id, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24 * 30, // 30 days attribution window
+            path: '/',
+        })
+
+        return response
     }
 
     // ============================================
