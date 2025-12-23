@@ -23,6 +23,12 @@ interface ConversionEvent {
 }
 
 async function ingestToTinybird(datasource: string, data: object): Promise<{ success: boolean; error?: string }> {
+    // 🦁 Mock Mode: Intercept calls in development
+    if (process.env.TINYBIRD_MOCK_MODE === 'true') {
+        console.log(`[🦁 MOCK TINYBIRD] Ingesting to ${datasource}:`, data);
+        return { success: true };
+    }
+
     // Debug log pour voir si le token est bien là
     console.log(`[Tinybird] Ingesting to ${datasource}... Token present: ${!!TINYBIRD_TOKEN}`);
 

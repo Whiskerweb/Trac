@@ -21,6 +21,63 @@ const TINYBIRD_ADMIN_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
  */
 export async function GET() {
     // ========================================
+    // 🦁 MOCK MODE: Return fake data for local development
+    // ========================================
+    if (process.env.TINYBIRD_MOCK_MODE === 'true') {
+        console.log('[🦁 MOCK STATS] Serving fake data for /api/stats/kpi')
+
+        // Generate realistic mock timeseries data (last 30 days)
+        const timeseries = []
+        const now = new Date()
+        for (let i = 29; i >= 0; i--) {
+            const date = new Date(now)
+            date.setDate(date.getDate() - i)
+            timeseries.push({
+                date: date.toISOString().split('T')[0],
+                clicks: Math.floor(Math.random() * 50) + 10,
+                leads: Math.floor(Math.random() * 5),
+                sales: Math.floor(Math.random() * 3),
+                revenue: Math.floor(Math.random() * 200) + 50,
+            })
+        }
+
+        // Calculate totals from timeseries
+        const totals = timeseries.reduce(
+            (acc, day) => ({
+                clicks: acc.clicks + day.clicks,
+                leads: acc.leads + day.leads,
+                sales: acc.sales + day.sales,
+                revenue: acc.revenue + day.revenue,
+            }),
+            { clicks: 0, leads: 0, sales: 0, revenue: 0 }
+        )
+
+        return NextResponse.json({
+            meta: [
+                { name: 'date', type: 'Date' },
+                { name: 'clicks', type: 'Int64' },
+                { name: 'leads', type: 'Int64' },
+                { name: 'sales', type: 'Int64' },
+                { name: 'revenue', type: 'Float64' },
+            ],
+            data: [
+                {
+                    ...totals,
+                    timeseries,
+                }
+            ],
+            rows: 1,
+            statistics: { elapsed: 0.001, rows_read: 100, bytes_read: 1024 },
+        }, {
+            headers: {
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+            }
+        })
+    }
+
+    // ========================================
     // SECURITY CHECK 1: Admin Token Present
     // ========================================
     if (!TINYBIRD_ADMIN_TOKEN) {

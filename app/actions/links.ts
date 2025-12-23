@@ -58,6 +58,15 @@ export async function createShortLink(formData: FormData) {
             }
         })
 
+        // ✅ DUAL WRITE: Sync to Redis for low-latency lookups
+        const { setLinkInRedis } = await import('@/lib/redis')
+        await setLinkInRedis(link.slug, {
+            url: link.original_url,
+            linkId: link.id,
+            workspaceId: link.workspace_id,
+            affiliateId: null,
+        })
+
         console.log('[ShortLink] ✅ Created:', link.slug, 'for user:', user.id)
 
         revalidatePath('/dashboard')
@@ -119,6 +128,10 @@ export async function deleteShortLink(id: string) {
     await prisma.shortLink.delete({
         where: { id }
     })
+
+    // ✅ DUAL DELETE: Remove from Redis
+    const { deleteLinkFromRedis } = await import('@/lib/redis')
+    await deleteLinkFromRedis(link.slug)
 
     revalidatePath('/dashboard')
     return { success: true }

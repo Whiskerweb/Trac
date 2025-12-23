@@ -52,6 +52,71 @@ function parseTSVResponse(text: string, columns: string[]): Record<string, strin
  * then filter Tinybird events by those link_ids.
  */
 export async function GET(req: NextRequest) {
+    // ========================================
+    // 🦁 MOCK MODE: Return fake data for local development
+    // ========================================
+    if (process.env.TINYBIRD_MOCK_MODE === 'true') {
+        console.log('[🦁 MOCK STATS] Serving fake data for /api/stats/activity')
+
+        const searchParams = req.nextUrl.searchParams
+        const limit = parseInt(searchParams.get('limit') || '30')
+        const viewMode = searchParams.get('mode') || 'startup'
+
+        // Generate realistic mock events
+        const mockEvents = []
+        const countries = ['FR', 'US', 'DE', 'GB', 'ES', 'IT', 'CA', 'AU']
+        const devices = ['mobile', 'desktop', 'tablet']
+        const cities = ['Paris', 'New York', 'Berlin', 'London', 'Madrid', 'Rome', 'Toronto', 'Sydney']
+
+        const now = new Date()
+
+        for (let i = 0; i < Math.min(limit, 20); i++) {
+            const timestamp = new Date(now.getTime() - i * 1000 * 60 * Math.floor(Math.random() * 30 + 5))
+            const isSale = Math.random() < 0.15 // 15% are sales
+            const countryIndex = Math.floor(Math.random() * countries.length)
+
+            if (isSale) {
+                mockEvents.push({
+                    type: 'sale' as const,
+                    timestamp: timestamp.toISOString(),
+                    link_id: `link_${Math.random().toString(36).substr(2, 9)}`,
+                    link_slug: `promo-${Math.floor(Math.random() * 100)}`,
+                    affiliate_id: viewMode === 'affiliate' ? 'mock_affiliate_id' : null,
+                    workspace_id: 'mock_workspace_id',
+                    amount: Math.floor(Math.random() * 200) + 29,
+                    currency: 'EUR',
+                    click_id: `click_${Math.random().toString(36).substr(2, 9)}`,
+                    country: countries[countryIndex],
+                    device: devices[Math.floor(Math.random() * devices.length)],
+                    _mock_label: `💰 Sale from ${cities[countryIndex]} - Stripe`,
+                })
+            } else {
+                mockEvents.push({
+                    type: 'click' as const,
+                    timestamp: timestamp.toISOString(),
+                    link_id: `link_${Math.random().toString(36).substr(2, 9)}`,
+                    link_slug: `promo-${Math.floor(Math.random() * 100)}`,
+                    affiliate_id: viewMode === 'affiliate' ? 'mock_affiliate_id' : null,
+                    workspace_id: 'mock_workspace_id',
+                    click_id: `click_${Math.random().toString(36).substr(2, 9)}`,
+                    country: countries[countryIndex],
+                    device: devices[Math.floor(Math.random() * devices.length)],
+                    _mock_label: `🖱️ Click from ${cities[countryIndex]}`,
+                })
+            }
+        }
+
+        return NextResponse.json({
+            success: true,
+            mode: viewMode,
+            user_id: 'mock_user_id',
+            affiliate_links_count: viewMode === 'affiliate' ? 5 : 0,
+            total: mockEvents.length,
+            events: mockEvents,
+            _mock: true,
+        })
+    }
+
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 

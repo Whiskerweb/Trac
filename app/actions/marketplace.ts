@@ -300,6 +300,15 @@ export async function joinMission(missionId: string): Promise<{
             }
         })
 
+        // ✅ DUAL WRITE: Sync to Redis for low-latency lookups
+        const { setLinkInRedis } = await import('@/lib/redis')
+        await setLinkInRedis(shortLink.slug, {
+            url: shortLink.original_url,
+            linkId: shortLink.id,
+            workspaceId: shortLink.workspace_id,
+            affiliateId: shortLink.affiliate_id,
+        })
+
         console.log('[Marketplace] 🔗 Created link:', shortLink.slug, '→', mission.target_url)
         console.log('[Marketplace] 🔐 Attribution: Startup', mission.workspace_id, '→ Affiliate', user.id)
 

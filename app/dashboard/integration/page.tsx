@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react'
 import {
     Code2, Webhook, CheckCircle2, Copy, Check,
-    ExternalLink, Zap, AlertCircle, ArrowLeft, Key, RefreshCw
+    ExternalLink, Zap, AlertCircle, ArrowLeft, Key, RefreshCw, Database
 } from 'lucide-react'
 import Link from 'next/link'
 import { getOrCreateApiKey, regenerateApiKey } from '@/app/actions/settings'
 import { WebhookManager } from '@/components/WebhookManager'
+import { syncLinksToRedis } from '@/app/actions/admin'
 
 // =============================================
 // COPY BUTTON COMPONENT
@@ -106,6 +107,8 @@ export default function IntegrationPage() {
     const [keyLoading, setKeyLoading] = useState(true)
     const [regenerating, setRegenerating] = useState(false)
     const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+    const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+    const [syncResult, setSyncResult] = useState<{ count?: number; error?: string } | null>(null)
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -146,6 +149,25 @@ export default function IntegrationPage() {
             setTimeout(() => setTestStatus('idle'), 3000)
         } catch {
             setTestStatus('error')
+        }
+    }
+
+    const handleSyncRedis = async () => {
+        setSyncStatus('loading')
+        setSyncResult(null)
+        try {
+            const result = await syncLinksToRedis()
+            if (result.success) {
+                setSyncStatus('success')
+                setSyncResult({ count: result.count })
+                setTimeout(() => setSyncStatus('idle'), 5000)
+            } else {
+                setSyncStatus('error')
+                setSyncResult({ error: result.error })
+            }
+        } catch (error) {
+            setSyncStatus('error')
+            setSyncResult({ error: 'Erreur réseau' })
         }
     }
 
@@ -268,6 +290,54 @@ export default function IntegrationPage() {
                                     <span className="text-sm font-medium">Échec de la connexion</span>
                                 </div>
                             )}
+                        </div>
+                    </IntegrationCard>
+
+                    {/* Card 4: Redis Sync (Admin) */}
+                    <IntegrationCard
+                        icon={Database}
+                        iconColor="bg-red-500"
+                        title="Synchronisation Redis (Admin)"
+                        description="Synchronisez tous les liens existants de PostgreSQL vers Redis pour les redirections ultra-rapides."
+                    >
+                        <div className="mt-4 flex items-center gap-4">
+                            <button
+                                onClick={handleSyncRedis}
+                                disabled={syncStatus === 'loading'}
+                                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-slate-400 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                            >
+                                {syncStatus === 'loading' ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Synchronisation...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Database className="w-4 h-4" />
+                                        🔄 Sync DB → Redis
+                                    </>
+                                )}
+                            </button>
+
+                            {syncStatus === 'success' && syncResult && (
+                                <div className="flex items-center gap-2 text-green-600">
+                                    <CheckCircle2 className="w-5 h-5" />
+                                    <span className="text-sm font-medium">{syncResult.count} liens synchronisés !</span>
+                                </div>
+                            )}
+
+                            {syncStatus === 'error' && syncResult && (
+                                <div className="flex items-center gap-2 text-red-600">
+                                    <AlertCircle className="w-5 h-5" />
+                                    <span className="text-sm font-medium">{syncResult.error}</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-lg flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-amber-700">
+                                Cette action est idempotente et peut être exécutée plusieurs fois sans risque.
+                            </p>
                         </div>
                     </IntegrationCard>
                 </div>
