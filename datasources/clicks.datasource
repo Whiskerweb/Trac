@@ -17,3 +17,7 @@ SCHEMA >
 ENGINE "MergeTree"
 ENGINE_SORTING_KEY "workspace_id, timestamp"
 ENGINE_TTL "timestamp + toIntervalYear(1)"
+
+FORWARD_QUERY >
+    SELECT timestamp, workspace_id, click_id, link_id, defaultValueOfTypeName('Nullable(String)') AS affiliate_id, url, user_agent, ip, country, city, referrer, device
+

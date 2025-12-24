@@ -52,6 +52,20 @@ export async function GET() {
             { clicks: 0, leads: 0, sales: 0, revenue: 0 }
         )
 
+        // Calculate conversion rate (sales / clicks * 100)
+        const conversion_rate = totals.clicks > 0
+            ? parseFloat(((totals.sales / totals.clicks) * 100).toFixed(2))
+            : 0
+
+        // Mock affiliates data (top 5 partners)
+        const affiliates = [
+            { affiliate_id: 'Alice Johnson', total_clicks: 234, total_sales: 12, total_revenue: 45000 },
+            { affiliate_id: 'Bob Martinez', total_clicks: 189, total_sales: 8, total_revenue: 32000 },
+            { affiliate_id: 'Charlie Chen', total_clicks: 156, total_sales: 7, total_revenue: 28000 },
+            { affiliate_id: 'Diana Foster', total_clicks: 98, total_sales: 4, total_revenue: 15000 },
+            { affiliate_id: 'Eve Williams', total_clicks: 67, total_sales: 2, total_revenue: 9000 },
+        ]
+
         return NextResponse.json({
             meta: [
                 { name: 'date', type: 'Date' },
@@ -59,11 +73,14 @@ export async function GET() {
                 { name: 'leads', type: 'Int64' },
                 { name: 'sales', type: 'Int64' },
                 { name: 'revenue', type: 'Float64' },
+                { name: 'conversion_rate', type: 'Float64' },
             ],
             data: [
                 {
                     ...totals,
+                    conversion_rate,
                     timeseries,
+                    affiliates,
                 }
             ],
             rows: 1,
@@ -110,45 +127,93 @@ export async function GET() {
 
     try {
         // ========================================
-        // BUILD TINYBIRD REQUEST (Strict Isolation)
+        // BUILD TINYBIRD URLS (Two pipes in parallel)
         // ========================================
-        const tinybirdUrl = new URL(`${TINYBIRD_HOST}/v0/pipes/kpis.json`)
+        const baseParams = new URLSearchParams({
+            workspace_id: user.id,
+            date_from: '2024-01-01',
+            date_to: '2025-12-31',
+        })
 
-        // CRITICAL: Use the authenticated user's ID as workspace_id
-        // This is the ONLY way data isolation is enforced
-        tinybirdUrl.searchParams.set('workspace_id', user.id)
-        tinybirdUrl.searchParams.set('date_from', '2024-01-01')
-        tinybirdUrl.searchParams.set('date_to', '2025-12-31')
+        const kpisUrl = `${TINYBIRD_HOST}/v0/pipes/kpis.json?${baseParams}`
+        const trendUrl = `${TINYBIRD_HOST}/v0/pipes/trend.json?${baseParams}`
 
-        console.log('[SECURITY CHECK] 🎯 Target Tinybird URL:', tinybirdUrl.toString())
+        console.log('[KPI Proxy] 🎯 Fetching KPIs:', kpisUrl)
+        console.log('[KPI Proxy] 📈 Fetching Trend:', trendUrl)
 
         // ========================================
-        // FETCH FROM TINYBIRD (NO CACHE)
+        // PARALLEL FETCH FROM TINYBIRD (NO CACHE)
         // ========================================
-        const response = await fetch(tinybirdUrl.toString(), {
+        const fetchOptions = {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${TINYBIRD_ADMIN_TOKEN}`,
                 'Content-Type': 'application/json',
             },
-            // CRITICAL: Never cache this request
-            cache: 'no-store',
-        })
+            cache: 'no-store' as RequestCache,
+        }
 
-        if (!response.ok) {
-            const errorText = await response.text()
-            console.error('[KPI Proxy] ❌ Tinybird error:', response.status, errorText)
+        const [kpisResponse, trendResponse] = await Promise.all([
+            fetch(kpisUrl, fetchOptions),
+            fetch(trendUrl, fetchOptions),
+        ])
+
+        // ========================================
+        // HANDLE KPI RESPONSE
+        // ========================================
+        if (!kpisResponse.ok) {
+            const errorText = await kpisResponse.text()
+            console.error('[KPI Proxy] ❌ KPIs Tinybird error:', kpisResponse.status, errorText)
             return NextResponse.json(
-                { error: 'Failed to fetch analytics', details: errorText },
-                { status: response.status }
+                { error: 'Failed to fetch KPIs', details: errorText },
+                { status: kpisResponse.status }
             )
         }
 
-        const data = await response.json()
-        console.log('[KPI Proxy] ✅ Data fetched successfully for user:', user.id)
+        const kpisData = await kpisResponse.json()
+        const kpi = kpisData.data?.[0] || { clicks: 0, sales: 0, revenue: 0, conversion_rate: 0 }
 
-        // Return with no-cache headers for the response too
-        return NextResponse.json(data, {
+        // ========================================
+        // HANDLE TREND RESPONSE (Graceful fallback)
+        // ========================================
+        let timeseries: Array<{ date: string; clicks: number; sales: number; revenue: number }> = []
+
+        if (trendResponse.ok) {
+            const trendData = await trendResponse.json()
+            timeseries = trendData.data || []
+            console.log('[KPI Proxy] 📈 Trend data:', timeseries.length, 'days')
+        } else {
+            // Log but don't fail - timeseries is optional
+            const errorText = await trendResponse.text()
+            console.warn('[KPI Proxy] ⚠️ Trend pipe error (fallback to empty):', errorText.slice(0, 100))
+        }
+
+        // ========================================
+        // MERGE RESULTS INTO UNIFIED RESPONSE
+        // ========================================
+        const mergedData = {
+            meta: [
+                { name: 'clicks', type: 'Int64' },
+                { name: 'sales', type: 'Int64' },
+                { name: 'revenue', type: 'Float64' },
+                { name: 'conversion_rate', type: 'Float64' },
+                { name: 'timeseries', type: 'Array' },
+            ],
+            data: [{
+                clicks: kpi.clicks || 0,
+                sales: kpi.sales || 0,
+                revenue: kpi.revenue || 0,
+                conversion_rate: kpi.conversion_rate || 0,
+                timeseries: timeseries,
+            }],
+            rows: 1,
+            statistics: kpisData.statistics || { elapsed: 0, rows_read: 0, bytes_read: 0 },
+        }
+
+        console.log('[KPI Proxy] ✅ Merged data for user:', user.id)
+
+        // Return with no-cache headers
+        return NextResponse.json(mergedData, {
             headers: {
                 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
                 'Pragma': 'no-cache',

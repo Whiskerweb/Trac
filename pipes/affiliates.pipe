@@ -1,0 +1,26 @@
+DESCRIPTION >
+    Affiliate Leaderboard - Top partners by revenue
+    Groups sales by affiliate_id and ranks by total revenue
+
+TOKEN "dashboard_endpoint" READ
+
+NODE endpoint
+SQL >
+    %
+    SELECT 
+        link_id as affiliate_id,
+        count() as total_clicks,
+        countIf(event_type = 'sale') as total_sales,
+        sumIf(amount, event_type = 'sale') as total_revenue
+    FROM sales
+    WHERE 
+        workspace_id = {{ String(workspace_id, '') }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+        AND link_id IS NOT NULL
+        AND link_id != ''
+    GROUP BY link_id
+    ORDER BY total_revenue DESC
+    LIMIT 10
+
+TYPE endpoint

@@ -1,0 +1,53 @@
+DESCRIPTION >
+    Time Series data for analytics dashboard graphs
+    Returns daily aggregates of clicks, sales and revenue
+
+TOKEN "dashboard_endpoint" READ
+
+NODE clicks_by_day
+SQL >
+    %
+    SELECT 
+        toDate(timestamp) as date,
+        count() as clicks,
+        0 as sales,
+        0 as revenue
+    FROM clicks
+    WHERE 
+        workspace_id = {{ String(workspace_id, '') }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+    GROUP BY date
+
+NODE sales_by_day
+SQL >
+    %
+    SELECT 
+        toDate(timestamp) as date,
+        0 as clicks,
+        count() as sales,
+        sum(amount) as revenue
+    FROM sales
+    WHERE 
+        workspace_id = {{ String(workspace_id, '') }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+    GROUP BY date
+
+NODE endpoint
+SQL >
+    %
+    SELECT 
+        date,
+        sum(clicks) as clicks,
+        sum(sales) as sales,
+        sum(revenue) as revenue
+    FROM (
+        SELECT * FROM clicks_by_day
+        UNION ALL
+        SELECT * FROM sales_by_day
+    )
+    GROUP BY date
+    ORDER BY date ASC
+
+TYPE endpoint

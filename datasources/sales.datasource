@@ -15,3 +15,6 @@ SCHEMA >
 
 ENGINE "ReplacingMergeTree"
 ENGINE_SORTING_KEY "invoice_id, workspace_id"
+
+FORWARD_QUERY >
+    SELECT timestamp, event_id, invoice_id, workspace_id, click_id, defaultValueOfTypeName('Nullable(String)') AS link_id, defaultValueOfTypeName('Nullable(String)') AS affiliate_id, customer_external_id, amount, currency, payment_processor

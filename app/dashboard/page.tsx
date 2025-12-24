@@ -9,13 +9,30 @@ import {
 import { CreateLinkModal } from '@/components/CreateLinkModal'
 import { deleteShortLink } from '@/app/actions/links'
 import { ActivityLog } from '@/components/ActivityLog'
+import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
+import { DateRangePicker } from '@/components/dashboard/DateRangePicker'
+import { LinkDrawer } from '@/components/dashboard/LinkDrawer'
+import { AffiliateLeaderboard } from '@/components/dashboard/AffiliateLeaderboard'
 import Link from 'next/link'
+import { subDays, format } from 'date-fns'
 
 interface KPIData {
     clicks: number
     sales: number
     revenue: number
     conversion_rate: number
+    timeseries?: Array<{
+        date: string
+        clicks: number
+        sales: number
+        revenue: number
+    }>
+    affiliates?: Array<{
+        affiliate_id: string
+        total_clicks: number
+        total_sales: number
+        total_revenue: number
+    }>
 }
 
 interface KPIResponse {
@@ -56,22 +73,24 @@ function KPICard({
     title,
     value,
     icon: Icon,
-    color
 }: {
     title: string
     value: string | number
-    icon: React.ComponentType<{ className?: string }>
-    color: string
+    icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
 }) {
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">{title}</h3>
-                <div className={`p-2 rounded-lg ${color}`}>
-                    <Icon className="w-5 h-5 text-white" />
+        <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 p-6 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-shadow">
+            <div className="flex items-start justify-between">
+                <div className="flex-1">
+                    <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3" style={{ letterSpacing: '0.05em' }}>
+                        {title}
+                    </h3>
+                    <p className="text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>
+                        {value}
+                    </p>
                 </div>
+                <Icon className="w-5 h-5 text-gray-400" strokeWidth={1.5} />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{value}</p>
         </div>
     )
 }
@@ -109,18 +128,20 @@ function UserIdBadge({ userId }: { userId: string }) {
     )
 }
 
-function LinkRow({ link, onDelete }: { link: ShortLink; onDelete: () => void }) {
+function LinkRow({ link, onDelete, onClick }: { link: ShortLink; onDelete: () => void; onClick: () => void }) {
     const [copied, setCopied] = useState(false)
     const [deleting, setDeleting] = useState(false)
     const shortUrl = `${window.location.origin}/s/${link.slug}`
 
-    const copyToClipboard = async () => {
+    const copyToClipboard = async (e: React.MouseEvent) => {
+        e.stopPropagation()
         await navigator.clipboard.writeText(shortUrl)
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
     }
 
-    const handleDelete = async () => {
+    const handleDelete = async (e: React.MouseEvent) => {
+        e.stopPropagation()
         if (!confirm('Delete this link?')) return
         setDeleting(true)
         await deleteShortLink(link.id)
@@ -129,7 +150,10 @@ function LinkRow({ link, onDelete }: { link: ShortLink; onDelete: () => void }) 
     }
 
     return (
-        <tr className="border-b border-gray-100 hover:bg-gray-50">
+        <tr
+            className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+            onClick={onClick}
+        >
             <td className="py-3 px-4">
                 <div className="flex items-center gap-2">
                     <code className="text-blue-600 font-medium">/s/{link.slug}</code>
@@ -170,6 +194,12 @@ function LinkRow({ link, onDelete }: { link: ShortLink; onDelete: () => void }) 
 export default function DashboardPage() {
     const [userId, setUserId] = useState<string | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [selectedLink, setSelectedLink] = useState<ShortLink | null>(null)
+
+    // Date range state (default: last 30 days)
+    const [selectedRange, setSelectedRange] = useState('30d')
+    const [dateFrom, setDateFrom] = useState(() => format(subDays(new Date(), 30), 'yyyy-MM-dd'))
+    const [dateTo, setDateTo] = useState(() => format(new Date(), 'yyyy-MM-dd'))
 
     // Fetch user ID on mount
     useEffect(() => {
@@ -183,11 +213,19 @@ export default function DashboardPage() {
             .catch(() => { })
     }, [])
 
-    // Fetch KPIs (manual refresh only to save Tinybird quota)
-    const { data: kpiData, error: kpiError, isLoading: kpiLoading, mutate: mutateKpi } = useSWR<KPIResponse>('/api/stats/kpi', kpiFetcher, {
+    // Fetch KPIs with date range parameters
+    const kpiUrl = `/api/stats/kpi?date_from=${dateFrom}&date_to=${dateTo}`
+    const { data: kpiData, error: kpiError, isLoading: kpiLoading, mutate: mutateKpi } = useSWR<KPIResponse>(kpiUrl, kpiFetcher, {
         revalidateOnFocus: false,
         dedupingInterval: 5000,
     })
+
+    // Handle date range change
+    const handleRangeChange = (range: string, from: string, to: string) => {
+        setSelectedRange(range)
+        setDateFrom(from)
+        setDateTo(to)
+    }
 
     // Fetch user's short links (manual refresh only)
     const { data: links, error: linksError, isLoading: linksLoading, mutate: mutateLinks } = useSWR<ShortLink[]>(
@@ -226,15 +264,8 @@ export default function DashboardPage() {
     const kpi = kpiData?.data?.[0] || { clicks: 0, sales: 0, revenue: 0, conversion_rate: 0 }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50/50">
             <div className="max-w-6xl mx-auto p-8">
-                {/* QA Testing Banner - Shows User ID */}
-                {userId && (
-                    <div className="mb-6">
-                        <UserIdBadge userId={userId} />
-                    </div>
-                )}
-
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
@@ -289,30 +320,74 @@ export default function DashboardPage() {
                         title="Clics"
                         value={kpi.clicks.toLocaleString('fr-FR')}
                         icon={MousePointer2}
-                        color="bg-blue-500"
                     />
                     <KPICard
                         title="Ventes"
                         value={kpi.sales.toLocaleString('fr-FR')}
                         icon={CreditCard}
-                        color="bg-green-500"
                     />
                     <KPICard
                         title="Revenus"
                         value={formatCurrency(kpi.revenue)}
                         icon={DollarSign}
-                        color="bg-purple-500"
                     />
                     <KPICard
                         title="Taux de conversion"
                         value={`${kpi.conversion_rate.toFixed(2)}%`}
                         icon={BarChart3}
-                        color="bg-orange-500"
                     />
                 </div>
 
+                {/* Analytics Grid: Chart + Leaderboard */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    {/* Analytics Chart - Takes 2 columns */}
+                    {kpiData?.data?.[0]?.timeseries && kpiData.data[0].timeseries.length > 0 ? (
+                        <div className="lg:col-span-2 bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-2">
+                                    <BarChart3 className="w-5 h-5 text-blue-500" />
+                                    <h2 className="text-lg font-semibold text-gray-900">Analytics Trend</h2>
+                                </div>
+                                <DateRangePicker
+                                    selectedRange={selectedRange}
+                                    onRangeChange={handleRangeChange}
+                                />
+                            </div>
+                            <AnalyticsChart
+                                data={kpiData.data[0].timeseries}
+                                isLoading={kpiLoading}
+                            />
+                        </div>
+                    ) : kpiLoading && !kpiData ? (
+                        <div className="lg:col-span-2 bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-2">
+                                    <BarChart3 className="w-5 h-5 text-blue-500" />
+                                    <h2 className="text-lg font-semibold text-gray-900">Analytics Trend</h2>
+                                </div>
+                                <DateRangePicker
+                                    selectedRange={selectedRange}
+                                    onRangeChange={handleRangeChange}
+                                />
+                            </div>
+                            <AnalyticsChart
+                                data={[]}
+                                isLoading={true}
+                            />
+                        </div>
+                    ) : null}
+
+                    {/* Affiliate Leaderboard - Takes 1 column */}
+                    <div className="lg:col-span-1">
+                        <AffiliateLeaderboard
+                            data={kpiData?.data?.[0]?.affiliates || []}
+                            isLoading={kpiLoading}
+                        />
+                    </div>
+                </div>
+
                 {/* Short Links Section */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Link2 className="w-5 h-5 text-blue-500" />
@@ -330,12 +405,11 @@ export default function DashboardPage() {
                         </div>
                     ) : links && links.length > 0 ? (
                         <table className="w-full">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Short URL</th>
-                                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Destination</th>
-                                    <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Clicks</th>
-                                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Created</th>
+                            <thead>
+                                <tr className="border-b border-gray-100">
+                                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ letterSpacing: '0.05em' }}>Link</th>
+                                    <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ letterSpacing: '0.05em' }}>Clicks</th>
+                                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ letterSpacing: '0.05em' }}>Créé le</th>
                                     <th className="py-3 px-4"></th>
                                 </tr>
                             </thead>
@@ -345,6 +419,7 @@ export default function DashboardPage() {
                                         key={link.id}
                                         link={link}
                                         onDelete={() => mutateLinks()}
+                                        onClick={() => setSelectedLink(link)}
                                     />
                                 ))}
                             </tbody>
@@ -381,6 +456,19 @@ export default function DashboardPage() {
                 onClose={() => setIsModalOpen(false)}
                 onSuccess={() => mutateLinks()}
             />
+
+            {/* Link Details Drawer */}
+            {selectedLink && (
+                <LinkDrawer
+                    isOpen={!!selectedLink}
+                    onClose={() => setSelectedLink(null)}
+                    link={selectedLink}
+                    onDelete={async () => {
+                        await deleteShortLink(selectedLink.id)
+                        mutateLinks()
+                    }}
+                />
+            )}
         </div>
     )
 }
