@@ -3,8 +3,29 @@
 import { useEffect, useState } from 'react'
 import useSWR from 'swr'
 import {
-    MousePointer2, CreditCard, DollarSign, BarChart3, AlertCircle,
-    Loader2, Copy, Check, Plus, Link2, ExternalLink, Trash2, Puzzle, Target, ShoppingBag, RefreshCw
+    Search,
+    Bell,
+    Filter,
+    Calendar,
+    ChevronDown,
+    MoreHorizontal,
+    ExternalLink,
+    RefreshCw,
+    ShoppingBag,
+    Target,
+    Puzzle,
+    Plus,
+    Menu,
+    MousePointer2,
+    CreditCard,
+    DollarSign,
+    BarChart3,
+    AlertCircle,
+    Loader2,
+    Copy,
+    Check,
+    Link2,
+    Trash2
 } from 'lucide-react'
 import { CreateLinkModal } from '@/components/CreateLinkModal'
 import { deleteShortLink } from '@/app/actions/links'
@@ -13,6 +34,7 @@ import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker'
 import { LinkDrawer } from '@/components/dashboard/LinkDrawer'
 import { AffiliateLeaderboard } from '@/components/dashboard/AffiliateLeaderboard'
+import { Sidebar } from '@/components/dashboard/Sidebar'
 import Link from 'next/link'
 import { subDays, format } from 'date-fns'
 
@@ -193,6 +215,7 @@ function LinkRow({ link, onDelete, onClick }: { link: ShortLink; onDelete: () =>
 
 export default function DashboardPage() {
     const [userId, setUserId] = useState<string | null>(null)
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedLink, setSelectedLink] = useState<ShortLink | null>(null)
 
@@ -261,214 +284,249 @@ export default function DashboardPage() {
         )
     }
 
+
+
+
     const kpi = kpiData?.data?.[0] || { clicks: 0, sales: 0, revenue: 0, conversion_rate: 0 }
 
     return (
-        <div className="min-h-screen bg-gray-50/50">
-            <div className="max-w-6xl mx-auto p-8">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-                        <p className="text-gray-500 mt-1">Vue d&apos;ensemble de vos performances</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => {
-                                mutateKpi()
-                                mutateLinks()
-                            }}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
-                        >
-                            <RefreshCw className="w-5 h-5" />
-                            Rafraîchir
-                        </button>
-                        <Link
-                            href="/dashboard/marketplace"
-                            className="flex items-center gap-2 px-4 py-2.5 bg-green-100 hover:bg-green-200 text-green-700 font-medium rounded-lg transition-colors"
-                        >
-                            <ShoppingBag className="w-5 h-5" />
-                            Marketplace
-                        </Link>
-                        <Link
-                            href="/dashboard/missions"
-                            className="flex items-center gap-2 px-4 py-2.5 bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium rounded-lg transition-colors"
-                        >
-                            <Target className="w-5 h-5" />
-                            Missions
-                        </Link>
-                        <Link
-                            href="/dashboard/integration"
-                            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors"
-                        >
-                            <Puzzle className="w-5 h-5" />
-                            Integrations
-                        </Link>
-                        <button
-                            onClick={() => setIsModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all shadow-lg shadow-blue-500/25"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Create Link
-                        </button>
-                    </div>
-                </div>
+        <div className="flex min-h-screen bg-gray-50">
+            {/* Desktop Sidebar */}
+            < div className="hidden md:block" >
+                <Sidebar />
+            </div >
 
-                {/* KPI Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <KPICard
-                        title="Clics"
-                        value={kpi.clicks.toLocaleString('fr-FR')}
-                        icon={MousePointer2}
-                    />
-                    <KPICard
-                        title="Ventes"
-                        value={kpi.sales.toLocaleString('fr-FR')}
-                        icon={CreditCard}
-                    />
-                    <KPICard
-                        title="Revenus"
-                        value={formatCurrency(kpi.revenue)}
-                        icon={DollarSign}
-                    />
-                    <KPICard
-                        title="Taux de conversion"
-                        value={`${kpi.conversion_rate.toFixed(2)}%`}
-                        icon={BarChart3}
-                    />
-                </div>
-
-                {/* Analytics Grid: Chart + Leaderboard */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    {/* Analytics Chart - Takes 2 columns */}
-                    {kpiData?.data?.[0]?.timeseries && kpiData.data[0].timeseries.length > 0 ? (
-                        <div className="lg:col-span-2 bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-2">
-                                    <BarChart3 className="w-5 h-5 text-blue-500" />
-                                    <h2 className="text-lg font-semibold text-gray-900">Analytics Trend</h2>
-                                </div>
-                                <DateRangePicker
-                                    selectedRange={selectedRange}
-                                    onRangeChange={handleRangeChange}
-                                />
-                            </div>
-                            <AnalyticsChart
-                                data={kpiData.data[0].timeseries}
-                                isLoading={kpiLoading}
-                            />
-                        </div>
-                    ) : kpiLoading && !kpiData ? (
-                        <div className="lg:col-span-2 bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-2">
-                                    <BarChart3 className="w-5 h-5 text-blue-500" />
-                                    <h2 className="text-lg font-semibold text-gray-900">Analytics Trend</h2>
-                                </div>
-                                <DateRangePicker
-                                    selectedRange={selectedRange}
-                                    onRangeChange={handleRangeChange}
-                                />
-                            </div>
-                            <AnalyticsChart
-                                data={[]}
-                                isLoading={true}
-                            />
-                        </div>
-                    ) : null}
-
-                    {/* Affiliate Leaderboard - Takes 1 column */}
-                    <div className="lg:col-span-1">
-                        <AffiliateLeaderboard
-                            data={kpiData?.data?.[0]?.affiliates || []}
-                            isLoading={kpiLoading}
+            {/* Mobile Sidebar (Drawer) */}
+            {
+                isMobileMenuOpen && (
+                    <div className="fixed inset-0 z-50 md:hidden">
+                        {/* Backdrop */}
+                        <div
+                            className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+                            onClick={() => setIsMobileMenuOpen(false)}
                         />
-                    </div>
-                </div>
-
-                {/* Short Links Section */}
-                <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Link2 className="w-5 h-5 text-blue-500" />
-                            <h2 className="text-lg font-semibold text-gray-900">My Short Links</h2>
+                        {/* Sidebar Content */}
+                        <div className="absolute left-0 top-0 h-full w-64 bg-white shadow-xl animate-in slide-in-from-left duration-300">
+                            <Sidebar />
                         </div>
-                        <span className="text-sm text-gray-500">
-                            {links?.length || 0} links
-                        </span>
+                    </div>
+                )
+            }
+
+            <main className="flex-1 md:ml-64 transition-all duration-300">
+                <div className="max-w-7xl mx-auto p-4 md:p-8">
+                    {/* Mobile Header */}
+                    <div className="md:hidden flex items-center justify-between mb-6 sticky top-0 bg-gray-50/80 backdrop-blur-md z-40 py-2">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setIsMobileMenuOpen(true)}
+                                className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                            >
+                                <Menu className="w-6 h-6" />
+                            </button>
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg"></div>
+                                <span className="font-bold text-xl text-gray-900" style={{ letterSpacing: '-0.02em' }}>Trac</span>
+                            </div>
+                        </div>
                     </div>
 
-                    {linksLoading ? (
-                        <div className="p-8 text-center text-gray-500">
-                            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                            Loading links...
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+                            <p className="text-gray-500 mt-1">Vue d&apos;ensemble de vos performances</p>
                         </div>
-                    ) : links && links.length > 0 ? (
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-gray-100">
-                                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ letterSpacing: '0.05em' }}>Link</th>
-                                    <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ letterSpacing: '0.05em' }}>Clicks</th>
-                                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ letterSpacing: '0.05em' }}>Créé le</th>
-                                    <th className="py-3 px-4"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {links.map((link) => (
-                                    <LinkRow
-                                        key={link.id}
-                                        link={link}
-                                        onDelete={() => mutateLinks()}
-                                        onClick={() => setSelectedLink(link)}
-                                    />
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <div className="p-12 text-center">
-                            <Link2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500 mb-4">No links yet. Create your first short link!</p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <button
+                                onClick={() => {
+                                    mutateKpi()
+                                    mutateLinks()
+                                }}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 font-medium rounded-lg transition-all shadow-sm"
+                            >
+                                <RefreshCw className="w-5 h-5" strokeWidth={1.5} />
+                                <span className="hidden sm:inline">Rafraîchir</span>
+                            </button>
                             <button
                                 onClick={() => setIsModalOpen(true)}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                                className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-lg transition-all shadow-lg shadow-gray-900/10"
                             >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-5 h-5" />
                                 Create Link
                             </button>
                         </div>
-                    )}
+                    </div>
+
+                    {/* Bento Grid - KPIs */}
+                    <div className="grid grid-cols-12 gap-6 mb-8">
+                        <div className="col-span-3">
+                            <KPICard
+                                title="Clics"
+                                value={kpi.clicks.toLocaleString('fr-FR')}
+                                icon={MousePointer2}
+                            />
+                        </div>
+                        <div className="col-span-3">
+                            <KPICard
+                                title="Ventes"
+                                value={kpi.sales.toLocaleString('fr-FR')}
+                                icon={CreditCard}
+                            />
+                        </div>
+                        <div className="col-span-3">
+                            <KPICard
+                                title="Revenus"
+                                value={formatCurrency(kpi.revenue)}
+                                icon={DollarSign}
+                            />
+                        </div>
+                        <div className="col-span-3">
+                            <KPICard
+                                title="Taux de conversion"
+                                value={`${kpi.conversion_rate.toFixed(2)}%`}
+                                icon={BarChart3}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Bento Grid - Chart + Leaderboard */}
+                    <div className="grid grid-cols-12 gap-6 mb-8">
+                        {/* Analytics Chart - 8 columns */}
+                        {kpiData?.data?.[0]?.timeseries && kpiData.data[0].timeseries.length > 0 ? (
+                            <div className="col-span-8 bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-200 p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-2">
+                                        <BarChart3 className="w-5 h-5 text-blue-500" />
+                                        <h2 className="text-lg font-semibold text-gray-900">Analytics Trend</h2>
+                                    </div>
+                                    <DateRangePicker
+                                        selectedRange={selectedRange}
+                                        onRangeChange={handleRangeChange}
+                                    />
+                                </div>
+                                <AnalyticsChart
+                                    data={kpiData.data[0].timeseries}
+                                    isLoading={kpiLoading}
+                                />
+                            </div>
+                        ) : kpiLoading && !kpiData ? (
+                            <div className="col-span-8 bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-200 p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-2">
+                                        <BarChart3 className="w-5 h-5 text-blue-500" />
+                                        <h2 className="text-lg font-semibold text-gray-900">Analytics Trend</h2>
+                                    </div>
+                                    <DateRangePicker
+                                        selectedRange={selectedRange}
+                                        onRangeChange={handleRangeChange}
+                                    />
+                                </div>
+                                <AnalyticsChart
+                                    data={[]}
+                                    isLoading={true}
+                                />
+                            </div>
+                        ) : null}
+
+                        {/* Affiliate Leaderboard - 4 columns */}
+                        <div className="col-span-4">
+                            <AffiliateLeaderboard
+                                data={kpiData?.data?.[0]?.affiliates || []}
+                                isLoading={kpiLoading}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Bento Grid - Table (Full Width) */}
+                    <div className="grid grid-cols-12 gap-6">
+                        <div className="col-span-12">
+                            {/*  Short Links Section */}
+                            <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-200 overflow-hidden">
+                                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Link2 className="w-5 h-5 text-blue-500" />
+                                        <h2 className="text-lg font-semibold text-gray-900">My Short Links</h2>
+                                    </div>
+                                    <span className="text-sm text-gray-500">
+                                        {links?.length || 0} links
+                                    </span>
+                                </div>
+
+                                {linksLoading ? (
+                                    <div className="p-8 text-center text-gray-500">
+                                        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                                        Loading links...
+                                    </div>
+                                ) : links && links.length > 0 ? (
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="border-b border-gray-100">
+                                                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ letterSpacing: '0.05em' }}>Link</th>
+                                                <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ letterSpacing: '0.05em' }}>Clicks</th>
+                                                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ letterSpacing: '0.05em' }}>Créé le</th>
+                                                <th className="py-3 px-4"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {links.map((link) => (
+                                                <LinkRow
+                                                    key={link.id}
+                                                    link={link}
+                                                    onDelete={() => mutateLinks()}
+                                                    onClick={() => setSelectedLink(link)}
+                                                />
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div className="p-12 text-center">
+                                        <Link2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                        <p className="text-gray-500 mb-4">No links yet. Create your first short link!</p>
+                                        <button
+                                            onClick={() => setIsModalOpen(true)}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            Create Link
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Last updated info */}
+                            <p className="text-sm text-gray-400 mt-6 text-center">
+                                Données actualisées automatiquement toutes les 30 secondes
+                            </p>
+                        </div>
+
+                        {/* Activity Log for debugging */}
+                        <div className="mt-8">
+                            <ActivityLog mode="startup" />
+                        </div>
+
+                        {/* Create Link Modal */}
+                        <CreateLinkModal
+                            isOpen={isModalOpen}
+                            onClose={() => setIsModalOpen(false)}
+                            onSuccess={() => mutateLinks()}
+                        />
+
+                        {/* Link Details Drawer */}
+                        {selectedLink && (
+                            <LinkDrawer
+                                isOpen={!!selectedLink}
+                                onClose={() => setSelectedLink(null)}
+                                link={selectedLink}
+                                onDelete={async () => {
+                                    await deleteShortLink(selectedLink.id)
+                                    mutateLinks()
+                                }}
+                            />
+                        )}
+                    </div>
                 </div>
-
-                {/* Last updated info */}
-                <p className="text-sm text-gray-400 mt-6 text-center">
-                    Données actualisées automatiquement toutes les 30 secondes
-                </p>
-            </div>
-
-            {/* Activity Log for debugging */}
-            <div className="mt-8">
-                <ActivityLog mode="startup" />
-            </div>
-
-            {/* Create Link Modal */}
-            <CreateLinkModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSuccess={() => mutateLinks()}
-            />
-
-            {/* Link Details Drawer */}
-            {selectedLink && (
-                <LinkDrawer
-                    isOpen={!!selectedLink}
-                    onClose={() => setSelectedLink(null)}
-                    link={selectedLink}
-                    onDelete={async () => {
-                        await deleteShortLink(selectedLink.id)
-                        mutateLinks()
-                    }}
-                />
-            )}
-        </div>
+            </main>
+        </div >
     )
 }
