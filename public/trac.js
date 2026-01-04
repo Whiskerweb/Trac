@@ -46,6 +46,35 @@
     'use strict';
 
     // =============================================
+    // TRAC UTILS (DUB.CO ARCHITECTURE)
+    // =============================================
+
+    if (typeof window.TracUtils === 'undefined') {
+        window.TracUtils = {
+            generateClickId: function () {
+                const timestamp = Math.floor(Date.now() / 1000);
+                // Generate exactly 16 hex characters (8 bytes)
+                let random = '';
+                for (let i = 0; i < 16; i++) {
+                    random += Math.floor(Math.random() * 16).toString(16);
+                }
+                return `clk_${timestamp}_${random}`;
+            },
+            isValidClickId: function (id) {
+                return /^clk_\d+_[a-z0-9]{16}$/.test(id);
+            },
+            getRootDomain: function () {
+                const hostname = window.location.hostname;
+                if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                    return hostname;
+                }
+                const parts = hostname.split('.');
+                return parts.length >= 2 ? `.${parts.slice(-2).join('.')}` : hostname;
+            }
+        };
+    }
+
+    // =============================================
     // CONFIGURATION
     // =============================================
 
@@ -330,8 +359,18 @@
     }
 
     // =============================================
-    // URL UTILITIES
+    // URL UTILITIES + MULTI-SOURCE TRACKING
     // =============================================
+
+    // Multi-source click tracking (Dub.co architecture)
+    var CLICK_SOURCES = {
+        'gclid': { cookie: '_trac_gclid', duration: 90 },
+        'fbclid': { cookie: '_trac_fbclid', duration: 90 },
+        'dub_id': { cookie: '_trac_dub_id', duration: 30 },
+        'ref': { cookie: '_trac_ref', duration: 30 },
+        'via': { cookie: '_trac_via', duration: 90 },
+        'clk': { cookie: 'clk_id', duration: 90 }  // Primary
+    };
 
     function getUrlParam(name) {
         try {
@@ -340,6 +379,41 @@
         } catch (e) {
             return null;
         }
+    }
+
+    function captureAllClickIds() {
+        var params = new URLSearchParams(window.location.search);
+
+        Object.entries(CLICK_SOURCES).forEach(function (entry) {
+            var paramName = entry[0];
+            var config = entry[1];
+            var value = params.get(paramName);
+            if (value) {
+                setCookie(config.cookie, value, config.duration);
+                setLocalStorage(config.cookie, value);
+                extendClickIdViaServer(value);
+                console.log('[Trac] Captured ' + paramName + '=' + value + ' → ' + config.cookie);
+            }
+        });
+    }
+
+    function extendClickIdViaServer(clickId) {
+        fetch('/api/track/click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ click_id: clickId }),
+            credentials: 'include'  // CRITICAL
+        }).catch(function () {
+            console.debug('[Trac] Server extension failed (using client-side only)');
+        });
+    }
+
+    function getPrimaryClickId() {
+        return getCookie('clk_id') ||
+            getCookie('_trac_gclid') ||
+            getCookie('_trac_fbclid') ||
+            getCookie('_trac_dub_id') ||
+            getCookie('_trac_ref');
     }
 
     function cleanUrl() {
@@ -786,6 +860,9 @@
         monkeyPatchHistoryAPI();
         listenForSPANavigation();
 
+        // NOUVEAU: Capture tous les click IDs (multi-source)
+        captureAllClickIds();
+
         // 1. CAPTURE: Check for trac_id in URL (LAST CLICK WINS)
         var urlTracId = getUrlParam(PARAM_NAME);
 
@@ -994,6 +1071,17 @@
         trackConversion: trackConversion,
         trackPageview: trackPageview,
         trackEvent: trackEvent,
+
+        // Multi-source tracking API
+        getClickIds: function () {
+            return {
+                gclid: getCookie('_trac_gclid'),
+                fbclid: getCookie('_trac_fbclid'),
+                dub_id: getCookie('_trac_dub_id'),
+                clk: getCookie('clk_id'),
+                primary: getPrimaryClickId()
+            };
+        },
 
         // Manual injection
         injectStripe: injectStripe,
