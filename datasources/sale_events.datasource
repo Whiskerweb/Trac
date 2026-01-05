@@ -1,0 +1,25 @@
+DESCRIPTION "Enhanced sale events with line items and product metadata"
+
+SCHEMA >
+    `timestamp` DateTime `json:$.timestamp`,
+    `event_id` String `json:$.event_id` DEFAULT generateUUIDv4(),
+    `order_id` String `json:$.order_id`,
+    `workspace_id` Nullable(String) `json:$.workspace_id`,
+    `click_id` Nullable(String) `json:$.click_id`,
+    `link_id` Nullable(String) `json:$.link_id`,
+    `affiliate_id` Nullable(String) `json:$.affiliate_id`,
+    `customer_external_id` String `json:$.customer_external_id`,
+    `customer_email` Nullable(String) `json:$.customer_email`,
+    `amount` Float64 `json:$.amount`,
+    `currency` LowCardinality(String) `json:$.currency`,
+    `event_type` LowCardinality(String) `json:$.event_type`,
+    `platform` LowCardinality(String) `json:$.platform`,
+    `line_items` Nullable(String) `json:$.line_items`,
+    `products_count` Int32 `json:$.products_count`,
+    `primary_product_id` Nullable(String) `json:$.primary_product_id`,
+    `primary_product_name` Nullable(String) `json:$.primary_product_name`,
+    `primary_sku` Nullable(String) `json:$.primary_sku`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_SORTING_KEY "timestamp, order_id, click_id"

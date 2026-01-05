@@ -49,8 +49,14 @@ function generateClickId(): string {
 
 /**
  * Extract domain from request for Redis key lookup
+ * Supports CNAME Cloaking via X-Forwarded-Host
  */
 function getDomain(request: NextRequest): string {
+    const forwardedHost = request.headers.get('x-forwarded-host')
+    if (forwardedHost) {
+        // Handle multiple hosts if comma-separated
+        return forwardedHost.split(',')[0].trim()
+    }
     return request.nextUrl.hostname
 }
 
@@ -181,11 +187,12 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             const response = NextResponse.redirect(destinationUrl.toString())
 
             // Set first-party cookie for attribution (survives URL param stripping)
-            response.cookies.set('trac_click_id', click_id, {
-                httpOnly: true,
+            // ✅ UNIFIED: Cookie name 'clk_id' matches SDK, TTL 90 days
+            response.cookies.set('clk_id', click_id, {
+                httpOnly: false,  // JS accessible for SDK compatibility
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
-                maxAge: 60 * 60 * 24 * 30, // 30 days attribution window
+                maxAge: 60 * 60 * 24 * 90, // 90 days attribution window (unified)
                 path: '/',
             })
 
@@ -267,12 +274,13 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
         destinationUrl.searchParams.set('client_reference_id', click_id)
 
         // Create redirect response with cookie
+        // ✅ UNIFIED: Cookie name 'clk_id' matches SDK, TTL 90 days
         const response = NextResponse.redirect(destinationUrl.toString())
-        response.cookies.set('trac_click_id', click_id, {
-            httpOnly: true,
+        response.cookies.set('clk_id', click_id, {
+            httpOnly: false,  // JS accessible for SDK compatibility
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 30, // 30 days
+            maxAge: 60 * 60 * 24 * 90, // 90 days (unified)
             path: '/',
         })
 

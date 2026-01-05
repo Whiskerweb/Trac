@@ -2,79 +2,17 @@ import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
+import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics/tinybird'
+import { waitUntil } from '@vercel/functions'
 
 export const dynamic = 'force-dynamic'
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-// Tinybird configuration
+// Tinybird configuration (used for click_id lookup)
 const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
 const TINYBIRD_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
-
-/**
- * Send sale event to Tinybird with affiliate attribution
- */
-async function logSaleToTinybird(data: {
-    workspace_id: string
-    invoice_id: string
-    click_id: string | null
-    link_id: string | null      // NEW: For affiliate stats
-    affiliate_id: string | null // NEW: For affiliate stats
-    customer_external_id: string
-    amount: number
-    currency: string
-}): Promise<boolean> {
-    if (!TINYBIRD_TOKEN) {
-        console.error('[Multi-Tenant Webhook] ❌ Missing TINYBIRD_ADMIN_TOKEN')
-        return false
-    }
-
-    const payload = {
-        timestamp: new Date().toISOString(),
-        event_id: crypto.randomUUID(),
-        workspace_id: data.workspace_id,
-        invoice_id: data.invoice_id,
-        click_id: data.click_id,
-        link_id: data.link_id,          // NEW
-        affiliate_id: data.affiliate_id, // NEW
-        customer_external_id: data.customer_external_id,
-        amount: data.amount,
-        currency: data.currency.toUpperCase(),
-        payment_processor: 'stripe',
-    }
-
-    console.log('[Multi-Tenant Webhook] 📊 Sending to Tinybird:', {
-        workspace_id: payload.workspace_id,
-        link_id: payload.link_id,
-        affiliate_id: payload.affiliate_id,
-        amount: payload.amount,
-        currency: payload.currency,
-    })
-
-    try {
-        const response = await fetch(`${TINYBIRD_HOST}/v0/events?name=sales`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${TINYBIRD_TOKEN}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-        })
-
-        if (response.ok) {
-            console.log('[Multi-Tenant Webhook] ✅ Sale logged to Tinybird')
-            return true
-        } else {
-            const errorText = await response.text()
-            console.error('[Multi-Tenant Webhook] ❌ Tinybird error:', errorText)
-            return false
-        }
-    } catch (error) {
-        console.error('[Multi-Tenant Webhook] ❌ Network error:', error)
-        return false
-    }
-}
 
 /**
  * Multi-Tenant Stripe Webhook Handler
@@ -149,121 +87,168 @@ export async function POST(
     console.log(`[Multi-Tenant Webhook] 📥 Event ${event.type} for Workspace ${endpoint.workspace_id}`)
 
     // ========================================
-    // 4. HANDLE: checkout.session.completed
+    // 4. PROCESS EVENT (ASYNC ENRICHMENT)
     // ========================================
+
+    // Only checkout.session.completed is processed to avoid duplicates
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object as Stripe.Checkout.Session
 
-        // CRITICAL: workspace_id comes from the webhook endpoint config
-        // This is the source of truth (owner of the Stripe account)
-        const workspaceId = endpoint.workspace_id
+        // Use waitUntil for "Fire-and-Forget" reliability
+        // This ensures the response to Stripe is fast (ms) while processing continues
+        waitUntil(
+            (async () => {
+                try {
+                    // Extract core data
+                    const clickId = session.client_reference_id ||
+                        session.metadata?.clk_id ||
+                        null
+                    const workspaceId = endpoint.workspace_id // Attribution to workspace of the endpoint
 
-        // click_id is metadata for traffic attribution (optional)
-        const clickId = session.client_reference_id || session.metadata?.click_id || null
+                    const customerExternalId = typeof session.customer === 'string'
+                        ? session.customer
+                        : session.customer_details?.email || 'guest'
 
-        // Customer identification
-        const customerExternalId = typeof session.customer === 'string'
-            ? session.customer
-            : session.customer_details?.email || 'guest'
+                    // Amount
+                    const amount = session.amount_total || 0
+                    const currency = session.currency || 'eur'
 
-        // Amount
-        const amount = session.amount_total || 0
-        const currency = session.currency || 'eur'
+                    // Invoice ID for deduplication
+                    const invoiceId = typeof session.invoice === 'string'
+                        ? session.invoice
+                        : session.id
 
-        // Invoice ID for deduplication
-        const invoiceId = typeof session.invoice === 'string'
-            ? session.invoice
-            : session.id
+                    // ===== NEW: Extract line items with product details =====
+                    let products: Array<{
+                        product_id: string;
+                        product_name: string;
+                        sku: string | null;
+                        category: string | null;
+                        brand: string | null;
+                        quantity: number;
+                        unit_price: number;
+                        total: number;
+                    }> = [];
 
-        // ========================================
-        // 4.1 RESOLVE AFFILIATE FROM CLICK_ID (FAIL-SAFE)
-        // ========================================
-        // ⚠️ CRITICAL: This is OPTIONAL enrichment. If it fails, sale MUST still be logged.
-        let linkId: string | null = null
-        let affiliateId: string | null = null
+                    try {
+                        // Note: This API call adds latency, which is why we must be inside waitUntil
+                        const lineItemsResponse = await stripe.checkout.sessions.listLineItems(
+                            session.id,
+                            { expand: ['data.price.product'] }
+                        );
 
-        if (clickId) {
-            try {
-                // Step 1: Query Tinybird to get link_id from click_id
-                console.log(`[Multi-Tenant Webhook] 🔍 Looking up click_id: ${clickId}`)
+                        products = lineItemsResponse.data.map(item => {
+                            const product = item.price?.product as Stripe.Product;
+                            return {
+                                product_id: product?.id || 'unknown',
+                                product_name: product?.name || 'Unknown Product',
+                                sku: product?.metadata?.sku || null,
+                                category: product?.metadata?.category || null,
+                                brand: product?.metadata?.brand || null,
+                                quantity: item.quantity || 1,
+                                unit_price: item.price?.unit_amount || 0,
+                                total: item.amount_total || 0
+                            };
+                        });
+                        console.log(`[Webhook] Extracted ${products.length} line items for session ${session.id}`);
+                    } catch (error) {
+                        console.error('[Webhook] Failed to fetch line items:', error);
+                        // Don't fail the webhook - continue without line items
+                    }
+                    // ===== END: Line items extraction =====
 
-                const tinybirdQuery = `SELECT link_id FROM clicks WHERE click_id = '${clickId}' LIMIT 1`
-                const tinybirdResponse = await fetch(
-                    `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(tinybirdQuery)}`,
-                    { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-                )
+                    // ========================================
+                    // 4.1 RESOLVE AFFILIATE FROM CLICK_ID (FAIL-SAFE)
+                    // ========================================
+                    let linkId: string | null = null
+                    let affiliateId: string | null = null
 
-                if (tinybirdResponse.ok) {
-                    const tinybirdText = await tinybirdResponse.text()
-                    // TSV format: first line is the link_id value
-                    const lines = tinybirdText.trim().split('\n')
-                    if (lines.length > 0 && lines[0].trim()) {
-                        linkId = lines[0].trim()
-                        console.log(`[Multi-Tenant Webhook] ✅ Found link_id from Tinybird: ${linkId}`)
+                    if (clickId) {
+                        try {
+                            // Step 1: Query Tinybird to get link_id from click_id
+                            console.log(`[Multi-Tenant Webhook] 🔍 Looking up click_id: ${clickId}`)
 
-                        // Step 2: Find ShortLink by ID to get affiliate
-                        const shortLink = await prisma.shortLink.findFirst({
-                            where: { id: linkId },
-                            include: { enrollment: true }
-                        })
+                            const tinybirdQuery = `SELECT link_id FROM clicks WHERE click_id = '${clickId}' LIMIT 1`
+                            const tinybirdResponse = await fetch(
+                                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(tinybirdQuery)}`,
+                                { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+                            )
 
-                        if (shortLink?.enrollment) {
-                            affiliateId = shortLink.enrollment.user_id
-                            console.log(`[Multi-Tenant Webhook] 🔗 Attribution: Link ${linkId} → Affiliate ${affiliateId}`)
-                        } else if (shortLink?.affiliate_id) {
-                            // Fallback: use affiliate_id from ShortLink directly
-                            affiliateId = shortLink.affiliate_id
-                            console.log(`[Multi-Tenant Webhook] 🔗 Attribution (direct): Link ${linkId} → Affiliate ${affiliateId}`)
+                            if (tinybirdResponse.ok) {
+                                const tinybirdText = await tinybirdResponse.text()
+                                const lines = tinybirdText.trim().split('\n')
+                                if (lines.length > 0 && lines[0].trim()) {
+                                    linkId = lines[0].trim()
+                                    console.log(`[Multi-Tenant Webhook] ✅ Found link_id from Tinybird: ${linkId}`)
+
+                                    // Step 2: Find ShortLink by ID to get affiliate
+                                    const shortLink = await prisma.shortLink.findFirst({
+                                        where: { id: linkId },
+                                        include: { enrollment: true }
+                                    })
+
+                                    if (shortLink?.enrollment) {
+                                        affiliateId = shortLink.enrollment.user_id
+                                        console.log(`[Multi-Tenant Webhook] 🔗 Attribution: Link ${linkId} → Affiliate ${affiliateId}`)
+                                    } else if (shortLink?.affiliate_id) {
+                                        affiliateId = shortLink.affiliate_id
+                                        console.log(`[Multi-Tenant Webhook] 🔗 Attribution (direct): Link ${linkId} → Affiliate ${affiliateId}`)
+                                    }
+                                }
+                            }
+                        } catch (attributionError) {
+                            console.error('[Multi-Tenant Webhook] ⚠️ Affiliate attribution failed (non-blocking):', attributionError)
                         }
                     }
-                } else {
-                    console.log(`[Multi-Tenant Webhook] ℹ️ Tinybird lookup failed: ${tinybirdResponse.status}`)
+
+                    console.log(`[Multi-Tenant Webhook] 💰 Sale for Workspace ${workspaceId} verified via Endpoint ${endpointId}`)
+
+                    // ========================================
+                    // 4.2 LOG TO TINYBIRD (PRIORITY #1)
+                    // ========================================
+                    const eventId = crypto.randomUUID();
+                    await recordSaleToTinybird({
+                        clickId: clickId || 'direct',
+                        orderId: invoiceId,
+                        amount: amount / 100,
+                        currency: currency.toUpperCase(),
+                        timestamp: new Date().toISOString(),
+                        source: 'stripe_webhook',
+                        workspaceId: workspaceId,
+                        linkId: linkId || undefined,
+                        affiliateId: affiliateId || undefined,
+                        customerExternalId: customerExternalId,
+                        customerEmail: customerExternalId,
+                        lineItems: products
+                    });
+
+                    // Record individual line items
+                    if (products.length > 0) {
+                        await recordSaleItemsToTinybird({
+                            clickId: clickId || 'direct',
+                            orderId: invoiceId,
+                            amount: amount / 100,
+                            currency: currency.toUpperCase(),
+                            timestamp: new Date().toISOString(),
+                            source: 'stripe_webhook',
+                            workspaceId: workspaceId,
+                            linkId: linkId || undefined,
+                            affiliateId: affiliateId || undefined,
+                            customerExternalId: customerExternalId,
+                            lineItems: products
+                        }, eventId);
+                    }
+
+                } catch (err) {
+                    // Start of the catch block for the async wrapper
+                    console.error('[Multi-Tenant Webhook] ❌ Async processing error:', err)
                 }
-            } catch (attributionError) {
-                // ⚠️ FAIL-SAFE: Attribution failed but sale MUST still be logged
-                console.error('[Multi-Tenant Webhook] ⚠️ Affiliate attribution failed (non-blocking):', attributionError)
-                // linkId and affiliateId remain null - sale continues without attribution
-            }
-        }
-
-        console.log(`[Multi-Tenant Webhook] 💰 Sale for Workspace ${workspaceId} verified via Endpoint ${endpointId}`)
-        console.log('[Multi-Tenant Webhook] 📦 Details:', {
-            amount: `${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`,
-            customer: customerExternalId,
-            click_id: clickId,
-            link_id: linkId,
-            affiliate_id: affiliateId,
-        })
-
-        // ========================================
-        // 4.2 LOG TO TINYBIRD (PRIORITY #1)
-        // ========================================
-        // This is the CRITICAL path - must always execute
-        try {
-            await logSaleToTinybird({
-                workspace_id: workspaceId,
-                invoice_id: invoiceId,
-                click_id: clickId,
-                link_id: linkId,
-                affiliate_id: affiliateId,
-                customer_external_id: customerExternalId,
-                amount,
-                currency,
-            })
-        } catch (tinybirdError) {
-            // Log error but don't crash the webhook response
-            console.error('[Multi-Tenant Webhook] ❌ Tinybird logging failed:', tinybirdError)
-        }
+            })()
+        )
+    } else {
+        console.log(`[Multi-Tenant Webhook] ⏭️ Ignoring event ${event.type}`)
     }
 
-    // ========================================
-    // 5. IGNORE OTHER EVENTS
-    // ========================================
-    // Only checkout.session.completed is processed to avoid duplicates
-    // payment_intent.succeeded/created are ACKed but not logged
-    if (event.type !== 'checkout.session.completed') {
-        console.log(`[Multi-Tenant Webhook] ⏭️ Ignoring event ${event.type} (no duplicate logging)`)
-    }
-
+    // Always return 200 OK immediately to Stripe
     return NextResponse.json({ received: true }, { status: 200 })
 }

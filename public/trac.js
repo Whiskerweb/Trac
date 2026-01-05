@@ -87,7 +87,7 @@
     var NAVIGATION_EVENT = 'trac:navigation';
 
     // First-Party Proxy Endpoint (Anti-AdBlock)
-    var ANALYTICS_ENDPOINT = '/api/analytics';
+    var ANALYTICS_ENDPOINT = '/_trac/api/analytics';
 
     // Retry config for Web Components
     var WEB_COMPONENT_RETRY_INTERVAL = 100; // ms
@@ -125,7 +125,7 @@
     // Internal config object
     var Config = {
         apiKey: null,
-        apiEndpoint: '/api/track',
+        apiEndpoint: '/_trac/api/track',
         debug: false,
         autoInject: true
     };
@@ -398,7 +398,7 @@
     }
 
     function extendClickIdViaServer(clickId) {
-        fetch('/api/track/click', {
+        fetch('/_trac/api/track/click', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ click_id: clickId }),
