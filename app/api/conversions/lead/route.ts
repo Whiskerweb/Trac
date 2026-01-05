@@ -18,11 +18,14 @@ export async function POST(req: NextRequest) {
         const { click_id, email, timestamp } = await req.json();
 
         if (!click_id || !email) {
+            console.error('[Conversions Lead] Missing fields:', { click_id, email });
             return NextResponse.json(
                 { error: 'Missing click_id or email' },
                 { status: 400 }
             );
         }
+
+        console.log('[Conversions Lead] Processing:', { click_id, email, timestamp });
 
         // 3. Record to Tinybird
         await recordLeadToTinybird({
@@ -32,11 +35,14 @@ export async function POST(req: NextRequest) {
             source: 'manual_api'
         });
 
+        console.log('[Conversions Lead] Success');
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('[Conversions Lead] Error:', error);
+        // Ensure we return a valid JSON response even on error
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: 'Internal server error', details: errorMessage },
             { status: 500 }
         );
     }

@@ -241,6 +241,22 @@
         </div>
     </div>
 
+    <!-- SDK Configuration (BEFORE loading the SDK) -->
+    <script>
+        // Configure Trac SDK before loading
+        window.TracConfig = {
+            // Authentication token
+            token: 'sk_test_phase2_mvp',
+
+            // Proxy path for adblock evasion (CNAME cloaking)
+            // Requests go to: origin/_trac/api/... -> proxied to Trac server
+            apiHost: '/_trac',
+
+            // Enable debug logging
+            debug: true
+        };
+    </script>
+
     <!-- SDK Local Integration -->
     <script src="/core/v1.js"></script>
 
