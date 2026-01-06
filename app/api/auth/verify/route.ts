@@ -26,7 +26,7 @@ export async function GET(request: Request) {
         const workspace = await prisma.workspace.findUnique({
             where: { slug },
             include: {
-                members: {
+                WorkspaceMember: {
                     where: { user_id: user.id },
                     select: { role: true }
                 }
@@ -37,11 +37,11 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
         }
 
-        if (workspace.members.length === 0) {
+        if (workspace.WorkspaceMember.length === 0) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        return NextResponse.json({ ok: true, role: workspace.members[0].role });
+        return NextResponse.json({ ok: true, role: workspace.WorkspaceMember[0].role });
 
     } catch (error) {
         console.error('Verify Access Error:', error);
