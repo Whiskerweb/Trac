@@ -40,13 +40,13 @@ model Mission {
 }
 
 model MissionEnrollment {
-  id         String           @id
+  id         String           @id @default(uuid())
   mission_id String
   user_id    String
   status     EnrollmentStatus @default(PENDING)
   link_id    String?          @unique
   created_at DateTime         @default(now())
-  updated_at DateTime
+  updated_at DateTime         @updatedAt
   ShortLink  ShortLink?       @relation(fields: [link_id], references: [id])
   Mission    Mission          @relation(fields: [mission_id], references: [id], onDelete: Cascade)
 
