@@ -105,7 +105,7 @@ export async function getWorkspaceMissions(): Promise<{
             where: { workspace_id: user.id },
             include: {
                 _count: {
-                    select: { enrollments: true }
+                    select: { MissionEnrollment: true }
                 }
             },
             orderBy: { created_at: 'desc' }
@@ -121,7 +121,7 @@ export async function getWorkspaceMissions(): Promise<{
                 reward: m.reward,
                 status: m.status,
                 created_at: m.created_at,
-                _count: m._count,
+                _count: { enrollments: m._count.MissionEnrollment },
             }))
         }
 
@@ -253,9 +253,9 @@ export async function getMissionDetails(missionId: string): Promise<{
                 workspace_id: user.id  // SECURITY: Only owner can view details
             },
             include: {
-                enrollments: {
+                MissionEnrollment: {
                     include: {
-                        link: true
+                        ShortLink: true
                     },
                     orderBy: { created_at: 'desc' }
                 }
@@ -278,16 +278,16 @@ export async function getMissionDetails(missionId: string): Promise<{
                 reward: mission.reward,
                 status: mission.status,
                 created_at: mission.created_at,
-                enrollments: mission.enrollments.map(e => ({
+                enrollments: mission.MissionEnrollment.map(e => ({
                     id: e.id,
                     user_id: e.user_id,
                     status: e.status,
                     created_at: e.created_at,
-                    link: e.link ? {
-                        id: e.link.id,
-                        slug: e.link.slug,
-                        clicks: e.link.clicks,
-                        full_url: `${baseUrl}/s/${e.link.slug}`
+                    link: e.ShortLink ? {
+                        id: e.ShortLink.id,
+                        slug: e.ShortLink.slug,
+                        clicks: e.ShortLink.clicks,
+                        full_url: `${baseUrl}/s/${e.ShortLink.slug}`
                     } : null
                 }))
             }
