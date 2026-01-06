@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     // B. Vérification en base de données - lookup by public_key in ApiKey model
     const apiKey = await prisma.apiKey.findUnique({
         where: { public_key: publishableKey },
-        include: { workspace: true }
+        include: { Workspace: true }
     });
 
     // C. Si clé inconnue -> 403
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     }
 
     // D. Clé valide -> Continue
-    console.log("✅ Workspace identifié:", apiKey.workspace.name, "(", apiKey.public_key, ")");
+    console.log("✅ Workspace identifié:", apiKey.Workspace.name, "(", apiKey.public_key, ")");
 
     try {
         const body = await request.json()
