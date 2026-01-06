@@ -56,7 +56,7 @@ model MissionEnrollment {
 }
 
 model ShortLink {
-  id                String             @id
+  id                String             @id @default(uuid())
   slug              String             @unique
   original_url      String
   workspace_id      String
