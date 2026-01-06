@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Plus, Link2, ExternalLink, Copy, Trash2, Check, MousePointer2, Calendar, Search, Filter } from 'lucide-react'
 
 interface ShortLink {
