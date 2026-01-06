@@ -337,7 +337,16 @@ export async function joinMission(missionId: string): Promise<{
         })
 
         // 6. ✅ REDIS with CUSTOM DOMAIN: shortlink:[domain]:[slug]
-        const { setLinkInRedis } = await import('@/lib/redis')
+        const { setLinkInRedis, buildLinkKey } = await import('@/lib/redis')
+
+        // 🔍 PRE-WRITE DEBUG LOG
+        const redisKey = buildLinkKey(shortLink.slug, customDomain || undefined)
+        console.log('========================================')
+        console.log('[Marketplace] 💾 REDIS WRITE ATTEMPT')
+        console.log('[Marketplace] Redis Key will be:', redisKey)
+        console.log('[Marketplace] Custom Domain:', customDomain || '(none - using default)')
+        console.log('========================================')
+
         await setLinkInRedis(shortLink.slug, {
             url: shortLink.original_url,
             linkId: shortLink.id,

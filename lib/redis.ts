@@ -60,8 +60,23 @@ export async function setLinkInRedis(
     domain?: string
 ): Promise<void> {
     const key = buildLinkKey(slug, domain)
-    await redis.set(key, JSON.stringify(data))
-    console.log(`[Redis] ✅ SET ${key}`)
+
+    // 🔍 EXPLICIT KEY LOGGING FOR VERCEL DEBUG
+    console.log('========================================')
+    console.log('[Redis] 📝 CREATING SHORTLINK KEY')
+    console.log('[Redis] Key:', key)
+    console.log('[Redis] Slug:', slug)
+    console.log('[Redis] Domain:', domain || 'DEFAULT')
+    console.log('[Redis] Data:', JSON.stringify(data, null, 2))
+    console.log('========================================')
+
+    try {
+        await redis.set(key, JSON.stringify(data))
+        console.log(`[Redis] ✅ SET SUCCESS: ${key}`)
+    } catch (error) {
+        console.error(`[Redis] ❌ SET FAILED: ${key}`, error)
+        throw error  // Re-throw to surface the error
+    }
 }
 
 /**
