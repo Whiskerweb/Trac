@@ -182,7 +182,7 @@ export async function getAllMissions(): Promise<{
         const enrollments = await prisma.missionEnrollment.findMany({
             where: { user_id: user.id },
             include: {
-                link: true
+                ShortLink: true
             }
         })
 
@@ -193,8 +193,8 @@ export async function getAllMissions(): Promise<{
 
         // Collect all link IDs for affiliate stats
         const linkIds = enrollments
-            .filter(e => e.link)
-            .map(e => e.link!.id)
+            .filter(e => e.ShortLink)
+            .map(e => e.ShortLink!.id)
 
         // Fetch REAL stats from Tinybird
         const statsMap = await getAffiliateStatsFromTinybird(linkIds)
@@ -205,12 +205,12 @@ export async function getAllMissions(): Promise<{
         // Merge missions with enrollment data and REAL stats
         const result: MissionWithEnrollment[] = missions.map(mission => {
             const enrollment = enrollmentMap.get(mission.id)
-            const linkId = enrollment?.link?.id
+            const linkId = enrollment?.ShortLink?.id
 
             // Get real stats from Tinybird (or defaults)
             const realStats = linkId ? statsMap.get(linkId) : null
             const stats: AffiliateStats = realStats || {
-                clicks: enrollment?.link?.clicks || 0,
+                clicks: enrollment?.ShortLink?.clicks || 0,
                 sales: 0,
                 revenue: 0,
             }
@@ -226,10 +226,10 @@ export async function getAllMissions(): Promise<{
                 enrollment: enrollment ? {
                     id: enrollment.id,
                     status: enrollment.status,
-                    link: enrollment.link ? {
-                        id: enrollment.link.id,
-                        slug: enrollment.link.slug,
-                        full_url: `${baseUrl}/s/${enrollment.link.slug}`
+                    link: enrollment.ShortLink ? {
+                        id: enrollment.ShortLink.id,
+                        slug: enrollment.ShortLink.slug,
+                        full_url: `${baseUrl}/s/${enrollment.ShortLink.slug}`
                     } : null,
                     stats
                 } : null
@@ -375,8 +375,8 @@ export async function getMyEnrollments(): Promise<{
         const enrollments = await prisma.missionEnrollment.findMany({
             where: { user_id: user.id },
             include: {
-                mission: true,
-                link: true,
+                Mission: true,
+                ShortLink: true,
             },
             orderBy: { created_at: 'desc' }
         })
@@ -388,14 +388,14 @@ export async function getMyEnrollments(): Promise<{
             enrollments: enrollments.map(e => ({
                 id: e.id,
                 mission: {
-                    id: e.mission.id,
-                    title: e.mission.title,
-                    reward: e.mission.reward,
+                    id: e.Mission.id,
+                    title: e.Mission.title,
+                    reward: e.Mission.reward,
                 },
-                link: e.link ? {
-                    slug: e.link.slug,
-                    full_url: `${baseUrl}/s/${e.link.slug}`,
-                    clicks: e.link.clicks,
+                link: e.ShortLink ? {
+                    slug: e.ShortLink.slug,
+                    full_url: `${baseUrl}/s/${e.ShortLink.slug}`,
+                    clicks: e.ShortLink.clicks,
                 } : null,
                 status: e.status,
                 created_at: e.created_at,
