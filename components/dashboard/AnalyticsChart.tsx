@@ -27,12 +27,12 @@ interface AnalyticsChartProps {
 function ChartSkeleton() {
     return (
         <div className="w-full h-[350px] flex items-end justify-between gap-2 px-8 pb-8 pt-4 animate-pulse">
-            {Array.from({ length: 12 }).map((_, i) => (
+            {[65, 45, 78, 52, 60, 85, 42, 58, 70, 62, 48, 75].map((height, i) => (
                 <div
                     key={i}
                     className="bg-gray-200 rounded-t-md flex-1"
                     style={{
-                        height: `${Math.random() * 60 + 40}%`,
+                        height: `${height}%`,
                     }}
                 />
             ))}

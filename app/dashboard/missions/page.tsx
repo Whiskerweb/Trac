@@ -7,6 +7,7 @@ import {
     ExternalLink, CheckCircle2, FileText, AlertCircle
 } from 'lucide-react'
 import Link from 'next/link'
+import { DNSGatekeeper } from '@/components/dashboard/DNSGatekeeper'
 import {
     createMission,
     getWorkspaceMissions,
@@ -317,7 +318,11 @@ function CreateMissionModal({
 // MAIN PAGE COMPONENT
 // =============================================
 
-export default function MissionsPage() {
+// =============================================
+// MISSIONS CONTENT (Renamed from default export)
+// =============================================
+
+function MissionsContent() {
     const [missions, setMissions] = useState<Mission[]>([])
     const [loading, setLoading] = useState(true)
     const [modalOpen, setModalOpen] = useState(false)
@@ -399,5 +404,13 @@ export default function MissionsPage() {
                 onSuccess={loadMissions}
             />
         </div>
+    )
+}
+
+export default function MissionsPage() {
+    return (
+        <DNSGatekeeper>
+            <MissionsContent />
+        </DNSGatekeeper>
     )
 }

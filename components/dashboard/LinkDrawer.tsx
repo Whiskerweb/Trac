@@ -98,7 +98,7 @@ export function LinkDrawer({ isOpen, onClose, link, onDelete }: LinkDrawerProps)
         date.setDate(date.getDate() - (29 - i))
         return {
             date: date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
-            clicks: Math.floor(Math.random() * 20) + (link.clicks > 100 ? 5 : 0) // Scale slightly if link has many clicks
+            clicks: Math.floor(((i * 1337 + link.clicks) % 100) / 5) + (link.clicks > 100 ? 5 : 0)
         }
     })
 
@@ -129,8 +129,8 @@ export function LinkDrawer({ isOpen, onClose, link, onDelete }: LinkDrawerProps)
                             <button
                                 onClick={() => setActiveTab('overview')}
                                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'overview'
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-500 hover:text-gray-700'
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
                                 Overview
@@ -138,8 +138,8 @@ export function LinkDrawer({ isOpen, onClose, link, onDelete }: LinkDrawerProps)
                             <button
                                 onClick={() => setActiveTab('settings')}
                                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'settings'
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-500 hover:text-gray-700'
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
                                 Settings

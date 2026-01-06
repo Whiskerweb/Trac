@@ -10,6 +10,14 @@ import {
     VERCEL_TEAM_ID,
     CNAME_TARGET,
 } from '@/lib/config/constants'
+import { redis } from '@/lib/redis'
+
+// Cache TTL for Vercel API responses (seconds)
+const DNS_CACHE_TTL = 60
+
+function getDnsCacheKey(domain: string): string {
+    return `dns_status:${domain}`
+}
 
 // =============================================
 // TYPES
@@ -144,7 +152,7 @@ async function addDomainToVercel(domainName: string): Promise<{
 /**
  * Check domain configuration status on Vercel
  */
-async function checkDomainStatus(domainName: string): Promise<{
+async function checkDomainStatus(domainName: string, skipCache: boolean = false): Promise<{
     success: boolean
     configured: boolean
     verified: boolean
@@ -157,6 +165,30 @@ async function checkDomainStatus(domainName: string): Promise<{
     }
 
     try {
+        const cacheKey = getDnsCacheKey(domainName)
+
+        // Return cached result if available (unless skipping)
+        if (!skipCache) {
+            try {
+                const cached = await redis.get<VercelDomainConfigResponse>(cacheKey)
+                if (cached) {
+                    console.log('[Domains] ⚡ Returning cached status for:', domainName)
+                    const configured = cached.configuredBy !== null && !cached.misconfigured
+                    const verified = configured && cached.conflicts.length === 0
+                    return {
+                        success: true,
+                        configured,
+                        verified,
+                        details: cached,
+                    }
+                }
+            } catch (err) {
+                console.warn('[Domains] ⚠️ Redis cache read error:', err)
+            }
+        } else {
+            console.log('[Domains] 🔄 Skipping cache for:', domainName)
+        }
+
         const url = `${VERCEL_API_BASE}/v6/domains/${domainName}/config${getTeamQuery()}`
 
         const res = await fetch(url, {
@@ -169,6 +201,13 @@ async function checkDomainStatus(domainName: string): Promise<{
         if (!res.ok) {
             console.error('[Domains] ❌ Domain config check failed:', data)
             return { success: false, configured: false, verified: false, error: 'Impossible de vérifier le domaine' }
+        }
+
+        // Cache the result
+        try {
+            await redis.set(cacheKey, data, { ex: DNS_CACHE_TTL })
+        } catch (err) {
+            console.warn('[Domains] ⚠️ Redis cache set error:', err)
         }
 
         const configured = data.configuredBy !== null && !data.misconfigured
@@ -383,7 +422,7 @@ export async function addDomain(domainName: string): Promise<AddDomainResult> {
 /**
  * Verify domain DNS configuration
  */
-export async function verifyDomain(domainId: string): Promise<VerifyDomainResult> {
+export async function verifyDomain(domainId: string, skipCache: boolean = false): Promise<VerifyDomainResult> {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -411,7 +450,7 @@ export async function verifyDomain(domainId: string): Promise<VerifyDomainResult
         }
 
         // Check status with Vercel
-        const status = await checkDomainStatus(domain.name)
+        const status = await checkDomainStatus(domain.name, skipCache)
 
         if (!status.success) {
             return { success: false, error: status.error }
@@ -437,6 +476,9 @@ export async function verifyDomain(domainId: string): Promise<VerifyDomainResult
             })
 
             console.log('[Domains] ✅ Domain verified:', domain.name)
+
+            // Invalidate cache immediately to reflect new status
+            await redis.del(getDnsCacheKey(domain.name))
         }
 
         revalidatePath('/dashboard/domains')
@@ -555,5 +597,39 @@ export async function getVerifiedDomainForWorkspace(): Promise<{
     } catch (error) {
         console.error('[Domains] ❌ getVerifiedDomainForWorkspace error:', error)
         return { success: false, error: 'Erreur lors du chargement' }
+    }
+}
+
+/**
+ * Check if the workspace has a verified domain (Gatekeeper check)
+ * Returns a simple boolean for UI use
+ */
+export async function getWorkspaceDNSStatus(): Promise<{
+    success: boolean
+    hasVerifiedDomain: boolean
+}> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { success: false, hasVerifiedDomain: false }
+    }
+
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+        if (!workspace) return { success: true, hasVerifiedDomain: false }
+
+        const domain = await prisma.domain.findFirst({
+            where: {
+                workspace_id: workspace.workspaceId,
+                verified: true
+            },
+            select: { id: true }
+        })
+
+        return { success: true, hasVerifiedDomain: !!domain }
+    } catch (error) {
+        console.error('[Domains] ❌ getWorkspaceDNSStatus error:', error)
+        return { success: false, hasVerifiedDomain: false }
     }
 }

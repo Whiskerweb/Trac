@@ -62,6 +62,7 @@ export async function createWorkspaceOnboarding(formData: FormData): Promise<{
     success: boolean
     slug?: string
     error?: string
+    redirectTo?: string
 }> {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -128,7 +129,7 @@ export async function createWorkspaceOnboarding(formData: FormData): Promise<{
 
         revalidatePath('/dashboard')
 
-        return { success: true, slug: workspace.slug }
+        return { success: true, slug: workspace.slug, redirectTo: '/dashboard/domains?setup=true' }
     } catch (err) {
         console.error('[Onboarding] ❌ Workspace creation error:', err)
         return { success: false, error: 'Erreur lors de la création du workspace' }

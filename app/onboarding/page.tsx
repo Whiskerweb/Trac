@@ -67,7 +67,7 @@ export default function OnboardingPage() {
             const result = await createWorkspaceOnboarding(formData)
 
             if (result.success) {
-                router.push('/dashboard')
+                router.push(result.redirectTo || '/dashboard')
             } else {
                 setError(result.error || 'Une erreur est survenue')
             }
@@ -127,10 +127,10 @@ export default function OnboardingPage() {
                                         onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                                         placeholder="acme"
                                         className={`w-full px-3 py-2.5 border rounded-r-lg focus:ring-2 focus:ring-black focus:border-black outline-none text-sm transition-all pr-10 ${slugStatus === 'taken' || slugStatus === 'invalid'
-                                                ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                                                : slugStatus === 'available'
-                                                    ? 'border-green-300 focus:ring-green-500 focus:border-green-500'
-                                                    : 'border-gray-300'
+                                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                                            : slugStatus === 'available'
+                                                ? 'border-green-300 focus:ring-green-500 focus:border-green-500'
+                                                : 'border-gray-300'
                                             }`}
                                         required
                                     />

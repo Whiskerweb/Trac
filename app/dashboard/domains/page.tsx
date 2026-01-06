@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
     Globe, Plus, RefreshCw, Trash2, ExternalLink, Copy, Check,
-    Loader2, AlertCircle, X, Info, AlertTriangle
+    Loader2, AlertCircle, X, Info, AlertTriangle, ArrowRight, CheckCircle2
 } from 'lucide-react'
 import Link from 'next/link'
 import { getDomains, addDomain, verifyDomain, removeDomain } from '@/app/actions/domains'
 import { CNAME_TARGET } from '@/lib/config/constants'
+import confetti from 'canvas-confetti'
 
 // =============================================
 // TYPES
@@ -107,7 +108,7 @@ function DomainRow({
     verificationRecords
 }: {
     domain: DomainData
-    onVerify: () => void
+    onVerify: (force?: boolean) => void
     onDelete: () => void
     isVerifying: boolean
     isDeleting: boolean
@@ -122,21 +123,25 @@ function DomainRow({
     const txtRecord = verificationRecords.find(r => r.type === 'TXT')
 
     return (
-        <div className="group border-b border-gray-100 last:border-0 bg-white hover:bg-gray-50/30 transition-colors">
+        <div className={`group border-b border-gray-100 last:border-0 transition-all ${domain.verified ? 'bg-white' : 'bg-gray-50/30'}`}>
             {/* Main Row */}
             <div className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-4 flex-1">
-                    <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center flex-shrink-0">
-                        <Globe className="w-5 h-5 text-gray-500" />
+                    <div className={`w-10 h-10 rounded-lg border flex items-center justify-center flex-shrink-0 transition-colors ${domain.verified ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white border-gray-200 text-gray-400'}`}>
+                        {domain.verified ? <CheckCircle2 className="w-5 h-5" /> : <Globe className="w-5 h-5" />}
                     </div>
                     <div>
                         <div className="flex items-center gap-3">
-                            <span className="font-semibold text-gray-900">{domain.name}</span>
+                            <span className={`font-semibold text-base ${domain.verified ? 'text-gray-900' : 'text-gray-700'}`}>{domain.name}</span>
                             <StatusDot status={isVerifying ? 'verifying' : domain.verified ? 'verified' : 'pending'} />
                         </div>
-                        {domain.verified && domain.verifiedAt && (
+                        {domain.verified && domain.verifiedAt ? (
                             <p className="text-xs text-gray-500 mt-0.5">
                                 Verified on {new Date(domain.verifiedAt).toLocaleDateString()}
+                            </p>
+                        ) : (
+                            <p className="text-xs text-amber-600 mt-0.5 font-medium">
+                                Action required
                             </p>
                         )}
                     </div>
@@ -147,17 +152,26 @@ function DomainRow({
                         <>
                             <button
                                 onClick={onToggleExpand}
-                                className="text-sm text-blue-600 hover:text-blue-700 font-medium px-3 py-1.5 hover:bg-blue-50 rounded-md transition-colors"
+                                className="text-sm text-gray-600 hover:text-gray-900 font-medium px-3 py-1.5 hover:bg-gray-100 rounded-md transition-colors"
                             >
-                                {expanded ? 'Hide' : 'Configure'}
+                                {expanded ? 'Hide Instructions' : 'Configure DNS'}
                             </button>
                             <button
-                                onClick={onVerify}
+                                onClick={() => onVerify(true)}
                                 disabled={isVerifying}
-                                className="text-sm text-gray-600 hover:text-gray-900 font-medium px-3 py-1.5 hover:bg-gray-100 rounded-md transition-colors flex items-center gap-2"
+                                className="text-sm text-white bg-black hover:bg-gray-800 disabled:opacity-50 disabled:hover:bg-black font-medium px-4 py-1.5 rounded-md transition-all flex items-center gap-2 shadow-sm"
                             >
-                                {isVerifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                                Verify
+                                {isVerifying ? (
+                                    <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        Checking...
+                                    </>
+                                ) : (
+                                    <>
+                                        <RefreshCw className="w-3.5 h-3.5" />
+                                        Verify Now
+                                    </>
+                                )}
                             </button>
                         </>
                     )}
@@ -171,58 +185,89 @@ function DomainRow({
                 </div>
             </div>
 
-            {/* Expanded DNS Instructions */}
+            {/* Expanded DNS Instructions (Step-by-Step) */}
             {expanded && !domain.verified && (
-                <div className="px-4 md:px-14 pb-6 pt-0">
-                    {/* Warning Block */}
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3 mb-4">
-                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <h4 className="text-sm font-semibold text-amber-900">Important: DNS Ownership Transfer</h4>
-                            <p className="text-sm text-amber-800 mt-1">
-                                Adding these DNS records will transfer routing authority to Traaaction for this domain/subdomain.
-                                SSL certificates will be automatically provisioned by Vercel once records propagate.
+                <div className="px-4 md:px-14 pb-8 pt-2 animate-in slide-in-from-top-2 duration-200">
+                    <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-8">
+
+                        {/* Step 1 */}
+                        <div className="flex gap-4">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-sm text-gray-600">1</div>
+                            <div>
+                                <h4 className="font-semibold text-gray-900">Log in to your DNS Provider</h4>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    Sign in to GoDaddy, Namecheap, Cloudflare, or wherever you bought your domain.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div className="flex gap-4">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-sm text-gray-600">2</div>
+                            <div className="w-full max-w-2xl">
+                                <h4 className="font-semibold text-gray-900">Add CNAME Record</h4>
+                                <p className="text-sm text-gray-500 mt-1 mb-3">
+                                    This points your subdomain to our servers.
+                                </p>
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-100/50 border-b border-gray-200">
+                                            <tr className="text-xs uppercase text-gray-500 font-medium">
+                                                <th className="px-4 py-2 w-24">Type</th>
+                                                <th className="px-4 py-2 w-32">Name</th>
+                                                <th className="px-4 py-2">Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <DNSRecordRow type="CNAME" name={recordName} value={CNAME_TARGET} />
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step 3 (Only if TXT needed) */}
+                        {txtRecord && (
+                            <div className="flex gap-4">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-sm text-gray-600">3</div>
+                                <div className="w-full max-w-2xl">
+                                    <h4 className="font-semibold text-gray-900">Add TXT Record (SSL Verification)</h4>
+                                    <p className="text-sm text-gray-500 mt-1 mb-3">
+                                        Required for issuing your secure SSL certificate.
+                                    </p>
+                                    <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-gray-100/50 border-b border-gray-200">
+                                                <tr className="text-xs uppercase text-gray-500 font-medium">
+                                                    <th className="px-4 py-2 w-24">Type</th>
+                                                    <th className="px-4 py-2 w-32">Name</th>
+                                                    <th className="px-4 py-2">Value</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <DNSRecordRow
+                                                    type="TXT"
+                                                    name={txtRecord.domain.replace(`.${domain.name}`, '') || '_vercel'}
+                                                    value={txtRecord.value}
+                                                />
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Warning */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3 text-sm text-amber-800">
+                            <Info className="w-5 h-5 flex-shrink-0 text-amber-600" />
+                            <p>
+                                DNS changes typically take a few minutes to propagate, but can take up to 24 hours.
+                                <br />
+                                <strong>Click "Verify Now" above to check status live.</strong>
                             </p>
                         </div>
-                    </div>
 
-                    {/* DNS Records Table */}
-                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                        <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                            <h4 className="text-sm font-semibold text-gray-900">Required DNS Records</h4>
-                            <p className="text-xs text-gray-500 mt-0.5">Add both records to your DNS provider</p>
-                        </div>
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50 border-b border-gray-100">
-                                <tr className="text-xs uppercase text-gray-500 font-medium">
-                                    <th className="px-4 py-2 w-20">Type</th>
-                                    <th className="px-4 py-2 w-32">Name</th>
-                                    <th className="px-4 py-2">Value</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {/* CNAME Record */}
-                                <DNSRecordRow
-                                    type="CNAME"
-                                    name={recordName}
-                                    value={CNAME_TARGET}
-                                />
-                                {/* TXT Record (if available) */}
-                                {txtRecord && (
-                                    <DNSRecordRow
-                                        type="TXT"
-                                        name={txtRecord.domain.replace(`.${domain.name}`, '') || '_vercel'}
-                                        value={txtRecord.value}
-                                    />
-                                )}
-                            </tbody>
-                        </table>
                     </div>
-
-                    <p className="text-xs text-gray-500 mt-3 flex items-center gap-1.5">
-                        <Info className="w-3 h-3" />
-                        DNS propagation can take 1-60 minutes. Click "Verify" to check status.
-                    </p>
                 </div>
             )}
         </div>
@@ -284,9 +329,11 @@ export default function DomainsPage() {
         setAdding(false)
     }
 
-    const handleVerify = async (id: string) => {
+    const handleVerify = async (id: string, force: boolean = false) => {
         setVerifyingId(id)
-        const result = await verifyDomain(id)
+
+        // If force (Live Validator), we skip cache
+        const result = await verifyDomain(id, force)
 
         // Store verification records
         if (result.verification && result.verification.length > 0) {
@@ -294,6 +341,17 @@ export default function DomainsPage() {
                 ...prev,
                 [id]: result.verification!
             }))
+        }
+
+        if (result.success && result.verified) {
+            // 🎊 Success!
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#000000', '#22C55E', '#FFD700']
+            })
+            setExpanded(null)
         }
 
         await loadDomains()
@@ -367,7 +425,7 @@ export default function DomainsPage() {
                             <DomainRow
                                 key={domain.id}
                                 domain={domain}
-                                onVerify={() => handleVerify(domain.id)}
+                                onVerify={(force) => handleVerify(domain.id, force)}
                                 onDelete={() => handleDelete(domain.id)}
                                 isVerifying={verifyingId === domain.id}
                                 isDeleting={deletingId === domain.id}
