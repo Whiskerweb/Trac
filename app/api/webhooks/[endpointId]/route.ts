@@ -206,11 +206,11 @@ export async function POST(
                                     // Step 2: Find ShortLink by ID to get affiliate
                                     const shortLink = await prisma.shortLink.findFirst({
                                         where: { id: linkId },
-                                        include: { enrollment: true }
+                                        include: { MissionEnrollment: true }
                                     })
 
-                                    if (shortLink?.enrollment) {
-                                        affiliateId = shortLink.enrollment.user_id
+                                    if (shortLink?.MissionEnrollment) {
+                                        affiliateId = shortLink.MissionEnrollment.user_id
                                         console.log(`[Multi-Tenant Webhook] 🔗 Attribution: Link ${linkId} → Affiliate ${affiliateId}`)
                                     } else if (shortLink?.affiliate_id) {
                                         affiliateId = shortLink.affiliate_id
