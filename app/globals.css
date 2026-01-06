@@ -1,1 +1,37 @@
 @import "tailwindcss";
+
+@theme {
+  --font-geist-sans: 'Geist Sans', system-ui, sans-serif;
+  --font-geist-mono: 'Geist Mono', monospace;
+}
+
+:root {
+  --background: #FAFAFA; /* Dub.co light grey background */
+  --foreground: #000000;
+  --card-bg: #FFFFFF;
+  --card-border: #E5E7EB; /* gray-200 */
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dub.co style scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #E5E7EB;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D1D5DB;
+}

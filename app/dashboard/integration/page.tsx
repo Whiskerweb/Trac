@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
     Code2, Webhook, CheckCircle2, Copy, Check,
-    ExternalLink, Zap, AlertCircle, Key, RefreshCw,
-    Play, Terminal, Loader2, XCircle, Clock, Building2, Eye, EyeOff
+    Zap, AlertCircle, Key, RefreshCw,
+    Play, Terminal, Loader2, Eye, EyeOff, Building2
 } from 'lucide-react'
 import Link from 'next/link'
 import { getOrCreateApiKey, regenerateApiKey } from '@/app/actions/settings'
@@ -22,202 +22,54 @@ interface InstallationStatus {
     status: 'connected' | 'waiting' | 'no_workspace' | 'error' | 'no_tinybird_token' | 'query_failed'
 }
 
-// =============================================
-// COPY BUTTON COMPONENT
-// =============================================
-
 function CopyButton({ text, className = '' }: { text: string; className?: string }) {
     const [copied, setCopied] = useState(false)
-
     const handleCopy = async () => {
         await navigator.clipboard.writeText(text)
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
     }
-
     return (
-        <button
-            onClick={handleCopy}
-            className={`p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-all ${className}`}
-            title="Copier"
-        >
-            {copied ? (
-                <Check className="w-4 h-4 text-green-400" />
-            ) : (
-                <Copy className="w-4 h-4 text-slate-400" />
-            )}
+        <button onClick={handleCopy} className={`p-1.5 rounded-md hover:bg-white/10 transition-colors ${className}`}>
+            {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
         </button>
     )
 }
 
-// =============================================
-// CODE BLOCK COMPONENT
-// =============================================
-
-function CodeBlock({ code, language = 'html' }: { code: string; language?: string }) {
-    return (
-        <div className="relative mt-4 group">
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <CopyButton text={code} />
-            </div>
-            <pre className="bg-slate-900 border border-slate-700 rounded-xl p-4 overflow-x-auto">
-                <code className="text-sm text-slate-300 font-mono whitespace-pre">
-                    {code}
-                </code>
-            </pre>
-        </div>
-    )
-}
-
-// =============================================
-// STEP CARD WITH SUCCESS INDICATOR
-// =============================================
-
-function StepCard({
-    icon: Icon,
-    iconColor,
-    step,
+function StepItem({
+    number,
     title,
     description,
     isComplete,
-    isLoading,
-    children,
+    children
 }: {
-    icon: React.ComponentType<{ className?: string }>
-    iconColor: string
-    step: number
+    number: number
     title: string
     description: string
     isComplete: boolean
-    isLoading?: boolean
     children: React.ReactNode
 }) {
     return (
-        <div className={`bg-white border rounded-2xl p-6 shadow-sm hover:shadow-md transition-all ${isComplete ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200'
-            }`}>
-            <div className="flex items-start gap-4">
-                {/* Status Icon */}
-                <div className="relative">
-                    <div className={`p-3 rounded-xl ${iconColor}`}>
-                        <Icon className="w-6 h-6 text-white" />
-                    </div>
-                    {isComplete && (
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-white">
-                            <Check className="w-3 h-3 text-white" />
-                        </div>
-                    )}
-                    {isLoading && (
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white">
-                            <Loader2 className="w-3 h-3 text-white animate-spin" />
-                        </div>
-                    )}
+        <div className="flex gap-4 sm:gap-6">
+            <div className="flex flex-col items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border ${isComplete
+                        ? 'bg-green-500 border-green-500 text-white'
+                        : 'bg-white border-gray-300 text-gray-500'
+                    }`}>
+                    {isComplete ? <Check className="w-4 h-4" /> : number}
                 </div>
-
-                <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isComplete
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-slate-100 text-slate-500'
-                            }`}>
-                            ÉTAPE {step}
-                        </span>
-                        {isComplete && (
-                            <span className="text-xs font-medium text-emerald-600 flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3" />
-                                Configuré
-                            </span>
-                        )}
-                    </div>
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
-                    <p className="text-slate-600 text-sm leading-relaxed mb-4">{description}</p>
-                    {children}
+                <div className="w-px h-full bg-gray-200 my-2 min-h-[2rem]" />
+            </div>
+            <div className="flex-1 pb-12">
+                <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+                    <p className="text-gray-500 text-sm mt-1">{description}</p>
                 </div>
+                {children}
             </div>
         </div>
     )
 }
-
-// =============================================
-// INSTALLATION STATUS COMPONENT
-// =============================================
-
-function InstallationChecker({
-    status,
-    isPolling,
-    onRefresh
-}: {
-    status: InstallationStatus | null
-    isPolling: boolean
-    onRefresh: () => void
-}) {
-    if (!status) {
-        return (
-            <div className="flex items-center gap-3 p-4 bg-slate-100 rounded-xl">
-                <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
-                <span className="text-sm text-slate-600">Vérification de l&apos;installation...</span>
-            </div>
-        )
-    }
-
-    if (status.installed) {
-        return (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-                <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                        <span className="font-semibold text-emerald-800">SDK Connecté !</span>
-                    </div>
-                    <button
-                        onClick={onRefresh}
-                        disabled={isPolling}
-                        className="p-1.5 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                    >
-                        <RefreshCw className={`w-4 h-4 text-emerald-600 ${isPolling ? 'animate-spin' : ''}`} />
-                    </button>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-3">
-                    <div className="bg-white/50 rounded-lg p-3">
-                        <p className="text-xs text-emerald-600 font-medium uppercase tracking-wide">Events Reçus</p>
-                        <p className="text-2xl font-bold text-emerald-800">{status.eventCount}</p>
-                    </div>
-                    <div className="bg-white/50 rounded-lg p-3">
-                        <p className="text-xs text-emerald-600 font-medium uppercase tracking-wide">Dernier Event</p>
-                        <p className="text-sm font-medium text-emerald-800">
-                            {status.lastEventAt
-                                ? new Date(status.lastEventAt).toLocaleString('fr-FR')
-                                : 'N/A'
-                            }
-                        </p>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    return (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-amber-600 animate-pulse" />
-                    <span className="font-semibold text-amber-800">En attente du premier event...</span>
-                </div>
-                {isPolling && (
-                    <span className="text-xs text-amber-600 flex items-center gap-1">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Polling...
-                    </span>
-                )}
-            </div>
-            <p className="text-sm text-amber-700">
-                Installez le SDK sur votre site et cette section se mettra à jour automatiquement.
-            </p>
-        </div>
-    )
-}
-
-// =============================================
-// SIMULATOR CONSOLE
-// =============================================
 
 function SimulatorConsole() {
     const [logs, setLogs] = useState<Array<{ type: 'info' | 'success' | 'error'; message: string; time: string }>>([])
@@ -233,413 +85,204 @@ function SimulatorConsole() {
 
     const simulateClick = async () => {
         setIsRunning(true)
-        addLog('info', 'Démarrage de la simulation de clic...')
-
+        addLog('info', 'Simulating click...')
         try {
-            // Check if Trac is available
             if (typeof window !== 'undefined' && (window as any).Trac) {
-                const clickId = (window as any).Trac.getClickId()
-                if (clickId) {
-                    addLog('success', `Click ID existant trouvé: ${clickId}`)
-                } else {
-                    // Generate new click
-                    const newClickId = (window as any).TracUtils?.generateClickId() || `clk_${Date.now()}_test`
-                    addLog('success', `Nouveau Click ID généré: ${newClickId}`)
-                }
+                const clickId = (window as any).Trac.getClickId() || (window as any).TracUtils?.generateClickId()
+                addLog('success', `Click ID captured: ${clickId}`)
             } else {
-                // SDK not loaded - simulate manually
-                const testClickId = `clk_${Math.floor(Date.now() / 1000)}_${Math.random().toString(16).slice(2, 18)}`
-                addLog('info', `SDK non chargé. Click ID de test: ${testClickId}`)
-
-                // Try to send to server
-                const res = await fetch('/_trac/api/track/click', {
+                addLog('info', 'SDK not detected. Mocking server request.')
+                const testClickId = `clk_test_${Date.now()}`
+                await fetch('/_trac/api/track/click', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ click_id: testClickId }),
-                    credentials: 'include'
+                    body: JSON.stringify({ click_id: testClickId })
                 })
-
-                if (res.ok) {
-                    addLog('success', 'Event envoyé au serveur avec succès ✓')
-                } else {
-                    addLog('error', `Erreur serveur: ${res.status}`)
-                }
+                addLog('success', 'Click event sent to server ✓')
             }
         } catch (err: any) {
-            addLog('error', `Erreur: ${err.message}`)
+            addLog('error', err.message)
         }
-
         setIsRunning(false)
     }
 
     const simulateSale = async () => {
         setIsRunning(true)
-        addLog('info', 'Démarrage de la simulation de vente...')
-
+        addLog('info', 'Simulating conversion...')
         try {
             if (typeof window !== 'undefined' && (window as any).Trac?.recordSale) {
-                await (window as any).Trac.recordSale({
-                    amount: 9900,
-                    currency: 'EUR',
-                    orderId: `test_${Date.now()}`
-                })
-                addLog('success', 'Vente enregistrée via SDK ✓')
+                await (window as any).Trac.recordSale({ amount: 5000, currency: 'USD', orderId: `ord_${Date.now()}` })
+                addLog('success', 'Conversion recorded via SDK ✓')
             } else {
-                // Try API directly
-                const res = await fetch('/_trac/api/conversions/sale', {
+                await fetch('/_trac/api/conversions/sale', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        click_id: `clk_test_${Date.now()}`,
-                        amount: 9900,
-                        currency: 'EUR'
-                    })
+                    body: JSON.stringify({ click_id: `clk_test_${Date.now()}`, amount: 5000, currency: 'USD' })
                 })
-
-                if (res.ok) {
-                    addLog('success', 'Vente de test envoyée au serveur ✓')
-                } else {
-                    const data = await res.json().catch(() => ({}))
-                    addLog('error', `Erreur: ${data.error || res.status}`)
-                }
+                addLog('success', 'Conversion sent to server ✓')
             }
         } catch (err: any) {
-            addLog('error', `Erreur: ${err.message}`)
+            addLog('error', err.message)
         }
-
         setIsRunning(false)
     }
 
-    const clearLogs = () => setLogs([])
-
     return (
-        <div className="mt-4">
-            {/* Buttons */}
-            <div className="flex gap-3 mb-4">
-                <button
-                    onClick={simulateClick}
-                    disabled={isRunning}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-xl transition-colors"
-                >
-                    <Play className="w-4 h-4" />
-                    Simuler un Clic
-                </button>
-                <button
-                    onClick={simulateSale}
-                    disabled={isRunning}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-medium rounded-xl transition-colors"
-                >
-                    <Zap className="w-4 h-4" />
-                    Simuler une Vente
-                </button>
-                {logs.length > 0 && (
-                    <button
-                        onClick={clearLogs}
-                        className="px-3 py-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
-                    >
-                        Effacer
-                    </button>
-                )}
-            </div>
-
-            {/* Console Output */}
-            {logs.length > 0 && (
-                <div className="bg-slate-900 rounded-xl p-4 font-mono text-sm max-h-48 overflow-y-auto">
-                    {logs.map((log, i) => (
-                        <div key={i} className="flex items-start gap-2 mb-1">
-                            <span className="text-slate-500 text-xs">{log.time}</span>
-                            <span className={
-                                log.type === 'success' ? 'text-emerald-400' :
-                                    log.type === 'error' ? 'text-red-400' :
-                                        'text-slate-400'
-                            }>
-                                {log.message}
-                            </span>
-                        </div>
-                    ))}
+        <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm">
+            <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-3">
+                <div className="flex items-center gap-2 text-gray-400">
+                    <Terminal className="w-4 h-4" />
+                    <span>Test Console</span>
                 </div>
-            )}
+                <div className="flex gap-2">
+                    <button onClick={simulateClick} disabled={isRunning} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-xs transition-colors">
+                        Simulate Click
+                    </button>
+                    <button onClick={simulateSale} disabled={isRunning} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-green-400 rounded text-xs transition-colors">
+                        Simulate Sale
+                    </button>
+                </div>
+            </div>
+            <div className="space-y-1 h-32 overflow-y-auto custom-scrollbar">
+                {logs.length === 0 && <span className="text-gray-600 italic">Ready to test...</span>}
+                {logs.map((log, i) => (
+                    <div key={i} className="flex gap-2">
+                        <span className="text-gray-600 text-xs">[{log.time}]</span>
+                        <span className={log.type === 'success' ? 'text-green-400' : log.type === 'error' ? 'text-red-400' : 'text-gray-300'}>
+                            {log.message}
+                        </span>
+                    </div>
+                ))}
+            </div>
         </div>
     )
 }
 
-// =============================================
-// MAIN PAGE COMPONENT
-// =============================================
-
-export default function SetupDiagnosticsPage() {
+export default function IntegrationPage() {
     const [publicKey, setPublicKey] = useState<string | null>(null)
     const [secretKey, setSecretKey] = useState<string | null>(null)
     const [showSecret, setShowSecret] = useState(false)
-    const [workspaceName, setWorkspaceName] = useState<string>('')
+    const [workspaceName, setWorkspaceName] = useState('')
     const [customDomain, setCustomDomain] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
-    const [regenerating, setRegenerating] = useState(false)
-    const [hasWebhooks, setHasWebhooks] = useState(false)
-
-    // Installation status
     const [installStatus, setInstallStatus] = useState<InstallationStatus | null>(null)
-    const [isPolling, setIsPolling] = useState(false)
 
-    // Load API keys on mount
     useEffect(() => {
-        async function loadData() {
-            // Load API keys
-            const keyResult = await getOrCreateApiKey()
-            if (keyResult.success) {
-                setPublicKey(keyResult.publicKey || null)
-                setWorkspaceName(keyResult.workspaceName || '')
-                if (keyResult.secretKey) {
-                    setSecretKey(keyResult.secretKey)
+        async function init() {
+            try {
+                const [keys, domain, status] = await Promise.all([
+                    getOrCreateApiKey(),
+                    getVerifiedDomainForWorkspace(),
+                    fetch('/api/stats/check-installation').then(r => r.json())
+                ])
+                if (keys.success) {
+                    setPublicKey(keys.publicKey!)
+                    setWorkspaceName(keys.workspaceName || '')
+                    setSecretKey(keys.secretKey || null)
                 }
+                if (domain.success) setCustomDomain(domain.domain || null)
+                if (status) setInstallStatus(status)
+            } catch (e) {
+                console.error(e)
             }
-
-            // Load verified domain
-            const domainResult = await getVerifiedDomainForWorkspace()
-            if (domainResult.success && domainResult.domain) {
-                setCustomDomain(domainResult.domain)
-            }
-
             setLoading(false)
         }
-        loadData()
-    }, [])
-
-    // Poll installation status
-    const checkInstallation = useCallback(async () => {
-        setIsPolling(true)
-        try {
-            const res = await fetch('/api/stats/check-installation')
-            if (res.ok) {
-                const data = await res.json()
-                setInstallStatus(data)
-            }
-        } catch (err) {
-            console.error('Failed to check installation:', err)
-        }
-        setIsPolling(false)
-    }, [])
-
-    useEffect(() => {
-        checkInstallation()
-        const interval = setInterval(checkInstallation, 10000) // Poll every 10s
+        init()
+        const interval = setInterval(() => fetch('/api/stats/check-installation').then(r => r.json()).then(setInstallStatus), 5000)
         return () => clearInterval(interval)
-    }, [checkInstallation])
+    }, [])
 
-    // Handle key regeneration
-    const handleRegenerate = async () => {
-        if (!confirm('Régénérer les clés ? L\'ancienne clé secrète sera invalidée.')) return
-
-        setRegenerating(true)
-        const result = await regenerateApiKey()
-
-        if (result.success) {
-            setPublicKey(result.publicKey || null)
-            if (result.secretKey) {
-                setSecretKey(result.secretKey)
-                setShowSecret(true)
-            }
-        }
-        setRegenerating(false)
-    }
-
-    // Build SDK code snippet (Dynamic based on custom domain)
-    const sdkCode = publicKey ? (customDomain ? `<!-- Trac Analytics SDK (First-Party Mode) -->
-<script 
+    const sdkCode = publicKey ? (customDomain ?
+        `<script 
   src="https://${customDomain}/trac.js" 
   data-key="${publicKey}"
   data-api-host="https://${customDomain}/_trac"
   defer
-></script>` : `<!-- Trac Analytics SDK -->
-<script>
-  window.TracConfig = {
-    apiKey: '${publicKey}',
-    debug: false,
-    autoInject: true
-  };
+></script>` :
+        `<script>
+  window.TracConfig = { apiKey: '${publicKey}', autoInject: true };
 </script>
-<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://traaaction.com'}/trac.js" defer></script>`) : ''
+<script src="https://traaaction.com/trac.js" defer></script>`) : 'Loading...'
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="flex items-center gap-3 text-slate-500">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>Chargement...</span>
-                </div>
-            </div>
-        )
-    }
+    if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
 
     return (
-        <div className="min-h-screen bg-slate-50">
-            {/* Header */}
-            <div className="bg-white border-b border-slate-200">
-                <div className="max-w-5xl mx-auto px-6 py-8">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <h1 className="text-3xl font-bold text-slate-900">Setup & Diagnostics</h1>
-                                {workspaceName && (
-                                    <span className="px-3 py-1 bg-slate-100 text-slate-600 text-sm font-medium rounded-full flex items-center gap-1.5">
-                                        <Building2 className="w-4 h-4" />
-                                        {workspaceName}
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-slate-600">
-                                Configurez votre tracking et vérifiez que tout fonctionne correctement.
-                            </p>
-                        </div>
-                        <Link
-                            href="/dashboard"
-                            className="px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                        >
-                            ← Retour
-                        </Link>
-                    </div>
+        <div className="w-full max-w-5xl mx-auto px-6 py-8">
+            <div className="mb-10">
+                <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Setup Integration</h1>
+                    {workspaceName && <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full flex items-center gap-1"><Building2 className="w-3 h-3" />{workspaceName}</span>}
                 </div>
+                <p className="text-gray-500">Connect your website to start tracking clicks and conversions.</p>
             </div>
 
-            {/* Content */}
-            <div className="max-w-5xl mx-auto px-6 py-8">
-                <div className="space-y-6">
-
-                    {/* STEP 1: SDK Installation */}
-                    <StepCard
-                        icon={Code2}
-                        iconColor="bg-blue-500"
-                        step={1}
-                        title="Installer le SDK"
-                        description="Ajoutez ce snippet dans le <head> de votre site pour commencer le tracking."
-                        isComplete={installStatus?.installed || false}
-                        isLoading={isPolling && !installStatus?.installed}
-                    >
-                        {customDomain ? (
-                            <div className="mb-3 px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg flex items-center gap-2">
-                                <Zap className="w-4 h-4 text-purple-600 fill-current" />
-                                <span className="text-sm font-medium text-purple-900">
-                                    Mode First-Party activé via <span className="font-bold">{customDomain}</span>
-                                </span>
-                            </div>
-                        ) : (
-                            <div className="mb-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg">
-                                <div className="flex items-start gap-2">
-                                    <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="font-medium text-amber-800">Mode Standard</p>
-                                        <p className="text-sm text-amber-700 mt-0.5">
-                                            Pour un tracking 100% anti-adblock et une meilleure résilience ITP, configurez un domaine personnalisé dans{' '}
-                                            <Link href="/dashboard/domains" className="underline font-medium hover:text-amber-900">
-                                                Paramètres → Domaines
-                                            </Link>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        <CodeBlock code={sdkCode} />
-
-                        {/* Installation Status */}
-                        <div className="mt-4">
-                            <InstallationChecker
-                                status={installStatus}
-                                isPolling={isPolling}
-                                onRefresh={checkInstallation}
-                            />
-                        </div>
-
-                        {/* Simulator */}
-                        <div className="mt-6 pt-6 border-t border-slate-200">
-                            <h4 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                                <Terminal className="w-4 h-4 text-slate-500" />
-                                Console de Test
-                            </h4>
-                            <p className="text-sm text-slate-600 mb-4">
-                                Testez votre intégration en simulant des events directement depuis cette page.
-                            </p>
-                            <SimulatorConsole />
-                        </div>
-                    </StepCard>
-
-                    {/* STEP 2: API Keys */}
-                    <StepCard
-                        icon={Key}
-                        iconColor="bg-amber-500"
-                        step={2}
-                        title="Clés API"
-                        description="Utilisez ces clés pour authentifier vos appels API côté serveur."
-                        isComplete={!!publicKey}
-                    >
-                        <div className="space-y-4">
-                            {/* Public Key */}
-                            <div className="bg-slate-50 rounded-xl p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                                        Clé Publique
-                                    </span>
-                                    <span className="text-xs text-slate-400">
-                                        Pour le SDK côté client
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <code className="flex-1 font-mono text-sm text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200">
-                                        {publicKey}
-                                    </code>
-                                    <CopyButton text={publicKey || ''} className="bg-slate-200 hover:bg-slate-300" />
-                                </div>
-                            </div>
-
-                            {/* Secret Key */}
-                            {secretKey && (
-                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <AlertCircle className="w-4 h-4 text-amber-600" />
-                                        <span className="text-sm font-semibold text-amber-800">
-                                            Clé Secrète - Affichée une seule fois !
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <code className="flex-1 font-mono text-sm text-amber-900 bg-white px-3 py-2 rounded-lg border border-amber-300">
-                                            {showSecret ? secretKey : '•'.repeat(40)}
-                                        </code>
-                                        <button
-                                            onClick={() => setShowSecret(!showSecret)}
-                                            className="p-2 rounded-lg bg-amber-200 hover:bg-amber-300 transition-colors"
-                                        >
-                                            {showSecret ? <EyeOff className="w-4 h-4 text-amber-700" /> : <Eye className="w-4 h-4 text-amber-700" />}
-                                        </button>
-                                        <CopyButton text={secretKey} className="bg-amber-200 hover:bg-amber-300" />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Regenerate Button */}
-                            <button
-                                onClick={handleRegenerate}
-                                disabled={regenerating}
-                                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-                            >
-                                <RefreshCw className={`w-4 h-4 ${regenerating ? 'animate-spin' : ''}`} />
-                                Régénérer les clés
-                            </button>
-                        </div>
-                    </StepCard>
-
-                    {/* STEP 3: Webhooks */}
-                    <StepCard
-                        icon={Webhook}
-                        iconColor="bg-purple-500"
-                        step={3}
-                        title="Webhooks Stripe"
-                        description="Configurez vos webhooks pour recevoir les événements de paiement automatiquement."
-                        isComplete={hasWebhooks}
-                    >
-                        <WebhookManager onStatusChange={(configured) => setHasWebhooks(configured)} />
-                    </StepCard>
-
+            <StepItem
+                number={1}
+                title="Install SDK"
+                description="Add this code snippet to the <head> of your website."
+                isComplete={!!installStatus?.installed}
+            >
+                <div className="bg-gray-900 rounded-lg p-4 border border-gray-800 group relative">
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <CopyButton text={sdkCode} />
+                    </div>
+                    <pre className="text-sm font-mono text-gray-300 overflow-x-auto whitespace-pre-wrap">{sdkCode}</pre>
                 </div>
+                {!customDomain && (
+                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-3 text-amber-800 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>Recommended: <Link href="/dashboard/domains" className="underline font-medium">Configure a custom domain</Link> to bypass ad-blockers.</span>
+                    </div>
+                )}
+                {installStatus?.installed && (
+                    <div className="mt-4 flex items-center gap-2 text-sm text-green-600 font-medium bg-green-50 px-3 py-2 rounded-md border border-green-100 w-fit">
+                        <Zap className="w-4 h-4 fill-current" />
+                        SDK Detected active on your site
+                    </div>
+                )}
+            </StepItem>
+
+            <StepItem
+                number={2}
+                title="Verify Tracking"
+                description="Use the console below to simulate events and verify data flow."
+                isComplete={false}
+            >
+                <SimulatorConsole />
+            </StepItem>
+
+            <StepItem
+                number={3}
+                title="API Keys"
+                description="Use these keys for server-side integration."
+                isComplete={!!publicKey}
+            >
+                <div className="grid gap-4 max-w-2xl">
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Public Key</span>
+                            <CopyButton text={publicKey || ''} className="text-gray-400 hover:text-gray-600 hover:bg-gray-50" />
+                        </div>
+                        <code className="font-mono text-sm text-gray-900 block truncate">{publicKey}</code>
+                    </div>
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Secret Key</span>
+                            <div className="flex gap-2">
+                                <button onClick={() => setShowSecret(!showSecret)} className="p-1 hover:bg-gray-50 rounded">
+                                    {showSecret ? <EyeOff className="w-3.5 h-3.5 text-gray-400" /> : <Eye className="w-3.5 h-3.5 text-gray-400" />}
+                                </button>
+                                <CopyButton text={secretKey || ''} className="text-gray-400 hover:text-gray-600 hover:bg-gray-50" />
+                            </div>
+                        </div>
+                        <code className="font-mono text-sm text-gray-900 block truncate">
+                            {showSecret ? secretKey : 'sk_live_••••••••••••••••••••••••••••'}
+                        </code>
+                    </div>
+                </div>
+            </StepItem>
+
+            <div className="pt-4 border-t border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Webhooks</h3>
+                <WebhookManager onStatusChange={() => { }} />
             </div>
         </div>
     )

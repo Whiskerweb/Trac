@@ -16,7 +16,7 @@ export const VERCEL_PROJECT_ID = process.env.VERCEL_PROJECT_ID;
 export const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID; // Optional, for team projects
 
 // CNAME target for custom domains - users point their domain here
-export const CNAME_TARGET = 'cname.vercel-dns.com';
+export const CNAME_TARGET = 'cname.traaaction.com';
 
 // =============================================
 // DOMAIN CONFIGURATION

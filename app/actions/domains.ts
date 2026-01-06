@@ -37,6 +37,12 @@ interface VerifyDomainResult extends DomainResult {
     verified?: boolean
     configured?: boolean
     error?: string
+    verification?: Array<{
+        type: string
+        domain: string
+        value: string
+        reason: string
+    }>
     details?: {
         misconfigured: boolean
         conflicts: string[]
@@ -179,6 +185,45 @@ async function checkDomainStatus(domainName: string): Promise<{
     } catch (err) {
         console.error('[Domains] ❌ Domain config check request failed:', err)
         return { success: false, configured: false, verified: false, error: 'Erreur de connexion' }
+    }
+}
+
+/**
+ * Get domain verification records (TXT) from Vercel
+ */
+async function getDomainVerification(domainName: string): Promise<{
+    success: boolean
+    verification?: Array<{ type: string; domain: string; value: string; reason: string }>
+    error?: string
+}> {
+    if (!VERCEL_AUTH_TOKEN || !VERCEL_PROJECT_ID) {
+        return { success: true, verification: [] }
+    }
+
+    try {
+        const url = `${VERCEL_API_BASE}/v10/projects/${VERCEL_PROJECT_ID}/domains/${domainName}${getTeamQuery()}`
+
+        const res = await fetch(url, {
+            method: 'GET',
+            headers: getVercelHeaders(),
+        })
+
+        const data: VercelDomainResponse = await res.json()
+
+        if (!res.ok) {
+            console.error('[Domains] ❌ Domain verification fetch failed:', data)
+            return { success: false, error: 'Impossible de récupérer les enregistrements de vérification' }
+        }
+
+        console.log('[Domains] 📄 Verification records for', domainName, ':', data.verification)
+
+        return {
+            success: true,
+            verification: data.verification || [],
+        }
+    } catch (err) {
+        console.error('[Domains] ❌ Domain verification fetch request failed:', err)
+        return { success: false, error: 'Erreur de connexion' }
     }
 }
 
@@ -372,6 +417,15 @@ export async function verifyDomain(domainId: string): Promise<VerifyDomainResult
             return { success: false, error: status.error }
         }
 
+        // Get verification records if not verified
+        let verification: Array<{ type: string; domain: string; value: string; reason: string }> = []
+        if (!status.verified) {
+            const verificationResult = await getDomainVerification(domain.name)
+            if (verificationResult.success && verificationResult.verification) {
+                verification = verificationResult.verification
+            }
+        }
+
         // Update database if verified
         if (status.verified && !domain.verified) {
             await prisma.domain.update({
@@ -391,6 +445,7 @@ export async function verifyDomain(domainId: string): Promise<VerifyDomainResult
             success: true,
             verified: status.verified,
             configured: status.configured,
+            verification,
             details: status.details ? {
                 misconfigured: status.details.misconfigured,
                 conflicts: status.details.conflicts.map(c => `${c.type}: ${c.name} → ${c.value}`),

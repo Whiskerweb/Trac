@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
     Globe, Plus, RefreshCw, Trash2, ExternalLink, Copy, Check,
-    Loader2, CheckCircle2, Clock, AlertCircle, X, Info
+    Loader2, AlertCircle, X, Info, AlertTriangle
 } from 'lucide-react'
 import Link from 'next/link'
 import { getDomains, addDomain, verifyDomain, removeDomain } from '@/app/actions/domains'
@@ -21,11 +21,18 @@ interface DomainData {
     verifiedAt: Date | null
 }
 
+interface VerificationRecord {
+    type: string
+    domain: string
+    value: string
+    reason: string
+}
+
 // =============================================
-// COPY BUTTON COMPONENT
+// COMPONENTS
 // =============================================
 
-function CopyButton({ text, className = '' }: { text: string; className?: string }) {
+function CopyButton({ text }: { text: string }) {
     const [copied, setCopied] = useState(false)
 
     const handleCopy = async () => {
@@ -37,315 +44,187 @@ function CopyButton({ text, className = '' }: { text: string; className?: string
     return (
         <button
             onClick={handleCopy}
-            className={`p-2 rounded-lg hover:bg-slate-100 transition-all ${className}`}
+            className="p-1.5 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0"
             title="Copier"
         >
             {copied ? (
                 <Check className="w-4 h-4 text-green-500" />
             ) : (
-                <Copy className="w-4 h-4 text-slate-400" />
+                <Copy className="w-4 h-4 text-gray-400" />
             )}
         </button>
     )
 }
 
-// =============================================
-// STATUS BADGE COMPONENT
-// =============================================
-
-function StatusBadge({ verified, verifying }: { verified: boolean; verifying?: boolean }) {
-    if (verifying) {
-        return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Vérification...
-            </span>
-        )
+function StatusDot({ status }: { status: 'verified' | 'pending' | 'verifying' }) {
+    const styles = {
+        verified: 'bg-green-500',
+        pending: 'bg-amber-400',
+        verifying: 'bg-blue-500 animate-pulse',
     }
 
-    if (verified) {
-        return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
-                <CheckCircle2 className="w-3 h-3" />
-                Vérifié
-            </span>
-        )
+    const labels = {
+        verified: 'Verified',
+        pending: 'Pending DNS',
+        verifying: 'Verifying...',
     }
 
     return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
-            <Clock className="w-3 h-3" />
-            En attente
-        </span>
-    )
-}
-
-// =============================================
-// DNS INSTRUCTIONS CARD
-// =============================================
-
-function DNSInstructionsCard({ domainName }: { domainName: string }) {
-    const isSubdomain = domainName.split('.').length > 2
-    const recordName = isSubdomain ? domainName.split('.')[0] : '@'
-
-    return (
-        <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-            <div className="flex items-start gap-3 mb-4">
-                <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                <div>
-                    <h4 className="font-medium text-slate-900">Configuration DNS requise</h4>
-                    <p className="text-sm text-slate-600 mt-1">
-                        Ajoutez un enregistrement CNAME dans les paramètres DNS de votre domaine.
-                    </p>
-                </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr className="border-b border-slate-100 bg-slate-50">
-                            <th className="text-left py-2 px-4 font-medium text-slate-600">Type</th>
-                            <th className="text-left py-2 px-4 font-medium text-slate-600">Nom</th>
-                            <th className="text-left py-2 px-4 font-medium text-slate-600">Valeur</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td className="py-3 px-4">
-                                <code className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">CNAME</code>
-                            </td>
-                            <td className="py-3 px-4">
-                                <code className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">{recordName}</code>
-                            </td>
-                            <td className="py-3 px-4">
-                                <div className="flex items-center gap-2">
-                                    <code className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">{CNAME_TARGET}</code>
-                                    <CopyButton text={CNAME_TARGET} />
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <p className="text-xs text-slate-500 mt-3 flex items-center gap-1.5">
-                <Clock className="w-3 h-3" />
-                La propagation DNS peut prendre 5 à 60 minutes.
-            </p>
+        <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${styles[status]}`} />
+            <span className="text-sm text-gray-600 font-medium">{labels[status]}</span>
         </div>
     )
 }
 
-// =============================================
-// DOMAIN CARD COMPONENT
-// =============================================
+function DNSRecordRow({ type, name, value }: { type: string; name: string; value: string }) {
+    return (
+        <tr className="border-b border-gray-100 last:border-0">
+            <td className="py-3 px-4">
+                <code className="text-xs font-semibold bg-gray-100 text-gray-700 px-2 py-0.5 rounded">{type}</code>
+            </td>
+            <td className="py-3 px-4 font-mono text-sm text-gray-700">{name}</td>
+            <td className="py-3 px-4">
+                <div className="flex items-center gap-2">
+                    <code className="font-mono text-sm text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-200 truncate max-w-[300px]">
+                        {value}
+                    </code>
+                    <CopyButton text={value} />
+                </div>
+            </td>
+        </tr>
+    )
+}
 
-function DomainCard({
+function DomainRow({
     domain,
     onVerify,
     onDelete,
     isVerifying,
     isDeleting,
-    showDNS,
-    onToggleDNS,
+    expanded,
+    onToggleExpand,
+    verificationRecords
 }: {
     domain: DomainData
     onVerify: () => void
     onDelete: () => void
     isVerifying: boolean
     isDeleting: boolean
-    showDNS: boolean
-    onToggleDNS: () => void
+    expanded: boolean
+    onToggleExpand: () => void
+    verificationRecords: VerificationRecord[]
 }) {
+    const isSubdomain = domain.name.split('.').length > 2
+    const recordName = isSubdomain ? domain.name.split('.')[0] : '@'
+
+    // Find TXT record from verification records
+    const txtRecord = verificationRecords.find(r => r.type === 'TXT')
+
     return (
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-slate-100 rounded-lg">
-                        <Globe className="w-5 h-5 text-slate-600" />
+        <div className="group border-b border-gray-100 last:border-0 bg-white hover:bg-gray-50/30 transition-colors">
+            {/* Main Row */}
+            <div className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-4 flex-1">
+                    <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center flex-shrink-0">
+                        <Globe className="w-5 h-5 text-gray-500" />
                     </div>
                     <div>
-                        <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-slate-900">{domain.name}</h3>
-                            <a
-                                href={`https://${domain.name}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-slate-400 hover:text-slate-600 transition-colors"
-                            >
-                                <ExternalLink className="w-4 h-4" />
-                            </a>
+                        <div className="flex items-center gap-3">
+                            <span className="font-semibold text-gray-900">{domain.name}</span>
+                            <StatusDot status={isVerifying ? 'verifying' : domain.verified ? 'verified' : 'pending'} />
                         </div>
-                        <p className="text-sm text-slate-500 mt-0.5">
-                            Ajouté le {new Date(domain.createdAt).toLocaleDateString('fr-FR')}
-                        </p>
+                        {domain.verified && domain.verifiedAt && (
+                            <p className="text-xs text-gray-500 mt-0.5">
+                                Verified on {new Date(domain.verifiedAt).toLocaleDateString()}
+                            </p>
+                        )}
                     </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <StatusBadge verified={domain.verified} verifying={isVerifying} />
-
                     {!domain.verified && (
-                        <button
-                            onClick={onVerify}
-                            disabled={isVerifying}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-                        >
-                            <RefreshCw className={`w-4 h-4 ${isVerifying ? 'animate-spin' : ''}`} />
-                            Vérifier
-                        </button>
+                        <>
+                            <button
+                                onClick={onToggleExpand}
+                                className="text-sm text-blue-600 hover:text-blue-700 font-medium px-3 py-1.5 hover:bg-blue-50 rounded-md transition-colors"
+                            >
+                                {expanded ? 'Hide' : 'Configure'}
+                            </button>
+                            <button
+                                onClick={onVerify}
+                                disabled={isVerifying}
+                                className="text-sm text-gray-600 hover:text-gray-900 font-medium px-3 py-1.5 hover:bg-gray-100 rounded-md transition-colors flex items-center gap-2"
+                            >
+                                {isVerifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                Verify
+                            </button>
+                        </>
                     )}
-
                     <button
                         onClick={onDelete}
                         disabled={isDeleting}
-                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                     >
-                        {isDeleting ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <Trash2 className="w-4 h-4" />
-                        )}
+                        {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>
                 </div>
             </div>
 
-            {/* DNS Toggle */}
-            {!domain.verified && (
-                <button
-                    onClick={onToggleDNS}
-                    className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                >
-                    {showDNS ? 'Masquer les instructions DNS' : 'Voir les instructions DNS'}
-                </button>
-            )}
-
-            {/* DNS Instructions */}
-            {showDNS && !domain.verified && (
-                <DNSInstructionsCard domainName={domain.name} />
-            )}
-
-            {/* Verified info */}
-            {domain.verified && domain.verifiedAt && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-emerald-600">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Vérifié le {new Date(domain.verifiedAt).toLocaleDateString('fr-FR')}
-                </div>
-            )}
-        </div>
-    )
-}
-
-// =============================================
-// ADD DOMAIN MODAL
-// =============================================
-
-function AddDomainModal({
-    isOpen,
-    onClose,
-    onAdd,
-}: {
-    isOpen: boolean
-    onClose: () => void
-    onAdd: (domain: string) => Promise<void>
-}) {
-    const [domainName, setDomainName] = useState('')
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setError(null)
-        setLoading(true)
-
-        try {
-            await onAdd(domainName)
-            setDomainName('')
-            onClose()
-        } catch (err: any) {
-            setError(err.message || 'Une erreur est survenue')
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    if (!isOpen) return null
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={onClose}
-            />
-
-            {/* Modal */}
-            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-slate-900">Ajouter un domaine</h2>
-                    <button
-                        onClick={onClose}
-                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Nom de domaine
-                        </label>
-                        <input
-                            type="text"
-                            value={domainName}
-                            onChange={(e) => setDomainName(e.target.value)}
-                            placeholder="track.votresite.com"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                            disabled={loading}
-                            autoFocus
-                        />
-                        <p className="mt-2 text-sm text-slate-500">
-                            Entrez un domaine (ex: track.startup.com) ou sous-domaine personnalisé.
-                        </p>
-                    </div>
-
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
-                            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-red-700">{error}</p>
+            {/* Expanded DNS Instructions */}
+            {expanded && !domain.verified && (
+                <div className="px-4 md:px-14 pb-6 pt-0">
+                    {/* Warning Block */}
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3 mb-4">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h4 className="text-sm font-semibold text-amber-900">Important: DNS Ownership Transfer</h4>
+                            <p className="text-sm text-amber-800 mt-1">
+                                Adding these DNS records will transfer routing authority to Traaaction for this domain/subdomain.
+                                SSL certificates will be automatically provisioned by Vercel once records propagate.
+                            </p>
                         </div>
-                    )}
-
-                    <div className="flex gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 px-4 py-3 border border-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors"
-                            disabled={loading}
-                        >
-                            Annuler
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading || !domainName.trim()}
-                            className="flex-1 px-4 py-3 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Ajout...
-                                </>
-                            ) : (
-                                <>
-                                    <Plus className="w-4 h-4" />
-                                    Ajouter
-                                </>
-                            )}
-                        </button>
                     </div>
-                </form>
-            </div>
+
+                    {/* DNS Records Table */}
+                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                            <h4 className="text-sm font-semibold text-gray-900">Required DNS Records</h4>
+                            <p className="text-xs text-gray-500 mt-0.5">Add both records to your DNS provider</p>
+                        </div>
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50 border-b border-gray-100">
+                                <tr className="text-xs uppercase text-gray-500 font-medium">
+                                    <th className="px-4 py-2 w-20">Type</th>
+                                    <th className="px-4 py-2 w-32">Name</th>
+                                    <th className="px-4 py-2">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {/* CNAME Record */}
+                                <DNSRecordRow
+                                    type="CNAME"
+                                    name={recordName}
+                                    value={CNAME_TARGET}
+                                />
+                                {/* TXT Record (if available) */}
+                                {txtRecord && (
+                                    <DNSRecordRow
+                                        type="TXT"
+                                        name={txtRecord.domain.replace(`.${domain.name}`, '') || '_vercel'}
+                                        value={txtRecord.value}
+                                    />
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p className="text-xs text-gray-500 mt-3 flex items-center gap-1.5">
+                        <Info className="w-3 h-3" />
+                        DNS propagation can take 1-60 minutes. Click "Verify" to check status.
+                    </p>
+                </div>
+            )}
         </div>
     )
 }
@@ -360,17 +239,22 @@ export default function DomainsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [verifyingId, setVerifyingId] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
-    const [expandedDNS, setExpandedDNS] = useState<string | null>(null)
+    const [expanded, setExpanded] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [verificationRecords, setVerificationRecords] = useState<Record<string, VerificationRecord[]>>({})
 
-    // Load domains on mount
+    // Modal state
+    const [newDomainName, setNewDomainName] = useState('')
+    const [adding, setAdding] = useState(false)
+
+    // Load domains
     const loadDomains = useCallback(async () => {
         setLoading(true)
         const result = await getDomains()
         if (result.success && result.domains) {
             setDomains(result.domains)
         } else {
-            setError(result.error || 'Erreur lors du chargement')
+            setError(result.error || 'Failed to load domains')
         }
         setLoading(false)
     }, [])
@@ -379,162 +263,178 @@ export default function DomainsPage() {
         loadDomains()
     }, [loadDomains])
 
-    // Add domain handler
-    const handleAddDomain = async (domainName: string) => {
-        const result = await addDomain(domainName)
-        if (!result.success) {
-            throw new Error(result.error)
+    const handleAddDomain = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setAdding(true)
+        try {
+            const result = await addDomain(newDomainName)
+            if (result.success && result.domain) {
+                setNewDomainName('')
+                setIsModalOpen(false)
+                setExpanded(result.domain.id)
+                await loadDomains()
+                // Trigger verification to get TXT records
+                handleVerify(result.domain.id)
+            } else {
+                throw new Error(result.error)
+            }
+        } catch (err: any) {
+            alert(err.message)
         }
-        // Expand DNS instructions for new domain
-        if (result.domain) {
-            setExpandedDNS(result.domain.id)
-        }
-        await loadDomains()
+        setAdding(false)
     }
 
-    // Verify domain handler
-    const handleVerify = async (domainId: string) => {
-        setVerifyingId(domainId)
-        const result = await verifyDomain(domainId)
-        if (result.success) {
-            await loadDomains()
+    const handleVerify = async (id: string) => {
+        setVerifyingId(id)
+        const result = await verifyDomain(id)
+
+        // Store verification records
+        if (result.verification && result.verification.length > 0) {
+            setVerificationRecords(prev => ({
+                ...prev,
+                [id]: result.verification!
+            }))
         }
+
+        await loadDomains()
         setVerifyingId(null)
     }
 
-    // Delete domain handler
-    const handleDelete = async (domainId: string) => {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer ce domaine ?')) return
-
-        setDeletingId(domainId)
-        const result = await removeDomain(domainId)
-        if (result.success) {
-            await loadDomains()
-        }
+    const handleDelete = async (id: string) => {
+        if (!confirm('Are you sure? This will break any links using this domain.')) return
+        setDeletingId(id)
+        await removeDomain(id)
+        await loadDomains()
         setDeletingId(null)
     }
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="flex items-center gap-3 text-slate-500">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>Chargement...</span>
-                </div>
-            </div>
-        )
-    }
-
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="w-full max-w-6xl mx-auto px-6 py-8">
             {/* Header */}
-            <div className="bg-white border-b border-slate-200">
-                <div className="max-w-5xl mx-auto px-6 py-8">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
-                                    <Globe className="w-6 h-6 text-white" />
-                                </div>
-                                <h1 className="text-3xl font-bold text-slate-900">Domaines</h1>
-                            </div>
-                            <p className="text-slate-600">
-                                Configurez des domaines personnalisés pour vos liens de tracking avec CNAME Cloaking.
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <Link
-                                href="/dashboard"
-                                className="px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                            >
-                                ← Retour
-                            </Link>
-                            <button
-                                onClick={() => setIsModalOpen(true)}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg transition-all shadow-lg shadow-slate-900/10"
-                            >
-                                <Plus className="w-5 h-5" />
-                                Ajouter un domaine
-                            </button>
-                        </div>
-                    </div>
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Custom Domains</h1>
+                    <p className="text-gray-500 mt-1">
+                        Configure branded domains for your tracking links.
+                    </p>
                 </div>
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md font-medium text-sm transition-all shadow-sm"
+                >
+                    <Plus className="w-4 h-4" />
+                    Add Domain
+                </button>
             </div>
+
+            {/* Error Banner */}
+            {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
+                    <AlertCircle className="w-5 h-5" />
+                    {error}
+                </div>
+            )}
 
             {/* Content */}
-            <div className="max-w-5xl mx-auto px-6 py-8">
-                {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                        <p className="text-red-700">{error}</p>
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                    <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                    <p className="text-sm">Loading domains...</p>
+                </div>
+            ) : domains.length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-xl p-16 text-center shadow-sm">
+                    <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
+                        <Globe className="w-6 h-6 text-gray-400" />
                     </div>
-                )}
-
-                {domains.length === 0 ? (
-                    <div className="bg-white border border-slate-200 rounded-xl p-12 text-center">
-                        <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <Globe className="w-8 h-8 text-slate-400" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                            Aucun domaine configuré
-                        </h3>
-                        <p className="text-slate-600 mb-6 max-w-md mx-auto">
-                            Ajoutez un domaine personnalisé pour utiliser vos propres URLs de tracking
-                            et améliorer la confiance des utilisateurs.
-                        </p>
-                        <button
-                            onClick={() => setIsModalOpen(true)}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Ajouter votre premier domaine
-                        </button>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        No custom domains
+                    </h3>
+                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                        Add a custom domain (e.g. <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm">link.yoursite.com</code>) to brand your short links and bypass ad-blockers.
+                    </p>
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md font-medium text-sm transition-colors shadow-sm"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Add Domain
+                    </button>
+                </div>
+            ) : (
+                <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                    <div className="divide-y divide-gray-100">
                         {domains.map((domain) => (
-                            <DomainCard
+                            <DomainRow
                                 key={domain.id}
                                 domain={domain}
                                 onVerify={() => handleVerify(domain.id)}
                                 onDelete={() => handleDelete(domain.id)}
                                 isVerifying={verifyingId === domain.id}
                                 isDeleting={deletingId === domain.id}
-                                showDNS={expandedDNS === domain.id}
-                                onToggleDNS={() => setExpandedDNS(
-                                    expandedDNS === domain.id ? null : domain.id
-                                )}
+                                expanded={expanded === domain.id}
+                                onToggleExpand={() => {
+                                    setExpanded(expanded === domain.id ? null : domain.id)
+                                    // Load verification records when expanding
+                                    if (!verificationRecords[domain.id]) {
+                                        handleVerify(domain.id)
+                                    }
+                                }}
+                                verificationRecords={verificationRecords[domain.id] || []}
                             />
                         ))}
                     </div>
-                )}
-
-                {/* Info Card */}
-                <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-5">
-                    <div className="flex items-start gap-3">
-                        <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <h4 className="font-semibold text-blue-900">Comment ça marche ?</h4>
-                            <p className="text-sm text-blue-800 mt-1">
-                                Le CNAME Cloaking permet d&apos;utiliser votre propre domaine (ex: <code className="bg-blue-100 px-1 rounded">track.votresite.com</code>)
-                                pour les liens de tracking. Cela améliore la confiance des utilisateurs et réduit les risques de blocage par les adblockers.
-                            </p>
-                            <ul className="text-sm text-blue-700 mt-3 space-y-1">
-                                <li>• SSL automatique via Vercel</li>
-                                <li>• Aucune maintenance requise</li>
-                                <li>• Compatible avec tous les navigateurs</li>
-                            </ul>
-                        </div>
-                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Add Domain Modal */}
-            <AddDomainModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onAdd={handleAddDomain}
-            />
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-gray-200 overflow-hidden">
+                        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                            <h2 className="text-lg font-bold text-gray-900">Add Custom Domain</h2>
+                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleAddDomain} className="p-6">
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Domain Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newDomainName}
+                                    onChange={(e) => setNewDomainName(e.target.value)}
+                                    placeholder="link.yoursite.com"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black outline-none text-sm"
+                                    autoFocus
+                                    required
+                                />
+                                <p className="text-xs text-gray-500 mt-1.5">
+                                    We recommend using a subdomain like <b>link</b> or <b>go</b> for tracking links.
+                                </p>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={!newDomainName.trim() || adding}
+                                    className="px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {adding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                    Add Domain
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
