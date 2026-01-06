@@ -10,7 +10,6 @@ import {
 } from '@/lib/api-keys'
 import {
     getActiveWorkspaceForUser,
-    getOrCreateDefaultWorkspace,
     setActiveWorkspaceId
 } from '@/lib/workspace-context'
 
@@ -38,22 +37,11 @@ export async function getOrCreateApiKey(): Promise<{
     }
 
     try {
-        // Get or create workspace for user
-        let activeWorkspace = await getActiveWorkspaceForUser()
-        let secretKey: string | undefined
-        let isNewWorkspace = false
+        // Get workspace for user
+        const activeWorkspace = await getActiveWorkspaceForUser()
 
         if (!activeWorkspace) {
-            // User has no workspace - create default
-            const result = await getOrCreateDefaultWorkspace()
-            isNewWorkspace = result.isNew
-            secretKey = result.secretKey
-
-            // Fetch the workspace info
-            activeWorkspace = await getActiveWorkspaceForUser()
-            if (!activeWorkspace) {
-                return { success: false, error: 'Failed to create workspace' }
-            }
+            return { success: false, error: 'Veuillez creer un workspace via /onboarding' }
         }
 
         // Get API keys for this workspace
@@ -80,7 +68,6 @@ export async function getOrCreateApiKey(): Promise<{
                 publicKey,
                 secretKey: newSecretKey,
                 workspaceName: activeWorkspace.workspaceName,
-                isNewWorkspace
             }
         }
 
@@ -88,9 +75,7 @@ export async function getOrCreateApiKey(): Promise<{
         return {
             success: true,
             publicKey: apiKeys[0].public_key,
-            secretKey, // Only set if new workspace was created
             workspaceName: activeWorkspace.workspaceName,
-            isNewWorkspace
         }
 
     } catch (error) {

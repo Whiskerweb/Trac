@@ -5,7 +5,6 @@ import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
 import {
     getActiveWorkspaceForUser,
-    getOrCreateDefaultWorkspace,
     getWorkspacesForUser,
     setActiveWorkspaceId
 } from '@/lib/workspace-context'
@@ -166,33 +165,10 @@ export async function getActiveWorkspaceAction(): Promise<{
     error?: string
 }> {
     try {
-        let workspace = await getActiveWorkspaceForUser()
+        const workspace = await getActiveWorkspaceForUser()
 
         if (!workspace) {
-            // Create default workspace for new users
-            const result = await getOrCreateDefaultWorkspace()
-            workspace = await getActiveWorkspaceForUser()
-
-            if (!workspace) {
-                return { success: false, error: 'Failed to create workspace' }
-            }
-
-            // Fetch slug
-            const ws = await prisma.workspace.findUnique({
-                where: { id: workspace.workspaceId }
-            })
-
-            return {
-                success: true,
-                workspace: {
-                    id: workspace.workspaceId,
-                    name: workspace.workspaceName,
-                    slug: ws?.slug || '',
-                    role: workspace.role
-                },
-                secretKey: result.secretKey,
-                isNew: result.isNew
-            }
+            return { success: false, error: 'Veuillez creer un workspace via /onboarding' }
         }
 
         // Fetch slug for existing workspace

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { getActiveWorkspaceForUser, getOrCreateDefaultWorkspace } from '@/lib/workspace-context'
+import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 
 // ⚠️ SECURITY: Force dynamic rendering - NEVER cache this route
 // This ensures each request gets fresh auth context
@@ -121,20 +121,19 @@ export async function GET() {
     }
 
     // ========================================
-    // GET ACTIVE WORKSPACE (or create default)
+    // GET ACTIVE WORKSPACE
     // ========================================
-    let workspace = await getActiveWorkspaceForUser()
+    const workspace = await getActiveWorkspaceForUser()
 
     if (!workspace) {
-        try {
-            await getOrCreateDefaultWorkspace()
-            workspace = await getActiveWorkspaceForUser()
-        } catch (error) {
-            console.error('[KPI Proxy] ❌ Failed to get/create workspace:', error)
-        }
+        console.warn('[KPI Proxy] ⚠️ User has no workspace, redirect to onboarding')
+        return NextResponse.json(
+            { error: 'No workspace found. Please complete onboarding.', code: 'NO_WORKSPACE' },
+            { status: 400 }
+        )
     }
 
-    const workspaceId = workspace?.workspaceId || user.id // Fallback for migration
+    const workspaceId = workspace.workspaceId
 
     // ========================================
     // SECURITY LOG: Trace the requesting user

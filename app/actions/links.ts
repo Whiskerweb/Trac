@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
 import { nanoid } from 'nanoid'
-import { getActiveWorkspaceForUser, getOrCreateDefaultWorkspace } from '@/lib/workspace-context'
+import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 
 /**
  * Create a new short link
@@ -18,22 +18,11 @@ export async function createShortLink(formData: FormData) {
         return { success: false, error: 'Not authenticated' }
     }
 
-    // Get active workspace (or create default for new users)
-    let workspace = await getActiveWorkspaceForUser()
+    // Get active workspace
+    const workspace = await getActiveWorkspaceForUser()
 
     if (!workspace) {
-        // New user without workspace - create default
-        try {
-            await getOrCreateDefaultWorkspace()
-            workspace = await getActiveWorkspaceForUser()
-        } catch (error) {
-            console.error('[ShortLink] ❌ Failed to create default workspace:', error)
-            return { success: false, error: 'Please create a workspace first' }
-        }
-    }
-
-    if (!workspace) {
-        return { success: false, error: 'No active workspace. Please create one first.' }
+        return { success: false, error: 'Veuillez creer un workspace via /onboarding' }
     }
 
     // Get form data
@@ -120,20 +109,7 @@ export async function getMyShortLinks() {
     const workspace = await getActiveWorkspaceForUser()
 
     if (!workspace) {
-        // No workspace - try to create default and get links
-        try {
-            await getOrCreateDefaultWorkspace()
-            const ws = await getActiveWorkspaceForUser()
-            if (!ws) return []
-
-            const links = await prisma.shortLink.findMany({
-                where: { workspace_id: ws.workspaceId },
-                orderBy: { created_at: 'desc' }
-            })
-            return links
-        } catch {
-            return []
-        }
+        return []  // No workspace = no links
     }
 
     const links = await prisma.shortLink.findMany({

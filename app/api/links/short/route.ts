@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
-import { getActiveWorkspaceForUser, getOrCreateDefaultWorkspace } from '@/lib/workspace-context'
+import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 import { Redis } from '@upstash/redis'
 
 export const dynamic = 'force-dynamic'
@@ -24,21 +24,11 @@ export async function GET() {
         return NextResponse.json({ success: false, links: [] }, { status: 200 })
     }
 
-    // Get active workspace (or create default for new users)
-    let workspace = await getActiveWorkspaceForUser()
+    // Get active workspace
+    const workspace = await getActiveWorkspaceForUser()
 
     if (!workspace) {
-        try {
-            await getOrCreateDefaultWorkspace()
-            workspace = await getActiveWorkspaceForUser()
-        } catch (error) {
-            console.error('[API] ❌ Failed to get/create workspace:', error)
-            return NextResponse.json({ success: false, links: [] }, { status: 200 })
-        }
-    }
-
-    if (!workspace) {
-        return NextResponse.json({ success: false, links: [] }, { status: 200 })
+        return NextResponse.json({ success: false, links: [], code: 'NO_WORKSPACE' }, { status: 200 })
     }
 
     const links = await prisma.shortLink.findMany({
@@ -78,19 +68,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Get active workspace
-    let workspace = await getActiveWorkspaceForUser()
+    const workspace = await getActiveWorkspaceForUser()
     if (!workspace) {
-        try {
-            await getOrCreateDefaultWorkspace()
-            workspace = await getActiveWorkspaceForUser()
-        } catch (error) {
-            console.error('[API] ❌ Failed to get/create workspace:', error)
-            return NextResponse.json({ success: false, error: 'No workspace' }, { status: 400 })
-        }
-    }
-
-    if (!workspace) {
-        return NextResponse.json({ success: false, error: 'No workspace' }, { status: 400 })
+        return NextResponse.json({ success: false, error: 'No workspace. Complete onboarding first.', code: 'NO_WORKSPACE' }, { status: 400 })
     }
 
     const body = await request.json()

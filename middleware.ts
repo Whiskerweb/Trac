@@ -432,6 +432,29 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
         }
 
         // ============================================
+        // WORKSPACE EXISTENCE CHECK (Onboarding Guard)
+        // ============================================
+        try {
+            const checkUrl = new URL('/api/auth/workspace-check', request.url)
+            const checkRes = await fetch(checkUrl, {
+                headers: {
+                    cookie: request.headers.get('cookie') || ''
+                }
+            })
+
+            if (checkRes.ok) {
+                const { hasWorkspace } = await checkRes.json()
+                if (!hasWorkspace) {
+                    console.log('[Middleware] 🚀 User has no workspace, redirecting to onboarding')
+                    return NextResponse.redirect(new URL('/onboarding', request.url))
+                }
+            }
+        } catch (err) {
+            // Fail open - let the page handle it if the check fails
+            console.error('[Middleware] ⚠️ Workspace check failed:', err)
+        }
+
+        // ============================================
         // WORKSPACE SECURITY CHECK
         // ============================================
         // Check if path is /dashboard/[slug]...
@@ -442,8 +465,6 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 
         if (pathParts.length >= 3 && !reservedSlugs.includes(pathParts[2])) {
             const slug = pathParts[2]
-
-            // Optimization: Skip valid static assets or checking if needed (already handled by matcher but be safe)
 
             try {
                 // Verify access via internal API (Context: Middleware runs on Edge, Prisma doesn't)
@@ -459,15 +480,22 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 
                 if (verifyRes.status === 403 || verifyRes.status === 404) {
                     console.warn(`[Middleware] ⛔ Access denied to workspace: ${slug}`)
-                    return NextResponse.redirect(new URL('/dashboard', request.url)) // Fallback to root dashboard
+                    return NextResponse.redirect(new URL('/dashboard', request.url))
                 }
             } catch (err) {
-                // Open fail: if verification fails (server error), we allow it and let Layout handle it?
-                // Or we block. Security-first = block. But availability-first = allow.
-                // Let's log and allow for robustness, Layout will 404/403 anyway if it fails data load.
                 console.error('[Middleware] ⚠️ Verify check failed:', err)
             }
         }
+    }
+
+    // ============================================
+    // ONBOARDING PAGE PROTECTION
+    // ============================================
+    if (pathname === '/onboarding') {
+        if (!user) {
+            return NextResponse.redirect(new URL('/login', request.url))
+        }
+        // Allow access to onboarding - the page will handle redirect if user already has workspace
     }
 
     return supabaseResponse
