@@ -1,6 +1,6 @@
 'use client'
 
-import { Home, Link2, ShoppingBag, Settings, Target, Puzzle } from 'lucide-react'
+import { Home, Link2, ShoppingBag, Settings, Target, Puzzle, Globe } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -15,9 +15,11 @@ const navigation: NavItem[] = [
     { name: 'My Links', href: '/dashboard/links', icon: Link2 },
     { name: 'Marketplace', href: '/dashboard/marketplace', icon: ShoppingBag },
     { name: 'Missions', href: '/dashboard/missions', icon: Target },
-    { name: 'Integrations', href: '/dashboard/integrations', icon: Puzzle },
+    { name: 'Domains', href: '/dashboard/domains', icon: Globe },
+    { name: 'Setup & Diagnostics', href: '/dashboard/integration', icon: Puzzle },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
+
 
 export function Sidebar() {
     const pathname = usePathname()

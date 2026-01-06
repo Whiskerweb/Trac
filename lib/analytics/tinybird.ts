@@ -4,6 +4,32 @@
  */
 
 import crypto from 'crypto';
+import { TINYBIRD_HOST, TINYBIRD_TOKEN, IS_MOCK_MODE } from '@/lib/config/constants';
+
+interface ClickEvent {
+    timestamp: string
+    click_id: string
+    link_id: string
+    url: string
+    country: string
+    user_agent: string
+}
+
+interface ConversionEvent {
+    timestamp: string
+    click_id: string
+    event_name: string
+    amount: number
+    currency: string
+    external_id: string
+}
+
+export interface DashboardStats {
+    total_clicks: number
+    total_leads: number
+    total_sales: number
+    total_revenue: number
+}
 
 interface SaleEvent {
     clickId: string;
@@ -12,12 +38,12 @@ interface SaleEvent {
     customerExternalId?: string;
     customerEmail?: string;
     amount: number;
+    netAmount?: number; // ✅ NEW: Net revenue (excl. tax)
     currency: string;
     orderId: string;
     timestamp?: string;
     source?: string;
-    // ✅ NEW: Add affiliate and line items support
-    affiliateId?: string;  // From webhook enrichment
+    affiliateId?: string;
     lineItems?: Array<{
         product_id: string;
         product_name: string;
@@ -27,6 +53,7 @@ interface SaleEvent {
         quantity: number;
         unit_price: number;
         total: number;
+        net_total?: number; // ✅ NEW: Net total per item
     }>;
 }
 
@@ -39,11 +66,12 @@ interface LeadEvent {
 
 export async function recordSaleToTinybird(event: SaleEvent): Promise<void> {
     // 🦁 Mock Mode: Intercept calls in development
-    if (process.env.TINYBIRD_MOCK_MODE === 'true') {
+    if (IS_MOCK_MODE) {
         console.log('[🦁 MOCK TINYBIRD] Sale Event:', {
             click_id: event.clickId,
             order_id: event.orderId,
             amount: event.amount,
+            net_amount: event.netAmount,
             currency: event.currency,
             workspace_id: event.workspaceId,
             products_count: event.lineItems?.length || 0,
@@ -52,13 +80,11 @@ export async function recordSaleToTinybird(event: SaleEvent): Promise<void> {
         return;
     }
 
-    const endpoint = process.env.TINYBIRD_ENDPOINT || 'https://api.europe-west2.gcp.tinybird.co';
-    const token = process.env.TINYBIRD_API_KEY || process.env.TINYBIRD_ADMIN_TOKEN;
-
-    if (!token) {
+    if (!TINYBIRD_TOKEN) {
         console.error('[Tinybird] No API key configured');
         throw new Error('TINYBIRD_API_KEY not configured');
     }
+
 
     const payload = {
         timestamp: event.timestamp || new Date().toISOString(),
@@ -70,6 +96,7 @@ export async function recordSaleToTinybird(event: SaleEvent): Promise<void> {
         affiliate_id: event.affiliateId || null,
         customer_external_id: event.customerExternalId || event.clickId,
         amount: Math.round(event.amount * 100),  // Convert to cents (Int32)
+        net_amount: event.netAmount ? Math.round(event.netAmount * 100) : Math.round(event.amount * 100), // ✅ NEW
         currency: event.currency.toUpperCase(),
         payment_processor: event.source || 'stripe'
         // NOTE: "sales" datasource doesn't have line_items field
@@ -77,10 +104,10 @@ export async function recordSaleToTinybird(event: SaleEvent): Promise<void> {
     };
 
     try {
-        const response = await fetch(`${endpoint}/v0/events?name=sales`, {
+        const response = await fetch(`${TINYBIRD_HOST}/v0/events?name=sales`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${TINYBIRD_TOKEN}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
@@ -119,6 +146,7 @@ interface SaleItem {
     quantity: number;
     unit_price: number;
     total: number;
+    net_total: number; // ✅ NEW
     currency: string;
 }
 
@@ -135,7 +163,7 @@ export async function recordSaleItemsToTinybird(
     }
 
     // 🦁 Mock Mode: Intercept calls in development
-    if (process.env.TINYBIRD_MOCK_MODE === 'true') {
+    if (IS_MOCK_MODE) {
         console.log('[🦁 MOCK TINYBIRD] Sale Items:', {
             order_id: event.orderId,
             items_count: event.lineItems.length,
@@ -144,10 +172,7 @@ export async function recordSaleItemsToTinybird(
         return;
     }
 
-    const endpoint = process.env.TINYBIRD_ENDPOINT || 'https://api.europe-west2.gcp.tinybird.co';
-    const token = process.env.TINYBIRD_API_KEY || process.env.TINYBIRD_ADMIN_TOKEN;
-
-    if (!token) {
+    if (!TINYBIRD_TOKEN) {
         console.error('[Tinybird] No API key configured for sale_items');
         return; // Don't throw - this is enhancement, not critical path
     }
@@ -169,8 +194,9 @@ export async function recordSaleItemsToTinybird(
         category: item.category || null,
         brand: item.brand || null,
         quantity: item.quantity,
-        unit_price: item.unit_price, // Already in cents from Stripe
-        total: item.total,           // Already in cents from Stripe
+        unit_price: item.unit_price,
+        total: item.total,
+        net_total: item.net_total || item.total, // ✅ NEW
         currency: event.currency.toUpperCase()
     }));
 
@@ -178,10 +204,10 @@ export async function recordSaleItemsToTinybird(
     const ndjson = items.map(item => JSON.stringify(item)).join('\n');
 
     try {
-        const response = await fetch(`${endpoint}/v0/events?name=sale_items`, {
+        const response = await fetch(`${TINYBIRD_HOST}/v0/events?name=sale_items`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${TINYBIRD_TOKEN}`,
                 'Content-Type': 'application/x-ndjson'
             },
             body: ndjson
@@ -205,7 +231,7 @@ export async function recordSaleItemsToTinybird(
 
 export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
     // 🦁 Mock Mode: Intercept calls in development
-    if (process.env.TINYBIRD_MOCK_MODE === 'true') {
+    if (IS_MOCK_MODE) {
         console.log('[🦁 MOCK TINYBIRD] Lead Event:', {
             click_id: data.click_id,
             email: data.email,
@@ -215,10 +241,7 @@ export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
         return;
     }
 
-    const endpoint = process.env.TINYBIRD_ENDPOINT || 'https://api.europe-west2.gcp.tinybird.co';
-    const token = process.env.TINYBIRD_API_KEY || process.env.TINYBIRD_ADMIN_TOKEN;
-
-    if (!token) {
+    if (!TINYBIRD_TOKEN) {
         console.error('[Tinybird] No API key configured');
         throw new Error('TINYBIRD_API_KEY not configured');
     }
@@ -232,10 +255,10 @@ export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
     };
 
     try {
-        const response = await fetch(`${endpoint}/v0/events?name=lead_events`, {
+        const response = await fetch(`${TINYBIRD_HOST}/v0/events?name=lead_events`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${TINYBIRD_TOKEN}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
@@ -254,5 +277,77 @@ export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
     } catch (error) {
         console.error('[Tinybird] Error recording lead:', error);
         throw error;
+    }
+}
+
+// ==========================================
+// LEGACY / GENERIC EVENTS (Unified)
+// ==========================================
+
+export async function ingestToTinybird(datasource: string, data: object): Promise<{ success: boolean; error?: string }> {
+    if (IS_MOCK_MODE) {
+        console.log(`[🦁 MOCK TINYBIRD] Ingesting to ${datasource}:`, data);
+        return { success: true };
+    }
+
+    if (!TINYBIRD_TOKEN) {
+        console.error('[Tinybird] Missing TINYBIRD_ADMIN_TOKEN')
+        return { success: false, error: 'Missing token' }
+    }
+
+    try {
+        const response = await fetch(`${TINYBIRD_HOST}/v0/events?name=${datasource}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${TINYBIRD_TOKEN}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        })
+
+        if (!response.ok) {
+            const errorText = await response.text()
+            console.error('[Tinybird] Ingest error:', errorText)
+            return { success: false, error: errorText }
+        }
+
+        return { success: true }
+    } catch (error) {
+        console.error('[Tinybird] Fetch error:', error)
+        return { success: false, error: String(error) }
+    }
+}
+
+export async function recordEvent(data: Omit<ConversionEvent, 'timestamp'>): Promise<{ success: boolean; error?: string }> {
+    const event: ConversionEvent = {
+        ...data,
+        timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    }
+    return ingestToTinybird('events', event)
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+    if (!TINYBIRD_TOKEN) {
+        return { total_clicks: 0, total_leads: 0, total_sales: 0, total_revenue: 0 }
+    }
+
+    try {
+        const url = `${TINYBIRD_HOST}/v0/pipes/kpis.json`
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` },
+            cache: 'no-store',
+        })
+
+        if (!response.ok) return { total_clicks: 0, total_leads: 0, total_sales: 0, total_revenue: 0 }
+
+        const result = await response.json()
+        if (result.data && result.data.length > 0) {
+            return result.data[0]
+        }
+
+        return { total_clicks: 0, total_leads: 0, total_sales: 0, total_revenue: 0 }
+    } catch (error) {
+        console.error('[Tinybird] Error fetching stats:', error)
+        return { total_clicks: 0, total_leads: 0, total_sales: 0, total_revenue: 0 }
     }
 }

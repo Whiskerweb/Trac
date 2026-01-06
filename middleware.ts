@@ -20,6 +20,23 @@ const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.euro
 const TINYBIRD_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
 
 // =============================================
+// DOMAIN CONFIGURATION
+// =============================================
+
+const PRIMARY_DOMAIN = process.env.PRIMARY_DOMAIN || 'traaaction.com'
+const PRIMARY_DOMAINS = [
+    'traaaction.com',
+    'www.traaaction.com',
+    'localhost',
+    '127.0.0.1',
+    'localhost:3000',
+]
+
+// Cache for domain lookups (Edge-compatible in-memory)
+const domainCache = new Map<string, { workspaceId: string | null; timestamp: number }>()
+const DOMAIN_CACHE_TTL = 60 * 60 * 1000 // 1 hour
+
+// =============================================
 // TYPES
 // =============================================
 
@@ -76,6 +93,81 @@ function parseDevice(ua: ReturnType<typeof userAgent>): string {
     return 'Desktop'
 }
 
+/**
+ * Check if hostname is a custom domain (not primary)
+ */
+function isCustomDomain(hostname: string): boolean {
+    const normalizedHost = hostname.toLowerCase().replace(/:\d+$/, '') // Remove port
+    return !PRIMARY_DOMAINS.some(d => normalizedHost === d || normalizedHost.endsWith('.' + d))
+}
+
+/**
+ * Extract root domain for cookie setting on client's domain
+ * e.g., track.startup.com → .startup.com
+ */
+function getRootDomainForCookie(hostname: string): string {
+    const parts = hostname.split('.')
+    if (parts.length >= 2) {
+        return '.' + parts.slice(-2).join('.')
+    }
+    return hostname
+}
+
+/**
+ * Lookup workspace ID for a custom domain
+ * Uses Redis cache with DB fallback
+ */
+async function getWorkspaceIdFromDomain(hostname: string, baseUrl: string): Promise<string | null> {
+    const cacheKey = hostname.toLowerCase()
+
+    // Check in-memory cache first
+    const cached = domainCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < DOMAIN_CACHE_TTL) {
+        return cached.workspaceId
+    }
+
+    // Check Redis cache
+    try {
+        const redisKey = `domain:${cacheKey}`
+        const cachedWorkspaceId = await redis.get<string>(redisKey)
+
+        if (cachedWorkspaceId !== null) {
+            domainCache.set(cacheKey, { workspaceId: cachedWorkspaceId || null, timestamp: Date.now() })
+            return cachedWorkspaceId || null
+        }
+    } catch (err) {
+        console.error('[Edge] ⚠️ Redis domain cache error:', err)
+    }
+
+    // Fallback to API lookup
+    try {
+        const res = await fetch(`${baseUrl}/api/domains/lookup?hostname=${encodeURIComponent(cacheKey)}`, {
+            cache: 'no-store',
+        })
+
+        if (res.ok) {
+            const data = await res.json()
+            const workspaceId = data.verified ? data.workspaceId : null
+
+            // Cache in Redis for future requests
+            try {
+                await redis.set(`domain:${cacheKey}`, workspaceId || '', { ex: 3600 }) // 1 hour TTL
+            } catch (e) {
+                // Ignore cache write errors
+            }
+
+            domainCache.set(cacheKey, { workspaceId, timestamp: Date.now() })
+            return workspaceId
+        }
+    } catch (err) {
+        console.error('[Edge] ⚠️ Domain lookup API error:', err)
+    }
+
+    // Cache negative result
+    domainCache.set(cacheKey, { workspaceId: null, timestamp: Date.now() })
+    return null
+}
+
 // =============================================
 // TRACKING FUNCTION (Fire-and-Forget)
 // =============================================
@@ -129,6 +221,42 @@ function logClickToTinybird(data: {
 
 export async function middleware(request: NextRequest, event: NextFetchEvent) {
     const { pathname } = request.nextUrl
+    const hostname = getDomain(request)
+    const customDomain = isCustomDomain(hostname)
+
+    // ============================================
+    // CUSTOM DOMAIN SECURITY GUARDS
+    // ============================================
+    if (customDomain) {
+        // Block dashboard access on custom domains - redirect to primary
+        if (pathname.startsWith('/dashboard')) {
+            const primaryUrl = new URL(pathname, `https://${PRIMARY_DOMAIN}`)
+            primaryUrl.search = request.nextUrl.search
+            console.log('[Edge] 🛡️ Blocking dashboard on custom domain, redirecting to primary')
+            return NextResponse.redirect(primaryUrl.toString())
+        }
+
+        // Block auth endpoints on custom domains
+        if (pathname.startsWith('/api/auth') || pathname.startsWith('/login') || pathname.startsWith('/auth')) {
+            console.log('[Edge] 🛡️ Blocking auth route on custom domain')
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
+        // Verify domain ownership for non-static routes
+        if (!pathname.startsWith('/_next') && !pathname.startsWith('/favicon') && !pathname.match(/\.(js|css|png|jpg|svg|ico|woff|woff2)$/)) {
+            const workspaceId = await getWorkspaceIdFromDomain(hostname, request.nextUrl.origin)
+
+            if (!workspaceId) {
+                console.log('[Edge] ⛔ Unverified custom domain:', hostname)
+                return NextResponse.json({ error: 'Domain not configured' }, { status: 404 })
+            }
+
+            // Attach workspace ID to request for downstream use
+            const requestHeaders = new Headers(request.headers)
+            requestHeaders.set('x-workspace-id', workspaceId)
+            requestHeaders.set('x-custom-domain', hostname)
+        }
+    }
 
     // ============================================
     // SHORT LINK REDIRECT (/s/*)
@@ -187,13 +315,16 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             const response = NextResponse.redirect(destinationUrl.toString())
 
             // Set first-party cookie for attribution (survives URL param stripping)
-            // ✅ UNIFIED: Cookie name 'clk_id' matches SDK, TTL 90 days
+            // ✅ ITP BYPASS: HttpOnly cookie on client's root domain
+            const cookieDomain = customDomain ? getRootDomainForCookie(hostname) : undefined
+
             response.cookies.set('clk_id', click_id, {
-                httpOnly: false,  // JS accessible for SDK compatibility
+                httpOnly: customDomain,  // HttpOnly for ITP bypass on custom domains
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
-                maxAge: 60 * 60 * 24 * 90, // 90 days attribution window (unified)
+                maxAge: 60 * 60 * 24 * 90, // 90 days attribution window
                 path: '/',
+                ...(cookieDomain && { domain: cookieDomain })
             })
 
             // 🔥 FIRE-AND-FORGET: Log click in background
@@ -298,6 +429,44 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             const loginUrl = new URL('/login', request.url)
             loginUrl.searchParams.set('redirectTo', pathname)
             return NextResponse.redirect(loginUrl)
+        }
+
+        // ============================================
+        // WORKSPACE SECURITY CHECK
+        // ============================================
+        // Check if path is /dashboard/[slug]...
+        const pathParts = pathname.split('/') // ['', 'dashboard', 'slug', ...]
+
+        // Reserved slugs that are actual page routes, not workspace slugs
+        const reservedSlugs = ['new', 'links', 'settings', 'domains', 'integration', 'marketplace', 'missions', 'affiliate', 'startup']
+
+        if (pathParts.length >= 3 && !reservedSlugs.includes(pathParts[2])) {
+            const slug = pathParts[2]
+
+            // Optimization: Skip valid static assets or checking if needed (already handled by matcher but be safe)
+
+            try {
+                // Verify access via internal API (Context: Middleware runs on Edge, Prisma doesn't)
+                const verifyUrl = new URL('/api/auth/verify', request.url)
+                verifyUrl.searchParams.set('slug', slug)
+
+                // Pass cookie headers for auth
+                const verifyRes = await fetch(verifyUrl, {
+                    headers: {
+                        cookie: request.headers.get('cookie') || ''
+                    }
+                })
+
+                if (verifyRes.status === 403 || verifyRes.status === 404) {
+                    console.warn(`[Middleware] ⛔ Access denied to workspace: ${slug}`)
+                    return NextResponse.redirect(new URL('/dashboard', request.url)) // Fallback to root dashboard
+                }
+            } catch (err) {
+                // Open fail: if verification fails (server error), we allow it and let Layout handle it?
+                // Or we block. Security-first = block. But availability-first = allow.
+                // Let's log and allow for robustness, Layout will 404/403 anyway if it fails data load.
+                console.error('[Middleware] ⚠️ Verify check failed:', err)
+            }
         }
     }
 

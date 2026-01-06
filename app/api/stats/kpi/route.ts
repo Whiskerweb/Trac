@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { getActiveWorkspaceForUser, getOrCreateDefaultWorkspace } from '@/lib/workspace-context'
 
 // ⚠️ SECURITY: Force dynamic rendering - NEVER cache this route
 // This ensures each request gets fresh auth context
@@ -120,17 +121,33 @@ export async function GET() {
     }
 
     // ========================================
+    // GET ACTIVE WORKSPACE (or create default)
+    // ========================================
+    let workspace = await getActiveWorkspaceForUser()
+
+    if (!workspace) {
+        try {
+            await getOrCreateDefaultWorkspace()
+            workspace = await getActiveWorkspaceForUser()
+        } catch (error) {
+            console.error('[KPI Proxy] ❌ Failed to get/create workspace:', error)
+        }
+    }
+
+    const workspaceId = workspace?.workspaceId || user.id // Fallback for migration
+
+    // ========================================
     // SECURITY LOG: Trace the requesting user
     // ========================================
     console.log('[SECURITY CHECK] ✅ Requesting User:', user.id)
-    console.log('[SECURITY CHECK] 📧 User Email:', user.email)
+    console.log('[SECURITY CHECK] 🏢 Workspace ID:', workspaceId)
 
     try {
         // ========================================
         // BUILD TINYBIRD URLS (Two pipes in parallel)
         // ========================================
         const baseParams = new URLSearchParams({
-            workspace_id: user.id,
+            workspace_id: workspaceId,  // Use actual workspace!
             date_from: '2024-01-01',
             date_to: '2025-12-31',
         })

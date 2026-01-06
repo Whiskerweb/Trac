@@ -10,6 +10,7 @@ SCHEMA >
     `affiliate_id` Nullable(String) `json:$.affiliate_id`,
     `customer_external_id` String `json:$.customer_external_id`,
     `amount` Int32 `json:$.amount`,
+    `net_amount` Int32 `json:$.net_amount`,
     `currency` LowCardinality(String) `json:$.currency`,
     `payment_processor` LowCardinality(String) `json:$.payment_processor`
 
@@ -17,4 +18,4 @@ ENGINE "ReplacingMergeTree"
 ENGINE_SORTING_KEY "invoice_id, workspace_id"
 
 FORWARD_QUERY >
-    SELECT timestamp, event_id, invoice_id, workspace_id, click_id, defaultValueOfTypeName('Nullable(String)') AS link_id, defaultValueOfTypeName('Nullable(String)') AS affiliate_id, customer_external_id, amount, currency, payment_processor
+    SELECT timestamp, event_id, invoice_id, workspace_id, click_id, link_id, affiliate_id, customer_external_id, amount, defaultValueOfTypeName('Int32') AS net_amount, currency, payment_processor

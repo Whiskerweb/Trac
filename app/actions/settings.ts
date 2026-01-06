@@ -2,18 +2,34 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
-import { nanoid } from 'nanoid'
+import {
+    validateApiKey as validateKey,
+    generatePublicKey,
+    generateSecretKey,
+    getWorkspaceApiKeys
+} from '@/lib/api-keys'
+import {
+    getActiveWorkspaceForUser,
+    getOrCreateDefaultWorkspace,
+    setActiveWorkspaceId
+} from '@/lib/workspace-context'
+
+// =============================================
+// API KEY ACTIONS (Workspace-scoped)
+// =============================================
 
 /**
- * Get or create API key for the current user
- * Returns the public key in format: pk_trac_<nanoid>
+ * Get or create API key for the current user's active workspace
+ * For existing users without a workspace, creates a default one
  */
 export async function getOrCreateApiKey(): Promise<{
     success: boolean
     publicKey?: string
+    secretKey?: string  // Only returned if new key was created!
+    workspaceName?: string
+    isNewWorkspace?: boolean
     error?: string
 }> {
-    // Authenticate user
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -22,28 +38,59 @@ export async function getOrCreateApiKey(): Promise<{
     }
 
     try {
-        // Check if user already has an API key
-        let apiKey = await prisma.apiKey.findUnique({
-            where: { workspace_id: user.id }
-        })
+        // Get or create workspace for user
+        let activeWorkspace = await getActiveWorkspaceForUser()
+        let secretKey: string | undefined
+        let isNewWorkspace = false
 
-        // Create one if not exists
-        if (!apiKey) {
-            const publicKey = `pk_trac_${nanoid(24)}`
+        if (!activeWorkspace) {
+            // User has no workspace - create default
+            const result = await getOrCreateDefaultWorkspace()
+            isNewWorkspace = result.isNew
+            secretKey = result.secretKey
 
-            apiKey = await prisma.apiKey.create({
+            // Fetch the workspace info
+            activeWorkspace = await getActiveWorkspaceForUser()
+            if (!activeWorkspace) {
+                return { success: false, error: 'Failed to create workspace' }
+            }
+        }
+
+        // Get API keys for this workspace
+        const apiKeys = await getWorkspaceApiKeys(activeWorkspace.workspaceId)
+
+        if (apiKeys.length === 0) {
+            // Create a new API key pair
+            const publicKey = generatePublicKey()
+            const { key: newSecretKey, hash: secretHash } = generateSecretKey()
+
+            await prisma.apiKey.create({
                 data: {
-                    workspace_id: user.id,
+                    workspace_id: activeWorkspace.workspaceId,
+                    name: 'Default Key',
                     public_key: publicKey,
+                    secret_hash: secretHash,
                 }
             })
 
-            console.log('[ApiKey] ✅ Created new key for:', user.id)
+            console.log('[ApiKey] ✅ Created new key for workspace:', activeWorkspace.workspaceId)
+
+            return {
+                success: true,
+                publicKey,
+                secretKey: newSecretKey,
+                workspaceName: activeWorkspace.workspaceName,
+                isNewWorkspace
+            }
         }
 
+        // Return existing key
         return {
             success: true,
-            publicKey: apiKey.public_key,
+            publicKey: apiKeys[0].public_key,
+            secretKey, // Only set if new workspace was created
+            workspaceName: activeWorkspace.workspaceName,
+            isNewWorkspace
         }
 
     } catch (error) {
@@ -53,11 +100,13 @@ export async function getOrCreateApiKey(): Promise<{
 }
 
 /**
- * Regenerate API key (creates a new one, invalidates old)
+ * Regenerate API key (creates new secret, invalidates old)
+ * Returns new secret key ONCE - cannot be recovered
  */
 export async function regenerateApiKey(): Promise<{
     success: boolean
     publicKey?: string
+    secretKey?: string  // New secret, shown once!
     error?: string
 }> {
     const supabase = await createClient()
@@ -68,25 +117,48 @@ export async function regenerateApiKey(): Promise<{
     }
 
     try {
-        const newPublicKey = `pk_trac_${nanoid(24)}`
+        const activeWorkspace = await getActiveWorkspaceForUser()
+        if (!activeWorkspace) {
+            return { success: false, error: 'No active workspace' }
+        }
 
-        const apiKey = await prisma.apiKey.upsert({
-            where: { workspace_id: user.id },
-            update: {
-                public_key: newPublicKey,
-                created_at: new Date(),
-            },
-            create: {
-                workspace_id: user.id,
-                public_key: newPublicKey,
-            }
+        // Get current API key
+        const existingKey = await prisma.apiKey.findFirst({
+            where: { workspace_id: activeWorkspace.workspaceId }
         })
 
-        console.log('[ApiKey] 🔄 Regenerated key for:', user.id)
+        // Generate new keys
+        const newPublicKey = generatePublicKey()
+        const { key: newSecretKey, hash: secretHash } = generateSecretKey()
+
+        if (existingKey) {
+            // Update existing key
+            await prisma.apiKey.update({
+                where: { id: existingKey.id },
+                data: {
+                    public_key: newPublicKey,
+                    secret_hash: secretHash,
+                    created_at: new Date(),
+                }
+            })
+        } else {
+            // Create new if none exists
+            await prisma.apiKey.create({
+                data: {
+                    workspace_id: activeWorkspace.workspaceId,
+                    name: 'Default Key',
+                    public_key: newPublicKey,
+                    secret_hash: secretHash,
+                }
+            })
+        }
+
+        console.log('[ApiKey] 🔄 Regenerated key for workspace:', activeWorkspace.workspaceId)
 
         return {
             success: true,
-            publicKey: apiKey.public_key,
+            publicKey: newPublicKey,
+            secretKey: newSecretKey,
         }
 
     } catch (error) {
@@ -94,6 +166,52 @@ export async function regenerateApiKey(): Promise<{
         return { success: false, error: 'Failed to regenerate API key' }
     }
 }
+
+// =============================================
+// WORKSPACE ACTIONS
+// =============================================
+
+/**
+ * Switch the active workspace
+ */
+export async function switchWorkspace(workspaceId: string): Promise<{
+    success: boolean
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    try {
+        // Verify user has access to this workspace
+        const membership = await prisma.workspaceMember.findUnique({
+            where: {
+                workspace_id_user_id: {
+                    workspace_id: workspaceId,
+                    user_id: user.id
+                }
+            }
+        })
+
+        if (!membership) {
+            return { success: false, error: 'Access denied' }
+        }
+
+        await setActiveWorkspaceId(workspaceId)
+        return { success: true }
+
+    } catch (error) {
+        console.error('[Workspace] ❌ Switch error:', error)
+        return { success: false, error: 'Failed to switch workspace' }
+    }
+}
+
+// =============================================
+// API KEY VALIDATION (for API routes)
+// =============================================
 
 /**
  * Validate a public key and return the workspace_id
@@ -103,32 +221,6 @@ export async function validateApiKey(publicKey: string): Promise<{
     valid: boolean
     workspaceId?: string
 }> {
-    if (!publicKey || !publicKey.startsWith('pk_trac_')) {
-        return { valid: false }
-    }
-
-    try {
-        const apiKey = await prisma.apiKey.findUnique({
-            where: { public_key: publicKey }
-        })
-
-        if (!apiKey) {
-            return { valid: false }
-        }
-
-        // Update last_used_at
-        await prisma.apiKey.update({
-            where: { id: apiKey.id },
-            data: { last_used_at: new Date() }
-        })
-
-        return {
-            valid: true,
-            workspaceId: apiKey.workspace_id,
-        }
-
-    } catch (error) {
-        console.error('[ApiKey] ❌ Validation error:', error)
-        return { valid: false }
-    }
+    return validateKey(publicKey)
 }
+

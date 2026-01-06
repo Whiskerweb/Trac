@@ -19,7 +19,11 @@ interface WebhookConfig {
     createdAt: Date
 }
 
-export function WebhookManager() {
+interface WebhookManagerProps {
+    onStatusChange?: (configured: boolean) => void
+}
+
+export function WebhookManager({ onStatusChange }: WebhookManagerProps) {
     const [loading, setLoading] = useState(true)
     const [creating, setCreating] = useState(false)
     const [saving, setSaving] = useState(false)
@@ -40,6 +44,9 @@ export function WebhookManager() {
         const result = await getWebhookConfig()
         if (result.success && result.config) {
             setConfig(result.config)
+            onStatusChange?.(result.config.hasSecret)
+        } else {
+            onStatusChange?.(false)
         }
         setLoading(false)
     }
@@ -88,6 +95,7 @@ export function WebhookManager() {
             setSecret('')
             setShowSecretInput(false)
             setSuccess('Secret sauvegardé avec succès !')
+            onStatusChange?.(true)
             setTimeout(() => setSuccess(null), 3000)
         } else {
             setError(result.error || 'Erreur lors de la sauvegarde')

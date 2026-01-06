@@ -9,9 +9,9 @@ SQL >
     %
     SELECT 
         link_id as affiliate_id,
-        count() as total_clicks,
-        countIf(event_type = 'sale') as total_sales,
-        sumIf(amount, event_type = 'sale') as total_revenue
+        count() as total_sales,
+        sum(amount) as total_revenue,
+        sum(net_amount) as net_revenue
     FROM sales
     WHERE 
         workspace_id = {{ String(workspace_id, '') }}

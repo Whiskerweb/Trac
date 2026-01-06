@@ -1,0 +1,504 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { createClient } from '@/utils/supabase/server'
+import { prisma } from '@/lib/db'
+import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
+import {
+    VERCEL_AUTH_TOKEN,
+    VERCEL_PROJECT_ID,
+    VERCEL_TEAM_ID,
+    CNAME_TARGET,
+} from '@/lib/config/constants'
+
+// =============================================
+// TYPES
+// =============================================
+
+interface DomainResult {
+    success: boolean
+    error?: string
+}
+
+interface DomainData {
+    id: string
+    name: string
+    verified: boolean
+    createdAt: Date
+    verifiedAt: Date | null
+}
+
+interface AddDomainResult extends DomainResult {
+    domain?: DomainData
+    cnameTarget?: string
+}
+
+interface VerifyDomainResult extends DomainResult {
+    verified?: boolean
+    configured?: boolean
+    error?: string
+    details?: {
+        misconfigured: boolean
+        conflicts: string[]
+        acceptedChallenges: string[]
+    }
+}
+
+interface VercelDomainResponse {
+    name: string
+    apexName: string
+    projectId: string
+    verified: boolean
+    verification?: Array<{
+        type: string
+        domain: string
+        value: string
+        reason: string
+    }>
+    error?: {
+        code: string
+        message: string
+    }
+}
+
+interface VercelDomainConfigResponse {
+    configuredBy: string | null
+    acceptedChallenges: string[]
+    misconfigured: boolean
+    conflicts: Array<{
+        name: string
+        type: string
+        value: string
+    }>
+}
+
+// =============================================
+// VERCEL API HELPERS
+// =============================================
+
+const VERCEL_API_BASE = 'https://api.vercel.com'
+
+function getVercelHeaders(): HeadersInit {
+    return {
+        'Authorization': `Bearer ${VERCEL_AUTH_TOKEN}`,
+        'Content-Type': 'application/json',
+    }
+}
+
+function getTeamQuery(): string {
+    return VERCEL_TEAM_ID ? `?teamId=${VERCEL_TEAM_ID}` : ''
+}
+
+/**
+ * Add a domain to Vercel project
+ */
+async function addDomainToVercel(domainName: string): Promise<{
+    success: boolean
+    error?: string
+    data?: VercelDomainResponse
+}> {
+    if (!VERCEL_AUTH_TOKEN || !VERCEL_PROJECT_ID) {
+        console.warn('[Domains] ⚠️ Vercel API not configured')
+        return { success: true } // Allow domain addition without Vercel (for testing)
+    }
+
+    try {
+        const url = `${VERCEL_API_BASE}/v10/projects/${VERCEL_PROJECT_ID}/domains${getTeamQuery()}`
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: getVercelHeaders(),
+            body: JSON.stringify({ name: domainName }),
+        })
+
+        const data = await res.json()
+
+        if (!res.ok) {
+            console.error('[Domains] ❌ Vercel API error:', data)
+
+            // Handle specific error codes
+            if (data.error?.code === 'domain_already_in_use') {
+                return { success: false, error: 'Ce domaine est déjà utilisé par un autre projet Vercel' }
+            }
+            if (data.error?.code === 'forbidden') {
+                return { success: false, error: 'Token Vercel invalide ou permissions insuffisantes' }
+            }
+
+            return { success: false, error: data.error?.message || 'Erreur lors de l\'ajout du domaine' }
+        }
+
+        console.log('[Domains] ✅ Domain added to Vercel:', domainName)
+        return { success: true, data }
+    } catch (err) {
+        console.error('[Domains] ❌ Vercel API request failed:', err)
+        return { success: false, error: 'Erreur de connexion à l\'API Vercel' }
+    }
+}
+
+/**
+ * Check domain configuration status on Vercel
+ */
+async function checkDomainStatus(domainName: string): Promise<{
+    success: boolean
+    configured: boolean
+    verified: boolean
+    error?: string
+    details?: VercelDomainConfigResponse
+}> {
+    if (!VERCEL_AUTH_TOKEN || !VERCEL_PROJECT_ID) {
+        console.warn('[Domains] ⚠️ Vercel API not configured')
+        return { success: true, configured: false, verified: false }
+    }
+
+    try {
+        const url = `${VERCEL_API_BASE}/v6/domains/${domainName}/config${getTeamQuery()}`
+
+        const res = await fetch(url, {
+            method: 'GET',
+            headers: getVercelHeaders(),
+        })
+
+        const data: VercelDomainConfigResponse = await res.json()
+
+        if (!res.ok) {
+            console.error('[Domains] ❌ Domain config check failed:', data)
+            return { success: false, configured: false, verified: false, error: 'Impossible de vérifier le domaine' }
+        }
+
+        const configured = data.configuredBy !== null && !data.misconfigured
+        const verified = configured && data.conflicts.length === 0
+
+        console.log('[Domains] 🔍 Domain status:', domainName, { configured, verified, misconfigured: data.misconfigured })
+
+        return {
+            success: true,
+            configured,
+            verified,
+            details: data,
+        }
+    } catch (err) {
+        console.error('[Domains] ❌ Domain config check request failed:', err)
+        return { success: false, configured: false, verified: false, error: 'Erreur de connexion' }
+    }
+}
+
+/**
+ * Remove a domain from Vercel project
+ */
+async function removeDomainFromVercel(domainName: string): Promise<{ success: boolean; error?: string }> {
+    if (!VERCEL_AUTH_TOKEN || !VERCEL_PROJECT_ID) {
+        console.warn('[Domains] ⚠️ Vercel API not configured')
+        return { success: true }
+    }
+
+    try {
+        const url = `${VERCEL_API_BASE}/v9/projects/${VERCEL_PROJECT_ID}/domains/${domainName}${getTeamQuery()}`
+
+        const res = await fetch(url, {
+            method: 'DELETE',
+            headers: getVercelHeaders(),
+        })
+
+        if (!res.ok && res.status !== 404) {
+            const data = await res.json()
+            console.error('[Domains] ❌ Vercel domain removal failed:', data)
+            return { success: false, error: data.error?.message || 'Erreur lors de la suppression' }
+        }
+
+        console.log('[Domains] ✅ Domain removed from Vercel:', domainName)
+        return { success: true }
+    } catch (err) {
+        console.error('[Domains] ❌ Vercel domain removal request failed:', err)
+        return { success: false, error: 'Erreur de connexion' }
+    }
+}
+
+// =============================================
+// SERVER ACTIONS
+// =============================================
+
+/**
+ * Get all domains for the current workspace
+ */
+export async function getDomains(): Promise<{
+    success: boolean
+    domains?: DomainData[]
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Non authentifié' }
+    }
+
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+
+        if (!workspace) {
+            return { success: false, error: 'Aucun workspace actif' }
+        }
+
+        const domains = await prisma.domain.findMany({
+            where: { workspace_id: workspace.workspaceId },
+            orderBy: { created_at: 'desc' },
+        })
+
+        return {
+            success: true,
+            domains: domains.map(d => ({
+                id: d.id,
+                name: d.name,
+                verified: d.verified,
+                createdAt: d.created_at,
+                verifiedAt: d.verified_at,
+            })),
+        }
+    } catch (error) {
+        console.error('[Domains] ❌ getDomains error:', error)
+        return { success: false, error: 'Erreur lors du chargement des domaines' }
+    }
+}
+
+/**
+ * Add a new domain to the workspace
+ */
+export async function addDomain(domainName: string): Promise<AddDomainResult> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Non authentifié' }
+    }
+
+    // Validate domain format
+    const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/
+    const cleanDomain = domainName.toLowerCase().trim()
+
+    if (!domainRegex.test(cleanDomain)) {
+        return { success: false, error: 'Format de domaine invalide' }
+    }
+
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+
+        if (!workspace) {
+            return { success: false, error: 'Aucun workspace actif' }
+        }
+
+        // Check if domain already exists globally
+        const existing = await prisma.domain.findUnique({
+            where: { name: cleanDomain },
+        })
+
+        if (existing) {
+            if (existing.workspace_id === workspace.workspaceId) {
+                return { success: false, error: 'Ce domaine est déjà ajouté à votre workspace' }
+            }
+            return { success: false, error: 'Ce domaine est déjà utilisé par un autre workspace' }
+        }
+
+        // Add to Vercel first
+        const vercelResult = await addDomainToVercel(cleanDomain)
+
+        if (!vercelResult.success) {
+            return { success: false, error: vercelResult.error }
+        }
+
+        // Create in database
+        const domain = await prisma.domain.create({
+            data: {
+                name: cleanDomain,
+                workspace_id: workspace.workspaceId,
+                verified: false,
+            },
+        })
+
+        console.log('[Domains] ✅ Domain added:', cleanDomain, 'for workspace:', workspace.workspaceId)
+
+        revalidatePath('/dashboard/domains')
+
+        return {
+            success: true,
+            domain: {
+                id: domain.id,
+                name: domain.name,
+                verified: domain.verified,
+                createdAt: domain.created_at,
+                verifiedAt: domain.verified_at,
+            },
+            cnameTarget: CNAME_TARGET,
+        }
+    } catch (error) {
+        console.error('[Domains] ❌ addDomain error:', error)
+        return { success: false, error: 'Erreur lors de l\'ajout du domaine' }
+    }
+}
+
+/**
+ * Verify domain DNS configuration
+ */
+export async function verifyDomain(domainId: string): Promise<VerifyDomainResult> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Non authentifié' }
+    }
+
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+
+        if (!workspace) {
+            return { success: false, error: 'Aucun workspace actif' }
+        }
+
+        // Get domain with workspace check
+        const domain = await prisma.domain.findFirst({
+            where: {
+                id: domainId,
+                workspace_id: workspace.workspaceId,
+            },
+        })
+
+        if (!domain) {
+            return { success: false, error: 'Domaine non trouvé' }
+        }
+
+        // Check status with Vercel
+        const status = await checkDomainStatus(domain.name)
+
+        if (!status.success) {
+            return { success: false, error: status.error }
+        }
+
+        // Update database if verified
+        if (status.verified && !domain.verified) {
+            await prisma.domain.update({
+                where: { id: domainId },
+                data: {
+                    verified: true,
+                    verified_at: new Date(),
+                },
+            })
+
+            console.log('[Domains] ✅ Domain verified:', domain.name)
+        }
+
+        revalidatePath('/dashboard/domains')
+
+        return {
+            success: true,
+            verified: status.verified,
+            configured: status.configured,
+            details: status.details ? {
+                misconfigured: status.details.misconfigured,
+                conflicts: status.details.conflicts.map(c => `${c.type}: ${c.name} → ${c.value}`),
+                acceptedChallenges: status.details.acceptedChallenges,
+            } : undefined,
+        }
+    } catch (error) {
+        console.error('[Domains] ❌ verifyDomain error:', error)
+        return { success: false, error: 'Erreur lors de la vérification' }
+    }
+}
+
+/**
+ * Remove a domain from the workspace
+ */
+export async function removeDomain(domainId: string): Promise<DomainResult> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Non authentifié' }
+    }
+
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+
+        if (!workspace) {
+            return { success: false, error: 'Aucun workspace actif' }
+        }
+
+        // Get domain with workspace check
+        const domain = await prisma.domain.findFirst({
+            where: {
+                id: domainId,
+                workspace_id: workspace.workspaceId,
+            },
+        })
+
+        if (!domain) {
+            return { success: false, error: 'Domaine non trouvé' }
+        }
+
+        // Remove from Vercel first
+        const vercelResult = await removeDomainFromVercel(domain.name)
+
+        if (!vercelResult.success) {
+            // Log but don't block - domain might already be removed from Vercel
+            console.warn('[Domains] ⚠️ Vercel removal failed:', vercelResult.error)
+        }
+
+        // Delete from database
+        await prisma.domain.delete({
+            where: { id: domainId },
+        })
+
+        console.log('[Domains] ✅ Domain removed:', domain.name)
+
+        revalidatePath('/dashboard/domains')
+
+        return { success: true }
+    } catch (error) {
+        console.error('[Domains] ❌ removeDomain error:', error)
+        return { success: false, error: 'Erreur lors de la suppression' }
+    }
+}
+
+/**
+ * Get the first verified domain for the current workspace
+ * Used by integration page to generate first-party SDK snippet
+ */
+export async function getVerifiedDomainForWorkspace(): Promise<{
+    success: boolean
+    domain?: string
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Non authentifié' }
+    }
+
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+
+        if (!workspace) {
+            return { success: false, error: 'Aucun workspace actif' }
+        }
+
+        // Get first verified domain
+        const domain = await prisma.domain.findFirst({
+            where: {
+                workspace_id: workspace.workspaceId,
+                verified: true,
+            },
+            orderBy: { created_at: 'asc' }, // Oldest verified domain first (primary)
+        })
+
+        if (!domain) {
+            return { success: true, domain: undefined }
+        }
+
+        return {
+            success: true,
+            domain: domain.name,
+        }
+    } catch (error) {
+        console.error('[Domains] ❌ getVerifiedDomainForWorkspace error:', error)
+        return { success: false, error: 'Erreur lors du chargement' }
+    }
+}

@@ -110,8 +110,23 @@ export async function POST(
                         : session.customer_details?.email || 'guest'
 
                     // Amount
+                    // Amount & Net Calculation
                     const amount = session.amount_total || 0
+                    const tax = session.total_details?.amount_tax || 0
+                    const netAmount = amount - tax
                     const currency = session.currency || 'eur'
+
+                    // Update Customer with clk_id for future recurring payments (invoice.paid)
+                    if (clickId && typeof session.customer === 'string') {
+                        try {
+                            await stripe.customers.update(session.customer, {
+                                metadata: { clk_id: clickId }
+                            })
+                            console.log(`[Webhook] Updated Customer ${session.customer} with clk_id: ${clickId}`)
+                        } catch (err) {
+                            console.error('[Webhook] Failed to update customer metadata:', err)
+                        }
+                    }
 
                     // Invoice ID for deduplication
                     const invoiceId = typeof session.invoice === 'string'
@@ -128,6 +143,7 @@ export async function POST(
                         quantity: number;
                         unit_price: number;
                         total: number;
+                        net_total: number;
                     }> = [];
 
                     try {
@@ -139,6 +155,11 @@ export async function POST(
 
                         products = lineItemsResponse.data.map(item => {
                             const product = item.price?.product as Stripe.Product;
+                            // Calculate item net (if tax is available on item, otherwise proportional or simplified)
+                            // Note: Stripe listLineItems might not return amount_tax directly on item unless specified?
+                            // Checked: LineItem has amount_tax.
+                            const itemTax = item.amount_tax || 0;
+
                             return {
                                 product_id: product?.id || 'unknown',
                                 product_name: product?.name || 'Unknown Product',
@@ -147,7 +168,8 @@ export async function POST(
                                 brand: product?.metadata?.brand || null,
                                 quantity: item.quantity || 1,
                                 unit_price: item.price?.unit_amount || 0,
-                                total: item.amount_total || 0
+                                total: item.amount_total || 0,
+                                net_total: (item.amount_total || 0) - itemTax
                             };
                         });
                         console.log(`[Webhook] Extracted ${products.length} line items for session ${session.id}`);
@@ -211,6 +233,7 @@ export async function POST(
                         clickId: clickId || 'direct',
                         orderId: invoiceId,
                         amount: amount / 100,
+                        netAmount: netAmount / 100, // Pass Net Amount
                         currency: currency.toUpperCase(),
                         timestamp: new Date().toISOString(),
                         source: 'stripe_webhook',
@@ -245,6 +268,107 @@ export async function POST(
                 }
             })()
         )
+    } else if (event.type === 'invoice.paid') {
+        const invoice = event.data.object as Stripe.Invoice
+
+        // Skip initial subscription invoice (handled by checkout.session.completed)
+        if (invoice.billing_reason === 'subscription_create') {
+            console.log('[Multi-Tenant Webhook] ⏭️ Skipping initial subscription invoice (deduplication)')
+            return NextResponse.json({ received: true }, { status: 200 })
+        }
+
+        waitUntil(
+            (async () => {
+                try {
+                    const workspaceId = endpoint.workspace_id
+
+                    // 1. Recover Click ID from Customer Metadata
+                    let clickId = invoice.metadata?.clk_id || null
+
+                    if (!clickId && invoice.customer) {
+                        try {
+                            const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer.id
+                            const customer = await stripe.customers.retrieve(customerId)
+                            if (!customer.deleted && customer.metadata?.clk_id) {
+                                clickId = customer.metadata.clk_id
+                                console.log(`[Webhook] Recovered click_id ${clickId} from Customer ${customerId}`)
+                            }
+                        } catch (e) {
+                            console.error('[Webhook] Failed to retrieve customer:', e)
+                        }
+                    }
+
+                    // 2. Net Amount Calculation
+                    const amount = invoice.amount_paid || 0
+                    const tax = (invoice as any).tax || 0
+                    const netAmount = amount - tax
+                    const currency = invoice.currency || 'eur'
+
+                    // 3. Extract Line Items (Products)
+                    let products: any[] = []
+                    try {
+                        const lineItems = await stripe.invoices.listLineItems(invoice.id, { expand: ['data.price.product'] })
+                        products = lineItems.data.map(item => {
+                            const product = (item as any).price?.product as Stripe.Product
+                            const itemTax = (item as any).tax_amounts?.reduce((sum: number, t: any) => sum + (t.amount || 0), 0) || 0
+                            const itemAmount = item.amount || 0
+                            return {
+                                product_id: product?.id || 'unknown',
+                                product_name: product?.name || item.description || 'Unknown Product',
+                                sku: product?.metadata?.sku || null,
+                                category: product?.metadata?.category || null,
+                                brand: product?.metadata?.brand || null,
+                                quantity: item.quantity || 1,
+                                unit_price: (item as any).price?.unit_amount || 0,
+                                total: itemAmount,
+                                net_total: itemAmount - itemTax
+                            }
+                        })
+                    } catch (e) {
+                        console.error('[Webhook] Failed to list invoice lines:', e)
+                    }
+
+                    // 4. Record to Tinybird
+                    const eventId = crypto.randomUUID()
+
+                    console.log(`[Webhook] 💰 Recurring Payment: ${amount / 100} ${currency} (Net: ${netAmount / 100}) - Click: ${clickId || 'none'}`)
+
+                    await recordSaleToTinybird({
+                        clickId: clickId || 'recurring', // Tag as recurring if lost
+                        orderId: invoice.id,
+                        amount: amount / 100,
+                        netAmount: netAmount / 100,
+                        currency: currency.toUpperCase(),
+                        timestamp: new Date().toISOString(),
+                        source: 'stripe_recurring',
+                        workspaceId: workspaceId,
+                        // Customer info
+                        customerExternalId: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id,
+                        customerEmail: invoice.customer_email || undefined,
+                        lineItems: products
+                    })
+
+                    // granular items
+                    if (products.length > 0) {
+                        await recordSaleItemsToTinybird({
+                            clickId: clickId || 'recurring',
+                            orderId: invoice.id,
+                            amount: amount / 100,
+                            netAmount: netAmount / 100,
+                            currency: currency.toUpperCase(),
+                            timestamp: new Date().toISOString(),
+                            source: 'stripe_recurring',
+                            workspaceId: workspaceId,
+                            lineItems: products
+                        }, eventId)
+                    }
+
+                } catch (err) {
+                    console.error('[Webhook] ❌ Invoice processing error:', err)
+                }
+            })()
+        )
+
     } else {
         console.log(`[Multi-Tenant Webhook] ⏭️ Ignoring event ${event.type}`)
     }

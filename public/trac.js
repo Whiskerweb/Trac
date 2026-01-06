@@ -158,6 +158,15 @@
 
     function initConfig() {
         try {
+            // Priority 1: Global Config Object
+            if (window.TracConfig) {
+                if (window.TracConfig.apiKey) Config.apiKey = window.TracConfig.apiKey;
+                if (window.TracConfig.apiEndpoint) Config.apiEndpoint = window.TracConfig.apiEndpoint;
+                if (window.TracConfig.debug) Config.debug = window.TracConfig.debug;
+                if (window.TracConfig.autoInject !== undefined) Config.autoInject = window.TracConfig.autoInject;
+            }
+
+            // Priority 2: Script Attributes (overrides global config)
             var scripts = document.querySelectorAll('script[src*="trac.js"]');
             for (var i = 0; i < scripts.length; i++) {
                 var script = scripts[i];
@@ -167,6 +176,14 @@
 
                 var endpoint = script.getAttribute('data-endpoint');
                 if (endpoint) Config.apiEndpoint = endpoint;
+
+                // Support data-api-host (sets base for endpoint)
+                var apiHost = script.getAttribute('data-api-host');
+                if (apiHost) {
+                    // Remove trailing slash if present
+                    apiHost = apiHost.replace(/\/$/, '');
+                    Config.apiEndpoint = apiHost + '/api/track';
+                }
 
                 if (script.hasAttribute('data-debug')) Config.debug = true;
                 if (script.hasAttribute('data-no-inject')) Config.autoInject = false;

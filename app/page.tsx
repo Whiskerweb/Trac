@@ -1,4 +1,4 @@
-import { getDashboardStats } from '@/lib/tinybird'
+import { getDashboardStats } from '@/lib/analytics/tinybird'
 import Dashboard from '@/components/dashboard'
 import HomeClient from '@/components/home-client'
 

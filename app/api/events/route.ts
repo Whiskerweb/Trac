@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { recordEvent } from '@/lib/tinybird'
+import { recordEvent } from '@/lib/analytics/tinybird'
 import { prisma } from '@/lib/db'
 
 // CORS Headers for public tracking API
@@ -33,13 +33,14 @@ export async function POST(request: Request) {
         )
     }
 
-    // B. Vérification en base de données
-    const project = await prisma.project.findUnique({
-        where: { public_key: publishableKey }
+    // B. Vérification en base de données - lookup by public_key in ApiKey model
+    const apiKey = await prisma.apiKey.findUnique({
+        where: { public_key: publishableKey },
+        include: { workspace: true }
     });
 
-    // C. Si projet inconnu -> 403
-    if (!project) {
+    // C. Si clé inconnue -> 403
+    if (!apiKey) {
         console.warn("❌ [API] Clé invalide:", publishableKey);
         return NextResponse.json(
             { success: false, error: 'Invalid API Key' },
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     }
 
     // D. Clé valide -> Continue
-    console.log("✅ Projet identifié:", project.name, "(", project.public_key, ")");
+    console.log("✅ Workspace identifié:", apiKey.workspace.name, "(", apiKey.public_key, ")");
 
     try {
         const body = await request.json()

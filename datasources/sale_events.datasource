@@ -22,4 +22,4 @@ SCHEMA >
 
 ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
-ENGINE_SORTING_KEY "timestamp, order_id, click_id"
+ENGINE_SORTING_KEY "timestamp, order_id, customer_external_id"

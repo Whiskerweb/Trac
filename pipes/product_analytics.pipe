@@ -1,0 +1,40 @@
+DESCRIPTION "Analytics for product performance (Best sellers, Revenue per SKU)"
+
+NODE top_products
+DESCRIPTION "Get top selling products by revenue"
+SQL >
+    %
+    SELECT 
+        product_name,
+        category,
+        brand,
+        sum(quantity) as units_sold,
+        sum(total) as gross_revenue,
+        sum(net_total) as net_revenue,
+        count(DISTINCT order_id) as total_orders
+    FROM sale_items
+    WHERE workspace_id = {{String(workspace_id)}}
+    {% if defined(start_date) and defined(end_date) %}
+        AND timestamp BETWEEN {{DateTime(start_date)}} AND {{DateTime(end_date)}}
+    {% end %}
+    GROUP BY product_name, category, brand
+    ORDER BY net_revenue DESC
+    LIMIT {{Int32(limit, 10)}}
+
+NODE revenue_by_sku
+DESCRIPTION "Granular SKU performance"
+SQL >
+    %
+    SELECT 
+        sku,
+        product_name,
+        sum(quantity) as units_sold,
+        sum(net_total) as net_revenue
+    FROM sale_items
+    WHERE workspace_id = {{String(workspace_id)}}
+    AND sku IS NOT NULL
+    {% if defined(start_date) and defined(end_date) %}
+        AND timestamp BETWEEN {{DateTime(start_date)}} AND {{DateTime(end_date)}}
+    {% end %}
+    GROUP BY sku, product_name
+    ORDER BY net_revenue DESC

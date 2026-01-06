@@ -15,10 +15,17 @@ interface ActivityEvent {
     affiliate_id: string | null
     workspace_id: string
     amount?: number
+    net_amount?: number
     currency?: string
     click_id?: string
     country?: string
     device?: string
+    // NEW: Mission Control fields
+    hostname?: string
+    product_name?: string
+    user_agent?: string
+    referrer?: string
+    payment_processor?: string
 }
 
 /**
@@ -155,8 +162,8 @@ export async function GET(req: NextRequest) {
     // FETCH CLICKS (use columns that exist in Tinybird Cloud)
     // ========================================
     try {
-        // Only use columns that definitely exist
-        const clicksColumns = ['timestamp', 'workspace_id', 'click_id', 'link_id', 'url', 'country', 'device']
+        // Only use columns that definitely exist + new enrichments
+        const clicksColumns = ['timestamp', 'workspace_id', 'click_id', 'link_id', 'url', 'country', 'device', 'referrer', 'user_agent']
 
         let clicksQuery: string
         if (viewMode === 'affiliate') {
@@ -178,6 +185,14 @@ export async function GET(req: NextRequest) {
                     console.log(`[Activity API] Parsed ${clicksData.length} affiliate clicks`)
 
                     for (const click of clicksData) {
+                        // Extract hostname from URL for domain validation
+                        let hostname = ''
+                        try {
+                            if (click.url) {
+                                hostname = new URL(click.url).hostname
+                            }
+                        } catch (e) { /* ignore */ }
+
                         events.push({
                             type: 'click',
                             timestamp: click.timestamp,
@@ -188,6 +203,9 @@ export async function GET(req: NextRequest) {
                             click_id: click.click_id,
                             country: click.country,
                             device: click.device,
+                            hostname,
+                            referrer: click.referrer,
+                            user_agent: click.user_agent,
                         })
                     }
                 } else {
@@ -210,6 +228,14 @@ export async function GET(req: NextRequest) {
                 console.log(`[Activity API] Parsed ${clicksData.length} startup clicks`)
 
                 for (const click of clicksData) {
+                    // Extract hostname from URL for domain validation
+                    let hostname = ''
+                    try {
+                        if (click.url) {
+                            hostname = new URL(click.url).hostname
+                        }
+                    } catch (e) { /* ignore */ }
+
                     events.push({
                         type: 'click',
                         timestamp: click.timestamp,
@@ -220,6 +246,9 @@ export async function GET(req: NextRequest) {
                         click_id: click.click_id,
                         country: click.country,
                         device: click.device,
+                        hostname,
+                        referrer: click.referrer,
+                        user_agent: click.user_agent,
                     })
                 }
             } else {
@@ -235,8 +264,8 @@ export async function GET(req: NextRequest) {
     // FETCH SALES (use columns that exist in Tinybird Cloud)
     // ========================================
     try {
-        // Only use columns that definitely exist
-        const salesColumns = ['timestamp', 'workspace_id', 'click_id', 'invoice_id', 'amount', 'currency']
+        // Only use columns that definitely exist + new enrichments
+        const salesColumns = ['timestamp', 'workspace_id', 'click_id', 'invoice_id', 'amount', 'net_amount', 'currency', 'payment_processor']
 
         let salesQuery: string
         if (viewMode === 'affiliate') {
@@ -276,8 +305,10 @@ export async function GET(req: NextRequest) {
                                 affiliate_id: user.id,
                                 workspace_id: sale.workspace_id,
                                 amount: parseInt(sale.amount) || 0,
+                                net_amount: parseInt(sale.net_amount) || 0,
                                 currency: sale.currency || 'EUR',
                                 click_id: sale.click_id,
+                                payment_processor: sale.payment_processor || 'stripe',
                             })
                         }
                     }
@@ -310,8 +341,10 @@ export async function GET(req: NextRequest) {
                         affiliate_id: null,
                         workspace_id: sale.workspace_id,
                         amount: parseInt(sale.amount) || 0,
+                        net_amount: parseInt(sale.net_amount) || 0,
                         currency: sale.currency || 'EUR',
                         click_id: sale.click_id,
+                        payment_processor: sale.payment_processor || 'stripe',
                     })
                 }
             } else {

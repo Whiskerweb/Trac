@@ -1,0 +1,89 @@
+
+import 'dotenv/config';
+import { prisma } from '../lib/db';
+import { nanoid } from 'nanoid';
+
+// Slugify helper
+function slugify(text: string) {
+    return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')     // Replace spaces with -
+        .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+        .replace(/\-\-+/g, '-');  // Replace multiple - with single -
+}
+
+async function migrate() {
+    console.log('🚀 Starting migration...');
+
+    // 1. Migrate Projects -> Workspaces
+    const projects = await prisma.project.findMany({ include: { links: true } });
+
+    for (const project of projects) {
+        console.log(`Processing Project: ${project.name} (${project.id})`);
+
+        // Check if workspace already exists (simple heuristic by name, or just create new)
+        // We will create new to be safe and avoid collisions
+        let slug = slugify(project.name);
+
+        // Ensure unique slug
+        const existing = await prisma.workspace.findUnique({ where: { slug } });
+        if (existing) {
+            slug = `${slug}-${nanoid(4)}`;
+        }
+
+        console.log(`-> Creating Workspace: ${project.name} (slug: ${slug})`);
+
+        const workspace = await prisma.workspace.create({
+            data: {
+                name: project.name,
+                slug: slug,
+                owner_id: project.user_id,
+                created_at: project.created_at,
+                // Create Owner Member
+                members: {
+                    create: {
+                        user_id: project.user_id,
+                        role: 'OWNER'
+                    }
+                }
+            }
+        });
+
+        // 2. Migrate Links -> ShortLinks
+        for (const link of project.links) {
+            console.log(`   -> Migrating Link: ${link.id} -> ${link.destination_url}`);
+
+            // Check if slug conflict exists in ShortLink
+            const existingLink = await prisma.shortLink.findUnique({ where: { slug: link.id } });
+
+            if (existingLink) {
+                console.warn(`   ⚠️  Skipping Link ${link.id} - ShortLink with this slug already exists.`);
+                continue;
+            }
+
+            await prisma.shortLink.create({
+                data: {
+                    slug: link.id, // Legacy links used ID as slug
+                    original_url: link.destination_url,
+                    workspace_id: workspace.id,
+                    affiliate_id: link.user_id, // The claimer
+                    created_at: link.created_at,
+                    clicks: 0 // Cannot migrate analytics easily without more complex logic
+                }
+            });
+        }
+    }
+
+    console.log('✅ Migration complete.');
+}
+
+migrate()
+    .catch(e => {
+        console.error(e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });

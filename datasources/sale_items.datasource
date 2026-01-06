@@ -1,24 +1,22 @@
-DESCRIPTION "Individual line items from sales for product-level analytics (Top products by campaign)"
+DESCRIPTION >
+    Line items for sales - contains product details from each transaction
 
 SCHEMA >
     `timestamp` DateTime `json:$.timestamp`,
-    `event_id` String `json:$.event_id`,
     `order_id` String `json:$.order_id`,
     `workspace_id` String `json:$.workspace_id`,
     `click_id` Nullable(String) `json:$.click_id`,
-    `link_id` Nullable(String) `json:$.link_id`,
-    `affiliate_id` Nullable(String) `json:$.affiliate_id`,
-    `product_id` String `json:$.product_id`,
-    `product_name` String `json:$.product_name`,
+    `product_id` Nullable(String) `json:$.product_id`,
+    `product_name` Nullable(String) `json:$.product_name`,
     `sku` Nullable(String) `json:$.sku`,
     `category` Nullable(String) `json:$.category`,
     `brand` Nullable(String) `json:$.brand`,
     `quantity` Int32 `json:$.quantity`,
-    `unit_price` Int32 `json:$.unit_price`,
-    `total` Int32 `json:$.total`,
+    `unit_price` Float64 `json:$.unit_price`,
+    `total` Float64 `json:$.total`,
+    `net_total` Float64 `json:$.net_total`,
     `currency` LowCardinality(String) `json:$.currency`
 
 ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
-ENGINE_SORTING_KEY "workspace_id, link_id, product_id, timestamp"
-ENGINE_TTL "timestamp + toIntervalYear(2)"
+ENGINE_SORTING_KEY "timestamp, order_id, workspace_id"

@@ -28,7 +28,7 @@ export async function getOrCreateWebhookEndpoint(): Promise<{
 
     try {
         // Check if endpoint already exists
-        let endpoint = await prisma.webhookEndpoint.findUnique({
+        let endpoint = await prisma.webhookEndpoint.findFirst({
             where: { workspace_id: user.id }
         })
 
@@ -84,8 +84,17 @@ export async function updateWebhookSecret(secret: string): Promise<{
     }
 
     try {
+        // Find the endpoint first
+        const endpoint = await prisma.webhookEndpoint.findFirst({
+            where: { workspace_id: user.id }
+        })
+
+        if (!endpoint) {
+            return { success: false, error: 'No webhook endpoint found' }
+        }
+
         await prisma.webhookEndpoint.update({
-            where: { workspace_id: user.id },
+            where: { id: endpoint.id },
             data: { secret }
         })
 
@@ -121,7 +130,7 @@ export async function getWebhookConfig(): Promise<{
     }
 
     try {
-        const endpoint = await prisma.webhookEndpoint.findUnique({
+        const endpoint = await prisma.webhookEndpoint.findFirst({
             where: { workspace_id: user.id }
         })
 
@@ -164,8 +173,16 @@ export async function deleteWebhookEndpoint(): Promise<{
     }
 
     try {
-        await prisma.webhookEndpoint.delete({
+        const endpoint = await prisma.webhookEndpoint.findFirst({
             where: { workspace_id: user.id }
+        })
+
+        if (!endpoint) {
+            return { success: false, error: 'No webhook endpoint found' }
+        }
+
+        await prisma.webhookEndpoint.delete({
+            where: { id: endpoint.id }
         })
 
         console.log('[Webhook] 🗑️ Endpoint deleted for workspace:', user.id)

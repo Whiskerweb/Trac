@@ -1,5 +1,5 @@
 import { MousePointerClick, Users, ShoppingCart, Euro } from 'lucide-react'
-import type { DashboardStats } from '@/lib/tinybird'
+import type { DashboardStats } from '@/lib/analytics/tinybird'
 
 interface DashboardProps {
     stats: DashboardStats
