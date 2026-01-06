@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
+import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 
 // Mission status type (mirrors Prisma enum)
 type MissionStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
@@ -36,6 +37,12 @@ export async function createMission(data: CreateMissionInput): Promise<{
         return { success: false, error: 'Not authenticated' }
     }
 
+    // Get active workspace
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace. Please complete onboarding.' }
+    }
+
     // Validate required fields
     if (!data.title?.trim()) {
         return { success: false, error: 'Title is required' }
@@ -50,7 +57,7 @@ export async function createMission(data: CreateMissionInput): Promise<{
     try {
         const mission = await prisma.mission.create({
             data: {
-                workspace_id: user.id,
+                workspace_id: workspace.workspaceId,  // ✅ FIXED: Use actual workspace ID
                 title: data.title.trim(),
                 description: data.description?.trim() || '',
                 target_url: data.target_url.trim(),

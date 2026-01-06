@@ -64,52 +64,18 @@ export default function HomeClient() {
 
     return (
         <div className="max-w-2xl">
-            {/* Create Link Form */}
-            <form onSubmit={createLink} className="bg-zinc-900 rounded-xl p-6 mb-6 border border-zinc-800">
-                <h2 className="text-xl font-semibold mb-4">Create Short Link</h2>
+            {/* Create Link Form Replaced by Mission CTA */}
+            <div className="bg-zinc-900 rounded-xl p-8 mb-6 border border-zinc-800 text-center">
+                <h2 className="text-xl font-semibold mb-2 text-white">Prêt à tracker ?</h2>
+                <p className="text-zinc-400 mb-6">Lancez une mission pour générer vos liens de tracking.</p>
 
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm text-zinc-400 mb-1">Destination URL *</label>
-                        <input
-                            type="url"
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                            placeholder="https://example.com/your-page"
-                            required
-                            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm text-zinc-400 mb-1">Custom Slug (optional)</label>
-                        <div className="flex items-center gap-2">
-                            <span className="text-zinc-500">{mounted ? window.location.origin : ''}/</span>
-                            <input
-                                type="text"
-                                value={slug}
-                                onChange={(e) => setSlug(e.target.value)}
-                                placeholder="my-link"
-                                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
-                            />
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-2.5 rounded-lg hover:opacity-90 transition disabled:opacity-50"
-                    >
-                        {loading ? 'Creating...' : 'Create Link'}
-                    </button>
-                </div>
-
-                {message && (
-                    <div className={`mt-4 p-3 rounded-lg ${message.includes('✅') ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}`}>
-                        {message}
-                    </div>
-                )}
-            </form>
+                <a
+                    href="/dashboard/missions"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg hover:opacity-90 transition"
+                >
+                    🚀 Lancer une Mission
+                </a>
+            </div>
 
             {/* Links List */}
             <div className="bg-zinc-900 rounded-xl p-6 border border-zinc-800">

@@ -16,9 +16,10 @@ import {
     Copy,
     Check,
     Trash2,
-    ExternalLink
+    ExternalLink,
+    Rocket
 } from 'lucide-react'
-import { CreateLinkModal } from '@/components/CreateLinkModal'
+import Link from 'next/link'
 import { deleteShortLink } from '@/app/actions/links'
 import { ActivityLog } from '@/components/ActivityLog'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
@@ -246,13 +247,13 @@ export default function DashboardPage() {
                     >
                         <RefreshCw className="w-4 h-4" />
                     </button>
-                    <button
-                        onClick={() => setIsModalOpen(true)}
+                    <Link
+                        href="/dashboard/missions"
                         className="flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-all shadow-sm"
                     >
-                        <Plus className="w-4 h-4" />
-                        <span>Create Link</span>
-                    </button>
+                        <Rocket className="w-4 h-4" />
+                        <span>Lancer une Mission</span>
+                    </Link>
                 </div>
             </div>
 
@@ -341,25 +342,19 @@ export default function DashboardPage() {
                             <LinkIcon className="w-5 h-5 text-gray-400" />
                         </div>
                         <h3 className="text-sm font-medium text-gray-900">No links created</h3>
-                        <p className="text-gray-500 text-xs mt-1 mb-4">Get started by creating your first short link.</p>
-                        <button
-                            onClick={() => setIsModalOpen(true)}
+                        <p className="text-gray-500 text-xs mt-1 mb-4">Get started by launching your first mission.</p>
+                        <Link
+                            href="/dashboard/missions"
                             className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 text-sm font-medium rounded-lg transition-all"
                         >
-                            <Plus className="w-4 h-4" />
-                            Create Link
-                        </button>
+                            <Rocket className="w-4 h-4" />
+                            Lancer une Mission
+                        </Link>
                     </div>
                 )}
             </div>
 
-            {/* Modals & Drawers */}
-            <CreateLinkModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSuccess={() => mutateLinks()}
-            />
-
+            {/* Drawers */}
             {selectedLink && (
                 <LinkDrawer
                     isOpen={!!selectedLink}

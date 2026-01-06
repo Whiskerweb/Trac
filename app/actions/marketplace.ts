@@ -29,6 +29,7 @@ interface MissionWithEnrollment {
     reward: string
     workspace_id: string
     created_at: Date
+    custom_domain: string | null  // ✅ CNAME domain for preview URLs
     enrollment: {
         id: string
         status: string
@@ -172,10 +173,20 @@ export async function getAllMissions(): Promise<{
     }
 
     try {
-        // Get all active missions
+        // Get all active missions with workspace domains
         const missions = await prisma.mission.findMany({
             where: { status: 'ACTIVE' },
-            orderBy: { created_at: 'desc' }
+            orderBy: { created_at: 'desc' },
+            include: {
+                Workspace: {
+                    include: {
+                        Domain: {
+                            where: { verified: true },
+                            take: 1
+                        }
+                    }
+                }
+            }
         })
 
         // Get user's enrollments WITH link data
@@ -199,13 +210,19 @@ export async function getAllMissions(): Promise<{
         // Fetch REAL stats from Tinybird
         const statsMap = await getAffiliateStatsFromTinybird(linkIds)
 
-        // Build base URL
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        // Build base URL (fallback)
+        const defaultBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
         // Merge missions with enrollment data and REAL stats
         const result: MissionWithEnrollment[] = missions.map(mission => {
             const enrollment = enrollmentMap.get(mission.id)
             const linkId = enrollment?.ShortLink?.id
+            const customDomain = mission.Workspace?.Domain?.[0]?.name || null
+
+            // Build URL with custom domain if available
+            const baseUrl = customDomain
+                ? `https://${customDomain}`
+                : defaultBaseUrl
 
             // Get real stats from Tinybird (or defaults)
             const realStats = linkId ? statsMap.get(linkId) : null
@@ -223,13 +240,14 @@ export async function getAllMissions(): Promise<{
                 reward: mission.reward,
                 workspace_id: mission.workspace_id,
                 created_at: mission.created_at,
+                custom_domain: customDomain,  // ✅ Pass to UI
                 enrollment: enrollment ? {
                     id: enrollment.id,
                     status: enrollment.status,
                     link: enrollment.ShortLink ? {
                         id: enrollment.ShortLink.id,
                         slug: enrollment.ShortLink.slug,
-                        full_url: `${baseUrl}/s/${enrollment.ShortLink.slug}`
+                        full_url: `${baseUrl}/s/${enrollment.ShortLink.slug}`  // ✅ Use custom domain
                     } : null,
                     stats
                 } : null
@@ -245,13 +263,16 @@ export async function getAllMissions(): Promise<{
 }
 
 /**
- * Join a mission - Creates enrollment + Short Link with DUAL ATTRIBUTION
+ * Join a mission - Creates enrollment + Short Link with CNAME-AWARE ATTRIBUTION
+ * 
+ * Link Structure: https://[CUSTOM_DOMAIN]/s/[MISSION_SLUG]/[AFFILIATE_CODE]
  */
 export async function joinMission(missionId: string): Promise<{
     success: boolean
     enrollment?: {
         id: string
         link_url: string
+        has_custom_domain: boolean
     }
     error?: string
 }> {
@@ -286,13 +307,28 @@ export async function joinMission(missionId: string): Promise<{
             return { success: false, error: 'Already enrolled in this mission' }
         }
 
-        // 3. Generate unique short link slug
-        const slug = nanoid(7)
+        // 3. 🌐 CNAME LOGIC: Fetch verified domain for workspace
+        const verifiedDomain = await prisma.domain.findFirst({
+            where: {
+                workspace_id: mission.workspace_id,
+                verified: true
+            }
+        })
+        const customDomain = verifiedDomain?.name || null
 
-        // 4. Create the ShortLink with DUAL ATTRIBUTION
+        // 4. 📝 Generate SEMANTIC slug: mission-slug/affiliate-code
+        const missionSlug = mission.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '')
+            .slice(0, 20)
+        const affiliateCode = user.id.slice(0, 8) // Short unique code
+        const fullSlug = `${missionSlug}/${affiliateCode}`
+
+        // 5. Create the ShortLink with DUAL ATTRIBUTION
         const shortLink = await prisma.shortLink.create({
             data: {
-                slug,
+                slug: fullSlug,
                 original_url: mission.target_url,
                 workspace_id: mission.workspace_id, // Startup owner
                 affiliate_id: user.id,               // Affiliate owner
@@ -300,19 +336,20 @@ export async function joinMission(missionId: string): Promise<{
             }
         })
 
-        // ✅ DUAL WRITE: Sync to Redis for low-latency lookups
+        // 6. ✅ REDIS with CUSTOM DOMAIN: shortlink:[domain]:[slug]
         const { setLinkInRedis } = await import('@/lib/redis')
         await setLinkInRedis(shortLink.slug, {
             url: shortLink.original_url,
             linkId: shortLink.id,
             workspaceId: shortLink.workspace_id,
             affiliateId: shortLink.affiliate_id,
-        })
+        }, customDomain || undefined)  // ✅ Pass custom domain!
 
-        console.log('[Marketplace] 🔗 Created link:', shortLink.slug, '→', mission.target_url)
+        console.log('[Marketplace] 🔗 Created link:', shortLink.slug)
+        console.log('[Marketplace] 🌐 Domain:', customDomain || 'default')
         console.log('[Marketplace] 🔐 Attribution: Startup', mission.workspace_id, '→ Affiliate', user.id)
 
-        // 5. Create MissionEnrollment linked to the ShortLink
+        // 7. Create MissionEnrollment linked to the ShortLink
         const enrollment = await prisma.missionEnrollment.create({
             data: {
                 mission_id: missionId,
@@ -324,15 +361,18 @@ export async function joinMission(missionId: string): Promise<{
 
         console.log('[Marketplace] ✅ Enrollment created:', enrollment.id)
 
-        // Build full URL
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        const linkUrl = `${baseUrl}/s/${slug}`
+        // 8. Build full URL with CUSTOM DOMAIN if available
+        const baseUrl = customDomain
+            ? `https://${customDomain}`
+            : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+        const linkUrl = `${baseUrl}/s/${fullSlug}`
 
         return {
             success: true,
             enrollment: {
                 id: enrollment.id,
                 link_url: linkUrl,
+                has_custom_domain: !!customDomain,
             }
         }
 
