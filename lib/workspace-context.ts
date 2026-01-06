@@ -86,7 +86,7 @@ export async function getActiveWorkspaceForUser(): Promise<{
         if (membership) {
             return {
                 workspaceId: membership.workspace_id,
-                workspaceName: membership.workspace.name,
+                workspaceName: membership.Workspace.name,
                 role: membership.role
             }
         }
@@ -98,7 +98,7 @@ export async function getActiveWorkspaceForUser(): Promise<{
     // No active workspace or lost access - try to find user's first workspace
     const firstMembership = await prisma.workspaceMember.findFirst({
         where: { user_id: user.id },
-        include: { workspace: true },
+        include: { Workspace: true },
         orderBy: { created_at: 'asc' }
     })
 
@@ -107,7 +107,7 @@ export async function getActiveWorkspaceForUser(): Promise<{
         await setActiveWorkspaceId(firstMembership.workspace_id)
         return {
             workspaceId: firstMembership.workspace_id,
-            workspaceName: firstMembership.workspace.name,
+            workspaceName: firstMembership.Workspace.name,
             role: firstMembership.role
         }
     }
@@ -137,16 +137,16 @@ export async function getWorkspacesForUser(): Promise<Array<{
 
     const memberships = await prisma.workspaceMember.findMany({
         where: { user_id: user.id },
-        include: { workspace: true },
+        include: { Workspace: true },
         orderBy: { created_at: 'asc' }
     })
 
     return memberships.map(m => ({
-        id: m.workspace.id,
-        name: m.workspace.name,
-        slug: m.workspace.slug,
+        id: m.Workspace.id,
+        name: m.Workspace.name,
+        slug: m.Workspace.slug,
         role: m.role,
-        isActive: m.workspace.id === activeWorkspaceId
+        isActive: m.Workspace.id === activeWorkspaceId
     }))
 }
 
@@ -265,7 +265,7 @@ export async function getOrCreateDefaultWorkspace(): Promise<{
     // Check if user already has a workspace
     const existing = await prisma.workspaceMember.findFirst({
         where: { user_id: user.id },
-        include: { workspace: true }
+        include: { Workspace: true }
     })
 
     if (existing) {
