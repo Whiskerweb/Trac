@@ -69,8 +69,11 @@ export async function getOrCreateWebhookEndpoint(): Promise<{
             console.log('[Webhook] ℹ️ Existing endpoint found:', endpoint.id)
         }
 
-        // Build webhook URL (will be replaced with actual domain in production)
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        // Build webhook URL - Always use production domain for Stripe configuration
+        // NEXT_PUBLIC_APP_URL may not be available in Server Actions, use explicit production URL
+        const baseUrl = process.env.NODE_ENV === 'production'
+            ? 'https://traaaction.com'
+            : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
         const webhookUrl = `${baseUrl}/api/webhooks/${endpoint.id}`
 
         console.log('[Webhook] ✅ Returning URL:', webhookUrl)
@@ -175,7 +178,10 @@ export async function getWebhookConfig(): Promise<{
             return { success: true, config: undefined }
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        // Always use production domain for Stripe webhook URL
+        const baseUrl = process.env.NODE_ENV === 'production'
+            ? 'https://traaaction.com'
+            : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
         const webhookUrl = `${baseUrl}/api/webhooks/${endpoint.id}`
 
         return {
