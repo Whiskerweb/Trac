@@ -37,10 +37,12 @@ export async function POST(
     })
 
     if (!endpoint) {
-        console.log('[Multi-Tenant Webhook] ❌ Endpoint not found:', endpointId)
+        // Return 200 OK to not block Stripe's queue for unknown endpoints
+        // Log for debugging but don't retry - endpoint truly doesn't exist
+        console.log('[Multi-Tenant Webhook] ⚠️ Endpoint not found (returning 200):', endpointId)
         return NextResponse.json(
-            { error: 'Webhook endpoint not found' },
-            { status: 404 }
+            { received: true, warning: 'Endpoint not registered' },
+            { status: 200 }
         )
     }
 

@@ -70,9 +70,10 @@ export async function getOrCreateWebhookEndpoint(): Promise<{
         }
 
         // Build webhook URL - Always use production domain for Stripe configuration
-        // NEXT_PUBLIC_APP_URL may not be available in Server Actions, use explicit production URL
+        // IMPORTANT: Use www.traaaction.com because Vercel redirects non-www → www with 307
+        // Stripe does NOT follow redirects, causing webhook failures
         const baseUrl = process.env.NODE_ENV === 'production'
-            ? 'https://traaaction.com'
+            ? 'https://www.traaaction.com'
             : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
         const webhookUrl = `${baseUrl}/api/webhooks/${endpoint.id}`
 
@@ -179,8 +180,9 @@ export async function getWebhookConfig(): Promise<{
         }
 
         // Always use production domain for Stripe webhook URL
+        // IMPORTANT: Use www.traaaction.com to avoid 307 redirect
         const baseUrl = process.env.NODE_ENV === 'production'
-            ? 'https://traaaction.com'
+            ? 'https://www.traaaction.com'
             : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
         const webhookUrl = `${baseUrl}/api/webhooks/${endpoint.id}`
 
