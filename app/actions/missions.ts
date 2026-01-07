@@ -107,9 +107,15 @@ export async function getWorkspaceMissions(): Promise<{
         return { success: false, error: 'Not authenticated' }
     }
 
+    // Get active workspace
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
     try {
         const missions = await prisma.mission.findMany({
-            where: { workspace_id: user.id },
+            where: { workspace_id: workspace.workspaceId }, // ✅ FIXED: Use workspace ID
             include: {
                 _count: {
                     select: { MissionEnrollment: true }
@@ -155,10 +161,16 @@ export async function updateMissionStatus(
         return { success: false, error: 'Not authenticated' }
     }
 
+    // Get active workspace
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
     try {
         // Verify ownership
         const mission = await prisma.mission.findFirst({
-            where: { id: missionId, workspace_id: user.id }
+            where: { id: missionId, workspace_id: workspace.workspaceId } // ✅ FIXED
         })
 
         if (!mission) {
@@ -194,10 +206,16 @@ export async function deleteMission(missionId: string): Promise<{
         return { success: false, error: 'Not authenticated' }
     }
 
+    // Get active workspace
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
     try {
         // Verify ownership
         const mission = await prisma.mission.findFirst({
-            where: { id: missionId, workspace_id: user.id }
+            where: { id: missionId, workspace_id: workspace.workspaceId } // ✅ FIXED
         })
 
         if (!mission) {
@@ -253,11 +271,17 @@ export async function getMissionDetails(missionId: string): Promise<{
         return { success: false, error: 'Not authenticated' }
     }
 
+    // Get active workspace
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
     try {
         const mission = await prisma.mission.findFirst({
             where: {
                 id: missionId,
-                workspace_id: user.id  // SECURITY: Only owner can view details
+                workspace_id: workspace.workspaceId  // ✅ FIXED: Use workspace ID
             },
             include: {
                 MissionEnrollment: {
