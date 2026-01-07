@@ -107,7 +107,12 @@ function DomainRow({
     expanded,
     onToggleExpand,
     verificationRecords,
-    onEdit
+    expanded,
+    onToggleExpand,
+    verificationRecords,
+    onEdit,
+    isConfirmingDelete,
+    onCancelDelete
 }: {
     domain: DomainData
     onVerify: (force?: boolean) => void
@@ -118,6 +123,8 @@ function DomainRow({
     onToggleExpand: () => void
     verificationRecords: VerificationRecord[]
     onEdit: () => void
+    isConfirmingDelete: boolean
+    onCancelDelete: () => void
 }) {
     const isSubdomain = domain.name.split('.').length > 2
     const recordName = isSubdomain ? domain.name.split('.')[0] : '@'
@@ -184,13 +191,34 @@ function DomainRow({
                             </button>
                         </>
                     )}
-                    <button
-                        onClick={onDelete}
-                        disabled={isDeleting}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                    >
-                        {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                    </button>
+                    {isConfirmingDelete ? (
+                        <>
+                            <span className="text-xs text-red-600 font-bold mr-2 animate-in fade-in">Sure?</span>
+                            <button
+                                onClick={onCancelDelete}
+                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                                title="Cancel"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={onDelete}
+                                className="p-2 text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors shadow-sm"
+                                title="Confirm Delete"
+                            >
+                                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={onDelete}
+                            disabled={isDeleting}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            title="Delete Domain"
+                        >
+                            {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -293,6 +321,7 @@ export default function DomainsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [verifyingId, setVerifyingId] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null) // Inline confirm state
     const [editingId, setEditingId] = useState<string | null>(null) // New state for editing
     const [expanded, setExpanded] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
@@ -394,11 +423,22 @@ export default function DomainsPage() {
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure? This will break any links using this domain.')) return
+        // If inline confirmation is not yet active for this ID, activate it
+        if (confirmDeleteId !== id) {
+            setConfirmDeleteId(id)
+            return
+        }
+
+        // If we are here, it means we confirmed
         setDeletingId(id)
         await removeDomain(id)
         await loadDomains()
         setDeletingId(null)
+        setConfirmDeleteId(null)
+    }
+
+    const cancelDelete = () => {
+        setConfirmDeleteId(null)
     }
 
     return (
@@ -477,6 +517,8 @@ export default function DomainsPage() {
                                 }}
                                 verificationRecords={verificationRecords[domain.id] || []}
                                 onEdit={() => openEditModal(domain)}
+                                isConfirmingDelete={confirmDeleteId === domain.id}
+                                onCancelDelete={() => setConfirmDeleteId(null)}
                             />
                         ))}
                     </div>
