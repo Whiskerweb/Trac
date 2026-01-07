@@ -78,7 +78,15 @@ const kpiFetcher = async (url: string): Promise<KPIResponse> => {
 const linksFetcher = async (url: string): Promise<ShortLink[]> => {
     const res = await fetch(url, { cache: 'no-store' })
     if (!res.ok) return []
-    return res.json()
+    const data = await res.json()
+    // API returns { success: true, links: [...] } with destination field
+    return (data.links || []).map((link: { id: string; slug: string; destination: string; clicks: number; created_at: string }) => ({
+        id: link.id,
+        slug: link.slug,
+        original_url: link.destination,  // Map destination → original_url
+        clicks: link.clicks,
+        created_at: link.created_at,
+    }))
 }
 
 // Dub.co Style Minimalist KPI Card
