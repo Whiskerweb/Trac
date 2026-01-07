@@ -301,6 +301,7 @@ export default function DomainsPage() {
     // Modal state
     const [newDomainName, setNewDomainName] = useState('')
     const [adding, setAdding] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
     // Load domains
     const loadDomains = useCallback(async () => {
@@ -353,6 +354,7 @@ export default function DomainsPage() {
     const openEditModal = (domain: DomainData) => {
         setNewDomainName(domain.name)
         setEditingId(domain.id)
+        setShowDeleteConfirm(false)
         setIsModalOpen(true)
     }
 
@@ -510,47 +512,72 @@ export default function DomainsPage() {
                                 </p>
                             </div>
                             <div className="flex items-center justify-between pt-2">
+                                {/* Left Side: Delete Button */}
                                 <div>
-                                    {editingId && (
+                                    {editingId && !showDeleteConfirm && (
                                         <button
                                             type="button"
-                                            onClick={async () => {
-                                                if (!confirm('Are you sure? This will break any links using this domain.')) return
-                                                setDeletingId(editingId)
-                                                try {
-                                                    await removeDomain(editingId)
-                                                    setIsModalOpen(false)
-                                                    setEditingId(null)
-                                                    await loadDomains()
-                                                } catch (e) {
-                                                    alert('Failed to delete')
-                                                }
-                                                setDeletingId(null)
-                                            }}
+                                            onClick={() => setShowDeleteConfirm(true)}
                                             disabled={adding || !!deletingId}
                                             className="px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md text-sm font-medium flex items-center gap-2 transition-colors"
                                         >
-                                            {deletingId === editingId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                            <Trash2 className="w-4 h-4" />
                                             Delete
                                         </button>
                                     )}
                                 </div>
+
+                                {/* Right Side: Actions */}
                                 <div className="flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsModalOpen(false)}
-                                        className="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={!newDomainName.trim() || adding || !!deletingId}
-                                        className="px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md text-sm font-medium disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                        {adding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                                        {editingId ? 'Update Domain' : 'Add Domain'}
-                                    </button>
+                                    {showDeleteConfirm ? (
+                                        <>
+                                            <span className="text-sm text-gray-500 self-center mr-2">Are you sure?</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowDeleteConfirm(false)}
+                                                className="px-3 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    setDeletingId(editingId)
+                                                    try {
+                                                        await removeDomain(editingId!)
+                                                        setIsModalOpen(false)
+                                                        setEditingId(null)
+                                                        await loadDomains()
+                                                    } catch (e) {
+                                                        alert('Failed to delete')
+                                                    }
+                                                    setDeletingId(null)
+                                                }}
+                                                className="px-3 py-2 bg-red-600 text-white hover:bg-red-700 rounded-md text-sm font-medium flex items-center gap-2 transition-colors"
+                                            >
+                                                {deletingId === editingId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                Confirm Delete
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsModalOpen(false)}
+                                                className="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={!newDomainName.trim() || adding || !!deletingId}
+                                                className="px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                            >
+                                                {adding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                                {editingId ? 'Update Domain' : 'Add Domain'}
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </form>
