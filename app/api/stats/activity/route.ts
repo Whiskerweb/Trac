@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
+import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 
 export const dynamic = 'force-dynamic'
 
@@ -135,6 +136,13 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '30')
     const viewMode = searchParams.get('mode') || 'startup'
 
+    // Get actual workspace ID (NOT user.id)
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return NextResponse.json({ error: 'No workspace found' }, { status: 400 })
+    }
+    const workspaceId = workspace.workspaceId
+
     if (!TINYBIRD_TOKEN) {
         return NextResponse.json({ error: 'Tinybird not configured' }, { status: 500 })
     }
@@ -215,7 +223,7 @@ export async function GET(req: NextRequest) {
             }
         } else {
             // Startup mode: filter by workspace_id
-            clicksQuery = `SELECT ${clicksColumns.join(', ')} FROM clicks WHERE workspace_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
+            clicksQuery = `SELECT ${clicksColumns.join(', ')} FROM clicks WHERE workspace_id = '${workspaceId}' ORDER BY timestamp DESC LIMIT ${limit}`
 
             const clicksResponse = await fetch(
                 `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
@@ -320,7 +328,7 @@ export async function GET(req: NextRequest) {
             }
         } else {
             // Startup mode: filter by workspace_id
-            salesQuery = `SELECT ${salesColumns.join(', ')} FROM sales WHERE workspace_id = '${user.id}' ORDER BY timestamp DESC LIMIT ${limit}`
+            salesQuery = `SELECT ${salesColumns.join(', ')} FROM sales WHERE workspace_id = '${workspaceId}' ORDER BY timestamp DESC LIMIT ${limit}`
 
             const salesResponse = await fetch(
                 `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
