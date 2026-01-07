@@ -107,9 +107,7 @@ function DomainRow({
     expanded,
     onToggleExpand,
     verificationRecords,
-    expanded,
-    onToggleExpand,
-    verificationRecords,
+
     onEdit,
     isConfirmingDelete,
     onCancelDelete
