@@ -2,6 +2,7 @@ import { NextResponse, userAgent } from 'next/server'
 import type { NextRequest, NextFetchEvent } from 'next/server'
 import { updateSession } from '@/utils/supabase/middleware'
 import { Redis } from '@upstash/redis'
+import { Ratelimit } from '@upstash/ratelimit'
 
 // =============================================
 // REDIS CLIENT (Edge-Compatible)
@@ -10,6 +11,34 @@ import { Redis } from '@upstash/redis'
 const redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL!,
     token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+})
+
+// =============================================
+// RATE LIMITING CONFIGURATION (Dub-Style)
+// =============================================
+
+/**
+ * Rate Limiter for Link Redirects (Very Permissive)
+ * - 100 requests per 10 seconds per IP
+ * - Uses sliding window for smooth limiting
+ */
+const linkRateLimiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(100, '10 s'),
+    prefix: 'ratelimit:link',
+    analytics: true,
+})
+
+/**
+ * Rate Limiter for API Endpoints (Stricter)
+ * - 1000 requests per 5 minutes per IP/User
+ * - Uses sliding window
+ */
+const apiRateLimiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(1000, '5 m'),
+    prefix: 'ratelimit:api',
+    analytics: true,
 })
 
 // =============================================
@@ -226,6 +255,40 @@ function logClickToTinybird(data: {
         })
 }
 
+/**
+ * Log abuse/rate limit events to Tinybird for monitoring
+ * Returns a Promise for use with waitUntil()
+ */
+function logAbuseToTinybird(ip: string, path: string, reason: string): Promise<void> {
+    if (!TINYBIRD_TOKEN) {
+        return Promise.resolve()
+    }
+
+    const data = {
+        timestamp: new Date().toISOString(),
+        ip,
+        path,
+        reason,
+    }
+
+    return fetch(`${TINYBIRD_HOST}/v0/events?name=abuse_events`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${TINYBIRD_TOKEN}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    })
+        .then(res => {
+            if (res.ok) {
+                console.log('[Edge] 📝 Abuse logged:', reason, ip)
+            }
+        })
+        .catch(() => {
+            // Silently fail - don't block for logging
+        })
+}
+
 // =============================================
 // MIDDLEWARE HANDLER
 // =============================================
@@ -234,6 +297,68 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     const { pathname } = request.nextUrl
     const hostname = getDomain(request)
     const customDomain = isCustomDomain(hostname)
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        request.headers.get('x-real-ip') ||
+        '127.0.0.1'
+
+    // ============================================
+    // RATE LIMITING (Dub-Style)
+    // ============================================
+
+    // 🛡️ EXEMPT: Stripe webhooks - NEVER rate limit
+    if (pathname.startsWith('/api/webhooks/stripe')) {
+        console.log('[Edge] 💳 Stripe webhook - bypassing rate limit')
+        // Continue to normal flow
+    }
+    // 🔗 LINK REDIRECTS: Very permissive (100 req/10s per IP)
+    else if (pathname.startsWith('/s/') || pathname.startsWith('/c/')) {
+        const { success, limit, remaining, reset } = await linkRateLimiter.limit(ip)
+
+        if (!success) {
+            console.warn('[Edge] ⚠️ Rate limited (link):', ip, '- Limit:', limit, 'Remaining:', remaining)
+
+            // Log abuse to Tinybird (fire-and-forget)
+            event.waitUntil(
+                logAbuseToTinybird(ip, pathname, 'link_rate_limit')
+            )
+
+            return new NextResponse(
+                JSON.stringify({ error: 'Too many requests', retryAfter: Math.ceil((reset - Date.now()) / 1000) }),
+                {
+                    status: 429,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-RateLimit-Limit': limit.toString(),
+                        'X-RateLimit-Remaining': remaining.toString(),
+                        'X-RateLimit-Reset': reset.toString(),
+                        'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
+                    },
+                }
+            )
+        }
+    }
+    // 📡 API ENDPOINTS: Stricter (1000 req/5min per IP)
+    else if (pathname.startsWith('/api/') && !pathname.startsWith('/api/domains/lookup')) {
+        const { success, limit, remaining, reset } = await apiRateLimiter.limit(ip)
+
+        if (!success) {
+            console.warn('[Edge] ⚠️ Rate limited (API):', ip, '- Limit:', limit, 'Remaining:', remaining)
+
+            return new NextResponse(
+                JSON.stringify({ error: 'Rate limit exceeded', retryAfter: Math.ceil((reset - Date.now()) / 1000) }),
+                {
+                    status: 429,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-RateLimit-Limit': limit.toString(),
+                        'X-RateLimit-Remaining': remaining.toString(),
+                        'X-RateLimit-Reset': reset.toString(),
+                        'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
+                    },
+                }
+            )
+        }
+    }
 
     // ============================================
     // CUSTOM DOMAIN SECURITY GUARDS
