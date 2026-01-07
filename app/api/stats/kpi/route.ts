@@ -148,7 +148,11 @@ export async function GET(request: NextRequest) {
         // Get date range from query params (sent by frontend DateRangePicker)
         const { searchParams } = new URL(request.url)
         const dateFrom = searchParams.get('date_from') || '2020-01-01'
-        const dateTo = searchParams.get('date_to') || '2030-12-31'  // ✅ Wide range to include all data
+        // ✅ Append T23:59:59 to include the FULL day (Tinybird parses 2026-01-07 as midnight, excluding clicks at 10:53)
+        let dateTo = searchParams.get('date_to') || '2030-12-31'
+        if (dateTo && !dateTo.includes('T')) {
+            dateTo = `${dateTo}T23:59:59`  // Include entire day
+        }
 
         const baseParams = new URLSearchParams({
             workspace_id: workspaceId,
