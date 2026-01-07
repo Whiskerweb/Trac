@@ -654,20 +654,20 @@ export async function removeDomain(domainId: string): Promise<DomainResult> {
 
         console.log('[Domains] ✅ Domain removed:', domain.name)
 
-        // 🔒 BLOCK MISSIONS: Pause all active missions when domain is deleted
+        // 🔒 BLOCK MISSIONS: Archive all active missions when domain is deleted
         // This prevents broken affiliate links from being shared
-        const pausedMissions = await prisma.mission.updateMany({
+        const archivedMissions = await prisma.mission.updateMany({
             where: {
                 workspace_id: workspace.workspaceId,
                 status: 'ACTIVE',
             },
             data: {
-                status: 'PAUSED',
+                status: 'ARCHIVED',
             },
         })
 
-        if (pausedMissions.count > 0) {
-            console.log(`[Domains] ⏸️ Paused ${pausedMissions.count} missions due to domain removal`)
+        if (archivedMissions.count > 0) {
+            console.log(`[Domains] ⏸️ Archived ${archivedMissions.count} missions due to domain removal`)
         }
 
         revalidatePath('/dashboard/domains')
