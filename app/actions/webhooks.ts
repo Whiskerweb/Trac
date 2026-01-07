@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
 import { nanoid } from 'nanoid'
+import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 
 // =============================================
 // WEBHOOK ENDPOINT MANAGEMENT
@@ -19,37 +20,60 @@ export async function getOrCreateWebhookEndpoint(): Promise<{
     secret?: string | null
     error?: string
 }> {
+    console.log('[Webhook] Starting getOrCreateWebhookEndpoint...')
+
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
+        console.log('[Webhook] ❌ Auth failed:', authError?.message || 'No user')
         return { success: false, error: 'Not authenticated' }
     }
 
+    console.log('[Webhook] ✅ User authenticated:', user.email)
+
     try {
-        // Check if endpoint already exists
+        // Get the active workspace for this user
+        console.log('[Webhook] Getting active workspace...')
+        const workspace = await getActiveWorkspaceForUser()
+
+        if (!workspace) {
+            console.log('[Webhook] ❌ No workspace found for user')
+            return { success: false, error: 'No active workspace. Please complete onboarding.' }
+        }
+
+        const workspaceId = workspace.workspaceId
+        console.log('[Webhook] ✅ Workspace found:', workspaceId, workspace.workspaceName)
+
+        // Check if endpoint already exists for this workspace
+        console.log('[Webhook] Checking for existing endpoint...')
         let endpoint = await prisma.webhookEndpoint.findFirst({
-            where: { workspace_id: user.id }
+            where: { workspace_id: workspaceId }
         })
 
         // Create if not exists
         if (!endpoint) {
             const endpointId = `whk_${nanoid(16)}`
+            console.log('[Webhook] Creating new endpoint:', endpointId)
 
             endpoint = await prisma.webhookEndpoint.create({
                 data: {
                     id: endpointId,
-                    workspace_id: user.id,
+                    workspace_id: workspaceId,
                     description: 'Stripe Webhook',
                 }
             })
 
-            console.log('[Webhook] ✅ Created endpoint:', endpointId)
+            console.log('[Webhook] ✅ Created endpoint:', endpointId, 'for workspace:', workspaceId)
+        } else {
+            console.log('[Webhook] ℹ️ Existing endpoint found:', endpoint.id)
         }
 
         // Build webhook URL (will be replaced with actual domain in production)
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
         const webhookUrl = `${baseUrl}/api/webhooks/${endpoint.id}`
+
+        console.log('[Webhook] ✅ Returning URL:', webhookUrl)
 
         return {
             success: true,
@@ -58,9 +82,10 @@ export async function getOrCreateWebhookEndpoint(): Promise<{
             secret: endpoint.secret,
         }
 
-    } catch (error) {
-        console.error('[Webhook] ❌ Error:', error)
-        return { success: false, error: 'Failed to create webhook endpoint' }
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.error('[Webhook] ❌ Error:', errorMessage, error)
+        return { success: false, error: `Webhook creation failed: ${errorMessage}` }
     }
 }
 
@@ -84,9 +109,15 @@ export async function updateWebhookSecret(secret: string): Promise<{
     }
 
     try {
+        // Get the active workspace
+        const workspace = await getActiveWorkspaceForUser()
+        if (!workspace) {
+            return { success: false, error: 'No active workspace' }
+        }
+
         // Find the endpoint first
         const endpoint = await prisma.webhookEndpoint.findFirst({
-            where: { workspace_id: user.id }
+            where: { workspace_id: workspace.workspaceId }
         })
 
         if (!endpoint) {
@@ -98,7 +129,7 @@ export async function updateWebhookSecret(secret: string): Promise<{
             data: { secret }
         })
 
-        console.log('[Webhook] 🔐 Secret updated for workspace:', user.id)
+        console.log('[Webhook] 🔐 Secret updated for workspace:', workspace.workspaceId)
 
         return { success: true }
 
@@ -130,8 +161,14 @@ export async function getWebhookConfig(): Promise<{
     }
 
     try {
+        // Get the active workspace
+        const workspace = await getActiveWorkspaceForUser()
+        if (!workspace) {
+            return { success: true, config: undefined }
+        }
+
         const endpoint = await prisma.webhookEndpoint.findFirst({
-            where: { workspace_id: user.id }
+            where: { workspace_id: workspace.workspaceId }
         })
 
         if (!endpoint) {

@@ -4,161 +4,362 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon Super SaaS - Boutique</title>
+    <title>🛒 Test Shop - Traaaction SDK Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
 
-    <!-- Trac Analytics SDK -->
-    <script src="/trac.js" data-key="pk_trac_IZIk4v7swOoFO3Yk789Z05mQ" defer></script>
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #1a1a2e;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .product-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 2px solid #e9ecef;
+        }
+
+        .product-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+
+        .product-price {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+            margin: 10px 0;
+        }
+
+        .status-box {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+        }
+
+        .status-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .status-line:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            color: #888;
+        }
+
+        .status-value {
+            color: #4ade80;
+            word-break: break-all;
+        }
+
+        .status-value.warning {
+            color: #fbbf24;
+        }
+
+        .status-value.error {
+            color: #f87171;
+        }
+
+        .buy-button {
+            display: block;
+            width: 100%;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .buy-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .secondary-button {
+            display: block;
+            width: 100%;
+            padding: 12px 24px;
+            background: #f0f0f0;
+            color: #333;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .secondary-button:hover {
+            background: #e0e0e0;
+        }
+
+        .console {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+        }
+
+        .console-line {
+            color: #8b949e;
+            margin: 4px 0;
+        }
+
+        .console-line.success {
+            color: #4ade80;
+        }
+
+        .console-line.error {
+            color: #f87171;
+        }
+
+        .console-line.info {
+            color: #60a5fa;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 0.85rem;
+        }
+    </style>
 </head>
 
-<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-
-    <!-- Navigation -->
-    <nav class="border-b border-white/10 backdrop-blur-sm">
-        <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-            <div class="text-xl font-bold text-white">🚀 SuperSaaS</div>
-            <div class="text-sm text-slate-400">Demo Shop</div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="max-w-5xl mx-auto px-6 py-16">
-        <div class="grid md:grid-cols-2 gap-12 items-center">
-
-            <!-- Product Image -->
-            <div
-                class="aspect-square bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-2xl border border-white/10 flex items-center justify-center">
-                <div class="text-center">
-                    <div class="text-8xl mb-4">💎</div>
-                    <div class="text-slate-400 text-sm">Premium SaaS Product</div>
-                </div>
-            </div>
-
-            <!-- Product Info -->
-            <div class="space-y-6">
-                <div>
-                    <div class="text-sm font-medium text-purple-400 uppercase tracking-wider mb-2">
-                        Nouveau
-                    </div>
-                    <h1 class="text-4xl font-bold text-white">
-                        Mon Super SaaS
-                    </h1>
-                </div>
-
-                <p class="text-slate-300 text-lg leading-relaxed">
-                    La solution tout-en-un pour booster votre productivité.
-                    Analytics, tracking, et bien plus encore.
-                </p>
-
-                <div class="flex items-baseline gap-3">
-                    <span class="text-5xl font-bold text-white">10€</span>
-                    <span class="text-slate-400 line-through">19€</span>
-                    <span class="bg-green-500/20 text-green-400 text-sm font-medium px-2 py-1 rounded">
-                        -47%
-                    </span>
-                </div>
-
-                <ul class="space-y-2 text-slate-300">
-                    <li class="flex items-center gap-2">
-                        <span class="text-green-400">✓</span> Accès à vie
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="text-green-400">✓</span> Support prioritaire
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="text-green-400">✓</span> Mises à jour gratuites
-                    </li>
-                </ul>
-
-                <!-- BUY BUTTON - CRITICAL -->
-                <a id="buy-btn" href="https://buy.stripe.com/test_bJe5kE1CB5oS9n63Ev2ZO00"
-                    class="block w-full py-4 px-8 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-lg rounded-xl text-center transition-all shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40">
-                    Acheter maintenant →
-                </a>
-
-                <p class="text-center text-sm text-slate-500">
-                    Paiement sécurisé via Stripe 🔒
-                </p>
-            </div>
-        </div>
-
-        <!-- Debug Panel -->
-        <div class="mt-16 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
-            <h3 class="text-lg font-semibold text-white mb-4">🔍 Debug - Trac Attribution</h3>
-            <div class="grid gap-4 text-sm font-mono">
-                <div class="flex items-center gap-3">
-                    <span class="text-slate-400">Click ID:</span>
-                    <span id="debug-click-id" class="text-green-400">-</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-slate-400">Stripe Link:</span>
-                    <span id="debug-stripe-link" class="text-blue-400 break-all">-</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-slate-400">Status:</span>
-                    <span id="debug-status" class="text-yellow-400">⏳ Loading...</span>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="border-t border-white/10 mt-16">
-        <div class="max-w-5xl mx-auto px-6 py-8 text-center text-slate-500 text-sm">
-            Demo pour tester le tracking Trac Analytics
-        </div>
-    </footer>
-
-    <!-- INJECTION SCRIPT - THE GLUE -->
+<body>
+    <!-- Traaaction SDK Integration -->
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Wait a bit for Trac SDK to initialize
-            setTimeout(function () {
-                var clickId = window.Trac ? window.Trac.getClickId() : null;
-                var buyBtn = document.getElementById('buy-btn');
-                var debugClickId = document.getElementById('debug-click-id');
-                var debugStripeLink = document.getElementById('debug-stripe-link');
-                var debugStatus = document.getElementById('debug-status');
+        window.TracConfig = {
+            apiKey: 'pk_test_local',
+            debug: true,
+            autoInject: true
+        };
+    </script>
+    <script src="/trac.js" defer></script>
 
-                if (clickId && buyBtn) {
-                    // Get current href
-                    var originalHref = buyBtn.getAttribute('href');
+    <div class="container">
+        <h1>🛒 Test Shop</h1>
+        <p class="subtitle">Simulation d'un site e-commerce avec SDK Traaaction</p>
 
-                    // Build new URL with client_reference_id
-                    var url = new URL(originalHref);
-                    url.searchParams.set('client_reference_id', clickId);
-                    var newHref = url.toString();
+        <div class="product-card">
+            <div class="product-name">Premium Subscription</div>
+            <div class="product-price">€49.00</div>
+            <p style="color: #666;">Accès illimité pendant 1 mois</p>
+        </div>
 
-                    // Update the button
-                    buyBtn.setAttribute('href', newHref);
+        <div class="status-box">
+            <div class="status-line">
+                <span class="status-label">Cookie clk_id:</span>
+                <span class="status-value" id="cookie-status">Checking...</span>
+            </div>
+            <div class="status-line">
+                <span class="status-label">URL trac_id:</span>
+                <span class="status-value" id="url-status">Checking...</span>
+            </div>
+            <div class="status-line">
+                <span class="status-label">SDK Status:</span>
+                <span class="status-value" id="sdk-status">Loading...</span>
+            </div>
+            <div class="status-line">
+                <span class="status-label">Active Click ID:</span>
+                <span class="status-value" id="active-click-id">-</span>
+            </div>
+        </div>
 
-                    // Log
-                    console.log('[Shop] 🔗 Injecting ID into Stripe Link:', clickId);
-                    console.log('[Shop] 📎 New URL:', newHref);
+        <!-- Stripe Payment Link (Test) -->
+        <a href="https://buy.stripe.com/test_aEU00h3Jv7RG1LWfYY" id="stripe-payment-link" class="buy-button"
+            target="_blank">
+            💳 Payer avec Stripe
+        </a>
 
-                    // Update debug panel
-                    debugClickId.textContent = clickId;
-                    debugClickId.className = 'text-green-400';
-                    debugStripeLink.textContent = newHref;
-                    debugStatus.textContent = '✅ Attribution active';
-                    debugStatus.className = 'text-green-400';
+        <!-- Manual Test Buttons -->
+        <button class="secondary-button" onclick="simulateClickCapture()">
+            🔗 Simuler Capture de Click
+        </button>
+        <button class="secondary-button" onclick="testStripeInjection()">
+            🧪 Tester Injection Stripe
+        </button>
+        <button class="secondary-button" onclick="sendTestPageview()">
+            📊 Envoyer Page View
+        </button>
 
+        <div class="console" id="console">
+            <div class="console-line info">[Shop] Console prête...</div>
+        </div>
+
+        <footer>
+            Traaaction SDK Test Environment • v1.0
+        </footer>
+    </div>
+
+    <script>
+        const consoleEl = document.getElementById('console');
+
+        function log(message, type = 'info') {
+            const line = document.createElement('div');
+            line.className = `console-line ${type}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleEl.appendChild(line);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function updateStatus() {
+            // Check cookie
+            const cookieMatch = document.cookie.match(/clk_id=([^;]+)/);
+            const cookieStatus = document.getElementById('cookie-status');
+            if (cookieMatch) {
+                cookieStatus.textContent = cookieMatch[1];
+                cookieStatus.className = 'status-value';
+            } else {
+                cookieStatus.textContent = 'Non trouvé';
+                cookieStatus.className = 'status-value warning';
+            }
+
+            // Check URL param
+            const urlParams = new URLSearchParams(window.location.search);
+            const tracId = urlParams.get('trac_id') || urlParams.get('clk_id');
+            const urlStatus = document.getElementById('url-status');
+            if (tracId) {
+                urlStatus.textContent = tracId;
+                urlStatus.className = 'status-value';
+            } else {
+                urlStatus.textContent = 'Aucun paramètre';
+                urlStatus.className = 'status-value warning';
+            }
+
+            // Check SDK
+            const sdkStatus = document.getElementById('sdk-status');
+            if (window.Trac) {
+                sdkStatus.textContent = '✅ Chargé';
+                sdkStatus.className = 'status-value';
+
+                // Get active click ID
+                const activeId = document.getElementById('active-click-id');
+                const clickId = window.Trac.getClickId();
+                if (clickId) {
+                    activeId.textContent = clickId;
+                    activeId.className = 'status-value';
+                    log(`SDK Click ID détecté: ${clickId}`, 'success');
                 } else {
-                    console.log('[Shop] ⚠️ No click ID found - direct visit');
-
-                    // Update debug panel
-                    debugClickId.textContent = 'None (direct visit)';
-                    debugClickId.className = 'text-yellow-400';
-                    debugStripeLink.textContent = buyBtn ? buyBtn.getAttribute('href') : '-';
-                    debugStatus.textContent = '⚠️ No attribution (direct visit)';
-                    debugStatus.className = 'text-yellow-400';
+                    activeId.textContent = 'Aucun (génération auto)';
+                    activeId.className = 'status-value warning';
                 }
-            }, 100);
+
+                // Update Stripe link with client_reference_id
+                updateStripeLink(clickId || 'direct_' + Date.now());
+            } else {
+                sdkStatus.textContent = '⏳ Chargement...';
+                sdkStatus.className = 'status-value warning';
+            }
+        }
+
+        function updateStripeLink(clickId) {
+            const link = document.getElementById('stripe-payment-link');
+            const baseUrl = link.href.split('?')[0];
+            link.href = `${baseUrl}?client_reference_id=${encodeURIComponent(clickId)}`;
+            log(`Stripe link updated with client_reference_id: ${clickId}`, 'success');
+        }
+
+        function simulateClickCapture() {
+            log('Simulation de capture de click...', 'info');
+            if (window.Trac && window.Trac.captureClickId) {
+                window.Trac.captureClickId();
+                log('captureClickId() appelé', 'success');
+                setTimeout(updateStatus, 500);
+            } else {
+                log('SDK non disponible', 'error');
+            }
+        }
+
+        function testStripeInjection() {
+            log('Test d\'injection Stripe...', 'info');
+            const links = document.querySelectorAll('a[href*="stripe.com"]');
+            links.forEach((link, i) => {
+                log(`Link ${i + 1}: ${link.href}`, 'success');
+            });
+
+            const buyButtons = document.querySelectorAll('stripe-buy-button');
+            if (buyButtons.length > 0) {
+                buyButtons.forEach((btn, i) => {
+                    log(`Buy Button ${i + 1}: client-reference-id = ${btn.getAttribute('client-reference-id')}`, 'success');
+                });
+            }
+        }
+
+        function sendTestPageview() {
+            log('Envoi page_view...', 'info');
+            if (window.Trac && window.Trac.trackPageview) {
+                window.Trac.trackPageview({ page: '/shop.html' });
+                log('Page view envoyé!', 'success');
+            } else {
+                log('SDK non disponible', 'error');
+            }
+        }
+
+        // Initial check + periodic updates
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Page chargée', 'info');
+            setTimeout(updateStatus, 1000);
+            setInterval(updateStatus, 5000);
+        });
+
+        // Listen for SDK ready
+        window.addEventListener('trac:ready', () => {
+            log('🎉 SDK Trac prêt!', 'success');
+            updateStatus();
         });
     </script>
-
 </body>
 
 </html>

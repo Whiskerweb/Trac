@@ -94,6 +94,22 @@ model WebhookEndpoint {
   @@index([workspace_id])
 }
 
+/// Idempotency table for webhook events - prevents double processing
+model ProcessedEvent {
+  id             String   @id @default(uuid())
+  event_id       String   @unique  /// Stripe event ID (evt_xxx)
+  event_type     String   /// checkout.session.completed, invoice.paid, etc.
+  workspace_id   String
+  processed_at   DateTime @default(now())
+  amount_cents   Int?     /// Amount processed
+  net_cents      Int?     /// Net amount after fees
+  stripe_fee     Int?     /// Stripe fee from balance_transaction
+  
+  @@index([event_id])
+  @@index([workspace_id])
+  @@index([processed_at])
+}
+
 model Workspace {
   id              String            @id @default(uuid())
   name            String

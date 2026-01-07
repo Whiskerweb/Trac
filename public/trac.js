@@ -936,6 +936,58 @@
                 });
             }
         }
+
+        // 5. AUTO-PING: Verify cookie persistence and send page_view
+        autoPingPageView();
+    }
+
+    // =============================================
+    // AUTO-PING: PAGE VIEW WITH COOKIE VERIFICATION
+    // =============================================
+
+    /**
+     * Auto-ping on every page load:
+     * - Verifies clk_id cookie is present
+     * - Sends enriched page_view event if cookie found
+     * - Proves tracking persists across navigation
+     */
+    function autoPingPageView() {
+        // Check for clk_id cookie (set by middleware on first click)
+        var clkId = getCookie('clk_id');
+        var tracId = loadClickId();
+
+        console.log('========================================');
+        console.log('[Trac] 🔍 AUTO-PING DIAGNOSTIC');
+        console.log('[Trac] clk_id cookie:', clkId ? '✅ FOUND' : '❌ NOT FOUND');
+        console.log('[Trac] trac_click_id:', tracId ? '✅ FOUND' : '❌ NOT FOUND');
+        console.log('[Trac] Page:', window.location.pathname);
+        console.log('========================================');
+
+        // If either tracking ID is found, send enriched page_view
+        var trackingId = clkId || tracId;
+
+        if (trackingId) {
+            console.log('[Trac] 📊 Sending enriched page_view with click_id:', trackingId);
+
+            // Send page_view event with tracking proof
+            sendEvent('page_views', {
+                click_id: trackingId,
+                page_url: window.location.href,
+                page_path: window.location.pathname,
+                page_title: document.title || '',
+                referrer: document.referrer || '',
+                timestamp: new Date().toISOString(),
+                cookie_verified: !!clkId,  // Proves cookie persisted
+                session_proof: true,       // Marker for attribution verification
+                user_agent: navigator.userAgent || ''
+            });
+
+            console.log('[Trac] ✅ Page view tracked with attribution: session continues');
+        } else {
+            if (Config.debug) {
+                console.log('[Trac] ℹ️ No tracking ID - visitor not yet attributed');
+            }
+        }
     }
 
     // =============================================

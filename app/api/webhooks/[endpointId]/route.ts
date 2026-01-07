@@ -99,6 +99,18 @@ export async function POST(
         waitUntil(
             (async () => {
                 try {
+                    // ========================================
+                    // IDEMPOTENCY CHECK (CRITICAL FOR PRODUCTION)
+                    // ========================================
+                    const existingEvent = await prisma.processedEvent.findUnique({
+                        where: { event_id: event.id }
+                    })
+
+                    if (existingEvent) {
+                        console.log(`[Webhook] ⏭️ Event ${event.id} already processed, skipping`)
+                        return
+                    }
+
                     // Extract core data
                     const clickId = session.client_reference_id ||
                         session.metadata?.clk_id ||
@@ -109,12 +121,46 @@ export async function POST(
                         ? session.customer
                         : session.customer_details?.email || 'guest'
 
-                    // Amount
-                    // Amount & Net Calculation
-                    const amount = session.amount_total || 0
+                    // ========================================
+                    // NET REVENUE CALCULATION (PRODUCTION GRADE)
+                    // Revenu_net = Montant_brut - (Frais_Stripe + Taxes)
+                    // ========================================
+                    const grossAmount = session.amount_total || 0
                     const tax = session.total_details?.amount_tax || 0
-                    const netAmount = amount - tax
                     const currency = session.currency || 'eur'
+
+                    // Fetch exact Stripe fees from balance_transaction
+                    let stripeFee = 0
+                    try {
+                        if (session.payment_intent) {
+                            const paymentIntentId = typeof session.payment_intent === 'string'
+                                ? session.payment_intent
+                                : session.payment_intent.id
+
+                            const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+                                expand: ['latest_charge.balance_transaction']
+                            })
+
+                            const charge = paymentIntent.latest_charge as Stripe.Charge
+                            if (charge?.balance_transaction && typeof charge.balance_transaction !== 'string') {
+                                stripeFee = charge.balance_transaction.fee || 0
+                                console.log(`[Webhook] 💰 Stripe fee from balance_transaction: ${stripeFee / 100} ${currency}`)
+                            }
+                        }
+                    } catch (feeError) {
+                        console.error('[Webhook] ⚠️ Failed to fetch Stripe fee (using estimate):', feeError)
+                        // Fallback: estimate 2.9% + 30¢
+                        stripeFee = Math.floor(grossAmount * 0.029 + 30)
+                    }
+
+                    // TRUE NET REVENUE = Gross - Stripe Fee - Tax
+                    const netAmount = grossAmount - stripeFee - tax
+
+                    console.log(`[Webhook] 📊 Revenue Breakdown:`)
+                    console.log(`  Gross: ${grossAmount / 100} ${currency}`)
+                    console.log(`  Stripe Fee: ${stripeFee / 100} ${currency}`)
+                    console.log(`  Tax: ${tax / 100} ${currency}`)
+                    console.log(`  Net: ${netAmount / 100} ${currency}`)
 
                     // Update Customer with clk_id for future recurring payments (invoice.paid)
                     if (clickId && typeof session.customer === 'string') {
@@ -232,7 +278,7 @@ export async function POST(
                     await recordSaleToTinybird({
                         clickId: clickId || 'direct',
                         orderId: invoiceId,
-                        amount: amount / 100,
+                        amount: grossAmount / 100,
                         netAmount: netAmount / 100, // Pass Net Amount
                         currency: currency.toUpperCase(),
                         timestamp: new Date().toISOString(),
@@ -250,7 +296,7 @@ export async function POST(
                         await recordSaleItemsToTinybird({
                             clickId: clickId || 'direct',
                             orderId: invoiceId,
-                            amount: amount / 100,
+                            amount: grossAmount / 100,
                             currency: currency.toUpperCase(),
                             timestamp: new Date().toISOString(),
                             source: 'stripe_webhook',
@@ -261,6 +307,21 @@ export async function POST(
                             lineItems: products
                         }, eventId);
                     }
+
+                    // ========================================
+                    // RECORD PROCESSED EVENT (IDEMPOTENCY)
+                    // ========================================
+                    await prisma.processedEvent.create({
+                        data: {
+                            event_id: event.id,
+                            event_type: event.type,
+                            workspace_id: workspaceId,
+                            amount_cents: grossAmount,
+                            net_cents: netAmount,
+                            stripe_fee: stripeFee
+                        }
+                    })
+                    console.log(`[Webhook] ✅ Event ${event.id} processed and recorded`)
 
                 } catch (err) {
                     // Start of the catch block for the async wrapper

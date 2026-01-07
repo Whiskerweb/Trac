@@ -315,11 +315,20 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             const response = NextResponse.redirect(destinationUrl.toString())
 
             // Set first-party cookie for attribution (survives URL param stripping)
-            // ✅ ITP BYPASS: HttpOnly cookie on client's root domain
+            // ✅ COOKIE STRATEGY:
+            // - Domain: .client.com (shared across all subdomains)
+            // - HttpOnly: false (allows SDK to read for page_view tracking)
+            // - SameSite: Lax (cross-site navigation allowed)
             const cookieDomain = customDomain ? getRootDomainForCookie(hostname) : undefined
 
+            console.log('[Edge] 🍪 Cookie Config:', {
+                domain: cookieDomain || '(default)',
+                hostname: hostname,
+                customDomain: customDomain,
+            })
+
             response.cookies.set('clk_id', click_id, {
-                httpOnly: customDomain,  // HttpOnly for ITP bypass on custom domains
+                httpOnly: false,  // ✅ SDK READABLE for page_view tracking
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 maxAge: 60 * 60 * 24 * 90, // 90 days attribution window
