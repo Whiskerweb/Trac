@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 
@@ -20,7 +20,7 @@ const TINYBIRD_ADMIN_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
  * 
  * SECURITY: Each request MUST authenticate fresh - no caching allowed.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
     // ========================================
     // 🦁 MOCK MODE: Return fake data for local development
     // ========================================
@@ -145,10 +145,15 @@ export async function GET() {
         // ========================================
         // BUILD TINYBIRD URLS (Two pipes in parallel)
         // ========================================
+        // Get date range from query params (sent by frontend DateRangePicker)
+        const { searchParams } = new URL(request.url)
+        const dateFrom = searchParams.get('date_from') || '2020-01-01'
+        const dateTo = searchParams.get('date_to') || '2030-12-31'  // ✅ Wide range to include all data
+
         const baseParams = new URLSearchParams({
-            workspace_id: workspaceId,  // Use actual workspace!
-            date_from: '2024-01-01',
-            date_to: '2025-12-31',
+            workspace_id: workspaceId,
+            date_from: dateFrom,
+            date_to: dateTo,
         })
 
         const kpisUrl = `${TINYBIRD_HOST}/v0/pipes/kpis.json?${baseParams}`
