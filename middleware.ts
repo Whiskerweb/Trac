@@ -305,58 +305,76 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     // RATE LIMITING (Dub-Style)
     // ============================================
 
+    // 🏠 BYPASS: Skip rate limiting for localhost in development
+    const isLocalhost = ip === '127.0.0.1' || ip === '::1' || hostname === 'localhost'
+    const isDev = process.env.NODE_ENV === 'development'
+
+    if (isLocalhost && isDev) {
+        console.log('[Edge] 🏠 Localhost - bypassing rate limit')
+        // Continue to normal flow without rate limiting
+    }
     // 🛡️ EXEMPT: Stripe webhooks - NEVER rate limit
-    if (pathname.startsWith('/api/webhooks/stripe')) {
+    else if (pathname.startsWith('/api/webhooks/stripe')) {
         console.log('[Edge] 💳 Stripe webhook - bypassing rate limit')
         // Continue to normal flow
     }
     // 🔗 LINK REDIRECTS: Very permissive (100 req/10s per IP)
     else if (pathname.startsWith('/s/') || pathname.startsWith('/c/')) {
-        const { success, limit, remaining, reset } = await linkRateLimiter.limit(ip)
+        try {
+            const { success, limit, remaining, reset } = await linkRateLimiter.limit(ip)
 
-        if (!success) {
-            console.warn('[Edge] ⚠️ Rate limited (link):', ip, '- Limit:', limit, 'Remaining:', remaining)
+            if (!success) {
+                console.warn('[Edge] ⚠️ Rate limited (link):', ip, '- Limit:', limit, 'Remaining:', remaining)
 
-            // Log abuse to Tinybird (fire-and-forget)
-            event.waitUntil(
-                logAbuseToTinybird(ip, pathname, 'link_rate_limit')
-            )
+                // Log abuse to Tinybird (fire-and-forget)
+                event.waitUntil(
+                    logAbuseToTinybird(ip, pathname, 'link_rate_limit')
+                )
 
-            return new NextResponse(
-                JSON.stringify({ error: 'Too many requests', retryAfter: Math.ceil((reset - Date.now()) / 1000) }),
-                {
-                    status: 429,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-RateLimit-Limit': limit.toString(),
-                        'X-RateLimit-Remaining': remaining.toString(),
-                        'X-RateLimit-Reset': reset.toString(),
-                        'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
-                    },
-                }
-            )
+                return new NextResponse(
+                    JSON.stringify({ error: 'Too many requests', retryAfter: Math.ceil((reset - Date.now()) / 1000) }),
+                    {
+                        status: 429,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-RateLimit-Limit': limit.toString(),
+                            'X-RateLimit-Remaining': remaining.toString(),
+                            'X-RateLimit-Reset': reset.toString(),
+                            'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
+                        },
+                    }
+                )
+            }
+        } catch (err) {
+            // 🔓 FAIL OPEN: If Redis is down, allow the request through
+            console.error('[Edge] ⚠️ Rate limiter error (fail-open):', err)
         }
     }
     // 📡 API ENDPOINTS: Stricter (1000 req/5min per IP)
     else if (pathname.startsWith('/api/') && !pathname.startsWith('/api/domains/lookup')) {
-        const { success, limit, remaining, reset } = await apiRateLimiter.limit(ip)
+        try {
+            const { success, limit, remaining, reset } = await apiRateLimiter.limit(ip)
 
-        if (!success) {
-            console.warn('[Edge] ⚠️ Rate limited (API):', ip, '- Limit:', limit, 'Remaining:', remaining)
+            if (!success) {
+                console.warn('[Edge] ⚠️ Rate limited (API):', ip, '- Limit:', limit, 'Remaining:', remaining)
 
-            return new NextResponse(
-                JSON.stringify({ error: 'Rate limit exceeded', retryAfter: Math.ceil((reset - Date.now()) / 1000) }),
-                {
-                    status: 429,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-RateLimit-Limit': limit.toString(),
-                        'X-RateLimit-Remaining': remaining.toString(),
-                        'X-RateLimit-Reset': reset.toString(),
-                        'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
-                    },
-                }
-            )
+                return new NextResponse(
+                    JSON.stringify({ error: 'Rate limit exceeded', retryAfter: Math.ceil((reset - Date.now()) / 1000) }),
+                    {
+                        status: 429,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-RateLimit-Limit': limit.toString(),
+                            'X-RateLimit-Remaining': remaining.toString(),
+                            'X-RateLimit-Reset': reset.toString(),
+                            'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
+                        },
+                    }
+                )
+            }
+        } catch (err) {
+            // 🔓 FAIL OPEN: If Redis is down, allow the request through
+            console.error('[Edge] ⚠️ Rate limiter error (fail-open):', err)
         }
     }
 
