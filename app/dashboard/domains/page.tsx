@@ -6,9 +6,10 @@ import {
     Loader2, AlertCircle, X, Info, AlertTriangle, ArrowRight, CheckCircle2
 } from 'lucide-react'
 import Link from 'next/link'
-import { getDomains, addDomain, verifyDomain, removeDomain } from '@/app/actions/domains'
+import { getDomains, addDomain, verifyDomain, removeDomain, updateDomain } from '@/app/actions/domains'
 import { CNAME_TARGET } from '@/lib/config/constants'
 import confetti from 'canvas-confetti'
+
 
 // =============================================
 // TYPES
@@ -105,7 +106,8 @@ function DomainRow({
     isDeleting,
     expanded,
     onToggleExpand,
-    verificationRecords
+    verificationRecords,
+    onEdit
 }: {
     domain: DomainData
     onVerify: (force?: boolean) => void
@@ -115,6 +117,7 @@ function DomainRow({
     expanded: boolean
     onToggleExpand: () => void
     verificationRecords: VerificationRecord[]
+    onEdit: () => void
 }) {
     const isSubdomain = domain.name.split('.').length > 2
     const recordName = isSubdomain ? domain.name.split('.')[0] : '@'
@@ -132,7 +135,13 @@ function DomainRow({
                     </div>
                     <div>
                         <div className="flex items-center gap-3">
-                            <span className={`font-semibold text-base ${domain.verified ? 'text-gray-900' : 'text-gray-700'}`}>{domain.name}</span>
+                            <span
+                                onClick={onEdit}
+                                className={`font-semibold text-base cursor-pointer hover:underline decoration-dotted underline-offset-4 ${domain.verified ? 'text-gray-900' : 'text-gray-700'}`}
+                                title="Click to edit domain"
+                            >
+                                {domain.name}
+                            </span>
                             <StatusDot status={isVerifying ? 'verifying' : domain.verified ? 'verified' : 'pending'} />
                         </div>
                         {domain.verified && domain.verifiedAt ? (
@@ -284,6 +293,7 @@ export default function DomainsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [verifyingId, setVerifyingId] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [editingId, setEditingId] = useState<string | null>(null) // New state for editing
     const [expanded, setExpanded] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [verificationRecords, setVerificationRecords] = useState<Record<string, VerificationRecord[]>>({})
@@ -312,14 +322,25 @@ export default function DomainsPage() {
         e.preventDefault()
         setAdding(true)
         try {
-            const result = await addDomain(newDomainName)
+            let result;
+            if (editingId) {
+                // UPDATE existing domain
+                result = await updateDomain(editingId, newDomainName)
+            } else {
+                // ADD new domain
+                result = await addDomain(newDomainName)
+            }
+
             if (result.success && result.domain) {
                 setNewDomainName('')
                 setIsModalOpen(false)
+                setEditingId(null)
                 setExpanded(result.domain.id)
                 await loadDomains()
-                // Trigger verification to get TXT records
-                handleVerify(result.domain.id)
+                // Trigger verification to get TXT records (only if not verified)
+                if (!result.domain.verified) {
+                    handleVerify(result.domain.id)
+                }
             } else {
                 throw new Error(result.error)
             }
@@ -327,6 +348,18 @@ export default function DomainsPage() {
             alert(err.message)
         }
         setAdding(false)
+    }
+
+    const openEditModal = (domain: DomainData) => {
+        setNewDomainName(domain.name)
+        setEditingId(domain.id)
+        setIsModalOpen(true)
+    }
+
+    const openAddModal = () => {
+        setNewDomainName('')
+        setEditingId(null)
+        setIsModalOpen(true)
     }
 
     const handleVerify = async (id: string, force: boolean = false) => {
@@ -376,13 +409,16 @@ export default function DomainsPage() {
                         Configure branded domains for your tracking links.
                     </p>
                 </div>
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md font-medium text-sm transition-all shadow-sm"
-                >
-                    <Plus className="w-4 h-4" />
-                    Add Domain
-                </button>
+                {/* Only show Add button if NO custom domains exist */}
+                {domains.length === 0 && (
+                    <button
+                        onClick={openAddModal}
+                        className="flex items-center gap-2 px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md font-medium text-sm transition-all shadow-sm"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Add Domain
+                    </button>
+                )}
             </div>
 
             {/* Error Banner */}
@@ -438,6 +474,7 @@ export default function DomainsPage() {
                                     }
                                 }}
                                 verificationRecords={verificationRecords[domain.id] || []}
+                                onEdit={() => openEditModal(domain)}
                             />
                         ))}
                     </div>
@@ -449,7 +486,7 @@ export default function DomainsPage() {
                 <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-gray-200 overflow-hidden">
                         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-                            <h2 className="text-lg font-bold text-gray-900">Add Custom Domain</h2>
+                            <h2 className="text-lg font-bold text-gray-900">{editingId ? 'Edit Custom Domain' : 'Add Custom Domain'}</h2>
                             <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                                 <X className="w-5 h-5" />
                             </button>
@@ -472,22 +509,49 @@ export default function DomainsPage() {
                                     We recommend using a subdomain like <b>link</b> or <b>go</b> for tracking links.
                                 </p>
                             </div>
-                            <div className="flex justify-end gap-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={!newDomainName.trim() || adding}
-                                    className="px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md text-sm font-medium disabled:opacity-50 flex items-center gap-2"
-                                >
-                                    {adding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                                    Add Domain
-                                </button>
+                            <div className="flex items-center justify-between pt-2">
+                                <div>
+                                    {editingId && (
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                if (!confirm('Are you sure? This will break any links using this domain.')) return
+                                                setDeletingId(editingId)
+                                                try {
+                                                    await removeDomain(editingId)
+                                                    setIsModalOpen(false)
+                                                    setEditingId(null)
+                                                    await loadDomains()
+                                                } catch (e) {
+                                                    alert('Failed to delete')
+                                                }
+                                                setDeletingId(null)
+                                            }}
+                                            disabled={adding || !!deletingId}
+                                            className="px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md text-sm font-medium flex items-center gap-2 transition-colors"
+                                        >
+                                            {deletingId === editingId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                            Delete
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsModalOpen(false)}
+                                        className="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={!newDomainName.trim() || adding || !!deletingId}
+                                        className="px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        {adding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                        {editingId ? 'Update Domain' : 'Add Domain'}
+                                    </button>
+                                </div>
                             </div>
                         </form>
                     </div>

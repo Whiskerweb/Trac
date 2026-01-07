@@ -382,6 +382,15 @@ export async function addDomain(domainName: string): Promise<AddDomainResult> {
             return { success: false, error: 'Ce domaine est déjà utilisé par un autre workspace' }
         }
 
+        // 🔒 RESTRICTION: Check if workspace already has a domain (Limit: 1)
+        const count = await prisma.domain.count({
+            where: { workspace_id: workspace.workspaceId }
+        })
+
+        if (count >= 1) {
+            return { success: false, error: 'Vous ne pouvez avoir qu\'un seul domaine personnalisé. Veuillez modifier ou supprimer l\'existant.' }
+        }
+
         // Add to Vercel first
         const vercelResult = await addDomainToVercel(cleanDomain)
 
@@ -416,6 +425,106 @@ export async function addDomain(domainName: string): Promise<AddDomainResult> {
     } catch (error) {
         console.error('[Domains] ❌ addDomain error:', error)
         return { success: false, error: 'Erreur lors de l\'ajout du domaine' }
+    }
+}
+
+/**
+ * Update an existing domain (Change name -> Re-verify)
+ */
+export async function updateDomain(domainId: string, newName: string): Promise<AddDomainResult> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Non authentifié' }
+    }
+
+    // Validate domain format
+    const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/
+    const cleanDomain = newName.toLowerCase().trim()
+
+    if (!domainRegex.test(cleanDomain)) {
+        return { success: false, error: 'Format de domaine invalide' }
+    }
+
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+
+        if (!workspace) {
+            return { success: false, error: 'Aucun workspace actif' }
+        }
+
+        // Get existing domain to verify ownership
+        const currentDomain = await prisma.domain.findFirst({
+            where: { id: domainId, workspace_id: workspace.workspaceId }
+        })
+
+        if (!currentDomain) {
+            return { success: false, error: 'Domaine introuvable' }
+        }
+
+        // If name is same, do nothing
+        if (currentDomain.name === cleanDomain) {
+            return {
+                success: true, domain: {
+                    id: currentDomain.id,
+                    name: currentDomain.name,
+                    verified: currentDomain.verified,
+                    createdAt: currentDomain.created_at,
+                    verifiedAt: currentDomain.verified_at,
+                }
+            }
+        }
+
+        // Check availability
+        const existing = await prisma.domain.findUnique({
+            where: { name: cleanDomain },
+        })
+
+        if (existing) {
+            return { success: false, error: 'Ce domaine est déjà utilisé.' }
+        }
+
+        // 1. Remove OLD domain from Vercel
+        await removeDomainFromVercel(currentDomain.name)
+
+        // 2. Add NEW domain to Vercel
+        const vercelResult = await addDomainToVercel(cleanDomain)
+
+        if (!vercelResult.success) {
+            return { success: false, error: vercelResult.error }
+        }
+
+        // 3. Update DB
+        const updatedDomain = await prisma.domain.update({
+            where: { id: domainId },
+            data: {
+                name: cleanDomain,
+                verified: false,
+                verified_at: null,
+                created_at: new Date() // Reset creation date to restart verification flow visually if needed
+            }
+        })
+
+        console.log('[Domains] ♻️ Domain updated:', currentDomain.name, '->', cleanDomain)
+
+        revalidatePath('/dashboard/domains')
+
+        return {
+            success: true,
+            domain: {
+                id: updatedDomain.id,
+                name: updatedDomain.name,
+                verified: updatedDomain.verified,
+                createdAt: updatedDomain.created_at,
+                verifiedAt: updatedDomain.verified_at,
+            },
+            cnameTarget: CNAME_TARGET,
+        }
+
+    } catch (error) {
+        console.error('[Domains] ❌ updateDomain error:', error)
+        return { success: false, error: 'Erreur lors de la modification du domaine' }
     }
 }
 
