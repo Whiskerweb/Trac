@@ -285,6 +285,18 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
                 // Handle both string and object formats
                 linkData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData
             }
+
+            // 🔄 FALLBACK: If custom domain miss, try primary domain
+            if (!linkData && customDomain) {
+                const fallbackKey = buildRedisKey(PRIMARY_DOMAIN, slug)
+                console.log('[Edge] 🔄 Fallback lookup:', fallbackKey)
+
+                const fallbackData = await redis.get<string | RedisLinkData>(fallbackKey)
+                if (fallbackData) {
+                    linkData = typeof fallbackData === 'string' ? JSON.parse(fallbackData) : fallbackData
+                    console.log('[Edge] ✅ Fallback HIT on primary domain')
+                }
+            }
         } catch (err) {
             console.error('[Edge] ❌ Redis error:', err)
         }

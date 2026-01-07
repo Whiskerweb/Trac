@@ -73,6 +73,14 @@ export async function setLinkInRedis(
     try {
         await redis.set(key, JSON.stringify(data))
         console.log(`[Redis] ✅ SET SUCCESS: ${key}`)
+
+        // 🔄 DUAL-WRITE: If custom domain, also write with primary domain for fallback
+        const defaultDomain = getDefaultDomain()
+        if (domain && domain !== defaultDomain) {
+            const fallbackKey = buildLinkKey(slug, defaultDomain)
+            await redis.set(fallbackKey, JSON.stringify(data))
+            console.log(`[Redis] ✅ DUAL-WRITE: Also stored at ${fallbackKey}`)
+        }
     } catch (error) {
         console.error(`[Redis] ❌ SET FAILED: ${key}`, error)
         throw error  // Re-throw to surface the error
@@ -116,6 +124,14 @@ export async function deleteLinkFromRedis(
     const key = buildLinkKey(slug, domain)
     await redis.del(key)
     console.log(`[Redis] 🗑️ DEL ${key}`)
+
+    // 🔄 DUAL-DELETE: Also delete from primary domain if custom domain was used
+    const defaultDomain = getDefaultDomain()
+    if (domain && domain !== defaultDomain) {
+        const fallbackKey = buildLinkKey(slug, defaultDomain)
+        await redis.del(fallbackKey)
+        console.log(`[Redis] 🗑️ DUAL-DELETE: Also removed ${fallbackKey}`)
+    }
 }
 
 /**
