@@ -237,25 +237,104 @@ export function WebhookManager({ onStatusChange }: WebhookManagerProps) {
                 </div>
             </div>
 
-            {/* Instructions */}
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
-                <h4 className="font-medium text-slate-900">Instructions :</h4>
-                <ol className="text-sm text-slate-600 space-y-2 list-decimal list-inside">
-                    <li>Copiez l&apos;URL ci-dessus</li>
-                    <li>
+            {/* Instructions - Stripe Connect Multi-Tenant Tutorial */}
+            <div className="space-y-4">
+                {/* Info Alert - V2 Requirement */}
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+                    <div className="p-1.5 bg-blue-100 rounded-lg">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-blue-800 font-semibold text-sm">Configuration Multi-Tenant requise</p>
+                        <p className="text-blue-700 text-sm mt-1">
+                            Vous devez sélectionner <strong>&quot;Comptes connectés et v2&quot;</strong> pour permettre à Traaaction de suivre les ventes de manière isolée et sécurisée.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Step by Step Tutorial */}
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-4">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                        <span className="w-6 h-6 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                        Création du Webhook
+                    </h4>
+                    <p className="text-sm text-slate-600 ml-8">
+                        Rendez-vous dans votre{' '}
                         <a
-                            href="https://dashboard.stripe.com/webhooks/create"
+                            href="https://dashboard.stripe.com/developers/webhooks"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-purple-600 hover:text-purple-700 inline-flex items-center gap-1"
+                            className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-1"
                         >
-                            Créez un webhook dans Stripe
+                            Dashboard Stripe (Développeurs → Webhooks)
                             <ExternalLink className="w-3 h-3" />
                         </a>
-                    </li>
-                    <li>Sélectionnez l&apos;événement <code className="bg-slate-200 px-1 rounded">checkout.session.completed</code></li>
-                    <li>Copiez le <strong>Signing Secret</strong> (whsec_...) et collez-le ci-dessous</li>
-                </ol>
+                        {' '}et cliquez sur <strong>&quot;Ajouter une destination&quot;</strong>.
+                    </p>
+
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2 pt-2">
+                        <span className="w-6 h-6 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                        Le choix stratégique (V2)
+                    </h4>
+                    <div className="ml-8 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-amber-800 text-sm font-medium flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Sélectionnez &quot;Comptes connectés et v2&quot;
+                        </p>
+                        <p className="text-amber-700 text-xs mt-1 ml-6">
+                            Cela permet à Traaaction de suivre les ventes de tous vos clients de manière isolée via notre infrastructure Stripe Connect.
+                        </p>
+                    </div>
+
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2 pt-2">
+                        <span className="w-6 h-6 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                        Sélection des événements
+                    </h4>
+                    <div className="ml-8 space-y-2">
+                        <p className="text-sm text-slate-600 mb-3">Sélectionnez ces 3 événements indispensables :</p>
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-lg">
+                                <div className="w-5 h-5 bg-green-100 border-2 border-green-500 rounded flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-green-600" />
+                                </div>
+                                <code className="text-sm font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded">checkout.session.completed</code>
+                                <span className="text-xs text-slate-500">Attribution initiale</span>
+                            </div>
+                            <div className="flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-lg">
+                                <div className="w-5 h-5 bg-green-100 border-2 border-green-500 rounded flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-green-600" />
+                                </div>
+                                <code className="text-sm font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded">invoice.paid</code>
+                                <span className="text-xs text-slate-500">Abonnements récurrents</span>
+                            </div>
+                            <div className="flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-lg">
+                                <div className="w-5 h-5 bg-green-100 border-2 border-green-500 rounded flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-green-600" />
+                                </div>
+                                <code className="text-sm font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded">charge.refunded</code>
+                                <span className="text-xs text-slate-500">Remboursements / Clawbacks</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2 pt-2">
+                        <span className="w-6 h-6 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">4</span>
+                        Validation
+                    </h4>
+                    <p className="text-sm text-slate-600 ml-8">
+                        Copiez le <strong>Signing Secret</strong> (whsec_...) et collez-le ci-dessous.
+                    </p>
+                    <div className="ml-8 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-green-700 text-sm flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-green-600" />
+                            Le <code className="bg-green-100 px-1 rounded">click_id</code> sera automatiquement extrait du champ <code className="bg-green-100 px-1 rounded">client_reference_id</code>. Aucune configuration supplémentaire requise.
+                        </p>
+                    </div>
+                </div>
             </div>
 
             {/* Secret Configuration */}
