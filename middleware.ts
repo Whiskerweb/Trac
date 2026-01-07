@@ -123,6 +123,7 @@ async function getWorkspaceIdFromDomain(hostname: string, baseUrl: string): Prom
     // Check in-memory cache first
     const cached = domainCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < DOMAIN_CACHE_TTL) {
+        console.log('[Edge] 💾 Domain cache HIT:', hostname, '→', cached.workspaceId)
         return cached.workspaceId
     }
 
@@ -132,6 +133,7 @@ async function getWorkspaceIdFromDomain(hostname: string, baseUrl: string): Prom
         const cachedWorkspaceId = await redis.get<string>(redisKey)
 
         if (cachedWorkspaceId !== null) {
+            console.log('[Edge] 📦 Redis domain cache HIT:', hostname, '→', cachedWorkspaceId)
             domainCache.set(cacheKey, { workspaceId: cachedWorkspaceId || null, timestamp: Date.now() })
             return cachedWorkspaceId || null
         }
@@ -140,14 +142,21 @@ async function getWorkspaceIdFromDomain(hostname: string, baseUrl: string): Prom
     }
 
     // Fallback to API lookup
+    // ⚠️ CRITICAL: Always use PRIMARY domain for API calls to avoid circular dependency
+    // If we use the custom domain, the middleware will try to verify itself → infinite loop
+    const lookupUrl = `https://${PRIMARY_DOMAIN}/api/domains/lookup?hostname=${encodeURIComponent(cacheKey)}`
+    console.log('[Edge] 🔍 Domain lookup via API:', lookupUrl)
+
     try {
-        const res = await fetch(`${baseUrl}/api/domains/lookup?hostname=${encodeURIComponent(cacheKey)}`, {
+        const res = await fetch(lookupUrl, {
             cache: 'no-store',
         })
 
         if (res.ok) {
             const data = await res.json()
             const workspaceId = data.verified ? data.workspaceId : null
+
+            console.log('[Edge] ✅ Domain lookup result:', hostname, '→', workspaceId)
 
             // Cache in Redis for future requests
             try {
@@ -158,6 +167,8 @@ async function getWorkspaceIdFromDomain(hostname: string, baseUrl: string): Prom
 
             domainCache.set(cacheKey, { workspaceId, timestamp: Date.now() })
             return workspaceId
+        } else {
+            console.error('[Edge] ❌ Domain lookup failed:', res.status, await res.text())
         }
     } catch (err) {
         console.error('[Edge] ⚠️ Domain lookup API error:', err)
