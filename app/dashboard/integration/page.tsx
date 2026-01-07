@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
     Code2, Webhook, CheckCircle2, Copy, Check,
     Zap, AlertCircle, Key, RefreshCw,
-    Play, Terminal, Loader2, Eye, EyeOff, Building2
+    Loader2, Eye, EyeOff, Building2
 } from 'lucide-react'
 import Link from 'next/link'
 import { getOrCreateApiKey, regenerateApiKey } from '@/app/actions/settings'
@@ -71,90 +71,7 @@ function StepItem({
     )
 }
 
-function SimulatorConsole() {
-    const [logs, setLogs] = useState<Array<{ type: 'info' | 'success' | 'error'; message: string; time: string }>>([])
-    const [isRunning, setIsRunning] = useState(false)
 
-    const addLog = (type: 'info' | 'success' | 'error', message: string) => {
-        setLogs(prev => [...prev, {
-            type,
-            message,
-            time: new Date().toLocaleTimeString('fr-FR')
-        }])
-    }
-
-    const simulateClick = async () => {
-        setIsRunning(true)
-        addLog('info', 'Simulating click...')
-        try {
-            if (typeof window !== 'undefined' && (window as any).Trac) {
-                const clickId = (window as any).Trac.getClickId() || (window as any).TracUtils?.generateClickId()
-                addLog('success', `Click ID captured: ${clickId}`)
-            } else {
-                addLog('info', 'SDK not detected. Mocking server request.')
-                const testClickId = `clk_test_${Date.now()}`
-                await fetch('/_trac/api/track/click', {
-                    method: 'POST',
-                    body: JSON.stringify({ click_id: testClickId })
-                })
-                addLog('success', 'Click event sent to server ✓')
-            }
-        } catch (err: any) {
-            addLog('error', err.message)
-        }
-        setIsRunning(false)
-    }
-
-    const simulateSale = async () => {
-        setIsRunning(true)
-        addLog('info', 'Simulating conversion...')
-        try {
-            if (typeof window !== 'undefined' && (window as any).Trac?.recordSale) {
-                await (window as any).Trac.recordSale({ amount: 5000, currency: 'USD', orderId: `ord_${Date.now()}` })
-                addLog('success', 'Conversion recorded via SDK ✓')
-            } else {
-                await fetch('/_trac/api/conversions/sale', {
-                    method: 'POST',
-                    body: JSON.stringify({ click_id: `clk_test_${Date.now()}`, amount: 5000, currency: 'USD' })
-                })
-                addLog('success', 'Conversion sent to server ✓')
-            }
-        } catch (err: any) {
-            addLog('error', err.message)
-        }
-        setIsRunning(false)
-    }
-
-    return (
-        <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm">
-            <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-3">
-                <div className="flex items-center gap-2 text-gray-400">
-                    <Terminal className="w-4 h-4" />
-                    <span>Test Console</span>
-                </div>
-                <div className="flex gap-2">
-                    <button onClick={simulateClick} disabled={isRunning} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-xs transition-colors">
-                        Simulate Click
-                    </button>
-                    <button onClick={simulateSale} disabled={isRunning} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-green-400 rounded text-xs transition-colors">
-                        Simulate Sale
-                    </button>
-                </div>
-            </div>
-            <div className="space-y-1 h-32 overflow-y-auto custom-scrollbar">
-                {logs.length === 0 && <span className="text-gray-600 italic">Ready to test...</span>}
-                {logs.map((log, i) => (
-                    <div key={i} className="flex gap-2">
-                        <span className="text-gray-600 text-xs">[{log.time}]</span>
-                        <span className={log.type === 'success' ? 'text-green-400' : log.type === 'error' ? 'text-red-400' : 'text-gray-300'}>
-                            {log.message}
-                        </span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    )
-}
 
 export default function IntegrationPage() {
     const [publicKey, setPublicKey] = useState<string | null>(null)
@@ -250,8 +167,8 @@ export default function IntegrationPage() {
                 <div className="space-y-4">
                     {installStatus?.lastEventAt ? (
                         <div className={`flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-md border w-fit ${(Date.now() - new Date(installStatus.lastEventAt).getTime()) < 15 * 60 * 1000
-                                ? 'text-green-600 bg-green-50 border-green-100'
-                                : 'text-amber-600 bg-amber-50 border-amber-100'
+                            ? 'text-green-600 bg-green-50 border-green-100'
+                            : 'text-amber-600 bg-amber-50 border-amber-100'
                             }`}>
                             <Zap className="w-4 h-4 fill-current" />
                             Dernier événement: {new Date(installStatus.lastEventAt).toLocaleString('fr-FR')}
@@ -263,7 +180,7 @@ export default function IntegrationPage() {
                             En attente du premier événement...
                         </div>
                     )}
-                    <SimulatorConsole />
+
                 </div>
             </StepItem>
 
