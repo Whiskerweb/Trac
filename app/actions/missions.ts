@@ -16,6 +16,9 @@ interface CreateMissionInput {
     description: string
     target_url: string
     reward: string
+    visibility?: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
+    industry?: string
+    gain_type?: string
 }
 
 /**
@@ -63,6 +66,9 @@ export async function createMission(data: CreateMissionInput): Promise<{
                 target_url: data.target_url.trim(),
                 reward: data.reward.trim(),
                 status: 'ACTIVE' as const,
+                visibility: data.visibility || 'PUBLIC',
+                industry: data.industry || null,
+                gain_type: data.gain_type || null,
             }
         })
 
@@ -327,5 +333,158 @@ export async function getMissionDetails(missionId: string): Promise<{
     } catch (error) {
         console.error('[Mission] ❌ Error fetching details:', error)
         return { success: false, error: 'Failed to fetch mission details' }
+    }
+}
+
+// =============================================
+// MISSION CONTENT MANAGEMENT
+// =============================================
+
+type ContentType = 'YOUTUBE' | 'PDF' | 'LINK' | 'TEXT'
+
+interface AddContentInput {
+    missionId: string
+    type: ContentType
+    url?: string
+    title: string
+    description?: string
+    order?: number
+}
+
+/**
+ * Add content/resource to a mission
+ */
+export async function addMissionContent(data: AddContentInput): Promise<{
+    success: boolean
+    content?: { id: string }
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
+    try {
+        // Verify mission ownership
+        const mission = await prisma.mission.findFirst({
+            where: { id: data.missionId, workspace_id: workspace.workspaceId }
+        })
+
+        if (!mission) {
+            return { success: false, error: 'Mission not found' }
+        }
+
+        // Get current max order
+        const maxOrder = await prisma.missionContent.aggregate({
+            where: { mission_id: data.missionId },
+            _max: { order: true }
+        })
+
+        const content = await prisma.missionContent.create({
+            data: {
+                mission_id: data.missionId,
+                type: data.type,
+                url: data.url || null,
+                title: data.title,
+                description: data.description || null,
+                order: data.order ?? ((maxOrder._max.order || 0) + 1)
+            }
+        })
+
+        console.log('[Mission] ✅ Content added:', content.id)
+        return { success: true, content: { id: content.id } }
+
+    } catch (error) {
+        console.error('[Mission] ❌ Error adding content:', error)
+        return { success: false, error: 'Failed to add content' }
+    }
+}
+
+/**
+ * Get all content for a mission
+ */
+export async function getMissionContents(missionId: string): Promise<{
+    success: boolean
+    contents?: Array<{
+        id: string
+        type: ContentType
+        url: string | null
+        title: string
+        description: string | null
+        order: number
+    }>
+    error?: string
+}> {
+    try {
+        const contents = await prisma.missionContent.findMany({
+            where: { mission_id: missionId },
+            orderBy: { order: 'asc' }
+        })
+
+        return {
+            success: true,
+            contents: contents.map(c => ({
+                id: c.id,
+                type: c.type as ContentType,
+                url: c.url,
+                title: c.title,
+                description: c.description,
+                order: c.order
+            }))
+        }
+
+    } catch (error) {
+        console.error('[Mission] ❌ Error fetching contents:', error)
+        return { success: false, error: 'Failed to fetch contents' }
+    }
+}
+
+/**
+ * Delete mission content
+ */
+export async function deleteMissionContent(contentId: string): Promise<{
+    success: boolean
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
+    try {
+        // Verify ownership via mission
+        const content = await prisma.missionContent.findUnique({
+            where: { id: contentId },
+            include: { Mission: true }
+        })
+
+        if (!content || content.Mission.workspace_id !== workspace.workspaceId) {
+            return { success: false, error: 'Content not found' }
+        }
+
+        await prisma.missionContent.delete({
+            where: { id: contentId }
+        })
+
+        console.log('[Mission] 🗑️ Content deleted:', contentId)
+        return { success: true }
+
+    } catch (error) {
+        console.error('[Mission] ❌ Error deleting content:', error)
+        return { success: false, error: 'Failed to delete content' }
     }
 }

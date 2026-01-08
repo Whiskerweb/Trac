@@ -2,315 +2,178 @@
 
 import { useState, useEffect } from 'react'
 import {
-    Wallet, TrendingUp, Clock, CheckCircle2,
-    ArrowDownToLine, DollarSign, Loader2,
-    ExternalLink, AlertCircle
+    Loader2, AlertCircle, ExternalLink, Copy, Check
 } from 'lucide-react'
 import Link from 'next/link'
-import { getPartnerDashboard } from '@/app/actions/partners'
+import { getAllPartnerPrograms } from '@/app/actions/partners'
 
-// Types
-interface PartnerStats {
-    totalEarned: number
-    pendingAmount: number
-    dueAmount: number
-    paidAmount: number
-    conversionCount: number
+// Design System
+const DS = {
+    colors: {
+        bg: 'bg-[#FAFAFB]',
+        card: 'bg-[#FFFFFF]',
+        border: 'border-[rgba(0,0,0,0.06)]',
+        text: {
+            primary: 'text-[#111111]',
+            secondary: 'text-[#5F6368]',
+            muted: 'text-[#9AA0A6]',
+        },
+        gradient: 'bg-gradient-to-r from-[#6D5EF6] to-[#E94BA8]'
+    },
+    typog: {
+        h1: 'text-[24px] font-semibold tracking-tight',
+        cardTitle: 'text-[16px] font-semibold',
+        label: 'text-[12px] font-medium text-[#5F6368]',
+        value: 'text-[24px] font-semibold text-[#111111]',
+        link: 'text-[13px] text-[#5F6368] font-normal'
+    }
 }
 
-interface Balance {
-    balance: number
-    pending: number
-    due: number
-    paid_total: number
+interface ProgramData {
+    partner: {
+        id: string
+        tenant_id: string
+        Program?: {
+            name: string
+            slug: string
+        } | null
+    }
+    stats: {
+        totalEarned: number
+        pendingAmount: number
+        dueAmount: number
+        paidAmount: number
+    }
 }
 
-interface Partner {
-    id: string
-    email: string
-    name: string | null
-    status: 'PENDING' | 'APPROVED' | 'BANNED'
-    Program?: {
-        name: string
-        slug: string
-    } | null
-}
+function ProgramCard({ data }: { data: ProgramData }) {
+    const [copied, setCopied] = useState(false)
+    const programName = data.partner.Program?.name || 'Programme Global'
+    const link = `https://traaaction.com/p/${data.partner.tenant_id}` // Constructing a generic referral link format
+    const earnings = (data.stats.totalEarned / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 })
 
-// Simple stat card component
-function StatCard({
-    icon: Icon,
-    label,
-    value,
-    sublabel,
-    color = 'slate'
-}: {
-    icon: React.ElementType
-    label: string
-    value: string
-    sublabel?: string
-    color?: 'slate' | 'green' | 'amber' | 'purple'
-}) {
-    const colors = {
-        slate: 'bg-slate-100 text-slate-700',
-        green: 'bg-green-100 text-green-700',
-        amber: 'bg-amber-100 text-amber-700',
-        purple: 'bg-purple-100 text-purple-700'
+    const copyLink = () => {
+        navigator.clipboard.writeText(link)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
     }
 
     return (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-3">
-                <div className={`p-2 rounded-lg ${colors[color]}`}>
-                    <Icon className="w-5 h-5" />
+        <div className={`${DS.colors.card} border ${DS.colors.border} rounded-[16px] p-6 hover:shadow-sm transition-shadow duration-200`}>
+            {/* Header */}
+            <div className="flex items-start gap-4 mb-6">
+                <div className="w-10 h-10 rounded-lg bg-black text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+                    {programName.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-slate-600 text-sm">{label}</span>
+                <div className="overflow-hidden">
+                    <h3 className={`${DS.typog.cardTitle} truncate`}>{programName}</h3>
+                    <div
+                        onClick={copyLink}
+                        className="flex items-center gap-1.5 mt-0.5 cursor-pointer group"
+                    >
+                        <span className={`${DS.typog.link} truncate`}>
+                            {link.replace('https://', '')}
+                        </span>
+                        {copied ?
+                            <Check className="w-3 h-3 text-green-500" /> :
+                            <Copy className="w-3 h-3 text-slate-400 group-hover:text-slate-600" />
+                        }
+                    </div>
+                </div>
             </div>
-            <div className="text-2xl font-bold text-slate-900">{value}</div>
-            {sublabel && (
-                <div className="text-sm text-slate-500 mt-1">{sublabel}</div>
-            )}
+
+            {/* Stats */}
+            <div className="bg-[#FAFAFB] border border-[rgba(0,0,0,0.04)] rounded-[12px] p-4">
+                <div className="flex items-center justify-between mb-3">
+                    <div>
+                        <p className={DS.typog.label}>Gains totaux</p>
+                        <p className={DS.typog.value}>{earnings}</p>
+                    </div>
+                </div>
+
+                {/* Visual Progress Bar (Gradient) */}
+                <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                        className={`h-full ${DS.colors.gradient}`}
+                        style={{ width: data.stats.totalEarned > 0 ? '100%' : '5%' }}
+                    />
+                </div>
+            </div>
         </div>
     )
 }
 
-export default function PartnerDashboardPage() {
+export default function PartnerProgramsPage() {
     const [loading, setLoading] = useState(true)
+    const [programs, setPrograms] = useState<ProgramData[]>([])
     const [error, setError] = useState<string | null>(null)
-    const [partner, setPartner] = useState<Partner | null>(null)
-    const [stats, setStats] = useState<PartnerStats | null>(null)
-    const [balance, setBalance] = useState<Balance | null>(null)
 
     useEffect(() => {
-        async function loadDashboard() {
+        async function load() {
             try {
-                const result = await getPartnerDashboard()
-
-                if (!result.success) {
-                    setError(result.error || 'Failed to load dashboard')
+                const res = await getAllPartnerPrograms()
+                if (res.success && res.programs) {
+                    setPrograms(res.programs as unknown as ProgramData[])
                 } else {
-                    setPartner(result.partner as unknown as Partner)
-                    setStats(result.stats as unknown as PartnerStats)
-                    setBalance(result.balance as unknown as Balance)
+                    setError(res.error || 'Erreur de chargement')
                 }
-            } catch (err) {
-                setError('Failed to load partner dashboard')
+            } catch (e) {
+                setError('Erreur inattendue')
             } finally {
                 setLoading(false)
             }
         }
-
-        loadDashboard()
+        load()
     }, [])
 
-    // Loading state
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="flex items-center gap-3 text-slate-500">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>Chargement...</span>
-                </div>
-            </div>
-        )
-    }
+    if (loading) return (
+        <div className="min-h-screen bg-[#FAFAFB] flex items-center justify-center">
+            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        </div>
+    )
 
-    // Error state
-    if (error) {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="max-w-md mx-auto text-center">
-                    <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <AlertCircle className="w-8 h-8 text-red-600" />
-                    </div>
-                    <h2 className="text-xl font-bold text-slate-900 mb-2">
-                        Erreur
-                    </h2>
-                    <p className="text-slate-600 mb-6">{error}</p>
-                    <Link
-                        href="/dashboard/marketplace"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                        <ExternalLink className="w-4 h-4" />
-                        Rejoindre un programme
-                    </Link>
-                </div>
+    if (error) return (
+        <div className="min-h-screen bg-[#FAFAFB] flex items-center justify-center">
+            <div className="text-center">
+                <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                <p className="text-slate-600">{error}</p>
             </div>
-        )
-    }
-
-    // Format currency
-    const formatCurrency = (cents: number) => {
-        return new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'EUR'
-        }).format(cents / 100)
-    }
+        </div>
+    )
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-            <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="min-h-screen bg-[#FAFAFB]">
+            <div className="max-w-[1200px] mx-auto px-8 py-10">
+
                 {/* Header */}
-                <div className="mb-8">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                            <Wallet className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-slate-900">
-                                Mes Gains
-                            </h1>
-                            <p className="text-slate-500 text-sm">
-                                {partner?.Program?.name || 'Programme affilié'}
-                            </p>
-                        </div>
-                    </div>
+                <div className="flex items-center justify-between mb-8">
+                    <h1 className={DS.typog.h1}>Mes Programmes</h1>
+                    {/* Hidden sidebar trigger or other utility could go here */}
                 </div>
 
-                {/* Status Badge */}
-                {partner?.status === 'PENDING' && (
-                    <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
-                        <Clock className="w-5 h-5 text-amber-600 mt-0.5" />
-                        <div>
-                            <p className="font-medium text-amber-800">
-                                En attente d&apos;approbation
-                            </p>
-                            <p className="text-sm text-amber-700">
-                                Votre demande est en cours de traitement. Vous pourrez gagner des commissions une fois approuvé.
-                            </p>
-                        </div>
+                {/* Grid */}
+                {programs.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {programs.map((prog) => (
+                            <ProgramCard key={prog.partner.id} data={prog} />
+                        ))}
                     </div>
-                )}
-
-                {partner?.status === 'BANNED' && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-                        <div>
-                            <p className="font-medium text-red-800">
-                                Compte suspendu
-                            </p>
-                            <p className="text-sm text-red-700">
-                                Votre compte partenaire a été suspendu. Contactez le support pour plus d&apos;informations.
-                            </p>
+                ) : (
+                    // Empty State
+                    <div className="flex flex-col items-center justify-center py-20 bg-white border border-[rgba(0,0,0,0.06)] rounded-[16px]">
+                        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                            <ExternalLink className="w-5 h-5 text-slate-400" />
                         </div>
-                    </div>
-                )}
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <StatCard
-                        icon={DollarSign}
-                        label="Total gagné"
-                        value={formatCurrency(stats?.totalEarned || 0)}
-                        sublabel={`${stats?.conversionCount || 0} conversions`}
-                        color="purple"
-                    />
-                    <StatCard
-                        icon={Clock}
-                        label="En attente"
-                        value={formatCurrency(stats?.pendingAmount || 0)}
-                        sublabel="Maturation 30 jours"
-                        color="amber"
-                    />
-                    <StatCard
-                        icon={CheckCircle2}
-                        label="Disponible"
-                        value={formatCurrency(stats?.dueAmount || 0)}
-                        sublabel="Prêt pour le retrait"
-                        color="green"
-                    />
-                    <StatCard
-                        icon={ArrowDownToLine}
-                        label="Versé"
-                        value={formatCurrency(stats?.paidAmount || 0)}
-                        sublabel="Total des versements"
-                        color="slate"
-                    />
-                </div>
-
-                {/* Balance Card */}
-                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white mb-8">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-purple-200 text-sm mb-1">
-                                Solde disponible
-                            </p>
-                            <p className="text-4xl font-bold">
-                                {formatCurrency(balance?.due || 0)}
-                            </p>
-                        </div>
-                        <button
-                            disabled={!balance?.due || balance.due <= 0}
-                            className="px-6 py-3 bg-white text-purple-700 font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-50 transition-colors flex items-center gap-2"
-                        >
-                            <ArrowDownToLine className="w-5 h-5" />
-                            Demander un versement
-                        </button>
-                    </div>
-                </div>
-
-                {/* EMPTY STATE: Start Exploring Marketplace */}
-                {(!stats?.conversionCount || stats.conversionCount === 0) && (!stats?.totalEarned || stats.totalEarned === 0) && (
-                    <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center mb-8">
-                        <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <TrendingUp className="w-8 h-8 text-purple-600" />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">
-                            Vous n'avez pas encore de gains
-                        </h3>
-                        <p className="text-slate-600 max-w-lg mx-auto mb-6">
-                            Pour commencer à gagner de l'argent, rejoignez des missions sur notre Marketplace et partagez vos liens d'affiliation.
-                        </p>
+                        <h3 className="text-[16px] font-medium text-[#111111] mb-2">Aucun programme rejoint</h3>
+                        <p className="text-[#5F6368] text-[14px] mb-6">Rejoignez des missions pour voir vos programmes ici.</p>
                         <Link
-                            href="/dashboard/marketplace"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 transition-all"
+                            href="/marketplace"
+                            className="bg-[#111111] text-white px-5 py-2.5 rounded-[10px] text-[13px] font-medium hover:bg-black transition-colors"
                         >
-                            <ExternalLink className="w-4 h-4" />
                             Explorer le Marketplace
                         </Link>
                     </div>
                 )}
-
-                {/* Info Section */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6">
-                    <h2 className="text-lg font-semibold text-slate-900 mb-4">
-                        Comment ça fonctionne
-                    </h2>
-                    <div className="grid md:grid-cols-3 gap-6">
-                        <div className="flex gap-3">
-                            <div className="w-8 h-8 bg-purple-100 text-purple-700 rounded-lg flex items-center justify-center font-bold text-sm">
-                                1
-                            </div>
-                            <div>
-                                <p className="font-medium text-slate-900">Partagez votre lien</p>
-                                <p className="text-sm text-slate-500">
-                                    Chaque clic est suivi automatiquement
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex gap-3">
-                            <div className="w-8 h-8 bg-purple-100 text-purple-700 rounded-lg flex items-center justify-center font-bold text-sm">
-                                2
-                            </div>
-                            <div>
-                                <p className="font-medium text-slate-900">Maturation 30 jours</p>
-                                <p className="text-sm text-slate-500">
-                                    Les commissions sont en attente pendant 30 jours
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex gap-3">
-                            <div className="w-8 h-8 bg-purple-100 text-purple-700 rounded-lg flex items-center justify-center font-bold text-sm">
-                                3
-                            </div>
-                            <div>
-                                <p className="font-medium text-slate-900">Recevez vos gains</p>
-                                <p className="text-sm text-slate-500">
-                                    Demandez un versement quand vous le souhaitez
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     )

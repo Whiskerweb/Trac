@@ -7,7 +7,7 @@ import {
     AlertCircle, ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
-import { getPartnerDashboard } from '@/app/actions/partners'
+import { getPartnerDashboard, getPartnerCommissions } from '@/app/actions/partners'
 
 interface Commission {
     id: string
@@ -40,14 +40,30 @@ export default function PartnerWalletPage() {
     useEffect(() => {
         async function loadWallet() {
             try {
-                const result = await getPartnerDashboard()
+                // Load dashboard stats and commissions in parallel
+                const [dashboardResult, commissionsResult] = await Promise.all([
+                    getPartnerDashboard(),
+                    getPartnerCommissions(20)
+                ])
 
-                if (!result.success) {
-                    setError(result.error || 'Failed to load wallet')
+                if (!dashboardResult.success) {
+                    setError(dashboardResult.error || 'Failed to load wallet')
                 } else {
-                    setStats(result.stats || stats)
-                    setBalance(result.balance || balance)
-                    // TODO: Load commission history
+                    setStats(dashboardResult.stats || stats)
+                    setBalance(dashboardResult.balance || balance)
+                }
+
+                // Load commissions
+                if (commissionsResult.success && commissionsResult.commissions) {
+                    setCommissions(commissionsResult.commissions.map(c => ({
+                        id: c.id,
+                        sale_id: c.sale_id,
+                        gross_amount: c.gross_amount,
+                        commission_amount: c.commission_amount,
+                        status: c.status as Commission['status'],
+                        created_at: c.created_at.toISOString(),
+                        matured_at: c.matured_at?.toISOString() || null
+                    })))
                 }
             } catch (err) {
                 setError('Failed to load wallet')

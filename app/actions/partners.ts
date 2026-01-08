@@ -118,7 +118,26 @@ export async function createGlobalPartner(params: { userId: string, email: strin
         // Create new global partner
         const tenantId = generateTenantId(null, normalizedEmail)
 
-        const partner = await prisma.partner.create({
+        // Robustness: Check if partner with this tenant_id already exists (dangling from deleted user?)
+        const existingByTenant = await prisma.partner.findUnique({
+            where: { tenant_id: tenantId }
+        })
+
+        let partner;
+
+        if (existingByTenant) {
+            console.log(`[Partner] ⚠️ Found existing partner ${existingByTenant.id} for tenant ${tenantId} - Reclaiming.`)
+            partner = await prisma.partner.update({
+                where: { id: existingByTenant.id },
+                data: {
+                    user_id: userId,
+                    status: 'APPROVED', // Reactivate if it was banned/pending? Safest is to ensure it's approved.
+                }
+            })
+            return { success: true, partner }
+        }
+
+        partner = await prisma.partner.create({
             data: {
                 program_id: null, // Global partner
                 email: normalizedEmail,
@@ -377,6 +396,148 @@ export async function getPartnerDashboard(): Promise<{
 
     } catch (error) {
         console.error('[Partner] ❌ Failed to get dashboard:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }
+    }
+}
+
+/**
+ * Get ALL partner programs for the current user
+ * Returns list of programs with stats for the dashboard grid
+ */
+export async function getAllPartnerPrograms(): Promise<{
+    success: boolean
+    programs?: Array<{
+        partner: Awaited<ReturnType<typeof prisma.partner.findFirst>>
+        stats: {
+            totalEarned: number
+            pendingAmount: number
+            dueAmount: number
+            paidAmount: number
+        }
+    }>
+    error?: string
+}> {
+    try {
+        const { createClient } = await import('@/utils/supabase/server')
+        const supabase = await createClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+        if (authError || !user) {
+            return { success: false, error: 'Not authenticated' }
+        }
+
+        const partners = await prisma.partner.findMany({
+            where: { user_id: user.id },
+            include: { Program: true }
+        })
+
+        if (!partners.length) {
+            return { success: true, programs: [] }
+        }
+
+        const partnerIds = partners.map(p => p.id)
+
+        // Aggregate commissions by partner_id and status
+        const commissionStats = await prisma.commission.groupBy({
+            by: ['partner_id', 'status'],
+            where: { partner_id: { in: partnerIds } },
+            _sum: { commission_amount: true }
+        })
+
+        // Map data to result structure
+        const result = partners.map(partner => {
+            const partnerStats = commissionStats.filter(s => s.partner_id === partner.id)
+
+            const stats = {
+                totalEarned: 0,
+                pendingAmount: 0,
+                dueAmount: 0,
+                paidAmount: 0
+            }
+
+            for (const s of partnerStats) {
+                const amount = s._sum.commission_amount || 0
+                stats.totalEarned += amount
+                if (s.status === 'PENDING') stats.pendingAmount = amount
+                else if (s.status === 'DUE') stats.dueAmount = amount
+                else if (s.status === 'PAID') stats.paidAmount = amount
+            }
+
+            return {
+                partner,
+                stats
+            }
+        })
+
+        return { success: true, programs: result }
+
+    } catch (error) {
+        console.error('[Partner] ❌ Failed to get all programs:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }
+    }
+}
+
+/**
+ * Get commission history for the current partner
+ * Used in the wallet page to display transaction history
+ */
+export async function getPartnerCommissions(limit: number = 50): Promise<{
+    success: boolean
+    commissions?: Array<{
+        id: string
+        sale_id: string
+        gross_amount: number
+        commission_amount: number
+        status: string
+        created_at: Date
+        matured_at: Date | null
+    }>
+    error?: string
+}> {
+    try {
+        const { createClient } = await import('@/utils/supabase/server')
+        const supabase = await createClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+        if (authError || !user) {
+            return { success: false, error: 'Not authenticated' }
+        }
+
+        // Find partner for this user
+        const partner = await prisma.partner.findFirst({
+            where: { user_id: user.id }
+        })
+
+        if (!partner) {
+            return { success: false, error: 'Partner not found' }
+        }
+
+        // Fetch commissions
+        const commissions = await prisma.commission.findMany({
+            where: { partner_id: partner.id },
+            orderBy: { created_at: 'desc' },
+            take: limit,
+            select: {
+                id: true,
+                sale_id: true,
+                gross_amount: true,
+                commission_amount: true,
+                status: true,
+                created_at: true,
+                matured_at: true
+            }
+        })
+
+        return { success: true, commissions }
+
+    } catch (error) {
+        console.error('[Partner] ❌ Failed to get commissions:', error)
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'

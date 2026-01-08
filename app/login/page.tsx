@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import { login, signup } from './actions'
+import { Building2, Users } from 'lucide-react'
 
 export default function LoginPage() {
     const [mode, setMode] = useState<'login' | 'signup'>('login')
+    const [role, setRole] = useState<'startup' | 'partner'>('startup')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
@@ -35,8 +37,37 @@ export default function LoginPage() {
                         Trac
                     </h1>
                     <p className="text-zinc-400 mt-2">
-                        {mode === 'login' ? 'Sign in to your account' : 'Create your account'}
+                        {mode === 'login'
+                            ? (role === 'startup' ? 'Connexion Startup' : 'Espace Partenaire')
+                            : (role === 'startup' ? 'Lancer votre Startup' : 'Devenir Partenaire')
+                        }
                     </p>
+                </div>
+
+                {/* Role Switcher */}
+                <div className="flex bg-zinc-900/50 p-1 rounded-lg mb-6 relative">
+                    <div
+                        className={`absolute inset-y-1 w-[calc(50%-4px)] bg-zinc-800 rounded-md transition-all duration-300 ease-out shadow-sm ${role === 'partner' ? 'translate-x-[calc(100%+4px)]' : 'translate-x-1'
+                            }`}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setRole('startup')}
+                        className={`relative flex-1 py-2.5 text-sm font-medium transition-colors z-10 flex items-center justify-center gap-2 ${role === 'startup' ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+                            }`}
+                    >
+                        <Building2 className="w-4 h-4" />
+                        Startup
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setRole('partner')}
+                        className={`relative flex-1 py-2.5 text-sm font-medium transition-colors z-10 flex items-center justify-center gap-2 ${role === 'partner' ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+                            }`}
+                    >
+                        <Users className="w-4 h-4" />
+                        Partenaire
+                    </button>
                 </div>
 
                 {/* Mode Toggle */}
@@ -45,26 +76,27 @@ export default function LoginPage() {
                         type="button"
                         onClick={() => setMode('login')}
                         className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === 'login'
-                                ? 'bg-zinc-800 text-white'
-                                : 'text-zinc-400 hover:text-white'
+                            ? 'bg-zinc-800 text-white'
+                            : 'text-zinc-400 hover:text-white'
                             }`}
                     >
-                        Sign In
+                        Se connecter
                     </button>
                     <button
                         type="button"
                         onClick={() => setMode('signup')}
                         className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === 'signup'
-                                ? 'bg-zinc-800 text-white'
-                                : 'text-zinc-400 hover:text-white'
+                            ? 'bg-zinc-800 text-white'
+                            : 'text-zinc-400 hover:text-white'
                             }`}
                     >
-                        Sign Up
+                        Créer un compte
                     </button>
                 </div>
 
                 <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
                     <form action={handleSubmit} className="space-y-4">
+                        <input type="hidden" name="role" value={role} />
                         {mode === 'signup' && (
                             <div>
                                 <label htmlFor="name" className="block text-sm font-medium text-zinc-300 mb-2">
@@ -125,8 +157,8 @@ export default function LoginPage() {
                             className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-zinc-700 disabled:to-zinc-700 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200"
                         >
                             {loading
-                                ? (mode === 'login' ? 'Signing in...' : 'Creating account...')
-                                : (mode === 'login' ? 'Sign In' : 'Sign Up')
+                                ? 'Chargement...'
+                                : (mode === 'login' ? 'Se connecter' : 'Créer un compte')
                             }
                         </button>
                     </form>

@@ -104,6 +104,23 @@ export async function login(formData: FormData) {
     // =============================================
     // ROLE-BASED ROUTING
     // =============================================
+    // =============================================
+    // INTENT-BASED ROUTING
+    // =============================================
+    const roleIntent = String(formData.get('role') || 'startup')
+    const userRoles = await getUserRoles(data.user!.id)
+
+    // If user explicitly chose "Partner" and HAS partner role -> Go to /partner
+    if (roleIntent === 'partner' && userRoles?.hasPartner) {
+        redirect('/partner')
+    }
+
+    // If user explicitly chose "Startup" and HAS workspace -> Go to /dashboard
+    if (roleIntent === 'startup' && userRoles?.hasWorkspace) {
+        redirect('/dashboard')
+    }
+
+    // Fallback: Use smart detection
     const redirectPath = await getAuthRedirectPath(data.user!.id)
     redirect(redirectPath)
 }
@@ -151,7 +168,25 @@ export async function signup(formData: FormData) {
         return { error: 'Cette adresse email est déjà utilisée' }
     }
 
+    const role = String(formData.get('role') || 'startup')
+
+    // ... (rest of signup logic)
+
     console.log('[Auth] ✅ Signup success for:', email)
+
+    // =============================================
+    // PARTNER AUTO-CREATION (Split Flow)
+    // =============================================
+    if (data.user && role === 'partner') {
+        const { createGlobalPartner } = await import('@/app/actions/partners')
+        await createGlobalPartner({
+            userId: data.user.id,
+            email: email,
+            name: name
+        })
+        console.log('[Auth] 🤝 Auto-created Global Partner for new user')
+        redirect('/partner')
+    }
 
     // =============================================
     // SHADOW PARTNER CLAIM (Dub.co Style)
@@ -168,9 +203,8 @@ export async function signup(formData: FormData) {
     // =============================================
     // ROLE-BASED ROUTING
     // =============================================
-    // If user had shadow partners, they might already have a role
-    const redirectPath = await getAuthRedirectPath(data.user!.id)
-    redirect(redirectPath)
+    // If not explicitly partner role, redirect to onboarding for startup creation
+    redirect('/onboarding')
 }
 
 // =============================================

@@ -31,12 +31,18 @@ model Mission {
   target_url        String
   reward            String
   status            MissionStatus       @default(DRAFT)
+  visibility        MissionVisibility   @default(PUBLIC)
+  industry          String?             /// SaaS, E-commerce, Finance, etc.
+  gain_type         String?             /// Net Revenue, ROI, Fixed
   created_at        DateTime            @default(now())
   updated_at        DateTime            @updatedAt
   Workspace         Workspace           @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
   MissionEnrollment MissionEnrollment[]
+  Contents          MissionContent[]
+  Requests          ProgramRequest[]
 
   @@index([status])
+  @@index([visibility])
   @@index([workspace_id])
 }
 
@@ -192,6 +198,59 @@ enum WorkspaceRole {
   MEMBER
 }
 
+enum MissionVisibility {
+  PUBLIC       /// Listed in Marketplace, anyone can join
+  PRIVATE      /// Listed but requires approval
+  INVITE_ONLY  /// Only visible to invited partners
+}
+
+enum ContentType {
+  YOUTUBE
+  PDF
+  LINK
+  TEXT
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Mission Resources - Rich content for partner briefing
+model MissionContent {
+  id          String      @id @default(cuid())
+  mission_id  String
+  type        ContentType
+  url         String?     /// URL for YOUTUBE, PDF, LINK types
+  title       String
+  description String?     @db.Text
+  order       Int         @default(0)
+  created_at  DateTime    @default(now())
+  Mission     Mission     @relation(fields: [mission_id], references: [id], onDelete: Cascade)
+
+  @@index([mission_id])
+}
+
+/// Program Access Requests - For PRIVATE missions
+model ProgramRequest {
+  id          String        @id @default(cuid())
+  partner_id  String
+  mission_id  String
+  status      RequestStatus @default(PENDING)
+  message     String?       @db.Text  /// Partner's application message
+  reviewed_at DateTime?     /// When the request was approved/rejected
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+  Partner     Partner       @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+  Mission     Mission       @relation(fields: [mission_id], references: [id], onDelete: Cascade)
+
+  @@unique([partner_id, mission_id])
+  @@index([partner_id])
+  @@index([mission_id])
+  @@index([status])
+}
+
 // =============================================
 // PARTNER COMMISSION SYSTEM (Dub.co Style)
 // =============================================
@@ -215,6 +274,7 @@ model Partner {
   Program             Workspace?      @relation(fields: [program_id], references: [id], onDelete: Cascade)
   Commissions         Commission[]
   Profile             PartnerProfile?
+  Requests            ProgramRequest[]
 
   @@unique([program_id, email])  /// Unique partner per program
   @@index([email])

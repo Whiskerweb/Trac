@@ -654,11 +654,15 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             })
 
             if (checkRes.ok) {
-                const { hasWorkspace } = await checkRes.json()
-                // Exempt marketplace from workspace check - Partners need access
-                const isMarketplace = pathname.startsWith('/dashboard/marketplace')
+                const { hasWorkspace, hasPartner } = await checkRes.json()
 
-                if (!hasWorkspace && !isMarketplace) {
+                if (!hasWorkspace) {
+                    // Strict Isolation: If Partner tries to access Dashboard/Onboarding, send to Partner Portal
+                    if (hasPartner) {
+                        console.log('[Middleware] 🛡️ Partner attempting to access Dashboard - Redirecting to /partner')
+                        return NextResponse.redirect(new URL('/partner', request.url))
+                    }
+
                     console.log('[Middleware] 🚀 User has no workspace, redirecting to onboarding')
                     return NextResponse.redirect(new URL('/onboarding', request.url))
                 }
@@ -711,7 +715,35 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             loginUrl.searchParams.set('redirectTo', pathname)
             return NextResponse.redirect(loginUrl)
         }
-        // Partner pages handle their own authorization
+
+        // Role Isolation: Block Startup users (have workspace but no partner) from Partner Portal
+        try {
+            const checkUrl = new URL('/api/auth/workspace-check', request.url)
+            const checkRes = await fetch(checkUrl, {
+                headers: {
+                    cookie: request.headers.get('cookie') || ''
+                }
+            })
+
+            if (checkRes.ok) {
+                const { hasWorkspace, hasPartner } = await checkRes.json()
+
+                // If user has a workspace but is NOT a partner, they are a Startup - block access
+                if (hasWorkspace && !hasPartner) {
+                    console.log('[Middleware] 🛡️ Startup attempting to access Partner Portal - Redirecting to /dashboard')
+                    return NextResponse.redirect(new URL('/dashboard', request.url))
+                }
+
+                // If user has no partner record at all, redirect to auth choice
+                if (!hasPartner && !hasWorkspace) {
+                    console.log('[Middleware] 🚀 User has no role, redirecting to auth choice')
+                    return NextResponse.redirect(new URL('/auth/choice', request.url))
+                }
+            }
+        } catch (err) {
+            console.error('[Middleware] ⚠️ Partner portal check failed:', err)
+            // Fail open - let the page handle it
+        }
     }
 
     // ============================================
@@ -732,6 +764,14 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             return NextResponse.redirect(new URL('/login', request.url))
         }
         // Allow access to onboarding - the page will handle redirect if user already has workspace
+    }
+
+    if (pathname.startsWith('/marketplace')) {
+        if (!user) {
+            const loginUrl = new URL('/login', request.url)
+            loginUrl.searchParams.set('redirectTo', pathname)
+            return NextResponse.redirect(loginUrl)
+        }
     }
 
     return supabaseResponse
