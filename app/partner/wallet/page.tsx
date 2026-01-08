@@ -40,7 +40,7 @@ export default function PartnerWalletPage() {
     useEffect(() => {
         async function loadWallet() {
             try {
-                const result = await getPartnerDashboard('current-user-id')
+                const result = await getPartnerDashboard()
 
                 if (!result.success) {
                     setError(result.error || 'Failed to load wallet')
