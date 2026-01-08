@@ -4,6 +4,7 @@ import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics/tinybird'
 import { waitUntil } from '@vercel/functions'
+import { createCommission, findPartnerForSale, handleClawback } from '@/lib/commission/engine'
 
 export const dynamic = 'force-dynamic'
 
@@ -311,6 +312,44 @@ export async function POST(
                     }
 
                     // ========================================
+                    // CREATE COMMISSION (IF AFFILIATE ATTRIBUTION)
+                    // ========================================
+                    if (affiliateId || linkId) {
+                        try {
+                            // Find the partner for this affiliate
+                            const partnerId = await findPartnerForSale({
+                                linkId,
+                                affiliateId,
+                                programId: workspaceId
+                            })
+
+                            if (partnerId) {
+                                // Get mission reward for commission calculation
+                                // For now, use a default - should be fetched from Mission
+                                const missionReward = '10%' // TODO: Fetch from Mission.reward
+
+                                await createCommission({
+                                    partnerId,
+                                    programId: workspaceId,
+                                    saleId: session.id,
+                                    linkId,
+                                    grossAmount,
+                                    netAmount,
+                                    stripeFee,
+                                    taxAmount: tax,
+                                    missionReward,
+                                    currency
+                                })
+                                console.log(`[Webhook] 💰 Commission created for partner ${partnerId}`)
+                            } else {
+                                console.log(`[Webhook] ⚠️ No approved partner found for affiliate ${affiliateId}`)
+                            }
+                        } catch (commissionError) {
+                            console.error('[Webhook] ⚠️ Commission creation failed (non-blocking):', commissionError)
+                        }
+                    }
+
+                    // ========================================
                     // RECORD PROCESSED EVENT (IDEMPOTENCY)
                     // ========================================
                     await prisma.processedEvent.create({
@@ -432,6 +471,45 @@ export async function POST(
             })()
         )
 
+    } else if (event.type === 'charge.refunded') {
+        // ========================================
+        // CLAWBACK HANDLER
+        // ========================================
+        const charge = event.data.object as Stripe.Charge
+
+        waitUntil(
+            (async () => {
+                try {
+                    console.log(`[Webhook] 🔙 Processing refund for charge ${charge.id}`)
+
+                    // Find associated session via payment_intent
+                    if (charge.payment_intent) {
+                        const paymentIntentId = typeof charge.payment_intent === 'string'
+                            ? charge.payment_intent
+                            : charge.payment_intent.id
+
+                        // Find the session that used this payment intent
+                        const sessions = await stripe.checkout.sessions.list({
+                            payment_intent: paymentIntentId,
+                            limit: 1
+                        })
+
+                        if (sessions.data.length > 0) {
+                            const sessionId = sessions.data[0].id
+                            await handleClawback({
+                                saleId: sessionId,
+                                reason: charge.refunds?.data[0]?.reason || 'Customer refund'
+                            })
+                            console.log(`[Webhook] ✅ Clawback processed for session ${sessionId}`)
+                        } else {
+                            console.log(`[Webhook] ⚠️ No checkout session found for payment intent ${paymentIntentId}`)
+                        }
+                    }
+                } catch (err) {
+                    console.error('[Webhook] ❌ Clawback processing error:', err)
+                }
+            })()
+        )
     } else {
         console.log(`[Multi-Tenant Webhook] ⏭️ Ignoring event ${event.type}`)
     }

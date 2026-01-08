@@ -122,6 +122,7 @@ model Workspace {
   ShortLink       ShortLink[]
   WebhookEndpoint WebhookEndpoint[]
   WorkspaceMember WorkspaceMember[]
+  Partner         Partner[]         /// Partners enrolled in this program
 
   @@index([owner_id])
   @@index([slug])
@@ -188,4 +189,98 @@ enum UserRole {
 enum WorkspaceRole {
   OWNER
   MEMBER
+}
+
+// =============================================
+// PARTNER COMMISSION SYSTEM (Dub.co Style)
+// =============================================
+
+/// Shadow Partner (Dub.co style) - linked to Program/Workspace
+/// Enables "Shadow Tenancy" where partners can exist before creating an account
+model Partner {
+  id                  String          @id @default(cuid())
+  program_id          String          /// FK to Workspace (Program)
+  user_id             String?         /// Nullable for Shadow Users (no account yet)
+  tenant_id           String          @unique /// External anchor ID for idempotent creation
+  email               String
+  name                String?
+  stripe_connect_id   String?         /// Stripe Express account ID (acct_xxx)
+  status              PartnerStatus   @default(PENDING)
+  payouts_enabled_at  DateTime?
+  created_at          DateTime        @default(now())
+  updated_at          DateTime        @updatedAt
+  
+  Program             Workspace       @relation(fields: [program_id], references: [id], onDelete: Cascade)
+  Commissions         Commission[]
+
+  @@unique([program_id, email])  /// Unique partner per program
+  @@index([email])
+  @@index([tenant_id])
+  @@index([user_id])
+  @@index([program_id])
+}
+
+/// Commission Ledger with State Machine
+/// Tracks all commission events with full audit trail
+model Commission {
+  id                String            @id @default(cuid())
+  partner_id        String
+  program_id        String            /// Denormalized for faster queries
+  sale_id           String            @unique  /// Stripe checkout session ID (cs_xxx)
+  link_id           String?           /// ShortLink that generated this sale
+  gross_amount      Int               /// In cents
+  net_amount        Int               /// After Stripe fees + tax
+  stripe_fee        Int               @default(0) /// Stripe fee in cents
+  tax_amount        Int               @default(0) /// Tax in cents
+  commission_amount Int               /// Calculated commission in cents
+  commission_rate   String            /// Original rate: "5€" or "10%"
+  commission_type   CommissionType
+  currency          String            @default("EUR")
+  status            CommissionStatus  @default(PENDING)
+  matured_at        DateTime?         /// When transitioned to DUE
+  paid_at           DateTime?         /// When payout completed
+  clawback_at       DateTime?         /// When refund received
+  clawback_reason   String?           /// Reason for clawback
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+
+  Partner           Partner           @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+
+  @@index([partner_id])
+  @@index([program_id])
+  @@index([status])
+  @@index([created_at])
+  @@index([sale_id])
+}
+
+/// Partner Balance for tracking payouts and negative balances (clawbacks)
+model PartnerBalance {
+  id          String   @id @default(cuid())
+  partner_id  String   @unique
+  balance     Int      @default(0) /// Current balance in cents (can be negative)
+  pending     Int      @default(0) /// Pending commissions (PENDING status)
+  due         Int      @default(0) /// Due for payout (DUE status)
+  paid_total  Int      @default(0) /// Total ever paid out
+  updated_at  DateTime @updatedAt
+
+  @@index([partner_id])
+}
+
+enum PartnerStatus {
+  PENDING   /// Awaiting approval
+  APPROVED  /// Can earn commissions
+  BANNED    /// Blocked from program
+}
+
+enum CommissionStatus {
+  PENDING     /// Waiting for 30-day maturation
+  DUE         /// Matured, ready for payout
+  PROCESSING  /// Payout in progress
+  PAID        /// Completed
+  CLAWBACK    /// Refunded/cancelled
+}
+
+enum CommissionType {
+  FIXED       /// Fixed amount (e.g., 5€)
+  PERCENTAGE  /// Percentage of net revenue
 }
