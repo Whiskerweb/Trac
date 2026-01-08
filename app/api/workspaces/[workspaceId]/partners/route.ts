@@ -9,7 +9,7 @@ import { createClient } from '@/utils/supabase/server'
  */
 export async function GET(
     request: Request,
-    { params }: { params: { workspaceId: string } }
+    { params }: { params: Promise<{ workspaceId: string }> }
 ) {
     try {
         const supabase = await createClient()
@@ -19,7 +19,7 @@ export async function GET(
             return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
         }
 
-        const { workspaceId } = params
+        const { workspaceId } = await params
 
         // Verify user has access to this workspace
         const workspace = await prisma.workspace.findFirst({
@@ -96,7 +96,7 @@ export async function GET(
  */
 export async function PATCH(
     request: Request,
-    { params }: { params: { workspaceId: string } }
+    { params }: { params: Promise<{ workspaceId: string }> }
 ) {
     try {
         const supabase = await createClient()
@@ -106,7 +106,7 @@ export async function PATCH(
             return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
         }
 
-        const { workspaceId } = params
+        const { workspaceId } = await params
         const body = await request.json()
         const { partnerId, status } = body
 
