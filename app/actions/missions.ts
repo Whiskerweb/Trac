@@ -103,6 +103,7 @@ export async function getWorkspaceMissions(): Promise<{
         status: MissionStatus
         created_at: Date
         _count: { enrollments: number }
+        visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
     }[]
     error?: string
 }> {
@@ -141,6 +142,7 @@ export async function getWorkspaceMissions(): Promise<{
                 status: m.status,
                 created_at: m.created_at,
                 _count: { enrollments: m._count.MissionEnrollment },
+                visibility: m.visibility as 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
             }))
         }
 
