@@ -61,6 +61,9 @@ const PRIMARY_DOMAINS = [
     'localhost:3000',
 ]
 
+// Partner subdomain for biface architecture
+const PARTNER_SUBDOMAIN = 'partners.traaaction.com'
+
 // Cache for domain lookups (Edge-compatible in-memory)
 const domainCache = new Map<string, { workspaceId: string | null; timestamp: number }>()
 const DOMAIN_CACHE_TTL = 60 * 60 * 1000 // 1 hour
@@ -661,6 +664,28 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
                 console.error('[Middleware] ⚠️ Verify check failed:', err)
             }
         }
+    }
+
+    // ============================================
+    // PARTNER PORTAL PROTECTION (Biface Architecture)
+    // ============================================
+    if (pathname.startsWith('/partner')) {
+        if (!user) {
+            const loginUrl = new URL('/login', request.url)
+            loginUrl.searchParams.set('redirectTo', pathname)
+            return NextResponse.redirect(loginUrl)
+        }
+        // Partner pages handle their own authorization
+    }
+
+    // ============================================
+    // AUTH CHOICE PAGE PROTECTION
+    // ============================================
+    if (pathname.startsWith('/auth/choice')) {
+        if (!user) {
+            return NextResponse.redirect(new URL('/login', request.url))
+        }
+        // Choice page handles role detection
     }
 
     // ============================================

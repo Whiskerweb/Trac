@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { z } from 'zod'
+import { claimPartners } from '@/app/actions/partners'
+import { getUserRoles } from '@/app/actions/get-user-roles'
 
 // =============================================
 // VALIDATION SCHEMAS
@@ -21,6 +23,41 @@ const signupSchema = z.object({
 })
 
 // =============================================
+// ROLE-BASED REDIRECT LOGIC
+// =============================================
+
+/**
+ * Determines where to redirect user after authentication based on their roles
+ * 
+ * - If hasWorkspace && hasPartner → /auth/choice (let user pick)
+ * - If hasWorkspace only → /dashboard
+ * - If hasPartner only → /partner
+ * - If neither → /onboarding
+ */
+async function getAuthRedirectPath(userId: string): Promise<string> {
+    const roles = await getUserRoles(userId)
+
+    if (!roles) {
+        return '/onboarding'
+    }
+
+    if (roles.hasWorkspace && roles.hasPartner) {
+        // Dual identity - show choice page
+        return '/auth/choice'
+    }
+
+    if (roles.hasWorkspace) {
+        return '/dashboard'
+    }
+
+    if (roles.hasPartner) {
+        return '/partner'
+    }
+
+    return '/onboarding'
+}
+
+// =============================================
 // LOGIN ACTION
 // =============================================
 
@@ -36,7 +73,7 @@ export async function login(formData: FormData) {
         return { error: validation.error.issues[0].message }
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
     })
@@ -52,8 +89,23 @@ export async function login(formData: FormData) {
         return { error: error.message }
     }
 
+    // =============================================
+    // SHADOW PARTNER CLAIM (Dub.co Style)
+    // =============================================
+    if (data.user) {
+        const claimed = await claimPartners(data.user.id, email)
+        if (claimed.claimed > 0) {
+            console.log(`[Auth] ✨ Claimed ${claimed.claimed} shadow partners for ${email}`)
+        }
+    }
+
     revalidatePath('/', 'layout')
-    redirect('/dashboard')
+
+    // =============================================
+    // ROLE-BASED ROUTING
+    // =============================================
+    const redirectPath = await getAuthRedirectPath(data.user!.id)
+    redirect(redirectPath)
 }
 
 // =============================================
@@ -100,10 +152,25 @@ export async function signup(formData: FormData) {
     }
 
     console.log('[Auth] ✅ Signup success for:', email)
+
+    // =============================================
+    // SHADOW PARTNER CLAIM (Dub.co Style)
+    // =============================================
+    if (data.user) {
+        const claimed = await claimPartners(data.user.id, email)
+        if (claimed.claimed > 0) {
+            console.log(`[Auth] ✨ Claimed ${claimed.claimed} shadow partners for ${email}`)
+        }
+    }
+
     revalidatePath('/', 'layout')
 
-    // Redirect to onboarding to create workspace
-    redirect('/onboarding')
+    // =============================================
+    // ROLE-BASED ROUTING
+    // =============================================
+    // If user had shadow partners, they might already have a role
+    const redirectPath = await getAuthRedirectPath(data.user!.id)
+    redirect(redirectPath)
 }
 
 // =============================================
@@ -116,3 +183,4 @@ export async function logout() {
     revalidatePath('/', 'layout')
     redirect('/login')
 }
+
