@@ -5,6 +5,11 @@ import { Redis } from '@upstash/redis'
 import { Ratelimit } from '@upstash/ratelimit'
 
 // =============================================
+// EDGE RUNTIME DECLARATION
+// Note: Next.js 16 automatically runs middleware on Edge
+// The runtime export has been removed as it's deprecated
+// Middleware always runs on Edge in Next.js 16+
+// =============================================
 // REDIS CLIENT (Edge-Compatible)
 // =============================================
 
@@ -297,12 +302,40 @@ function logAbuseToTinybird(ip: string, path: string, reason: string): Promise<v
 // =============================================
 
 export async function middleware(request: NextRequest, event: NextFetchEvent) {
-    const { pathname } = request.nextUrl
+    const { pathname, searchParams } = request.nextUrl // Use nextUrl for easier manipulation
     const hostname = getDomain(request)
     const customDomain = isCustomDomain(hostname)
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
         request.headers.get('x-real-ip') ||
         '127.0.0.1'
+
+    // ============================================
+    // HOST HEADER ROUTING (Architecture Alignment)
+    // ============================================
+    const isPartnersDomain = hostname === PARTNER_SUBDOMAIN ||
+        (process.env.NODE_ENV === 'development' && hostname === 'partners.localhost')
+
+    // 🔄 PARTNER PORTAL ROUTING
+    if (isPartnersDomain) {
+        // Rewrite all requests on partners.domain.com to /partner internal path
+        // e.g. partners.traaaction.com/settings -> /partner/settings
+        // e.g. partners.traaaction.com/ -> /partner
+
+        const newUrl = request.nextUrl.clone()
+        // If root, map to /partner
+        if (pathname === '/') {
+            newUrl.pathname = '/partner'
+        } else {
+            // If already has path, prepend /partner (unless it's already there, which shoudln't happen in clean routing)
+            // But we must be careful not to double-prefix if user visits /partner on the partner domain
+            if (!pathname.startsWith('/partner') && !pathname.startsWith('/api')) {
+                newUrl.pathname = `/partner${pathname}`
+            }
+        }
+
+        console.log(`[Middleware] 🔀 Rewriting Partner Domain: ${hostname}${pathname} -> ${newUrl.pathname}`)
+        return NextResponse.rewrite(newUrl)
+    }
 
     // ============================================
     // RATE LIMITING (Dub-Style)
@@ -622,7 +655,10 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 
             if (checkRes.ok) {
                 const { hasWorkspace } = await checkRes.json()
-                if (!hasWorkspace) {
+                // Exempt marketplace from workspace check - Partners need access
+                const isMarketplace = pathname.startsWith('/dashboard/marketplace')
+
+                if (!hasWorkspace && !isMarketplace) {
                     console.log('[Middleware] 🚀 User has no workspace, redirecting to onboarding')
                     return NextResponse.redirect(new URL('/onboarding', request.url))
                 }

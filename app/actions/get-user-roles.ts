@@ -123,8 +123,8 @@ export async function getUserRoles(userId?: string): Promise<UserRoles | null> {
             workspaces,
             partners: partners.map(p => ({
                 id: p.id,
-                programId: p.Program.id,
-                programName: p.Program.name,
+                programId: p.Program?.id || 'global',
+                programName: p.Program?.name || 'Global Partner',
                 status: p.status
             }))
         }

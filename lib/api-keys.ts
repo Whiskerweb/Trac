@@ -28,12 +28,13 @@ export function generatePublicKey(): string {
 
 /**
  * Generate a secret API key with its hash (server-side API access)
- * Format: trac_live_<32 chars>
+ * Format: trac_live_<32 chars> or trac_ws_<32 chars> for workspace-scoped
  * 
  * Returns both the plaintext key (show once) and hash (store in DB)
  */
-export function generateSecretKey(): { key: string; hash: string } {
-    const key = `trac_live_${nanoid(32)}`
+export function generateSecretKey(type: 'live' | 'workspace' = 'live'): { key: string; hash: string } {
+    const prefix = type === 'workspace' ? 'trac_ws_' : 'trac_live_'
+    const key = `${prefix}${nanoid(32)}`
     const hash = hashSecretKey(key)
     return { key, hash }
 }
@@ -67,7 +68,7 @@ export async function validateApiKey(token: string): Promise<ValidationResult> {
     }
 
     // Detect key type by prefix
-    if (token.startsWith('trac_live_')) {
+    if (token.startsWith('trac_live_') || token.startsWith('trac_ws_')) {
         return validateSecretKey(token)
     } else if (token.startsWith('pk_')) {
         return validatePublicKey(token)
@@ -80,7 +81,7 @@ export async function validateApiKey(token: string): Promise<ValidationResult> {
  * Validate a secret key by computing its hash and looking up
  */
 export async function validateSecretKey(token: string): Promise<ValidationResult> {
-    if (!token || !token.startsWith('trac_live_')) {
+    if (!token || (!token.startsWith('trac_live_') && !token.startsWith('trac_ws_'))) {
         return { valid: false }
     }
 

@@ -1,0 +1,18 @@
+DESCRIPTION >
+    Partner KPIs - Stats for a specific affiliate/partner
+    Returns total clicks for a given affiliate_id (partner user ID)
+
+TOKEN "dashboard_endpoint" READ
+
+NODE endpoint
+SQL >
+    %
+    SELECT 
+        count() as total_clicks
+    FROM clicks
+    WHERE 
+        affiliate_id = {{ String(affiliate_id, required=True) }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+
+TYPE endpoint

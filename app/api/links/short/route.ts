@@ -58,8 +58,91 @@ export async function GET() {
 /**
  * POST /api/links/short
  * Create a new short link
+ * 
+ * Supports both:
+ * 1. Session-based auth (Supabase user)
+ * 2. API key auth with links:write scope
  */
 export async function POST(request: NextRequest) {
+    // Try API key auth first
+    const authHeader = request.headers.get('authorization')
+
+    if (authHeader) {
+        // API Key flow - use scope middleware
+        const { requireScopes } = await import('@/lib/api-middleware')
+        const ctx = await requireScopes(request, ['links:write'])
+
+        if (!ctx.valid) {
+            return NextResponse.json(
+                { success: false, error: ctx.error },
+                { status: ctx.workspaceId ? 403 : 401 }
+            )
+        }
+
+        // Use workspace from API key
+        const body = await request.json()
+        const { destination, slug: customSlug } = body
+
+        if (!destination) {
+            return NextResponse.json({ success: false, error: 'Destination URL is required' }, { status: 400 })
+        }
+
+        // Validate URL format
+        try {
+            new URL(destination)
+        } catch {
+            return NextResponse.json({ success: false, error: 'Invalid URL format' }, { status: 400 })
+        }
+
+        // Generate or validate slug
+        const slug = customSlug || generateSlug()
+
+        // Check if slug already exists
+        const existing = await prisma.shortLink.findUnique({ where: { slug } })
+        if (existing) {
+            return NextResponse.json({ success: false, error: 'Slug already exists' }, { status: 409 })
+        }
+
+        // Create the short link with workspace from API key
+        const link = await prisma.shortLink.create({
+            data: {
+                slug,
+                original_url: destination,
+                workspace_id: ctx.workspaceId!,
+                clicks: 0,
+            },
+            select: {
+                id: true,
+                slug: true,
+                original_url: true,
+                clicks: true,
+                created_at: true,
+            }
+        })
+
+        // Cache in Redis
+        const domain = 'localhost'
+        await redis.set(`shortlink:${domain}:${slug}`, JSON.stringify({
+            url: destination,
+            linkId: link.id,
+            workspaceId: ctx.workspaceId!,
+        }), { ex: 60 * 60 * 24 * 30 })
+
+        console.log(`[API] ✅ Created shortlink via API key: /s/${slug}`)
+
+        return NextResponse.json({
+            success: true,
+            link: {
+                id: link.id,
+                slug: link.slug,
+                destination: link.original_url,
+                clicks: link.clicks,
+                created_at: link.created_at,
+            }
+        })
+    }
+
+    // Session-based auth fallback
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 

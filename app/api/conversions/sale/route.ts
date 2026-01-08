@@ -1,44 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { recordSaleToTinybird } from '@/lib/analytics/tinybird';
+import { requireScopes } from '@/lib/api-middleware';
 
+/**
+ * POST /api/conversions/sale
+ * Record a manual sale conversion
+ * 
+ * Requires: conversions:write scope
+ */
 export async function POST(req: NextRequest) {
-    // 1. Verify Bearer token
-    const auth = req.headers.get('Authorization');
-    if (!auth?.startsWith('Bearer ')) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify API key and scope
+    const ctx = await requireScopes(req, ['conversions:write']);
+
+    if (!ctx.valid) {
+        return NextResponse.json(
+            { error: ctx.error || 'Unauthorized' },
+            { status: ctx.workspaceId ? 403 : 401 }
+        );
     }
 
-    const token = auth.substring(7);
-    if (token !== process.env.TRAC_CLIENT_TOKEN) {
-        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // 2. Parse request
+    // Parse request
     try {
         const { click_id, order_id, amount, currency, timestamp } = await req.json();
 
         if (!click_id || !order_id || !amount) {
             return NextResponse.json(
-                { error: 'Missing required fields' },
+                { error: 'Missing required fields: click_id, order_id, amount' },
                 { status: 400 }
             );
         }
 
-        // 3. Record to Tinybird
+        // Record to Tinybird with workspace from API key
         await recordSaleToTinybird({
             clickId: click_id,
             orderId: order_id,
             amount: parseFloat(amount),
-            currency: currency || 'USD',
+            currency: currency || 'EUR',
             timestamp: timestamp || new Date().toISOString(),
             source: 'manual_api',
-            // Required fields for existing interface
+            workspaceId: ctx.workspaceId!,
             linkId: '',
-            workspaceId: '',
             customerExternalId: click_id,
             customerEmail: ''
         });
 
+        console.log(`[Conversions] ✅ Sale recorded for workspace ${ctx.workspaceId}`);
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('[Conversions Sale] Error:', error);

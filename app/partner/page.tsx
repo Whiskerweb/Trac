@@ -83,7 +83,7 @@ export default function PartnerDashboardPage() {
     useEffect(() => {
         async function loadDashboard() {
             try {
-                const result = await getPartnerDashboard('current-user-id') // TODO: Get from auth
+                const result = await getPartnerDashboard()
 
                 if (!result.success) {
                     setError(result.error || 'Failed to load dashboard')
@@ -247,6 +247,28 @@ export default function PartnerDashboardPage() {
                         </button>
                     </div>
                 </div>
+
+                {/* EMPTY STATE: Start Exploring Marketplace */}
+                {(!stats?.conversionCount || stats.conversionCount === 0) && (!stats?.totalEarned || stats.totalEarned === 0) && (
+                    <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center mb-8">
+                        <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <TrendingUp className="w-8 h-8 text-purple-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">
+                            Vous n'avez pas encore de gains
+                        </h3>
+                        <p className="text-slate-600 max-w-lg mx-auto mb-6">
+                            Pour commencer à gagner de l'argent, rejoignez des missions sur notre Marketplace et partagez vos liens d'affiliation.
+                        </p>
+                        <Link
+                            href="/dashboard/marketplace"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 transition-all"
+                        >
+                            <ExternalLink className="w-4 h-4" />
+                            Explorer le Marketplace
+                        </Link>
+                    </div>
+                )}
 
                 {/* Info Section */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-6">

@@ -7,20 +7,42 @@ console.log('📢 Tinybird Proxy Target:', TINYBIRD_HOST);
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    return [
-      // Anti-adblock proxy: /_trac/api/* -> /api/*
-      // This allows the SDK to send requests through a "cloaked" path
-      // that is less likely to be blocked by ad blockers
-      {
-        source: "/_trac/api/:path*",
-        destination: "/api/:path*",
-      },
-      // Tinybird analytics proxy
-      {
-        source: "/api/analytics/:path*",
-        destination: `${TINYBIRD_HOST}/:path*`,
-      },
-    ];
+    return {
+      // beforeFiles rewrites are processed before pages/public files
+      beforeFiles: [
+        // =============================================
+        // WHITE-LABEL PORTAL REWRITES
+        // Partner portals serve Traaaction content while preserving their URL
+        // =============================================
+        {
+          source: '/:path*',
+          has: [{ type: 'host', value: 'partners.cardz.dev' }],
+          destination: '/partner/:path*',
+        },
+        // Add more white-label domains here:
+        // {
+        //   source: '/:path*',
+        //   has: [{ type: 'host', value: 'affiliate.otherbrand.com' }],
+        //   destination: '/partner/:path*',
+        // },
+      ],
+      // afterFiles rewrites run after pages check but before fallback
+      afterFiles: [
+        // Anti-adblock proxy: /_trac/api/* -> /api/*
+        // This allows the SDK to send requests through a "cloaked" path
+        // that is less likely to be blocked by ad blockers
+        {
+          source: "/_trac/api/:path*",
+          destination: "/api/:path*",
+        },
+        // Tinybird analytics proxy
+        {
+          source: "/api/analytics/:path*",
+          destination: `${TINYBIRD_HOST}/:path*`,
+        },
+      ],
+      fallback: [],
+    };
   },
 };
 

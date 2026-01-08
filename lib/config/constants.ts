@@ -33,3 +33,41 @@ export const PRIMARY_DOMAINS = [
     '127.0.0.1',
     'localhost:3000',
 ];
+
+// =============================================
+// API SCOPES CONFIGURATION
+// =============================================
+
+/**
+ * Available API scopes for granular permission control
+ * Partners can only be granted a subset of these scopes
+ */
+export const API_SCOPES = [
+    'links:read',      // Read short links
+    'links:write',     // Create/update short links
+    'partners:read',   // Read partner data
+    'partners:write',  // Create/update partners
+    'analytics:read',  // Read analytics data
+    'conversions:write', // Record conversions
+    'admin:*',         // Full admin access (NEVER grant to partners)
+] as const;
+
+export type ApiScope = typeof API_SCOPES[number];
+
+/**
+ * Scopes that are safe to grant to partner API keys
+ * Admin scopes are explicitly excluded
+ */
+export const PARTNER_SAFE_SCOPES: ApiScope[] = [
+    'links:read',
+    'analytics:read',
+];
+
+/**
+ * Default scopes for new API keys
+ */
+export const DEFAULT_API_SCOPES: ApiScope[] = [
+    'analytics:read',
+    'links:write',
+];
+

@@ -255,7 +255,7 @@ export async function getOnboardingStatus(userId: string) {
                 onboardingStep: partner.onboarding_step,
                 stripeConnected: !!partner.stripe_connect_id,
                 payoutsEnabled: !!partner.payouts_enabled_at,
-                program: partner.Program.name
+                program: partner.Program?.name || 'Global Partner'
             },
             profile: partner.Profile ? {
                 bio: partner.Profile.bio,

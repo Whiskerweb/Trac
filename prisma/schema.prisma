@@ -199,8 +199,8 @@ enum WorkspaceRole {
 /// Shadow Partner (Dub.co style) - linked to Program/Workspace
 /// Enables "Shadow Tenancy" where partners can exist before creating an account
 model Partner {
-  id                  String          @id @default(cuid())
-  program_id          String          /// FK to Workspace (Program)
+  id                  String          @id @default(cuid()) /// TODO: Use trac_pn_ prefix via application layer
+  program_id          String?         /// Optional for Global Partners
   user_id             String?         /// Nullable for Shadow Users (no account yet)
   tenant_id           String          @unique /// External anchor ID for idempotent creation
   email               String
@@ -212,7 +212,7 @@ model Partner {
   created_at          DateTime        @default(now())
   updated_at          DateTime        @updatedAt
   
-  Program             Workspace       @relation(fields: [program_id], references: [id], onDelete: Cascade)
+  Program             Workspace?      @relation(fields: [program_id], references: [id], onDelete: Cascade)
   Commissions         Commission[]
   Profile             PartnerProfile?
 

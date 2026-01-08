@@ -325,6 +325,41 @@ export async function joinMission(missionId: string): Promise<{
         const affiliateCode = user.id.slice(0, 8) // Short unique code
         const fullSlug = `${missionSlug}/${affiliateCode}`
 
+        // 5. AUTO-PARTNER CHECK (One-Click Join)
+        // Ensure user has a Partner record before creating link
+        await prisma.partner.upsert({
+            where: {
+                // Ideally we'd use user_id unique constraint, but schema has unique on [program_id, email]
+                // For global partners (program_id=null), we check email + null program
+                program_id_email: {
+                    email: user.email!,
+                    program_id: "global" // Using a dummy value that won't match, as we don't rely on this upsert for global partners
+                }
+            },
+            create: {
+                // WE WON'T USE THIS BLOCK directly, see below
+                email: user.email!,
+                tenant_id: "temp"
+            },
+            update: {}
+        }).catch(() => { }) // Ignore standard upsert, we use custom logic below
+
+        // CORRECT LOGIC: Check for ANY partner record for this user
+        const existingPartner = await prisma.partner.findFirst({
+            where: { user_id: user.id }
+        })
+
+        if (!existingPartner) {
+            console.log('[Marketplace] 👤 Creating Global Partner for new affiliate:', user.email)
+            // Use the action logic directly to ensure consistency
+            const { createGlobalPartner } = await import('@/app/actions/partners')
+            await createGlobalPartner({
+                userId: user.id,
+                email: user.email!,
+                name: user.user_metadata?.full_name
+            })
+        }
+
         // 5. Create the ShortLink with DUAL ATTRIBUTION
         const shortLink = await prisma.shortLink.create({
             data: {

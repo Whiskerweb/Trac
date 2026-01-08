@@ -9,9 +9,10 @@ import { prisma } from '@/lib/db'
 /**
  * Generate a unique tenant ID for a partner
  */
-function generateTenantId(programId: string, email: string): string {
-    const hash = Buffer.from(`${programId}:${email}`).toString('base64url')
-    return `ptn_${hash.slice(0, 16)}`
+function generateTenantId(programId: string | null, email: string): string {
+    const prefix = programId ? programId.slice(0, 4) : 'glob'
+    const hash = Buffer.from(`${programId || 'global'}:${email}`).toString('base64url')
+    return `ptn_${prefix}_${hash.slice(0, 16)}`
 }
 
 interface CreateShadowPartnerParams {
@@ -78,6 +79,72 @@ export async function createShadowPartner(params: CreateShadowPartnerParams): Pr
 
     } catch (error) {
         console.error('[Partner] ❌ Failed to create shadow partner:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }
+    }
+}
+
+/**
+ * Create a GLOBAL partner (not tied to any program initially)
+ * Used when a user signs up directly as a Partner
+ */
+export async function createGlobalPartner(params: { userId: string, email: string, name?: string }): Promise<{
+    success: boolean
+    partner?: Awaited<ReturnType<typeof prisma.partner.findFirst>>
+    error?: string
+}> {
+    const { userId, email, name } = params
+    const normalizedEmail = email.toLowerCase().trim()
+
+    try {
+        // Check if already has a partner record (any kind)
+        const existing = await prisma.partner.findFirst({
+            where: { user_id: userId }
+        })
+
+        if (existing) {
+            return { success: true, partner: existing }
+        }
+
+        // Check if there are pending shadow partners to claim
+        // If so, we claim them instead of creating a new empty one
+        const claimResult = await claimPartners(userId, normalizedEmail)
+        if (claimResult.success && claimResult.claimed > 0 && claimResult.partners) {
+            return { success: true, partner: claimResult.partners[0] }
+        }
+
+        // Create new global partner
+        const tenantId = generateTenantId(null, normalizedEmail)
+
+        const partner = await prisma.partner.create({
+            data: {
+                program_id: null, // Global partner
+                email: normalizedEmail,
+                name: name || email.split('@')[0],
+                tenant_id: tenantId,
+                status: 'APPROVED', // Auto-approve global partners (they have no program to be banned from yet)
+                user_id: userId,
+                onboarding_step: 0
+            }
+        })
+
+        // Initialize empty balance
+        await prisma.partnerBalance.create({
+            data: { partner_id: partner.id }
+        })
+
+        // Create initial profile
+        await prisma.partnerProfile.create({
+            data: { partner_id: partner.id }
+        })
+
+        console.log(`[Partner] ✅ Created Global Partner ${partner.id} for user ${userId}`)
+        return { success: true, partner }
+
+    } catch (error) {
+        console.error('[Partner] ❌ Failed to create global partner:', error)
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'
@@ -225,7 +292,7 @@ export async function getPartnerByUserId(userId: string): Promise<Awaited<Return
 /**
  * Get partner dashboard data
  */
-export async function getPartnerDashboard(userId: string): Promise<{
+export async function getPartnerDashboard(): Promise<{
     success: boolean
     partner?: Awaited<ReturnType<typeof prisma.partner.findFirst>>
     balance?: Awaited<ReturnType<typeof prisma.partnerBalance.findUnique>>
@@ -239,6 +306,18 @@ export async function getPartnerDashboard(userId: string): Promise<{
     error?: string
 }> {
     try {
+        const { createClient } = await import('@/utils/supabase/server')
+        const supabase = await createClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+        if (authError || !user) {
+            return { success: false, error: 'Not authenticated' }
+        }
+
+        const userId = user.id
+
+        // Try to find a partner record
+        // Prioritize one that has a program if multiples exist
         const partner = await prisma.partner.findFirst({
             where: { user_id: userId },
             include: { Program: true }
@@ -247,14 +326,21 @@ export async function getPartnerDashboard(userId: string): Promise<{
         if (!partner) {
             return {
                 success: false,
-                error: 'Partner not found. You may need to join a program first.'
+                error: 'Partner not found.'
             }
         }
 
         // Get balance
-        const balance = await prisma.partnerBalance.findUnique({
+        let balance = await prisma.partnerBalance.findUnique({
             where: { partner_id: partner.id }
         })
+
+        if (!balance) {
+            // Lazy create balance if missing
+            balance = await prisma.partnerBalance.create({
+                data: { partner_id: partner.id }
+            })
+        }
 
         // Get commission stats
         const commissions = await prisma.commission.groupBy({
