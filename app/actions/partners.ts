@@ -405,7 +405,7 @@ export async function getPartnerDashboard(): Promise<{
 
 /**
  * Get ALL partner programs for the current user
- * Returns list of programs with stats for the dashboard grid
+ * Returns list of programs with stats and tracking links for the dashboard grid
  */
 export async function getAllPartnerPrograms(): Promise<{
     success: boolean
@@ -417,6 +417,7 @@ export async function getAllPartnerPrograms(): Promise<{
             dueAmount: number
             paidAmount: number
         }
+        trackingLink?: string
     }>
     error?: string
 }> {
@@ -431,7 +432,16 @@ export async function getAllPartnerPrograms(): Promise<{
 
         const partners = await prisma.partner.findMany({
             where: { user_id: user.id },
-            include: { Program: true }
+            include: {
+                Program: {
+                    include: {
+                        Domain: {
+                            where: { verified: true },
+                            take: 1
+                        }
+                    }
+                }
+            }
         })
 
         if (!partners.length) {
@@ -445,6 +455,26 @@ export async function getAllPartnerPrograms(): Promise<{
             by: ['partner_id', 'status'],
             where: { partner_id: { in: partnerIds } },
             _sum: { commission_amount: true }
+        })
+
+        // Get enrollments with shortlinks for tracking URLs
+        const enrollments = await prisma.missionEnrollment.findMany({
+            where: { user_id: user.id },
+            include: {
+                ShortLink: true,
+                Mission: {
+                    include: {
+                        Workspace: {
+                            include: {
+                                Domain: {
+                                    where: { verified: true },
+                                    take: 1
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         })
 
         // Map data to result structure
@@ -466,9 +496,25 @@ export async function getAllPartnerPrograms(): Promise<{
                 else if (s.status === 'PAID') stats.paidAmount = amount
             }
 
+            // Find tracking link for this partner's program
+            let trackingLink: string | undefined
+            if (partner.program_id) {
+                const enrollment = enrollments.find(e =>
+                    e.Mission.workspace_id === partner.program_id && e.ShortLink
+                )
+                if (enrollment?.ShortLink) {
+                    const customDomain = enrollment.Mission.Workspace.Domain?.[0]?.name
+                    const baseUrl = customDomain
+                        ? `https://${customDomain}`
+                        : process.env.NEXT_PUBLIC_APP_URL || 'https://traaaction.com'
+                    trackingLink = `${baseUrl}/s/${enrollment.ShortLink.slug}`
+                }
+            }
+
             return {
                 partner,
-                stats
+                stats,
+                trackingLink
             }
         })
 
@@ -482,6 +528,7 @@ export async function getAllPartnerPrograms(): Promise<{
         }
     }
 }
+
 
 /**
  * Get commission history for the current partner

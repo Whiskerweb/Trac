@@ -44,12 +44,14 @@ interface ProgramData {
         dueAmount: number
         paidAmount: number
     }
+    trackingLink?: string
 }
 
 function ProgramCard({ data }: { data: ProgramData }) {
     const [copied, setCopied] = useState(false)
     const programName = data.partner.Program?.name || 'Programme Global'
-    const link = `https://traaaction.com/p/${data.partner.tenant_id}` // Constructing a generic referral link format
+    // Use backend tracking link or fallback to generic format
+    const link = data.trackingLink || `https://traaaction.com/p/${data.partner.tenant_id}`
     const earnings = (data.stats.totalEarned / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 })
 
     const copyLink = () => {

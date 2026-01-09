@@ -1,18 +1,53 @@
 DESCRIPTION >
     Partner KPIs - Stats for a specific affiliate/partner
-    Returns total clicks for a given affiliate_id (partner user ID)
+    Returns total clicks, sales count, and revenue for a given affiliate_id
 
 TOKEN "dashboard_endpoint" READ
 
-NODE endpoint
+NODE clicks_stats
 SQL >
-    %
     SELECT 
-        count() as total_clicks
+        count() as total_clicks,
+        countIf(timestamp >= now() - INTERVAL 30 DAY) as clicks_30d
     FROM clicks
     WHERE 
         affiliate_id = {{ String(affiliate_id, required=True) }}
         AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
         AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+
+NODE click_ids
+SQL >
+    SELECT click_id
+    FROM clicks
+    WHERE 
+        affiliate_id = {{ String(affiliate_id, required=True) }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+
+NODE sales_stats
+SQL >
+    SELECT 
+        count() as total_sales,
+        sum(amount) as total_revenue,
+        countIf(timestamp >= now() - INTERVAL 30 DAY) as sales_30d,
+        sumIf(amount, timestamp >= now() - INTERVAL 30 DAY) as revenue_30d
+    FROM sales
+    WHERE 
+        click_id IN (SELECT click_id FROM click_ids)
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+
+NODE endpoint
+SQL >
+    SELECT 
+        c.total_clicks,
+        c.clicks_30d,
+        s.total_sales,
+        s.sales_30d,
+        s.total_revenue,
+        s.revenue_30d,
+        CASE WHEN c.total_clicks > 0 THEN round(s.total_sales / c.total_clicks * 100, 2) ELSE 0 END as conversion_rate
+    FROM clicks_stats c
+    CROSS JOIN sales_stats s
 
 TYPE endpoint

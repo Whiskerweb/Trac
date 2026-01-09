@@ -227,7 +227,14 @@ export async function getMissionWithResources(missionId: string) {
             where: { id: missionId },
             include: {
                 Workspace: {
-                    select: { name: true, slug: true }
+                    select: {
+                        name: true,
+                        slug: true,
+                        Domain: {
+                            where: { verified: true },
+                            take: 1
+                        }
+                    }
                 },
                 Contents: {
                     orderBy: { order: 'asc' }
@@ -276,12 +283,20 @@ export async function getMissionWithResources(missionId: string) {
                 title: c.title,
                 description: c.description
             })),
-            enrollment: enrollment ? {
-                id: enrollment.id,
-                status: enrollment.status,
-                link_slug: enrollment.ShortLink?.slug,
-                link_url: enrollment.ShortLink ? `${process.env.NEXT_PUBLIC_APP_URL}/s/${enrollment.ShortLink.slug}` : null
-            } : null
+            enrollment: enrollment ? (() => {
+                // Build proper tracking URL with custom domain
+                const customDomain = mission.Workspace.Domain?.[0]?.name
+                const baseUrl = customDomain
+                    ? `https://${customDomain}`
+                    : process.env.NEXT_PUBLIC_APP_URL
+
+                return {
+                    id: enrollment.id,
+                    status: enrollment.status,
+                    link_slug: enrollment.ShortLink?.slug,
+                    link_url: enrollment.ShortLink ? `${baseUrl}/s/${enrollment.ShortLink.slug}` : null
+                }
+            })() : null
         }
 
     } catch (error) {

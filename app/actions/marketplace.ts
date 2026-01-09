@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
 import { nanoid } from 'nanoid'
+import { revalidatePath } from 'next/cache'
 
 // =============================================
 // TINYBIRD CONFIGURATION
@@ -410,6 +411,10 @@ export async function joinMission(missionId: string): Promise<{
             ? `https://${customDomain}`
             : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
         const linkUrl = `${baseUrl}/s/${fullSlug}`
+
+        // 9. Force refresh of Partner pages to show new program
+        revalidatePath('/partner')
+        revalidatePath('/partner/marketplace')
 
         return {
             success: true,
