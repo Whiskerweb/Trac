@@ -105,19 +105,41 @@ function getTeamQuery(): string {
 
 /**
  * Add a domain to Vercel project
+ * CRITICAL: Requires VERCEL_AUTH_TOKEN and VERCEL_PROJECT_ID env vars
  */
 async function addDomainToVercel(domainName: string): Promise<{
     success: boolean
     error?: string
     data?: VercelDomainResponse
 }> {
+    // 🔍 DEBUG: Log configuration status
+    console.log('[Domains] 🔐 Vercel API Config Check:', {
+        hasAuthToken: !!VERCEL_AUTH_TOKEN,
+        hasProjectId: !!VERCEL_PROJECT_ID,
+        hasTeamId: !!VERCEL_TEAM_ID,
+        projectId: VERCEL_PROJECT_ID ? `${VERCEL_PROJECT_ID.slice(0, 8)}...` : 'NOT SET',
+    })
+
     if (!VERCEL_AUTH_TOKEN || !VERCEL_PROJECT_ID) {
-        console.warn('[Domains] ⚠️ Vercel API not configured')
-        return { success: true } // Allow domain addition without Vercel (for testing)
+        console.error('[Domains] ❌ CRITICAL: Vercel API credentials not configured!')
+        console.error('[Domains] ❌ Missing:', {
+            VERCEL_AUTH_TOKEN: VERCEL_AUTH_TOKEN ? 'SET' : 'MISSING',
+            VERCEL_PROJECT_ID: VERCEL_PROJECT_ID ? 'SET' : 'MISSING',
+        })
+        return {
+            success: false,
+            error: 'Configuration Vercel manquante. Contactez le support.'
+        }
     }
 
     try {
         const url = `${VERCEL_API_BASE}/v10/projects/${VERCEL_PROJECT_ID}/domains${getTeamQuery()}`
+
+        console.log('[Domains] 🚀 Adding domain to Vercel:', {
+            domain: domainName,
+            url: url,
+            teamQuery: getTeamQuery() || '(no team)',
+        })
 
         const res = await fetch(url, {
             method: 'POST',
@@ -127,8 +149,20 @@ async function addDomainToVercel(domainName: string): Promise<{
 
         const data = await res.json()
 
+        // 🔍 DEBUG: Log full response for troubleshooting
+        console.log('[Domains] 📡 Vercel API Response:', {
+            status: res.status,
+            statusText: res.statusText,
+            ok: res.ok,
+            data: JSON.stringify(data).slice(0, 500), // Truncate for logs
+        })
+
         if (!res.ok) {
-            console.error('[Domains] ❌ Vercel API error:', data)
+            console.error('[Domains] ❌ Vercel API error:', {
+                status: res.status,
+                error: data.error,
+                fullResponse: data,
+            })
 
             // Handle specific error codes
             if (data.error?.code === 'domain_already_in_use') {
@@ -137,17 +171,24 @@ async function addDomainToVercel(domainName: string): Promise<{
             if (data.error?.code === 'forbidden') {
                 return { success: false, error: 'Token Vercel invalide ou permissions insuffisantes' }
             }
+            if (data.error?.code === 'not_found') {
+                return { success: false, error: 'Projet Vercel introuvable. Vérifiez VERCEL_PROJECT_ID.' }
+            }
+            if (data.error?.code === 'team_not_found') {
+                return { success: false, error: 'Équipe Vercel introuvable. Vérifiez VERCEL_TEAM_ID.' }
+            }
 
-            return { success: false, error: data.error?.message || 'Erreur lors de l\'ajout du domaine' }
+            return { success: false, error: data.error?.message || `Erreur Vercel (${res.status})` }
         }
 
-        console.log('[Domains] ✅ Domain added to Vercel:', domainName)
+        console.log('[Domains] ✅ Domain successfully added to Vercel:', domainName)
         return { success: true, data }
     } catch (err) {
         console.error('[Domains] ❌ Vercel API request failed:', err)
         return { success: false, error: 'Erreur de connexion à l\'API Vercel' }
     }
 }
+
 
 /**
  * Check domain configuration status on Vercel
