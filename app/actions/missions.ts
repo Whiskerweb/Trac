@@ -289,9 +289,17 @@ export async function getMissionDetails(missionId: string): Promise<{
         const mission = await prisma.mission.findFirst({
             where: {
                 id: missionId,
-                workspace_id: workspace.workspaceId  // ✅ FIXED: Use workspace ID
+                workspace_id: workspace.workspaceId
             },
             include: {
+                Workspace: {
+                    include: {
+                        Domain: {
+                            where: { verified: true },
+                            take: 1
+                        }
+                    }
+                },
                 MissionEnrollment: {
                     include: {
                         ShortLink: true
@@ -305,7 +313,11 @@ export async function getMissionDetails(missionId: string): Promise<{
             return { success: false, error: 'Mission not found or access denied' }
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        // Use custom domain if available, otherwise fallback to app URL
+        const customDomain = mission.Workspace.Domain?.[0]?.name
+        const baseUrl = customDomain
+            ? `https://${customDomain}`
+            : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
 
         return {
             success: true,
@@ -337,6 +349,7 @@ export async function getMissionDetails(missionId: string): Promise<{
         return { success: false, error: 'Failed to fetch mission details' }
     }
 }
+
 
 // =============================================
 // MISSION CONTENT MANAGEMENT
