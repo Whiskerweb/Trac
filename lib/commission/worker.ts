@@ -12,7 +12,7 @@ const MATURATION_DAYS = 30
 
 /**
  * Process all PENDING commissions older than 30 days
- * Transitions them to DUE status
+ * Transitions them to PROCEED status
  * 
  * This should be called daily via Vercel Cron
  */
@@ -48,7 +48,7 @@ export async function processMaturedCommissions(): Promise<{
                 await prisma.commission.update({
                     where: { id: commission.id },
                     data: {
-                        status: 'DUE' as CommissionStatus,
+                        status: 'PROCEED' as CommissionStatus,
                         matured_at: new Date()
                     }
                 })
@@ -56,7 +56,7 @@ export async function processMaturedCommissions(): Promise<{
                 partnerIds.add(commission.partner_id)
                 processed++
 
-                console.log(`[Worker] ✅ Matured commission ${commission.id} → DUE (${commission.commission_amount / 100}€)`)
+                console.log(`[Worker] ✅ Matured commission ${commission.id} → PROCEED (${commission.commission_amount / 100}€)`)
 
             } catch (err) {
                 errors++
@@ -88,10 +88,8 @@ export async function processMaturedCommissions(): Promise<{
  */
 export async function getCommissionStats(): Promise<{
     pending: { count: number; total: number }
-    due: { count: number; total: number }
-    processing: { count: number; total: number }
-    paid: { count: number; total: number }
-    clawback: { count: number; total: number }
+    proceed: { count: number; total: number }
+    complete: { count: number; total: number }
 }> {
     const stats = await prisma.commission.groupBy({
         by: ['status'],
@@ -101,10 +99,8 @@ export async function getCommissionStats(): Promise<{
 
     const result = {
         pending: { count: 0, total: 0 },
-        due: { count: 0, total: 0 },
-        processing: { count: 0, total: 0 },
-        paid: { count: 0, total: 0 },
-        clawback: { count: 0, total: 0 }
+        proceed: { count: 0, total: 0 },
+        complete: { count: 0, total: 0 }
     }
 
     for (const stat of stats) {

@@ -383,8 +383,8 @@ export async function getPartnerDashboard(): Promise<{
             stats.conversionCount += c._count
 
             if (c.status === 'PENDING') stats.pendingAmount = amount
-            else if (c.status === 'DUE') stats.dueAmount = amount
-            else if (c.status === 'PAID') stats.paidAmount = amount
+            else if (c.status === 'PROCEED') stats.dueAmount = amount
+            else if (c.status === 'COMPLETE') stats.paidAmount = amount
         }
 
         return {
@@ -492,8 +492,8 @@ export async function getAllPartnerPrograms(): Promise<{
                 const amount = s._sum.commission_amount || 0
                 stats.totalEarned += amount
                 if (s.status === 'PENDING') stats.pendingAmount = amount
-                else if (s.status === 'DUE') stats.dueAmount = amount
-                else if (s.status === 'PAID') stats.paidAmount = amount
+                else if (s.status === 'PROCEED') stats.dueAmount = amount
+                else if (s.status === 'COMPLETE') stats.paidAmount = amount
             }
 
             // Find tracking link for this partner's program

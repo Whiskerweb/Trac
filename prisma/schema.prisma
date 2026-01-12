@@ -130,6 +130,7 @@ model Workspace {
   WebhookEndpoint WebhookEndpoint[]
   WorkspaceMember WorkspaceMember[]
   Partner         Partner[]         /// Partners enrolled in this program
+  Conversations   Conversation[]    /// Messaging: Conversations with partners
 
   @@index([owner_id])
   @@index([slug])
@@ -275,6 +276,7 @@ model Partner {
   Commissions         Commission[]
   Profile             PartnerProfile?
   Requests            ProgramRequest[]
+  Conversations       Conversation[]  /// Messaging: Conversations with startups
 
   @@unique([program_id, email])  /// Unique partner per program
   @@index([email])
@@ -355,14 +357,61 @@ enum PartnerStatus {
 }
 
 enum CommissionStatus {
-  PENDING     /// Waiting for 30-day maturation
-  DUE         /// Matured, ready for payout
-  PROCESSING  /// Payout in progress
-  PAID        /// Completed
-  CLAWBACK    /// Refunded/cancelled
+  PENDING   /// Waiting for maturation period
+  PROCEED   /// Approved for payout (replaces DUE/PROCESSING)
+  COMPLETE  /// Payout completed (replaces PAID)
 }
 
 enum CommissionType {
   FIXED       /// Fixed amount (e.g., 5€)
   PERCENTAGE  /// Percentage of net revenue
 }
+
+// =============================================
+// MESSAGING SYSTEM
+// =============================================
+
+/// Conversation between Startup (Workspace) and Partner
+model Conversation {
+  id            String    @id @default(cuid())
+  workspace_id  String
+  partner_id    String
+  last_message  String?   @db.Text  /// Preview of last message
+  last_at       DateTime  @default(now())  /// For sorting
+  unread_startup  Int     @default(0)  /// Unread count for startup
+  unread_partner  Int     @default(0)  /// Unread count for partner
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  Workspace     Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  Partner       Partner   @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+  Messages      Message[]
+
+  @@unique([workspace_id, partner_id])
+  @@index([workspace_id])
+  @@index([partner_id])
+  @@index([last_at])
+}
+
+/// Message in a Conversation
+model Message {
+  id              String      @id @default(cuid())
+  conversation_id String
+  sender_type     SenderType
+  content         String      @db.Text
+  is_invitation   Boolean     @default(false)  /// Special message type for invitations
+  invitation_id   String?     /// Reference to ProgramRequest if invitation
+  read_at         DateTime?
+  created_at      DateTime    @default(now())
+
+  Conversation    Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@index([conversation_id])
+  @@index([created_at])
+}
+
+enum SenderType {
+  STARTUP
+  PARTNER
+}
+

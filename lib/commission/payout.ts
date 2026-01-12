@@ -2,7 +2,7 @@
  * Payout Engine - Batched Commission Payouts
  * 
  * Implements aggregated payouts to minimize Stripe fees:
- * - Groups all DUE commissions per partner
+ * - Groups all PROCEED commissions per partner
  * - Executes single transfer per partner per batch
  * - Updates commission statuses atomically
  * - Handles negative balances (clawback recovery)
@@ -43,42 +43,42 @@ export interface PayoutResult {
 // =============================================
 
 /**
- * Prepare payout batches for all partners with DUE commissions
+ * Prepare payout batches for all partners with PROCEED commissions
  * Aggregates commissions per partner to minimize Stripe fees
  */
 export async function preparePayoutBatches(): Promise<PayoutBatch[]> {
-    // Find all partners with DUE commissions and valid Stripe Connect
-    const partnersWithDue = await prisma.partner.findMany({
+    // Find all partners with PROCEED commissions and valid Stripe Connect
+    const partnersWithProceed = await prisma.partner.findMany({
         where: {
             stripe_connect_id: { not: null },
             status: 'APPROVED',
             Commissions: {
-                some: { status: 'DUE' }
+                some: { status: 'PROCEED' }
             }
         },
         include: {
             Commissions: {
-                where: { status: 'DUE' }
+                where: { status: 'PROCEED' }
             }
         }
     })
 
     const batches: PayoutBatch[] = []
 
-    for (const partner of partnersWithDue) {
+    for (const partner of partnersWithProceed) {
         // Get partner's current balance (may be negative from clawbacks)
         const balance = await prisma.partnerBalance.findUnique({
             where: { partner_id: partner.id }
         })
 
-        // Aggregate DUE commissions
-        const dueAmount = partner.Commissions.reduce(
+        // Aggregate PROCEED commissions
+        const proceedAmount = partner.Commissions.reduce(
             (sum, c) => sum + c.commission_amount,
             0
         )
 
         // Apply any negative balance from clawbacks
-        const adjustedAmount = dueAmount + (balance?.balance || 0)
+        const adjustedAmount = proceedAmount + (balance?.balance || 0)
 
         // Skip if below threshold or negative
         if (adjustedAmount < MIN_PAYOUT_THRESHOLD) {
@@ -126,12 +126,12 @@ export async function processPayoutBatch(batch: PayoutBatch): Promise<PayoutResu
             }
         })
 
-        // Atomically update all commissions to PAID
+        // Atomically update all commissions to COMPLETE
         await prisma.$transaction([
             prisma.commission.updateMany({
                 where: { id: { in: commissionIds } },
                 data: {
-                    status: 'PAID',
+                    status: 'COMPLETE',
                     paid_at: new Date()
                 }
             }),

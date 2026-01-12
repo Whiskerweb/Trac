@@ -14,7 +14,7 @@ interface Commission {
     sale_id: string
     gross_amount: number
     commission_amount: number
-    status: 'PENDING' | 'DUE' | 'PROCESSING' | 'PAID' | 'CLAWBACK'
+    status: 'PENDING' | 'PROCEED' | 'COMPLETE'
     created_at: string
     matured_at?: string | null
 }
@@ -85,10 +85,8 @@ export default function PartnerWalletPage() {
     const getStatusBadge = (status: Commission['status']) => {
         const badges = {
             PENDING: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'En attente' },
-            DUE: { bg: 'bg-green-100', text: 'text-green-700', label: 'Disponible' },
-            PROCESSING: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'En cours' },
-            PAID: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Versé' },
-            CLAWBACK: { bg: 'bg-red-100', text: 'text-red-700', label: 'Annulé' }
+            PROCEED: { bg: 'bg-green-100', text: 'text-green-700', label: 'Disponible' },
+            COMPLETE: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Versé' }
         }
         const badge = badges[status]
         return (
@@ -257,7 +255,7 @@ export default function PartnerWalletPage() {
                         <div>
                             <p className="font-medium text-blue-900 text-sm mb-1">2. Disponibilité</p>
                             <p className="text-blue-700 text-sm">
-                                Après 30 jours, elles passent en DUE et vous pouvez demander un versement
+                                Après 30 jours, elles passent en PROCEED et vous pouvez demander un versement
                             </p>
                         </div>
                         <div>

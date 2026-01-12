@@ -351,3 +351,61 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         return { total_clicks: 0, total_leads: 0, total_sales: 0, total_revenue: 0 }
     }
 }
+
+// ==========================================
+// RECENT CLICKS FOR DASHBOARD
+// ==========================================
+
+export interface RecentClick {
+    click_id: string
+    link_id: string
+    affiliate_id: string | null
+    timestamp: string
+    country: string
+    device: string
+}
+
+/**
+ * Get recent clicks for a workspace from Tinybird
+ * Used in dashboard "Last Events" section
+ */
+export async function getRecentClicks(workspaceId: string, limit: number = 10): Promise<RecentClick[]> {
+    if (IS_MOCK_MODE) {
+        console.log('[🦁 MOCK TINYBIRD] Getting recent clicks for workspace:', workspaceId)
+        return []
+    }
+
+    if (!TINYBIRD_TOKEN) {
+        console.warn('[Tinybird] No API key configured for recent clicks')
+        return []
+    }
+
+    try {
+        // Query clicks datasource directly via SQL API
+        const query = `
+            SELECT click_id, link_id, affiliate_id, timestamp, country, device
+            FROM clicks
+            WHERE workspace_id = '${workspaceId}'
+            ORDER BY timestamp DESC
+            LIMIT ${limit}
+        `
+
+        const url = `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(query)}`
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` },
+            cache: 'no-store',
+        })
+
+        if (!response.ok) {
+            console.error('[Tinybird] Failed to fetch recent clicks:', await response.text())
+            return []
+        }
+
+        const result = await response.json()
+        return result.data || []
+    } catch (error) {
+        console.error('[Tinybird] Error fetching recent clicks:', error)
+        return []
+    }
+}
+

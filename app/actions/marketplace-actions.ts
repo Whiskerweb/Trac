@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { createClient } from '@/utils/supabase/server'
+import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 import { MissionVisibility, RequestStatus } from '@/lib/generated/prisma/client'
 
 // =============================================
@@ -309,6 +310,17 @@ export async function getMissionWithResources(missionId: string) {
 }
 
 /**
+ * Get program requests for current user's workspace (server action safe for client components)
+ */
+export async function getMyProgramRequests() {
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+    return getProgramRequests(workspace.workspaceId)
+}
+
+/**
  * Get program requests for startup dashboard
  */
 export async function getProgramRequests(workspaceId: string) {
@@ -373,23 +385,26 @@ export async function approveProgramRequest(requestId: string) {
             }
         })
 
-        // Auto-create enrollment for approved request
-        await prisma.missionEnrollment.upsert({
-            where: {
-                mission_id_user_id: {
+        // Auto-create enrollment for approved request (only if partner has user_id)
+        // Shadow partners (no account yet) won't have user_id
+        if (request.Partner.user_id) {
+            await prisma.missionEnrollment.upsert({
+                where: {
+                    mission_id_user_id: {
+                        mission_id: request.mission_id,
+                        user_id: request.Partner.user_id
+                    }
+                },
+                create: {
                     mission_id: request.mission_id,
-                    user_id: request.Partner.user_id!
+                    user_id: request.Partner.user_id,
+                    status: 'APPROVED'
+                },
+                update: {
+                    status: 'APPROVED'
                 }
-            },
-            create: {
-                mission_id: request.mission_id,
-                user_id: request.Partner.user_id!,
-                status: 'APPROVED'
-            },
-            update: {
-                status: 'APPROVED'
-            }
-        })
+            })
+        }
 
         return { success: true }
 

@@ -133,8 +133,9 @@ export async function createCommission(params: {
 
 /**
  * Handle charge.refunded - Clawback logic
- * If PENDING: Mark as CLAWBACK
- * If PAID: Create negative balance entry
+ * With simplified enum (PENDING/PROCEED/COMPLETE):
+ * - Delete the commission if PENDING or PROCEED
+ * - If COMPLETE: Create negative balance entry
  */
 export async function handleClawback(params: {
     saleId: string
@@ -153,35 +154,15 @@ export async function handleClawback(params: {
             return { success: true }
         }
 
-        if (commission.status === 'CLAWBACK') {
-            console.log(`[Commission] ⏭️ Commission ${commission.id} already clawed back`)
-            return { success: true }
-        }
-
-        if (commission.status === 'PENDING' || commission.status === 'DUE') {
-            // Not yet paid - simply mark as CLAWBACK
-            await prisma.commission.update({
-                where: { id: commission.id },
-                data: {
-                    status: 'CLAWBACK',
-                    clawback_at: new Date(),
-                    clawback_reason: reason || 'Refund received'
-                }
+        if (commission.status === 'PENDING' || commission.status === 'PROCEED') {
+            // Not yet paid - simply delete the commission
+            await prisma.commission.delete({
+                where: { id: commission.id }
             })
-            console.log(`[Commission] 🔙 Clawed back PENDING commission ${commission.id}`)
+            console.log(`[Commission] 🔙 Deleted ${commission.status} commission ${commission.id} due to refund`)
 
-        } else if (commission.status === 'PAID') {
-            // Already paid - create negative balance entry
-            await prisma.commission.update({
-                where: { id: commission.id },
-                data: {
-                    status: 'CLAWBACK',
-                    clawback_at: new Date(),
-                    clawback_reason: reason || 'Refund after payout'
-                }
-            })
-
-            // Deduct from partner balance
+        } else if (commission.status === 'COMPLETE') {
+            // Already paid - create negative balance entry by decrementing balance
             await prisma.partnerBalance.upsert({
                 where: { partner_id: commission.partner_id },
                 create: {
@@ -196,7 +177,12 @@ export async function handleClawback(params: {
                 }
             })
 
-            console.log(`[Commission] 🔙 Clawed back PAID commission ${commission.id} - created negative balance`)
+            // Delete the commission after adjusting balance
+            await prisma.commission.delete({
+                where: { id: commission.id }
+            })
+
+            console.log(`[Commission] 🔙 Clawed back COMPLETE commission ${commission.id} - created negative balance`)
         }
 
         // Update partner balance
@@ -232,8 +218,8 @@ export async function updatePartnerBalance(partnerId: string): Promise<void> {
         for (const agg of aggregates) {
             const amount = agg._sum.commission_amount || 0
             if (agg.status === 'PENDING') pending = amount
-            else if (agg.status === 'DUE') due = amount
-            else if (agg.status === 'PAID') paid = amount
+            else if (agg.status === 'PROCEED') due = amount
+            else if (agg.status === 'COMPLETE') paid = amount
         }
 
         // Upsert balance record
