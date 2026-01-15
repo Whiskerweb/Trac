@@ -10,7 +10,8 @@ import {
     Loader2,
     RefreshCw,
     AlertCircle,
-    Rocket
+    Rocket,
+    UserPlus
 } from 'lucide-react'
 import Link from 'next/link'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
@@ -20,9 +21,12 @@ import { subDays, format } from 'date-fns'
 
 interface KPIData {
     clicks: number
+    leads: number
     sales: number
     revenue: number
     conversion_rate: number
+    click_to_lead_rate?: number
+    lead_to_sale_rate?: number
     timeseries?: Array<{
         date: string
         clicks: number
@@ -104,7 +108,7 @@ export default function DashboardPage() {
         setDateTo(to)
     }
 
-    const kpi = kpiData?.data?.[0] || { clicks: 0, sales: 0, revenue: 0, conversion_rate: 0 }
+    const kpi = kpiData?.data?.[0] || { clicks: 0, leads: 0, sales: 0, revenue: 0, conversion_rate: 0 }
 
     if (kpiError) {
         return (
@@ -149,11 +153,16 @@ export default function DashboardPage() {
             </div>
 
             {/* KPI Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <KPICard
                     title="Total Clicks"
                     value={kpi.clicks.toLocaleString('en-US')}
                     icon={MousePointer2}
+                />
+                <KPICard
+                    title="Total Leads"
+                    value={kpi.leads.toLocaleString('en-US')}
+                    icon={UserPlus}
                 />
                 <KPICard
                     title="Total Sales"

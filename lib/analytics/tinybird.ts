@@ -58,10 +58,19 @@ interface SaleEvent {
 }
 
 interface LeadEvent {
-    click_id: string;
-    email: string;
     timestamp: string;
-    source: string;
+    event_id?: string;
+    workspace_id: string;
+    customer_id: string;
+    customer_external_id: string;
+    click_id: string | null;
+    link_id?: string | null;
+    affiliate_id?: string | null;
+    event_name: string;
+    event_value?: number | null;
+    customer_email?: string | null;
+    customer_name?: string | null;
+    metadata?: string | null;
 }
 
 export async function recordSaleToTinybird(event: SaleEvent): Promise<void> {
@@ -233,9 +242,11 @@ export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
     // 🦁 Mock Mode: Intercept calls in development
     if (IS_MOCK_MODE) {
         console.log('[🦁 MOCK TINYBIRD] Lead Event:', {
+            customer_id: data.customer_id,
+            customer_external_id: data.customer_external_id,
             click_id: data.click_id,
-            email: data.email,
-            source: data.source,
+            event_name: data.event_name,
+            workspace_id: data.workspace_id,
             timestamp: data.timestamp
         });
         return;
@@ -248,14 +259,22 @@ export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
 
     const payload = {
         timestamp: data.timestamp,
+        event_id: data.event_id || crypto.randomUUID(),
+        workspace_id: data.workspace_id,
+        customer_id: data.customer_id,
+        customer_external_id: data.customer_external_id,
         click_id: data.click_id,
-        email: data.email,
-        source: data.source,
-        event_type: 'lead'
+        link_id: data.link_id || null,
+        affiliate_id: data.affiliate_id || null,
+        event_name: data.event_name,
+        event_value: data.event_value || null,
+        customer_email: data.customer_email || null,
+        customer_name: data.customer_name || null,
+        metadata: data.metadata || null
     };
 
     try {
-        const response = await fetch(`${TINYBIRD_HOST}/v0/events?name=lead_events`, {
+        const response = await fetch(`${TINYBIRD_HOST}/v0/events?name=leads`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${TINYBIRD_TOKEN}`,
@@ -271,8 +290,9 @@ export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
         }
 
         console.log('[Tinybird] Lead recorded successfully:', {
-            clickId: data.click_id,
-            email: data.email
+            customerId: data.customer_id,
+            eventName: data.event_name,
+            clickId: data.click_id
         });
     } catch (error) {
         console.error('[Tinybird] Error recording lead:', error);

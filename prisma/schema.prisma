@@ -131,6 +131,9 @@ model Workspace {
   WorkspaceMember WorkspaceMember[]
   Partner         Partner[]         /// Partners enrolled in this program
   Conversations   Conversation[]    /// Messaging: Conversations with partners
+  Customer        Customer[]        /// Tracked customers for lead attribution
+  LeadEvent       LeadEvent[]       /// Lead conversion events
+  Discount        Discount?         /// Dual-sided incentive discount
 
   @@index([owner_id])
   @@index([slug])
@@ -175,6 +178,55 @@ model RateLimitHit {
   @@index([workspace_id])
   @@index([ip_address])
   @@index([created_at])
+}
+
+/// Customer for Lead Tracking - Links click_id to customer_id permanently
+/// Enables lifetime attribution even after cookie expiration (Dub-style)
+model Customer {
+  id            String    @id @default(cuid())
+  workspace_id  String
+  external_id   String    /// Customer ID in client's system (e.g., user_123)
+  click_id      String?   /// First-click attribution - stored permanently
+  link_id       String?   /// The link that was clicked
+  affiliate_id  String?   /// Partner who referred this customer
+  
+  name          String?
+  email         String?
+  avatar        String?
+  country       String?
+  
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  
+  Workspace     Workspace   @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  LeadEvents    LeadEvent[]
+  
+  @@unique([workspace_id, external_id])
+  @@index([workspace_id])
+  @@index([click_id])
+  @@index([email])
+}
+
+/// Lead conversion event - Tracks when customer becomes a lead
+/// Deduplicated on (customer_id + event_name) to prevent duplicates
+model LeadEvent {
+  id            String    @id @default(cuid())
+  workspace_id  String
+  customer_id   String
+  click_id      String?
+  link_id       String?
+  event_name    String    /// "Sign Up", "Demo Booked", "Free Trial"
+  event_value   Float?    /// Quantity or value associated
+  metadata      Json?     /// Custom data
+  created_at    DateTime  @default(now())
+  
+  Workspace     Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  Customer      Customer  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  
+  @@unique([customer_id, event_name]) /// Deduplication: one lead per customer per event type
+  @@index([workspace_id])
+  @@index([customer_id])
+  @@index([click_id])
 }
 
 enum EnrollmentStatus {
@@ -365,6 +417,36 @@ enum CommissionStatus {
 enum CommissionType {
   FIXED       /// Fixed amount (e.g., 5€)
   PERCENTAGE  /// Percentage of net revenue
+}
+
+// =============================================
+// DISCOUNT SYSTEM (Dub Partners Style)
+// =============================================
+
+/// Discount for dual-sided incentives - linked to Program (Workspace)
+/// Enables "{partner} vous offre {discount}%" banners
+model Discount {
+  id              String    @id @default(cuid())
+  workspace_id    String    /// Program/Mission that offers this discount
+  amount          Float     /// 25 = 25% or 25€ depending on type
+  type            DiscountType @default(PERCENTAGE)
+  max_duration    Int?      /// Max months for subscription discounts
+  coupon_id       String?   /// Stripe coupon ID (production)
+  coupon_test_id  String?   /// Stripe coupon ID (test)
+  active          Boolean   @default(true)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  
+  Workspace       Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  
+  @@unique([workspace_id])  /// One discount per program
+  @@index([workspace_id])
+  @@index([active])
+}
+
+enum DiscountType {
+  PERCENTAGE  /// Percentage off (e.g., 25%)
+  FIXED       /// Fixed amount off (e.g., 25€)
 }
 
 // =============================================

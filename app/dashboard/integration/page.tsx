@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
-    Code2, Webhook, CheckCircle2, Copy, Check,
-    Zap, AlertCircle, Key, RefreshCw,
-    Loader2, Eye, EyeOff, Building2
+    Code2, CheckCircle2, Copy, Check,
+    Zap, AlertCircle, RefreshCw,
+    Loader2, Eye, EyeOff, Building2,
+    Globe, ShieldCheck, ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
 import { getOrCreateApiKey, regenerateApiKey } from '@/app/actions/settings'
@@ -22,7 +23,7 @@ interface InstallationStatus {
     status: 'connected' | 'waiting' | 'no_workspace' | 'error' | 'no_tinybird_token' | 'query_failed'
 }
 
-function CopyButton({ text, className = '' }: { text: string; className?: string }) {
+function CopyButton({ text, label, className = '' }: { text: string; label?: string; className?: string }) {
     const [copied, setCopied] = useState(false)
     const handleCopy = async () => {
         await navigator.clipboard.writeText(text)
@@ -30,48 +31,41 @@ function CopyButton({ text, className = '' }: { text: string; className?: string
         setTimeout(() => setCopied(false), 2000)
     }
     return (
-        <button onClick={handleCopy} className={`p-1.5 rounded-md hover:bg-white/10 transition-colors ${className}`}>
+        <button
+            onClick={handleCopy}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-800 hover:bg-gray-700 transition-colors text-sm ${className}`}
+        >
             {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
+            {label && <span className="text-gray-300">{copied ? 'Copié !' : label}</span>}
         </button>
     )
 }
 
-function StepItem({
-    number,
-    title,
-    description,
-    isComplete,
-    children
-}: {
-    number: number
-    title: string
-    description: string
-    isComplete: boolean
-    children: React.ReactNode
-}) {
+function CodeBlock({ code, language = 'html' }: { code: string; language?: string }) {
     return (
-        <div className="flex gap-4 sm:gap-6">
-            <div className="flex flex-col items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border ${isComplete
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : 'bg-white border-gray-300 text-gray-500'
-                    }`}>
-                    {isComplete ? <Check className="w-4 h-4" /> : number}
-                </div>
-                <div className="w-px h-full bg-gray-200 my-2 min-h-[2rem]" />
+        <div className="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 bg-gray-800/50 border-b border-gray-800">
+                <span className="text-xs text-gray-500 uppercase font-mono">{language}</span>
+                <CopyButton text={code} label="Copier" />
             </div>
-            <div className="flex-1 pb-12">
-                <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-                    <p className="text-gray-500 text-sm mt-1">{description}</p>
-                </div>
-                {children}
-            </div>
+            <pre className="p-4 text-sm font-mono text-gray-300 overflow-x-auto whitespace-pre-wrap">{code}</pre>
         </div>
     )
 }
 
-
+function StatusBadge({ status, children }: { status: 'success' | 'warning' | 'info' | 'loading'; children: React.ReactNode }) {
+    const styles = {
+        success: 'bg-green-50 border-green-200 text-green-700',
+        warning: 'bg-amber-50 border-amber-200 text-amber-700',
+        info: 'bg-blue-50 border-blue-200 text-blue-700',
+        loading: 'bg-gray-50 border-gray-200 text-gray-500'
+    }
+    return (
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${styles[status]}`}>
+            {children}
+        </div>
+    )
+}
 
 export default function IntegrationPage() {
     const [publicKey, setPublicKey] = useState<string | null>(null)
@@ -107,107 +101,314 @@ export default function IntegrationPage() {
         return () => clearInterval(interval)
     }, [])
 
-    const sdkCode = publicKey ? (customDomain ?
-        `<script 
-  src="https://${customDomain}/trac.js" 
-  data-key="${publicKey}"
-  data-api-host="https://${customDomain}/_trac"
+    // Generate SDK snippets based on configuration
+    const firstPartySnippet = `<!-- Trac Analytics -->
+<script 
+  src="/trac.js" 
   defer
-></script>` :
-        `<script>
-  window.TracConfig = { apiKey: '${publicKey}', autoInject: true };
-</script>
-<script src="https://traaaction.com/trac.js" defer></script>`) : 'Loading...'
+  data-domains='{"refer":"${customDomain || 'short.yourdomain.com'}"}'
+  data-query-params='["via", "ref"]'
+  data-attribution-model="first-click"
+></script>`
 
-    if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+    const thirdPartySnippet = `<!-- Trac Analytics -->
+<script>
+  window.TracConfig = { 
+    apiKey: '${publicKey || 'pk_trac_xxx'}',
+    autoInject: true 
+  };
+</script>
+<script 
+  src="https://traaaction.com/trac.js" 
+  defer
+  data-domains='{"refer":"short.yourdomain.com"}'
+  data-query-params='["via", "ref"]'
+  data-attribution-model="first-click"
+></script>`
+
+    const reactBannerSnippet = `// Afficher la bannière de réduction partenaire
+import { DiscountBanner } from '@/components/DiscountBanner'
+
+function MyPage() {
+  return (
+    <div>
+      <DiscountBanner />
+      {/* Affiche: "John vous offre 25% de réduction" */}
+    </div>
+  )
+}`
+
+    const hookSnippet = `// Utiliser le hook pour accéder aux données partenaire
+import { useTracAnalytics } from '@/lib/hooks/useTracAnalytics'
+
+function MyComponent() {
+  const { partner, discount } = useTracAnalytics()
+  
+  if (partner && discount) {
+    console.log(partner.name, discount.amount)
+  }
+}`
+
+    const vanillaJsSnippet = `// Usage sans React (vanilla JS)
+tracAnalytics("ready", function() {
+  if (Trac.partner && Trac.discount) {
+    var banner = document.createElement("div");
+    banner.innerHTML = Trac.partner.name + " vous offre " + 
+      Trac.discount.amount + "% de réduction";
+    document.body.prepend(banner);
+  }
+});`
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            </div>
+        )
+    }
 
     return (
-        <div className="w-full max-w-5xl mx-auto px-6 py-8">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+            {/* Header */}
             <div className="mb-10">
                 <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Setup Integration</h1>
-                    {workspaceName && <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full flex items-center gap-1"><Building2 className="w-3 h-3" />{workspaceName}</span>}
+                    <Code2 className="w-6 h-6 text-gray-700" />
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Intégration</h1>
+                    {workspaceName && (
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full flex items-center gap-1">
+                            <Building2 className="w-3 h-3" />{workspaceName}
+                        </span>
+                    )}
                 </div>
-                <p className="text-gray-500">Connect your website to start tracking clicks and conversions.</p>
+                <p className="text-gray-500">Connecte ton site pour tracker les clics et conversions de tes partenaires.</p>
             </div>
 
-            <StepItem
-                number={1}
-                title="Install SDK"
-                description="Add this code snippet to the <head> of your website."
-                isComplete={!!installStatus?.installed}
-            >
-                <div className="bg-gray-900 rounded-lg p-4 border border-gray-800 group relative">
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <CopyButton text={sdkCode} />
+            {/* Mode Indicator */}
+            <div className="mb-8">
+                {customDomain ? (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                <ShieldCheck className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-green-800">Mode First-Party Activé ✓</h3>
+                                <p className="text-green-600 text-sm">Ton domaine <code className="bg-green-100 px-1.5 py-0.5 rounded">{customDomain}</code> est configuré</p>
+                            </div>
+                        </div>
+                        <p className="text-green-700 text-sm mt-2">
+                            Le script sera servi depuis ton propre domaine. Aucun problème de CSP ou d'ad-blocker !
+                        </p>
                     </div>
-                    <pre className="text-sm font-mono text-gray-300 overflow-x-auto whitespace-pre-wrap">{sdkCode}</pre>
-                </div>
-                {!customDomain && (
-                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-3 text-amber-800 text-sm">
-                        <AlertCircle className="w-4 h-4" />
-                        <span>Recommended: <Link href="/dashboard/domains" className="underline font-medium">Configure a custom domain</Link> to bypass ad-blockers.</span>
+                ) : (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                                <Globe className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-amber-800">Mode Third-Party</h3>
+                                <p className="text-amber-600 text-sm">Le script est servi depuis traaaction.com</p>
+                            </div>
+                        </div>
+                        <p className="text-amber-700 text-sm mt-2">
+                            <Link href="/dashboard/domains" className="underline font-medium hover:text-amber-800">
+                                Configure un domaine personnalisé
+                            </Link> pour activer le mode First-Party et éviter les blocages CSP.
+                        </p>
                     </div>
                 )}
-                {installStatus?.installed && (
-                    <div className="mt-4 flex items-center gap-2 text-sm text-green-600 font-medium bg-green-50 px-3 py-2 rounded-md border border-green-100 w-fit">
-                        <Zap className="w-4 h-4 fill-current" />
-                        SDK Detected active on your site
-                    </div>
-                )}
-            </StepItem>
+            </div>
 
-            <StepItem
-                number={2}
-                title="Réception d'événements"
-                description="Vérifie que le SDK envoie des événements à Tinybird."
-                isComplete={!!(installStatus?.installed && installStatus.lastEventAt &&
-                    (Date.now() - new Date(installStatus.lastEventAt).getTime()) < 15 * 60 * 1000)}
-            >
-                <div className="space-y-4">
-                    {installStatus?.lastEventAt ? (
-                        <div className={`flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-md border w-fit ${(Date.now() - new Date(installStatus.lastEventAt).getTime()) < 15 * 60 * 1000
-                            ? 'text-green-600 bg-green-50 border-green-100'
-                            : 'text-amber-600 bg-amber-50 border-amber-100'
-                            }`}>
+            {/* Step 1: Install SDK */}
+            <div className="mb-10">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${installStatus?.installed
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 text-gray-600'
+                        }`}>
+                        {installStatus?.installed ? <Check className="w-4 h-4" /> : '1'}
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Installe le SDK</h2>
+                        <p className="text-sm text-gray-500">Ajoute ce code dans le <code className="bg-gray-100 px-1 rounded">&lt;head&gt;</code> de ton site</p>
+                    </div>
+                </div>
+
+                <CodeBlock code={customDomain ? firstPartySnippet : thirdPartySnippet} />
+
+                {/* Platform-specific instructions */}
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {[
+                        { name: 'Shopify', hint: 'Theme > Edit code > theme.liquid' },
+                        { name: 'WordPress', hint: 'Appearance > Theme Editor > header.php' },
+                        { name: 'Webflow', hint: 'Project Settings > Custom Code' }
+                    ].map(platform => (
+                        <div key={platform.name} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                            <p className="font-medium text-gray-900 text-sm">{platform.name}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{platform.hint}</p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Installation status */}
+                <div className="mt-4">
+                    {installStatus?.installed ? (
+                        <StatusBadge status="success">
                             <Zap className="w-4 h-4 fill-current" />
-                            Dernier événement: {new Date(installStatus.lastEventAt).toLocaleString('fr-FR')}
-                            {installStatus.eventCount > 0 && ` (${installStatus.eventCount} total)`}
-                        </div>
+                            <span>SDK détecté et actif sur ton site</span>
+                        </StatusBadge>
                     ) : (
-                        <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-md border border-gray-100 w-fit">
+                        <StatusBadge status="loading">
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            En attente du premier événement...
-                        </div>
+                            <span>En attente de l'installation...</span>
+                        </StatusBadge>
                     )}
-
                 </div>
-            </StepItem>
+            </div>
 
-            <StepItem
-                number={3}
-                title="API Keys"
-                description="Use these keys for server-side integration."
-                isComplete={!!publicKey}
-            >
-                <div className="grid gap-4 max-w-2xl">
+            {/* Step 2: Stripe Webhook */}
+            <div className="mb-10">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
+                        2
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Configure ton Webhook Stripe</h2>
+                        <p className="text-sm text-gray-500">Pour recevoir les paiements et calculer les commissions</p>
+                    </div>
+                </div>
+
+                <WebhookManager onStatusChange={() => { }} />
+            </div>
+
+            {/* Step 3: Verify */}
+            <div className="mb-10">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${installStatus?.lastEventAt
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 text-gray-600'
+                        }`}>
+                        {installStatus?.lastEventAt ? <Check className="w-4 h-4" /> : '3'}
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Vérifie la réception</h2>
+                        <p className="text-sm text-gray-500">Assure-toi que les événements arrivent correctement</p>
+                    </div>
+                </div>
+
+                {installStatus?.lastEventAt ? (
+                    <StatusBadge status={
+                        (Date.now() - new Date(installStatus.lastEventAt).getTime()) < 15 * 60 * 1000
+                            ? 'success'
+                            : 'warning'
+                    }>
+                        <Zap className="w-4 h-4 fill-current" />
+                        <span>Dernier événement: {new Date(installStatus.lastEventAt).toLocaleString('fr-FR')}</span>
+                        {installStatus.eventCount > 0 && (
+                            <span className="ml-1 opacity-75">({installStatus.eventCount} total)</span>
+                        )}
+                    </StatusBadge>
+                ) : (
+                    <StatusBadge status="loading">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>En attente du premier événement...</span>
+                    </StatusBadge>
+                )}
+
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                    <h4 className="font-medium text-gray-900 mb-2">💡 Comment tester ?</h4>
+                    <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                        <li>Ouvre ton site dans un nouvel onglet</li>
+                        <li>Clique sur un lien partenaire (depuis /s/xxx)</li>
+                        <li>Reviens ici - le compteur devrait se mettre à jour</li>
+                    </ol>
+                </div>
+            </div>
+
+            {/* Step 4: Partner Features */}
+            <div className="mb-10">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-sm font-bold text-white">
+                        4
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Fonctionnalités Partenaires</h2>
+                        <p className="text-sm text-gray-500">Affiche une bannière de réduction aux visiteurs référés</p>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                        <h4 className="font-medium text-purple-900 mb-2">🎁 Bannière DiscountBanner</h4>
+                        <p className="text-sm text-purple-700 mb-3">
+                            Quand un utilisateur arrive via <code className="bg-purple-100 px-1 rounded">?via=john</code>,
+                            le SDK stocke les données du partenaire. Affiche une bannière pour augmenter les conversions !
+                        </p>
+                        <CodeBlock code={reactBannerSnippet} language="tsx" />
+                    </div>
+
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <h4 className="font-medium text-gray-900 mb-2">🔧 Hook useTracAnalytics (React)</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                            Pour un contrôle plus fin, utilise le hook React pour accéder aux données brutes.
+                        </p>
+                        <CodeBlock code={hookSnippet} language="tsx" />
+                    </div>
+
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <h4 className="font-medium text-amber-900 mb-2">📜 Vanilla JS (autres frameworks)</h4>
+                        <p className="text-sm text-amber-700 mb-3">
+                            Pour Shopify, WordPress, ou tout site sans React, utilise le callback <code className="bg-amber-100 px-1 rounded">tracAnalytics("ready")</code>.
+                        </p>
+                        <CodeBlock code={vanillaJsSnippet} language="javascript" />
+                    </div>
+
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 className="font-medium text-blue-900 mb-2">⚙️ Configuration Discount</h4>
+                        <p className="text-sm text-blue-700">
+                            Configure ton discount dans
+                            <Link href="/dashboard/settings" className="underline font-medium ml-1">Settings → Discount</Link>.
+                            Lie un coupon Stripe pour appliquer automatiquement la réduction au checkout.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* API Keys Section (collapsed by default for simplicity) */}
+            <details className="mb-10 bg-gray-50 rounded-xl border border-gray-200">
+                <summary className="p-4 cursor-pointer flex items-center justify-between hover:bg-gray-100 rounded-xl transition-colors">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                            <Code2 className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-900">Clés API</h2>
+                            <p className="text-sm text-gray-500">Pour les intégrations serveur avancées</p>
+                        </div>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-gray-400" />
+                </summary>
+
+                <div className="p-4 border-t border-gray-200 space-y-4">
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <div className="flex justify-between items-center mb-1">
                             <span className="text-xs font-semibold text-gray-500 uppercase">Public Key</span>
-                            <CopyButton text={publicKey || ''} className="text-gray-400 hover:text-gray-600 hover:bg-gray-50" />
+                            <CopyButton text={publicKey || ''} />
                         </div>
                         <code className="font-mono text-sm text-gray-900 block truncate">{publicKey}</code>
                     </div>
+
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <div className="flex justify-between items-center mb-1">
                             <span className="text-xs font-semibold text-gray-500 uppercase">Secret Key</span>
                             <div className="flex gap-2">
                                 {secretKey && (
                                     <>
-                                        <button onClick={() => setShowSecret(!showSecret)} className="p-1 hover:bg-gray-50 rounded">
-                                            {showSecret ? <EyeOff className="w-3.5 h-3.5 text-gray-400" /> : <Eye className="w-3.5 h-3.5 text-gray-400" />}
+                                        <button onClick={() => setShowSecret(!showSecret)} className="p-1.5 hover:bg-gray-100 rounded">
+                                            {showSecret ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
                                         </button>
-                                        <CopyButton text={secretKey} className="text-gray-400 hover:text-gray-600 hover:bg-gray-50" />
+                                        <CopyButton text={secretKey} />
                                     </>
                                 )}
                             </div>
@@ -221,11 +422,11 @@ export default function IntegrationPage() {
                                 <code className="font-mono text-sm text-gray-400 block">sk_live_••••••••••••••••••••••••••••</code>
                                 <p className="text-xs text-amber-600 flex items-center gap-1">
                                     <AlertCircle className="w-3 h-3" />
-                                    La clé secrète n&apos;est visible qu&apos;à la création. Régénérez-la si perdue.
+                                    La clé secrète n&apos;est visible qu&apos;à la création.
                                 </p>
                                 <button
                                     onClick={async () => {
-                                        if (confirm('Attention : Cela invalidera votre clé actuelle. Continuer ?')) {
+                                        if (confirm('Attention : Cela invalidera ta clé actuelle. Continuer ?')) {
                                             const result = await regenerateApiKey()
                                             if (result.success) {
                                                 setPublicKey(result.publicKey!)
@@ -234,7 +435,7 @@ export default function IntegrationPage() {
                                             }
                                         }
                                     }}
-                                    className="text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
+                                    className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
                                 >
                                     <RefreshCw className="w-3 h-3" />
                                     Régénérer les clés
@@ -243,12 +444,7 @@ export default function IntegrationPage() {
                         )}
                     </div>
                 </div>
-            </StepItem>
-
-            <div className="pt-4 border-t border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Webhooks</h3>
-                <WebhookManager onStatusChange={() => { }} />
-            </div>
+            </details>
         </div>
     )
 }

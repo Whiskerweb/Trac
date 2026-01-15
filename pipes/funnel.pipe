@@ -1,0 +1,60 @@
+DESCRIPTION "Conversion funnel analytics - Clicks → Leads → Sales with drop-off rates"
+
+NODE clicks_count
+SQL >
+    %
+    SELECT
+        workspace_id,
+        toDate(timestamp) AS date,
+        count() AS total_clicks,
+        countDistinct(affiliate_id) AS unique_affiliates
+    FROM clicks
+    WHERE workspace_id = {{String(workspace_id, '')}}
+    AND timestamp >= now() - interval {{Int32(days, 30)}} day
+    GROUP BY workspace_id, date
+
+NODE leads_count
+SQL >
+    %
+    SELECT
+        workspace_id,
+        toDate(timestamp) AS date,
+        count() AS total_leads,
+        countDistinct(customer_external_id) AS unique_customers,
+        countDistinct(event_name) AS event_types
+    FROM leads
+    WHERE workspace_id = {{String(workspace_id, '')}}
+    AND timestamp >= now() - interval {{Int32(days, 30)}} day
+    GROUP BY workspace_id, date
+
+NODE sales_count
+SQL >
+    %
+    SELECT
+        workspace_id,
+        toDate(timestamp) AS date,
+        count() AS total_sales,
+        sum(amount) / 100 AS total_revenue,
+        sum(net_amount) / 100 AS total_net_revenue
+    FROM sales
+    WHERE workspace_id = {{String(workspace_id, '')}}
+    AND timestamp >= now() - interval {{Int32(days, 30)}} day
+    GROUP BY workspace_id, date
+
+NODE funnel_summary
+SQL >
+    SELECT
+        c.workspace_id,
+        c.date,
+        c.total_clicks,
+        coalesce(l.total_leads, 0) AS total_leads,
+        coalesce(s.total_sales, 0) AS total_sales,
+        coalesce(s.total_revenue, 0) AS total_revenue,
+        coalesce(s.total_net_revenue, 0) AS total_net_revenue,
+        if(c.total_clicks > 0, round(coalesce(l.total_leads, 0) / c.total_clicks * 100, 2), 0) AS click_to_lead_rate,
+        if(coalesce(l.total_leads, 0) > 0, round(coalesce(s.total_sales, 0) / l.total_leads * 100, 2), 0) AS lead_to_sale_rate,
+        if(c.total_clicks > 0, round(coalesce(s.total_sales, 0) / c.total_clicks * 100, 2), 0) AS click_to_sale_rate
+    FROM clicks_count c
+    LEFT JOIN leads_count l ON c.workspace_id = l.workspace_id AND c.date = l.date
+    LEFT JOIN sales_count s ON c.workspace_id = s.workspace_id AND c.date = s.date
+    ORDER BY c.date DESC

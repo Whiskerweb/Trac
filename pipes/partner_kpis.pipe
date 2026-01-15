@@ -6,6 +6,7 @@ TOKEN "dashboard_endpoint" READ
 
 NODE clicks_stats
 SQL >
+    %
     SELECT 
         count() as total_clicks,
         countIf(timestamp >= now() - INTERVAL 30 DAY) as clicks_30d
@@ -17,6 +18,7 @@ SQL >
 
 NODE click_ids
 SQL >
+    %
     SELECT click_id
     FROM clicks
     WHERE 
@@ -26,6 +28,7 @@ SQL >
 
 NODE sales_stats
 SQL >
+    %
     SELECT 
         count() as total_sales,
         sum(amount) as total_revenue,
@@ -39,6 +42,7 @@ SQL >
 
 NODE endpoint
 SQL >
+    %
     SELECT 
         c.total_clicks,
         c.clicks_30d,

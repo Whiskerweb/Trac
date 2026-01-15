@@ -115,14 +115,57 @@ export async function POST(
                     }
 
                     // Extract core data
-                    const clickId = session.client_reference_id ||
+                    let clickId = session.client_reference_id ||
                         session.metadata?.clk_id ||
                         null
                     const workspaceId = endpoint.workspace_id // Attribution to workspace of the endpoint
 
-                    const customerExternalId = typeof session.customer === 'string'
-                        ? session.customer
-                        : session.customer_details?.email || 'guest'
+                    // ========================================
+                    // CUSTOMER EXTERNAL ID (Dub-style Priority)
+                    // 1. metadata.customer_id = Internal user ID from startup (BEST)
+                    // 2. metadata.user_id = Alternative key
+                    // 3. Stripe customer ID = Fallback
+                    // 4. Email = Last resort
+                    // ========================================
+                    const customerExternalId =
+                        session.metadata?.customer_id ||      // ✅ Internal user ID (recommended)
+                        session.metadata?.user_id ||          // ✅ Alternative key
+                        session.metadata?.external_id ||      // ✅ Explicit external ID
+                        (typeof session.customer === 'string' ? session.customer : null) ||
+                        session.customer_details?.email ||
+                        'guest'
+
+                    console.log(`[Webhook] 🔑 Customer External ID: ${customerExternalId} (source: ${session.metadata?.customer_id ? 'metadata.customer_id' :
+                            session.metadata?.user_id ? 'metadata.user_id' :
+                                session.metadata?.external_id ? 'metadata.external_id' :
+                                    typeof session.customer === 'string' ? 'stripe_customer' :
+                                        session.customer_details?.email ? 'email' : 'guest'
+                        })`)
+
+                    // ========================================
+                    // CUSTOMER LOOKUP FALLBACK (Dub-style)
+                    // If no clickId from cookie/URL, lookup from Customer table
+                    // Enables lifetime attribution even with expired cookies
+                    // ========================================
+                    if (!clickId) {
+                        try {
+                            const customer = await prisma.customer.findFirst({
+                                where: {
+                                    workspace_id: workspaceId,
+                                    OR: [
+                                        { external_id: customerExternalId },
+                                        { email: session.customer_details?.email || undefined }
+                                    ]
+                                }
+                            })
+                            if (customer?.click_id) {
+                                clickId = customer.click_id
+                                console.log(`[Webhook] 🔍 Customer lookup found click_id: ${clickId}`)
+                            }
+                        } catch (e) {
+                            console.log('[Webhook] Customer lookup failed:', e)
+                        }
+                    }
 
                     // ========================================
                     // NET REVENUE CALCULATION (PRODUCTION GRADE)

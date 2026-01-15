@@ -248,6 +248,7 @@ export async function updatePartnerBalance(partnerId: string): Promise<void> {
 /**
  * Find partner by click attribution
  * Uses link_id → MissionEnrollment → user_id → Partner
+ * OR affiliateId directly (could be Partner.id or Partner.user_id)
  */
 export async function findPartnerForSale(params: {
     linkId?: string | null
@@ -259,16 +260,30 @@ export async function findPartnerForSale(params: {
     try {
         // Case 1: Direct affiliate ID provided
         if (affiliateId) {
-            const partner = await prisma.partner.findFirst({
+            // Try 1: affiliateId is Partner.id directly
+            const partnerById = await prisma.partner.findFirst({
+                where: {
+                    id: affiliateId,
+                    program_id: programId,
+                    status: 'APPROVED'
+                }
+            })
+            if (partnerById) {
+                console.log(`[Commission] 🔗 Found partner ${partnerById.id} by direct id`)
+                return partnerById.id
+            }
+
+            // Try 2: affiliateId is Partner.user_id
+            const partnerByUserId = await prisma.partner.findFirst({
                 where: {
                     program_id: programId,
                     user_id: affiliateId,
                     status: 'APPROVED'
                 }
             })
-            if (partner) {
-                console.log(`[Commission] 🔗 Found partner ${partner.id} by affiliate_id ${affiliateId}`)
-                return partner.id
+            if (partnerByUserId) {
+                console.log(`[Commission] 🔗 Found partner ${partnerByUserId.id} by user_id ${affiliateId}`)
+                return partnerByUserId.id
             }
         }
 

@@ -1,0 +1,20 @@
+DESCRIPTION "Lead conversion events - Tracks when visitors become leads (signup, demo, trial) for funnel analytics"
+
+SCHEMA >
+    `timestamp` DateTime `json:$.timestamp`,
+    `event_id` String `json:$.event_id`,
+    `workspace_id` String `json:$.workspace_id`,
+    `customer_id` String `json:$.customer_id`,
+    `customer_external_id` String `json:$.customer_external_id`,
+    `click_id` Nullable(String) `json:$.click_id`,
+    `link_id` Nullable(String) `json:$.link_id`,
+    `affiliate_id` Nullable(String) `json:$.affiliate_id`,
+    `event_name` String `json:$.event_name`,
+    `event_value` Nullable(Float64) `json:$.event_value`,
+    `customer_email` Nullable(String) `json:$.customer_email`,
+    `customer_name` Nullable(String) `json:$.customer_name`,
+    `metadata` Nullable(String) `json:$.metadata`
+
+ENGINE "ReplacingMergeTree"
+ENGINE_SORTING_KEY "workspace_id, customer_external_id, event_name, timestamp"
+ENGINE_TTL "timestamp + toIntervalYear(2)"

@@ -196,7 +196,7 @@ export async function GET(request: NextRequest) {
         }
 
         const kpisData = await kpisResponse.json()
-        const kpi = kpisData.data?.[0] || { clicks: 0, sales: 0, revenue: 0, conversion_rate: 0 }
+        const kpi = kpisData.data?.[0] || { clicks: 0, leads: 0, sales: 0, revenue: 0, conversion_rate: 0, click_to_lead_rate: 0, lead_to_sale_rate: 0 }
 
         // ========================================
         // HANDLE TREND RESPONSE (Graceful fallback)
@@ -219,16 +219,22 @@ export async function GET(request: NextRequest) {
         const mergedData = {
             meta: [
                 { name: 'clicks', type: 'Int64' },
+                { name: 'leads', type: 'Int64' },
                 { name: 'sales', type: 'Int64' },
                 { name: 'revenue', type: 'Float64' },
                 { name: 'conversion_rate', type: 'Float64' },
+                { name: 'click_to_lead_rate', type: 'Float64' },
+                { name: 'lead_to_sale_rate', type: 'Float64' },
                 { name: 'timeseries', type: 'Array' },
             ],
             data: [{
                 clicks: kpi.clicks || 0,
+                leads: kpi.leads || 0,
                 sales: kpi.sales || 0,
                 revenue: kpi.revenue || 0,
                 conversion_rate: kpi.conversion_rate || 0,
+                click_to_lead_rate: kpi.click_to_lead_rate || 0,
+                lead_to_sale_rate: kpi.lead_to_sale_rate || 0,
                 timeseries: timeseries,
             }],
             rows: 1,

@@ -449,6 +449,75 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     }
 
     // ============================================
+    // FIRST-PARTY TRACKING ROUTES (CSP Bypass)
+    // Rewrites /trac.js and /_trac/* on custom domains
+    // Enables boutiques to load tracking without CSP errors
+    // ============================================
+    if (customDomain) {
+        // Get workspace ID for this domain (needed for tracking context)
+        const workspaceId = await getWorkspaceIdFromDomain(hostname, request.nextUrl.origin)
+
+        // Serve trac.js as first-party script
+        if (pathname === '/trac.js' || pathname === '/trac.min.js') {
+            console.log('[Edge] 📜 First-Party Script Request:', hostname, pathname)
+
+            const newUrl = request.nextUrl.clone()
+            newUrl.pathname = '/api/script'
+            newUrl.searchParams.set('domain', hostname)
+            if (workspaceId) {
+                newUrl.searchParams.set('workspace_id', workspaceId)
+            }
+
+            const response = NextResponse.rewrite(newUrl)
+            response.headers.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
+            return response
+        }
+
+        // Proxy /_trac/* API calls (tracking events, clicks, etc.)
+        if (pathname.startsWith('/_trac/')) {
+            console.log('[Edge] 🔄 First-Party API Proxy:', hostname, pathname)
+
+            const newUrl = request.nextUrl.clone()
+            // Remove /_trac prefix: /_trac/api/events → /api/events
+            newUrl.pathname = pathname.replace('/_trac', '')
+
+            // Forward workspace context
+            const requestHeaders = new Headers(request.headers)
+            if (workspaceId) {
+                requestHeaders.set('x-workspace-id', workspaceId)
+            }
+            requestHeaders.set('x-custom-domain', hostname)
+            requestHeaders.set('x-first-party', 'true')
+
+            const response = NextResponse.rewrite(newUrl, {
+                request: { headers: requestHeaders }
+            })
+
+            // Dynamic CORS for first-party tracking
+            response.headers.set('Access-Control-Allow-Origin', `https://${hostname}`)
+            response.headers.set('Access-Control-Allow-Credentials', 'true')
+            response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+
+            return response
+        }
+
+        // Handle CORS preflight for /_trac routes
+        if (request.method === 'OPTIONS' && pathname.startsWith('/_trac/')) {
+            return new NextResponse(null, {
+                status: 204,
+                headers: {
+                    'Access-Control-Allow-Origin': `https://${hostname}`,
+                    'Access-Control-Allow-Credentials': 'true',
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                    'Access-Control-Max-Age': '86400'
+                }
+            })
+        }
+    }
+
+    // ============================================
     // SHORT LINK REDIRECT (/s/*)
     // Ultra-fast Edge redirect via Redis
     // ============================================
