@@ -102,26 +102,33 @@ export default function IntegrationPage() {
     }, [])
 
     // Generate SDK snippets based on configuration
-    const firstPartySnippet = `<!-- Trac Analytics -->
+    // FIRST-PARTY: Requires reverse proxy setup on startup's site
+    const firstPartySnippet = `<!-- Step 1: Add to next.config.js -->
+module.exports = {
+  async rewrites() {
+    return [
+      { source: "/_trac/script.js", destination: "https://traaaction.com/trac.js" },
+      { source: "/_trac/api/:path*", destination: "https://traaaction.com/api/:path*" },
+    ];
+  },
+};
+
+<!-- Step 2: Add to your HTML <head> -->
 <script 
-  src="/trac.js" 
+  src="/_trac/script.js" 
   defer
+  data-api-host="/_trac"
   data-domains='{"refer":"${customDomain || 'short.yourdomain.com'}"}'
   data-query-params='["via", "ref"]'
   data-attribution-model="first-click"
 ></script>`
 
-    const thirdPartySnippet = `<!-- Trac Analytics -->
-<script>
-  window.TracConfig = { 
-    apiKey: '${publicKey || 'pk_trac_xxx'}',
-    autoInject: true 
-  };
-</script>
+    // THIRD-PARTY: Simpler but can be blocked by adblockers
+    const thirdPartySnippet = `<!-- Option simple (peut être bloqué par adblockers) -->
 <script 
   src="https://traaaction.com/trac.js" 
   defer
-  data-domains='{"refer":"short.yourdomain.com"}'
+  data-domains='{"refer":"${customDomain || 'short.yourdomain.com'}"}'
   data-query-params='["via", "ref"]'
   data-attribution-model="first-click"
 ></script>`
