@@ -199,13 +199,17 @@ tracAnalytics("ready", function() {
                                 <ShieldCheck className="w-5 h-5 text-green-600" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-green-800">Mode First-Party Activé ✓</h3>
-                                <p className="text-green-600 text-sm">Ton domaine <code className="bg-green-100 px-1.5 py-0.5 rounded">{customDomain}</code> est configuré</p>
+                                <h3 className="font-semibold text-green-800">Mode First-Party Recommandé ✓</h3>
+                                <p className="text-green-600 text-sm">Domaine custom: <code className="bg-green-100 px-1.5 py-0.5 rounded">{customDomain}</code></p>
                             </div>
                         </div>
-                        <p className="text-green-700 text-sm mt-2">
-                            Le script sera servi depuis ton propre domaine. Aucun problème de CSP ou d'ad-blocker !
-                        </p>
+                        <div className="bg-green-100 border border-green-300 rounded-lg p-3 mt-3">
+                            <p className="text-green-800 text-sm font-medium mb-1">⚠️ Configuration requise</p>
+                            <p className="text-green-700 text-sm">
+                                Pour le first-party tracking, tu dois configurer un <strong>reverse proxy</strong> sur ton site
+                                (Next.js rewrites ou Vercel config). Le code ci-dessous inclut les 2 étapes nécessaires.
+                            </p>
+                        </div>
                     </div>
                 ) : (
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
@@ -215,14 +219,17 @@ tracAnalytics("ready", function() {
                             </div>
                             <div>
                                 <h3 className="font-semibold text-amber-800">Mode Third-Party</h3>
-                                <p className="text-amber-600 text-sm">Le script est servi depuis traaaction.com</p>
+                                <p className="text-amber-600 text-sm">Le script est chargé depuis traaaction.com</p>
                             </div>
                         </div>
-                        <p className="text-amber-700 text-sm mt-2">
-                            <Link href="/dashboard/domains" className="underline font-medium hover:text-amber-800">
-                                Configure un domaine personnalisé
-                            </Link> pour activer le mode First-Party et éviter les blocages CSP.
-                        </p>
+                        <div className="bg-amber-100 border border-amber-300 rounded-lg p-3 mt-3">
+                            <p className="text-amber-800 text-sm">
+                                ⚠️ Cette option peut être <strong>bloquée par les adblockers</strong>.
+                                <Link href="/dashboard/domains" className="underline font-medium hover:text-amber-900 ml-1">
+                                    Configure un domaine personnalisé
+                                </Link> pour le mode First-Party.
+                            </p>
+                        </div>
                     </div>
                 )}
             </div>
