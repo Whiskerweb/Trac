@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, AlertCircle, MousePointer, Users, ShoppingCart, DollarSign, ExternalLink, Copy, Check } from 'lucide-react'
+import { Loader2, AlertCircle, ShoppingCart, DollarSign, ExternalLink, Copy, Check, MousePointer } from 'lucide-react'
 import Link from 'next/link'
-import { getPartnerDashboard, getAllPartnerPrograms } from '@/app/actions/partners'
+import { getPartnerDashboard } from '@/app/actions/partners'
+import { getMyEnrollments } from '@/app/actions/marketplace'
 
 interface Stats {
     totalEarned: number
@@ -13,18 +14,20 @@ interface Stats {
     conversionCount: number
 }
 
-interface MissionEnrollment {
-    partner: {
+interface Enrollment {
+    id: string
+    mission: {
         id: string
-        Program?: {
-            name: string
-            slug: string
-        } | null
+        title: string
+        reward: string
     }
-    stats: {
-        totalEarned: number
-    }
-    trackingLink?: string
+    link: {
+        slug: string
+        full_url: string
+        clicks: number
+    } | null
+    status: string
+    created_at: Date
 }
 
 function formatCurrency(cents: number): string {
@@ -47,14 +50,12 @@ function StatCard({ icon: Icon, label, value, color }: {
     )
 }
 
-function MissionCard({ data }: { data: MissionEnrollment }) {
+function MissionCard({ data }: { data: Enrollment }) {
     const [copied, setCopied] = useState(false)
-    const programName = data.partner.Program?.name || 'Programme Global'
-    const link = data.trackingLink
 
     const copyLink = () => {
-        if (!link) return
-        navigator.clipboard.writeText(link)
+        if (!data.link) return
+        navigator.clipboard.writeText(data.link.full_url)
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
     }
@@ -64,16 +65,22 @@ function MissionCard({ data }: { data: MissionEnrollment }) {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center font-bold text-lg">
-                        {programName.charAt(0).toUpperCase()}
+                        {data.mission.title.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900">{programName}</h3>
-                        <p className="text-sm text-gray-500">
-                            Gains: {formatCurrency(data.stats.totalEarned)}
-                        </p>
+                        <h3 className="font-semibold text-gray-900">{data.mission.title}</h3>
+                        <div className="flex items-center gap-3 text-sm text-gray-500">
+                            <span>{data.mission.reward}</span>
+                            {data.link && (
+                                <span className="flex items-center gap-1">
+                                    <MousePointer className="w-3 h-3" />
+                                    {data.link.clicks} clics
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
-                {link && (
+                {data.link && (
                     <button
                         onClick={copyLink}
                         className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
@@ -99,26 +106,25 @@ function MissionCard({ data }: { data: MissionEnrollment }) {
 export default function PartnerDashboardPage() {
     const [loading, setLoading] = useState(true)
     const [stats, setStats] = useState<Stats | null>(null)
-    const [missions, setMissions] = useState<MissionEnrollment[]>([])
+    const [enrollments, setEnrollments] = useState<Enrollment[]>([])
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         async function load() {
             try {
-                const [dashboardRes, programsRes] = await Promise.all([
+                const [dashboardRes, enrollmentsRes] = await Promise.all([
                     getPartnerDashboard(),
-                    getAllPartnerPrograms()
+                    getMyEnrollments()
                 ])
 
                 if (dashboardRes.success && dashboardRes.stats) {
                     setStats(dashboardRes.stats)
                 }
-                if (programsRes.success && programsRes.programs) {
-                    // Filter only programs with actual missions (have a trackingLink)
-                    setMissions(programsRes.programs.filter(p => p.trackingLink) as unknown as MissionEnrollment[])
+                if (enrollmentsRes.success && enrollmentsRes.enrollments) {
+                    setEnrollments(enrollmentsRes.enrollments)
                 }
-                if (!dashboardRes.success) {
-                    setError(dashboardRes.error || 'Erreur')
+                if (!dashboardRes.success && !enrollmentsRes.success) {
+                    setError(dashboardRes.error || enrollmentsRes.error || 'Erreur')
                 }
             } catch (e) {
                 setError('Erreur inattendue')
@@ -189,7 +195,7 @@ export default function PartnerDashboardPage() {
                 {/* Missions Section */}
                 <div>
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-gray-900">Mes Missions</h2>
+                        <h2 className="text-lg font-semibold text-gray-900">Mes Missions ({enrollments.length})</h2>
                         <Link
                             href="/marketplace"
                             className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
@@ -199,10 +205,10 @@ export default function PartnerDashboardPage() {
                         </Link>
                     </div>
 
-                    {missions.length > 0 ? (
+                    {enrollments.length > 0 ? (
                         <div className="space-y-3">
-                            {missions.map((mission) => (
-                                <MissionCard key={mission.partner.id} data={mission} />
+                            {enrollments.map((enrollment) => (
+                                <MissionCard key={enrollment.id} data={enrollment} />
                             ))}
                         </div>
                     ) : (
