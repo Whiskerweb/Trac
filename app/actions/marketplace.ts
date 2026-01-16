@@ -84,46 +84,21 @@ async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<str
             }
         }
 
-        // 2. Build click_id -> link_id map
-        const clickToLinkQuery = `SELECT click_id, link_id FROM clicks WHERE link_id IN (${linkIdList})`
-        const clickToLinkResponse = await fetch(
-            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clickToLinkQuery)}`,
+        // 2. GET SALES directly by link_id (sales table has link_id column!)
+        const salesQuery = `SELECT link_id, count() as sales, sum(amount) as revenue FROM sales WHERE link_id IN (${linkIdList}) GROUP BY link_id`
+        const salesResponse = await fetch(
+            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
             { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
         )
 
-        const clickToLinkMap = new Map<string, string>()
-
-        if (clickToLinkResponse.ok) {
-            const text = await clickToLinkResponse.text()
-            for (const line of text.trim().split('\n').filter(l => l.trim())) {
-                const [click_id, link_id] = line.split('\t')
-                if (click_id && link_id) {
-                    clickToLinkMap.set(click_id, link_id)
-                }
-            }
-        }
-
-        // 3. GET SALES and attribute to links
-        if (clickToLinkMap.size > 0) {
-            const clickIdList = Array.from(clickToLinkMap.keys()).map(id => `'${id}'`).join(',')
-            const salesQuery = `SELECT click_id, amount FROM sales WHERE click_id IN (${clickIdList})`
-
-            const salesResponse = await fetch(
-                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
-                { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-            )
-
-            if (salesResponse.ok) {
-                const salesText = await salesResponse.text()
-                for (const line of salesText.trim().split('\n').filter(l => l.trim())) {
-                    const [click_id, amount] = line.split('\t')
-                    const link_id = clickToLinkMap.get(click_id)
-
-                    if (link_id && statsMap.has(link_id)) {
-                        const stats = statsMap.get(link_id)!
-                        stats.sales += 1
-                        stats.revenue += (parseInt(amount) || 0) / 100
-                    }
+        if (salesResponse.ok) {
+            const salesText = await salesResponse.text()
+            for (const line of salesText.trim().split('\n').filter(l => l.trim())) {
+                const [link_id, sales, revenue] = line.split('\t')
+                if (link_id && statsMap.has(link_id)) {
+                    const stats = statsMap.get(link_id)!
+                    stats.sales = parseInt(sales) || 0
+                    stats.revenue = (parseInt(revenue) || 0) / 100 // Convert cents to euros
                 }
             }
         }
