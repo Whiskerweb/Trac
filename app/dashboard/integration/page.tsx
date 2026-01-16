@@ -166,6 +166,45 @@ tracAnalytics("ready", function() {
   }
 });`
 
+    // Lead Tracking snippet (Step 2)
+    const leadTrackingSnippet = `// Backend Node.js - Lors de la création du compte utilisateur
+// Lit le cookie trac_click_id côté client et l'envoie au backend
+
+await fetch('https://traaaction.com/api/track/lead', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    eventName: 'sign_up',
+    customerExternalId: user.id,      // ID interne (obligatoire)
+    clickId: req.cookies.trac_click_id, // Cookie du SDK
+    customerEmail: user.email,
+    customerName: user.name
+  })
+});
+
+// ✅ Une fois le lead créé, toutes les ventes futures
+// seront automatiquement attribuées au lien original.`
+
+    // Stripe Checkout snippet (Step 3)
+    const stripeCheckoutSnippet = `// Backend - Création de la session Stripe Checkout
+// Passe le customerExternalId pour l'attribution automatique
+
+const session = await stripe.checkout.sessions.create({
+  line_items: [{ price: 'price_xxx', quantity: 1 }],
+  mode: 'payment',
+  success_url: 'https://example.com/success',
+  cancel_url: 'https://example.com/cancel',
+  
+  // ⚠️ IMPORTANT: Attribution automatique
+  metadata: {
+    tracCustomerExternalId: user.id,  // Même ID que dans trackLead
+    tracClickId: clickId,              // Optionnel si lead créé
+  },
+  
+  // Pour guest checkout (pas de compte utilisateur)
+  customer_creation: 'always',
+});`
+
     if (loading) {
         return (
             <div className="flex justify-center items-center py-20">
@@ -281,11 +320,55 @@ tracAnalytics("ready", function() {
                 </div>
             </div>
 
-            {/* Step 2: Stripe Webhook */}
+            {/* Step 2: Lead Tracking */}
+            <div className="mb-10">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-bold text-white">
+                        2
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Tracker les Signups (Lead)</h2>
+                        <p className="text-sm text-gray-500">Appelle l'API lors de la création d'un compte utilisateur</p>
+                    </div>
+                </div>
+
+                <CodeBlock code={leadTrackingSnippet} language="javascript" />
+
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <p className="text-sm text-blue-700">
+                        <strong>💡 Point clé:</strong> Une fois le lead créé avec <code className="bg-blue-100 px-1 rounded">customerExternalId</code>,
+                        toutes les ventes futures de ce client sont automatiquement attribuées au lien partenaire original.
+                    </p>
+                </div>
+            </div>
+
+            {/* Step 3: Stripe Checkout Attribution */}
+            <div className="mb-10">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-sm font-bold text-white">
+                        3
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Attribution Stripe Checkout</h2>
+                        <p className="text-sm text-gray-500">Passe les metadata pour l'attribution automatique</p>
+                    </div>
+                </div>
+
+                <CodeBlock code={stripeCheckoutSnippet} language="javascript" />
+
+                <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-100">
+                    <p className="text-sm text-purple-700">
+                        <strong>⚠️ Important:</strong> Utilise le même <code className="bg-purple-100 px-1 rounded">tracCustomerExternalId</code>
+                        que dans le tracking des leads pour une attribution cohérente.
+                    </p>
+                </div>
+            </div>
+
+            {/* Step 4: Stripe Webhook */}
             <div className="mb-10">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
-                        2
+                        4
                     </div>
                     <div>
                         <h2 className="text-lg font-semibold text-gray-900">Configure ton Webhook Stripe</h2>
@@ -296,14 +379,14 @@ tracAnalytics("ready", function() {
                 <WebhookManager onStatusChange={() => { }} />
             </div>
 
-            {/* Step 3: Verify */}
+            {/* Step 5: Verify */}
             <div className="mb-10">
                 <div className="flex items-center gap-3 mb-4">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${installStatus?.lastEventAt
                         ? 'bg-green-500 text-white'
                         : 'bg-gray-200 text-gray-600'
                         }`}>
-                        {installStatus?.lastEventAt ? <Check className="w-4 h-4" /> : '3'}
+                        {installStatus?.lastEventAt ? <Check className="w-4 h-4" /> : '5'}
                     </div>
                     <div>
                         <h2 className="text-lg font-semibold text-gray-900">Vérifie la réception</h2>
