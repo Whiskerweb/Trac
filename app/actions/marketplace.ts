@@ -464,31 +464,61 @@ export async function getMyEnrollments(): Promise<{
         const enrollments = await prisma.missionEnrollment.findMany({
             where: { user_id: user.id },
             include: {
-                Mission: true,
+                Mission: {
+                    include: {
+                        Workspace: {
+                            include: {
+                                Domain: {
+                                    where: { verified: true },
+                                    take: 1
+                                }
+                            }
+                        }
+                    }
+                },
                 ShortLink: true,
             },
             orderBy: { created_at: 'desc' }
         })
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        // Get link IDs for Tinybird stats lookup
+        const linkIds = enrollments
+            .filter(e => e.ShortLink)
+            .map(e => e.ShortLink!.id)
+
+        // Fetch real stats from Tinybird
+        const tinybirdStats = await getAffiliateStatsFromTinybird(linkIds)
 
         return {
             success: true,
-            enrollments: enrollments.map(e => ({
-                id: e.id,
-                mission: {
-                    id: e.Mission.id,
-                    title: e.Mission.title,
-                    reward: e.Mission.reward,
-                },
-                link: e.ShortLink ? {
-                    slug: e.ShortLink.slug,
-                    full_url: `${baseUrl}/s/${e.ShortLink.slug}`,
-                    clicks: e.ShortLink.clicks,
-                } : null,
-                status: e.status,
-                created_at: e.created_at,
-            }))
+            enrollments: enrollments.map(e => {
+                // Get custom domain for this mission's workspace
+                const customDomain = e.Mission.Workspace.Domain?.[0]?.name
+                const baseUrl = customDomain
+                    ? `https://${customDomain}`
+                    : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+
+                // Get stats from Tinybird (or fallback to 0)
+                const stats = e.ShortLink ? tinybirdStats.get(e.ShortLink.id) : null
+
+                return {
+                    id: e.id,
+                    mission: {
+                        id: e.Mission.id,
+                        title: e.Mission.title,
+                        reward: e.Mission.reward,
+                    },
+                    link: e.ShortLink ? {
+                        slug: e.ShortLink.slug,
+                        full_url: `${baseUrl}/s/${e.ShortLink.slug}`,
+                        clicks: stats?.clicks || 0,
+                        sales: stats?.sales || 0,
+                        revenue: stats?.revenue || 0,
+                    } : null,
+                    status: e.status,
+                    created_at: e.created_at,
+                }
+            })
         }
 
     } catch (error) {
