@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import {
-    Code2, CheckCircle2, Copy, Check,
-    Zap, AlertCircle, RefreshCw,
-    Loader2, Eye, EyeOff, Building2,
-    Globe, ShieldCheck, ExternalLink
+    Code2, Copy, Check, Zap, AlertCircle, RefreshCw,
+    Loader2, Eye, EyeOff, Building2, Globe, ShieldCheck,
+    ExternalLink, Users, CreditCard, Webhook
 } from 'lucide-react'
 import Link from 'next/link'
 import { getOrCreateApiKey, regenerateApiKey } from '@/app/actions/settings'
@@ -13,59 +12,72 @@ import { getVerifiedDomainForWorkspace } from '@/app/actions/domains'
 import { WebhookManager } from '@/components/WebhookManager'
 
 // =============================================
-// TYPES
+// COMPONENTS
 // =============================================
 
-interface InstallationStatus {
-    installed: boolean
-    eventCount: number
-    lastEventAt: string | null
-    status: 'connected' | 'waiting' | 'no_workspace' | 'error' | 'no_tinybird_token' | 'query_failed'
-}
-
-function CopyButton({ text, label, className = '' }: { text: string; label?: string; className?: string }) {
+function CopyButton({ text }: { text: string }) {
     const [copied, setCopied] = useState(false)
-    const handleCopy = async () => {
-        await navigator.clipboard.writeText(text)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-    }
     return (
         <button
-            onClick={handleCopy}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-800 hover:bg-gray-700 transition-colors text-sm ${className}`}
+            onClick={async () => {
+                await navigator.clipboard.writeText(text)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+            }}
+            className="p-1.5 rounded bg-gray-800 hover:bg-gray-700 transition-colors"
         >
             {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
-            {label && <span className="text-gray-300">{copied ? 'Copié !' : label}</span>}
         </button>
     )
 }
 
-function CodeBlock({ code, language = 'html' }: { code: string; language?: string }) {
+function CodeBlock({ code, language = 'javascript' }: { code: string; language?: string }) {
     return (
         <div className="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2 bg-gray-800/50 border-b border-gray-800">
                 <span className="text-xs text-gray-500 uppercase font-mono">{language}</span>
-                <CopyButton text={code} label="Copier" />
+                <CopyButton text={code} />
             </div>
             <pre className="p-4 text-sm font-mono text-gray-300 overflow-x-auto whitespace-pre-wrap">{code}</pre>
         </div>
     )
 }
 
-function StatusBadge({ status, children }: { status: 'success' | 'warning' | 'info' | 'loading'; children: React.ReactNode }) {
-    const styles = {
-        success: 'bg-green-50 border-green-200 text-green-700',
-        warning: 'bg-amber-50 border-amber-200 text-amber-700',
-        info: 'bg-blue-50 border-blue-200 text-blue-700',
-        loading: 'bg-gray-50 border-gray-200 text-gray-500'
+function StepHeader({ number, title, description, color = 'gray' }: {
+    number: number; title: string; description: string; color?: string
+}) {
+    const colors: Record<string, string> = {
+        gray: 'bg-gray-200 text-gray-600',
+        green: 'bg-green-500 text-white',
+        blue: 'bg-blue-500 text-white',
+        purple: 'bg-purple-500 text-white',
+        orange: 'bg-orange-500 text-white'
     }
     return (
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${styles[status]}`}>
-            {children}
+        <div className="flex items-start gap-3 mb-4">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${colors[color]}`}>
+                {number}
+            </div>
+            <div>
+                <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+                <p className="text-sm text-gray-500">{description}</p>
+            </div>
         </div>
     )
 }
+
+function InfoBox({ type, children }: { type: 'info' | 'warning' | 'success'; children: React.ReactNode }) {
+    const styles = {
+        info: 'bg-blue-50 border-blue-200 text-blue-800',
+        warning: 'bg-amber-50 border-amber-200 text-amber-800',
+        success: 'bg-green-50 border-green-200 text-green-800'
+    }
+    return <div className={`p-3 rounded-lg border text-sm ${styles[type]}`}>{children}</div>
+}
+
+// =============================================
+// MAIN PAGE
+// =============================================
 
 export default function IntegrationPage() {
     const [publicKey, setPublicKey] = useState<string | null>(null)
@@ -74,7 +86,7 @@ export default function IntegrationPage() {
     const [workspaceName, setWorkspaceName] = useState('')
     const [customDomain, setCustomDomain] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
-    const [installStatus, setInstallStatus] = useState<InstallationStatus | null>(null)
+    const [eventCount, setEventCount] = useState(0)
 
     useEffect(() => {
         async function init() {
@@ -90,20 +102,21 @@ export default function IntegrationPage() {
                     setSecretKey(keys.secretKey || null)
                 }
                 if (domain.success) setCustomDomain(domain.domain || null)
-                if (status) setInstallStatus(status)
+                if (status?.eventCount) setEventCount(status.eventCount)
             } catch (e) {
                 console.error(e)
             }
             setLoading(false)
         }
         init()
-        const interval = setInterval(() => fetch('/api/stats/check-installation').then(r => r.json()).then(setInstallStatus), 5000)
-        return () => clearInterval(interval)
     }, [])
 
-    // Generate SDK snippets based on configuration
-    // FIRST-PARTY: Requires reverse proxy setup on startup's site
-    const firstPartySnippet = `<!-- Step 1: Add to next.config.js -->
+    // =============================================
+    // CODE SNIPPETS
+    // =============================================
+
+    const sdkSnippet = customDomain
+        ? `<!-- next.config.js - Ajoute ces rewrites -->
 module.exports = {
   async rewrites() {
     return [
@@ -113,96 +126,40 @@ module.exports = {
   },
 };
 
-<!-- Step 2: Add to your HTML <head> -->
+<!-- HTML <head> -->
 <script 
   src="/_trac/script.js" 
   defer
   data-api-host="/_trac"
-  data-domains='{"refer":"${customDomain || 'short.yourdomain.com'}"}'
-  data-query-params='["via", "ref"]'
-  data-attribution-model="first-click"
+  data-domains='{"refer":"${customDomain}"}'
 ></script>`
-
-    // THIRD-PARTY: Simpler but can be blocked by adblockers
-    const thirdPartySnippet = `<!-- Option simple (peut être bloqué par adblockers) -->
+        : `<!-- HTML <head> - Simple (Third-party) -->
 <script 
   src="https://traaaction.com/trac.js" 
   defer
-  data-domains='{"refer":"${customDomain || 'short.yourdomain.com'}"}'
-  data-query-params='["via", "ref"]'
-  data-attribution-model="first-click"
+  data-domains='{"refer":"short.yourdomain.com"}'
 ></script>`
 
-    const reactBannerSnippet = `// Afficher la bannière de réduction partenaire
-import { DiscountBanner } from '@/components/DiscountBanner'
-
-function MyPage() {
-  return (
-    <div>
-      <DiscountBanner />
-      {/* Affiche: "John vous offre 25% de réduction" */}
-    </div>
-  )
-}`
-
-    const hookSnippet = `// Utiliser le hook pour accéder aux données partenaire
-import { useTracAnalytics } from '@/lib/hooks/useTracAnalytics'
-
-function MyComponent() {
-  const { partner, discount } = useTracAnalytics()
-  
-  if (partner && discount) {
-    console.log(partner.name, discount.amount)
-  }
-}`
-
-    const vanillaJsSnippet = `// Usage sans React (vanilla JS)
-tracAnalytics("ready", function() {
-  if (Trac.partner && Trac.discount) {
-    var banner = document.createElement("div");
-    banner.innerHTML = Trac.partner.name + " vous offre " + 
-      Trac.discount.amount + "% de réduction";
-    document.body.prepend(banner);
-  }
-});`
-
-    // Lead Tracking snippet (Step 2)
-    const leadTrackingSnippet = `// Backend Node.js - Lors de la création du compte utilisateur
-// Lit le cookie trac_click_id côté client et l'envoie au backend
-
+    const leadSnippet = `// Backend - Après création du compte utilisateur
 await fetch('https://traaaction.com/api/track/lead', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     eventName: 'sign_up',
-    customerExternalId: user.id,      // ID interne (obligatoire)
-    clickId: req.cookies.trac_click_id, // Cookie du SDK
-    customerEmail: user.email,
-    customerName: user.name
+    customerExternalId: user.id,  // Obligatoire
+    clickId: cookies.trac_click_id,
+    customerEmail: user.email
   })
-});
+});`
 
-// ✅ Une fois le lead créé, toutes les ventes futures
-// seront automatiquement attribuées au lien original.`
-
-    // Stripe Checkout snippet (Step 3)
-    const stripeCheckoutSnippet = `// Backend - Création de la session Stripe Checkout
-// Passe le customerExternalId pour l'attribution automatique
-
+    const stripeSnippet = `// Backend - Création Stripe Checkout
 const session = await stripe.checkout.sessions.create({
-  line_items: [{ price: 'price_xxx', quantity: 1 }],
+  line_items: [...],
   mode: 'payment',
-  success_url: 'https://example.com/success',
-  cancel_url: 'https://example.com/cancel',
-  
-  // ⚠️ IMPORTANT: Attribution automatique
   metadata: {
-    tracCustomerExternalId: user.id,  // Même ID que dans trackLead
-    tracClickId: clickId,              // Optionnel si lead créé
-  },
-  
-  // Pour guest checkout (pas de compte utilisateur)
-  customer_creation: 'always',
+    tracCustomerExternalId: user.id,  // Même ID que trackLead
+    tracClickId: clickId              // Optionnel si lead créé
+  }
 });`
 
     if (loading) {
@@ -214,292 +171,125 @@ const session = await stripe.checkout.sessions.create({
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="max-w-3xl mx-auto px-6 py-8">
             {/* Header */}
-            <div className="mb-10">
+            <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
                     <Code2 className="w-6 h-6 text-gray-700" />
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Intégration</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">Intégration</h1>
                     {workspaceName && (
                         <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full flex items-center gap-1">
                             <Building2 className="w-3 h-3" />{workspaceName}
                         </span>
                     )}
                 </div>
-                <p className="text-gray-500">Connecte ton site pour tracker les clics et conversions de tes partenaires.</p>
+                <p className="text-gray-500">Connecte ton site pour tracker les clics et conversions.</p>
             </div>
 
             {/* Mode Indicator */}
-            <div className="mb-8">
+            <div className="mb-8 p-4 rounded-xl border bg-gradient-to-r from-gray-50 to-white">
                 {customDomain ? (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                <ShieldCheck className="w-5 h-5 text-green-600" />
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-green-800">Mode First-Party Recommandé ✓</h3>
-                                <p className="text-green-600 text-sm">Domaine custom: <code className="bg-green-100 px-1.5 py-0.5 rounded">{customDomain}</code></p>
-                            </div>
-                        </div>
-                        <div className="bg-green-100 border border-green-300 rounded-lg p-3 mt-3">
-                            <p className="text-green-800 text-sm font-medium mb-1">⚠️ Configuration requise</p>
-                            <p className="text-green-700 text-sm">
-                                Pour le first-party tracking, tu dois configurer un <strong>reverse proxy</strong> sur ton site
-                                (Next.js rewrites ou Vercel config). Le code ci-dessous inclut les 2 étapes nécessaires.
-                            </p>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                                <Globe className="w-5 h-5 text-amber-600" />
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-amber-800">Mode Third-Party</h3>
-                                <p className="text-amber-600 text-sm">Le script est chargé depuis traaaction.com</p>
-                            </div>
-                        </div>
-                        <div className="bg-amber-100 border border-amber-300 rounded-lg p-3 mt-3">
-                            <p className="text-amber-800 text-sm">
-                                ⚠️ Cette option peut être <strong>bloquée par les adblockers</strong>.
-                                <Link href="/dashboard/domains" className="underline font-medium hover:text-amber-900 ml-1">
-                                    Configure un domaine personnalisé
-                                </Link> pour le mode First-Party.
-                            </p>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Step 1: Install SDK */}
-            <div className="mb-10">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${installStatus?.installed
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-600'
-                        }`}>
-                        {installStatus?.installed ? <Check className="w-4 h-4" /> : '1'}
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Installe le SDK</h2>
-                        <p className="text-sm text-gray-500">Ajoute ce code dans le <code className="bg-gray-100 px-1 rounded">&lt;head&gt;</code> de ton site</p>
-                    </div>
-                </div>
-
-                <CodeBlock code={customDomain ? firstPartySnippet : thirdPartySnippet} />
-
-                {/* Platform-specific instructions */}
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {[
-                        { name: 'Shopify', hint: 'Theme > Edit code > theme.liquid' },
-                        { name: 'WordPress', hint: 'Appearance > Theme Editor > header.php' },
-                        { name: 'Webflow', hint: 'Project Settings > Custom Code' }
-                    ].map(platform => (
-                        <div key={platform.name} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                            <p className="font-medium text-gray-900 text-sm">{platform.name}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{platform.hint}</p>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Installation status */}
-                <div className="mt-4">
-                    {installStatus?.installed ? (
-                        <StatusBadge status="success">
-                            <Zap className="w-4 h-4 fill-current" />
-                            <span>SDK détecté et actif sur ton site</span>
-                        </StatusBadge>
-                    ) : (
-                        <StatusBadge status="loading">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>En attente de l'installation...</span>
-                        </StatusBadge>
-                    )}
-                </div>
-            </div>
-
-            {/* Step 2: Lead Tracking */}
-            <div className="mb-10">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-bold text-white">
-                        2
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Tracker les Signups (Lead)</h2>
-                        <p className="text-sm text-gray-500">Appelle l'API lors de la création d'un compte utilisateur</p>
-                    </div>
-                </div>
-
-                <CodeBlock code={leadTrackingSnippet} language="javascript" />
-
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                    <p className="text-sm text-blue-700">
-                        <strong>💡 Point clé:</strong> Une fois le lead créé avec <code className="bg-blue-100 px-1 rounded">customerExternalId</code>,
-                        toutes les ventes futures de ce client sont automatiquement attribuées au lien partenaire original.
-                    </p>
-                </div>
-            </div>
-
-            {/* Step 3: Stripe Checkout Attribution */}
-            <div className="mb-10">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-sm font-bold text-white">
-                        3
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Attribution Stripe Checkout</h2>
-                        <p className="text-sm text-gray-500">Passe les metadata pour l'attribution automatique</p>
-                    </div>
-                </div>
-
-                <CodeBlock code={stripeCheckoutSnippet} language="javascript" />
-
-                <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-100">
-                    <p className="text-sm text-purple-700">
-                        <strong>⚠️ Important:</strong> Utilise le même <code className="bg-purple-100 px-1 rounded">tracCustomerExternalId</code>
-                        que dans le tracking des leads pour une attribution cohérente.
-                    </p>
-                </div>
-            </div>
-
-            {/* Step 4: Stripe Webhook */}
-            <div className="mb-10">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
-                        4
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Configure ton Webhook Stripe</h2>
-                        <p className="text-sm text-gray-500">Pour recevoir les paiements et calculer les commissions</p>
-                    </div>
-                </div>
-
-                <WebhookManager onStatusChange={() => { }} />
-            </div>
-
-            {/* Step 5: Verify */}
-            <div className="mb-10">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${installStatus?.lastEventAt
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-600'
-                        }`}>
-                        {installStatus?.lastEventAt ? <Check className="w-4 h-4" /> : '5'}
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Vérifie la réception</h2>
-                        <p className="text-sm text-gray-500">Assure-toi que les événements arrivent correctement</p>
-                    </div>
-                </div>
-
-                {installStatus?.lastEventAt ? (
-                    <StatusBadge status={
-                        (Date.now() - new Date(installStatus.lastEventAt).getTime()) < 15 * 60 * 1000
-                            ? 'success'
-                            : 'warning'
-                    }>
-                        <Zap className="w-4 h-4 fill-current" />
-                        <span>Dernier événement: {new Date(installStatus.lastEventAt).toLocaleString('fr-FR')}</span>
-                        {installStatus.eventCount > 0 && (
-                            <span className="ml-1 opacity-75">({installStatus.eventCount} total)</span>
-                        )}
-                    </StatusBadge>
-                ) : (
-                    <StatusBadge status="loading">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>En attente du premier événement...</span>
-                    </StatusBadge>
-                )}
-
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                    <h4 className="font-medium text-gray-900 mb-2">💡 Comment tester ?</h4>
-                    <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-                        <li>Ouvre ton site dans un nouvel onglet</li>
-                        <li>Clique sur un lien partenaire (depuis /s/xxx)</li>
-                        <li>Reviens ici - le compteur devrait se mettre à jour</li>
-                    </ol>
-                </div>
-            </div>
-
-            {/* Step 4: Partner Features */}
-            <div className="mb-10">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-sm font-bold text-white">
-                        4
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Fonctionnalités Partenaires</h2>
-                        <p className="text-sm text-gray-500">Affiche une bannière de réduction aux visiteurs référés</p>
-                    </div>
-                </div>
-
-                <div className="space-y-4">
-                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                        <h4 className="font-medium text-purple-900 mb-2">🎁 Bannière DiscountBanner</h4>
-                        <p className="text-sm text-purple-700 mb-3">
-                            Quand un utilisateur arrive via <code className="bg-purple-100 px-1 rounded">?via=john</code>,
-                            le SDK stocke les données du partenaire. Affiche une bannière pour augmenter les conversions !
-                        </p>
-                        <CodeBlock code={reactBannerSnippet} language="tsx" />
-                    </div>
-
-                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                        <h4 className="font-medium text-gray-900 mb-2">🔧 Hook useTracAnalytics (React)</h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                            Pour un contrôle plus fin, utilise le hook React pour accéder aux données brutes.
-                        </p>
-                        <CodeBlock code={hookSnippet} language="tsx" />
-                    </div>
-
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <h4 className="font-medium text-amber-900 mb-2">📜 Vanilla JS (autres frameworks)</h4>
-                        <p className="text-sm text-amber-700 mb-3">
-                            Pour Shopify, WordPress, ou tout site sans React, utilise le callback <code className="bg-amber-100 px-1 rounded">tracAnalytics("ready")</code>.
-                        </p>
-                        <CodeBlock code={vanillaJsSnippet} language="javascript" />
-                    </div>
-
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="font-medium text-blue-900 mb-2">⚙️ Configuration Discount</h4>
-                        <p className="text-sm text-blue-700">
-                            Configure ton discount dans
-                            <Link href="/dashboard/settings" className="underline font-medium ml-1">Settings → Discount</Link>.
-                            Lie un coupon Stripe pour appliquer automatiquement la réduction au checkout.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* API Keys Section (collapsed by default for simplicity) */}
-            <details className="mb-10 bg-gray-50 rounded-xl border border-gray-200">
-                <summary className="p-4 cursor-pointer flex items-center justify-between hover:bg-gray-100 rounded-xl transition-colors">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                            <Code2 className="w-4 h-4 text-gray-600" />
-                        </div>
+                        <ShieldCheck className="w-6 h-6 text-green-600" />
                         <div>
-                            <h2 className="text-lg font-semibold text-gray-900">Clés API</h2>
-                            <p className="text-sm text-gray-500">Pour les intégrations serveur avancées</p>
+                            <p className="font-medium text-green-800">Mode First-Party</p>
+                            <p className="text-sm text-gray-600">Domaine: <code className="bg-gray-100 px-1 rounded">{customDomain}</code></p>
                         </div>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-3">
+                        <Globe className="w-6 h-6 text-amber-600" />
+                        <div>
+                            <p className="font-medium text-amber-800">Mode Third-Party</p>
+                            <p className="text-sm text-gray-600">
+                                <Link href="/dashboard/domains" className="underline">Configure un domaine</Link> pour éviter les adblockers
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Steps */}
+            <div className="space-y-10">
+
+                {/* Step 1: SDK */}
+                <section>
+                    <StepHeader
+                        number={1}
+                        title="Installe le SDK"
+                        description="Ajoute ce script dans le <head> de ton site"
+                        color="blue"
+                    />
+                    <CodeBlock code={sdkSnippet} language="html" />
+                    {eventCount > 0 && (
+                        <div className="mt-3 flex items-center gap-2 text-green-600 text-sm">
+                            <Zap className="w-4 h-4" />
+                            <span>{eventCount} événements reçus</span>
+                        </div>
+                    )}
+                </section>
+
+                {/* Step 2: Lead Tracking */}
+                <section>
+                    <StepHeader
+                        number={2}
+                        title="Track les Signups"
+                        description="Appelle l'API lors de la création d'un compte"
+                        color="purple"
+                    />
+                    <CodeBlock code={leadSnippet} />
+                    <div className="mt-3">
+                        <InfoBox type="info">
+                            <strong>💡 Clé:</strong> Une fois le lead créé, toutes les ventes futures sont attribuées automatiquement.
+                        </InfoBox>
+                    </div>
+                </section>
+
+                {/* Step 3: Stripe Attribution */}
+                <section>
+                    <StepHeader
+                        number={3}
+                        title="Attribution Stripe"
+                        description="Passe les metadata dans Stripe Checkout"
+                        color="orange"
+                    />
+                    <CodeBlock code={stripeSnippet} />
+                </section>
+
+                {/* Step 4: Webhook */}
+                <section>
+                    <StepHeader
+                        number={4}
+                        title="Configure le Webhook Stripe"
+                        description="Pour recevoir les paiements et créer les commissions"
+                        color="gray"
+                    />
+                    <WebhookManager onStatusChange={() => { }} />
+                </section>
+
+            </div>
+
+            {/* API Keys (Collapsible) */}
+            <details className="mt-10 bg-gray-50 rounded-xl border border-gray-200">
+                <summary className="px-4 py-3 cursor-pointer flex items-center justify-between hover:bg-gray-100 transition-colors rounded-xl">
+                    <div className="flex items-center gap-3">
+                        <Code2 className="w-4 h-4 text-gray-600" />
+                        <span className="font-medium text-gray-900">Clés API</span>
                     </div>
                     <ExternalLink className="w-4 h-4 text-gray-400" />
                 </summary>
-
-                <div className="p-4 border-t border-gray-200 space-y-4">
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="p-4 border-t border-gray-200 space-y-3">
+                    <div className="bg-white border rounded-lg p-3">
                         <div className="flex justify-between items-center mb-1">
                             <span className="text-xs font-semibold text-gray-500 uppercase">Public Key</span>
                             <CopyButton text={publicKey || ''} />
                         </div>
-                        <code className="font-mono text-sm text-gray-900 block truncate">{publicKey}</code>
+                        <code className="font-mono text-sm text-gray-900">{publicKey}</code>
                     </div>
-
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <div className="bg-white border rounded-lg p-3">
                         <div className="flex justify-between items-center mb-1">
                             <span className="text-xs font-semibold text-gray-500 uppercase">Secret Key</span>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1">
                                 {secretKey && (
                                     <>
                                         <button onClick={() => setShowSecret(!showSecret)} className="p-1.5 hover:bg-gray-100 rounded">
@@ -511,19 +301,15 @@ const session = await stripe.checkout.sessions.create({
                             </div>
                         </div>
                         {secretKey ? (
-                            <code className="font-mono text-sm text-gray-900 block truncate">
-                                {showSecret ? secretKey : 'sk_live_••••••••••••••••••••••••••••'}
+                            <code className="font-mono text-sm text-gray-900">
+                                {showSecret ? secretKey : 'sk_live_••••••••••••••••••••••••'}
                             </code>
                         ) : (
                             <div className="space-y-2">
-                                <code className="font-mono text-sm text-gray-400 block">sk_live_••••••••••••••••••••••••••••</code>
-                                <p className="text-xs text-amber-600 flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3" />
-                                    La clé secrète n&apos;est visible qu&apos;à la création.
-                                </p>
+                                <code className="font-mono text-sm text-gray-400">sk_live_••••••••••••••••••••••••</code>
                                 <button
                                     onClick={async () => {
-                                        if (confirm('Attention : Cela invalidera ta clé actuelle. Continuer ?')) {
+                                        if (confirm('Régénérer invalidera la clé actuelle. Continuer ?')) {
                                             const result = await regenerateApiKey()
                                             if (result.success) {
                                                 setPublicKey(result.publicKey!)
@@ -534,8 +320,7 @@ const session = await stripe.checkout.sessions.create({
                                     }}
                                     className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
                                 >
-                                    <RefreshCw className="w-3 h-3" />
-                                    Régénérer les clés
+                                    <RefreshCw className="w-3 h-3" /> Régénérer
                                 </button>
                             </div>
                         )}
