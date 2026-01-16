@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Loader2, AlertCircle, ExternalLink, Copy, Check, MousePointer, Users, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 import { getPartnerDashboard } from '@/app/actions/partners'
-import { getMyEnrollments } from '@/app/actions/marketplace'
+import { getMyEnrollments, getMyGlobalStats } from '@/app/actions/marketplace'
 
 interface Stats {
     totalEarned: number
@@ -181,15 +181,16 @@ export default function PartnerDashboardPage() {
     const [loading, setLoading] = useState(true)
     const [stats, setStats] = useState<Stats | null>(null)
     const [enrollments, setEnrollments] = useState<Enrollment[]>([])
-    const [totalClicks, setTotalClicks] = useState(0)
+    const [globalStats, setGlobalStats] = useState({ clicks: 0, sales: 0, revenue: 0 })
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         async function load() {
             try {
-                const [dashboardRes, enrollmentsRes] = await Promise.all([
+                const [dashboardRes, enrollmentsRes, globalStatsRes] = await Promise.all([
                     getPartnerDashboard(),
-                    getMyEnrollments()
+                    getMyEnrollments(),
+                    getMyGlobalStats()
                 ])
 
                 if (dashboardRes.success && dashboardRes.stats) {
@@ -197,9 +198,9 @@ export default function PartnerDashboardPage() {
                 }
                 if (enrollmentsRes.success && enrollmentsRes.enrollments) {
                     setEnrollments(enrollmentsRes.enrollments)
-                    // Calculate total clicks from all enrollments
-                    const clicks = enrollmentsRes.enrollments.reduce((sum, e) => sum + (e.link?.clicks || 0), 0)
-                    setTotalClicks(clicks)
+                }
+                if (globalStatsRes.success && globalStatsRes.stats) {
+                    setGlobalStats(globalStatsRes.stats)
                 }
                 if (!dashboardRes.success && !enrollmentsRes.success) {
                     setError(dashboardRes.error || enrollmentsRes.error || 'Erreur')
@@ -232,10 +233,9 @@ export default function PartnerDashboardPage() {
         )
     }
 
-    // Leads = 0 for now (not tracked yet), Sales = revenue from commissions
+    // Use globalStats from Tinybird (real clicks/sales by affiliate_id)
     const leads = 0 // TODO: Get from Tinybird leads table
-    const sales = stats?.conversionCount || 0
-    const revenue = stats?.totalEarned || 0
+    const { clicks: totalClicks, sales, revenue } = globalStats
 
     return (
         <div className="min-h-screen bg-[#FAFAFB]">

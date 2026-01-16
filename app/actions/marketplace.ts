@@ -112,6 +112,80 @@ async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<str
     return statsMap
 }
 
+/**
+ * Get TOTAL affiliate stats by user_id (affiliate_id)
+ * This aggregates ALL clicks and sales for a partner, regardless of which link was used
+ */
+export async function getAffiliateStatsByUserId(userId: string): Promise<AffiliateStats> {
+    const stats: AffiliateStats = { clicks: 0, sales: 0, revenue: 0 }
+
+    if (!userId || !TINYBIRD_TOKEN) {
+        return stats
+    }
+
+    try {
+        // 1. GET TOTAL CLICKS by affiliate_id
+        const clicksQuery = `SELECT count() as clicks FROM clicks WHERE affiliate_id = '${userId}'`
+        const clicksResponse = await fetch(
+            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
+            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+        )
+
+        if (clicksResponse.ok) {
+            const text = await clicksResponse.text()
+            const clicks = parseInt(text.trim()) || 0
+            stats.clicks = clicks
+        }
+
+        // 2. GET TOTAL SALES by affiliate_id
+        const salesQuery = `SELECT count() as sales, sum(amount) as revenue FROM sales WHERE affiliate_id = '${userId}'`
+        const salesResponse = await fetch(
+            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
+            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+        )
+
+        if (salesResponse.ok) {
+            const text = await salesResponse.text()
+            const [sales, revenue] = text.trim().split('\t')
+            stats.sales = parseInt(sales) || 0
+            stats.revenue = (parseInt(revenue) || 0) / 100
+        }
+
+        console.log(`[Marketplace] 📊 Total stats for affiliate ${userId}: ${stats.clicks} clicks, ${stats.sales} sales, ${stats.revenue}€`)
+
+    } catch (error) {
+        console.error('[Marketplace] ⚠️ Error fetching affiliate stats:', error)
+    }
+
+    return stats
+}
+
+/**
+ * Get global stats for the current authenticated partner
+ * Wrapper that handles auth and calls getAffiliateStatsByUserId
+ */
+export async function getMyGlobalStats(): Promise<{
+    success: boolean
+    stats?: AffiliateStats
+    userId?: string
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    try {
+        const stats = await getAffiliateStatsByUserId(user.id)
+        return { success: true, stats, userId: user.id }
+    } catch (error) {
+        console.error('[Marketplace] ❌ Error getting global stats:', error)
+        return { success: false, error: 'Failed to fetch stats' }
+    }
+}
+
 // =============================================
 // SECURITY HELPERS
 // =============================================
