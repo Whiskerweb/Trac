@@ -40,85 +40,138 @@ function formatNumber(n: number): string {
 }
 
 // =============================================
-// FUNNEL CHART COMPONENT
+// FUNNEL CHART COMPONENT (Dub.co style)
 // =============================================
 function FunnelChart({ clicks, leads, sales, revenue }: {
     clicks: number; leads: number; sales: number; revenue: number
 }) {
-    // Calculate percentages
+    // Calculate percentages (relative to clicks)
     const leadsPercent = clicks > 0 ? Math.round((leads / clicks) * 100) : 0
     const salesPercent = clicks > 0 ? Math.round((sales / clicks) * 100) : 0
+
+    // Heights for funnel visualization (relative, max = 100)
+    const clicksHeight = 100
+    const leadsHeight = Math.max(leadsPercent, 5) // minimum 5% for visibility
+    const salesHeight = Math.max(salesPercent, 3) // minimum 3% for visibility
+
+    // SVG dimensions
+    const width = 900
+    const height = 200
+    const sectionWidth = width / 3
+
+    // Generate flowing path between two sections
+    const generateFlowPath = (
+        startX: number, startHeight: number,
+        endX: number, endHeight: number,
+        maxHeight: number
+    ) => {
+        const startY = (maxHeight - startHeight) / 2
+        const endY = (maxHeight - endHeight) / 2
+        const cpOffset = (endX - startX) / 2
+
+        // Top curve
+        const topStart = `M ${startX} ${startY}`
+        const topCurve = `C ${startX + cpOffset} ${startY}, ${endX - cpOffset} ${endY}, ${endX} ${endY}`
+
+        // Bottom curve
+        const bottomEnd = `L ${endX} ${endY + endHeight}`
+        const bottomCurve = `C ${endX - cpOffset} ${endY + endHeight}, ${startX + cpOffset} ${startY + startHeight}, ${startX} ${startY + startHeight}`
+
+        return `${topStart} ${topCurve} ${bottomEnd} ${bottomCurve} Z`
+    }
+
+    // Calculate normalized heights for SVG
+    const svgMaxHeight = height - 40 // padding
+    const clicksSvgHeight = (clicksHeight / 100) * svgMaxHeight
+    const leadsSvgHeight = (leadsHeight / 100) * svgMaxHeight
+    const salesSvgHeight = (salesHeight / 100) * svgMaxHeight
 
     return (
         <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8">
             {/* Header Stats */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="text-center">
-                    <div className="flex items-center justify-center gap-2 mb-1">
+            <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="text-left">
+                    <div className="flex items-center gap-2 mb-1">
                         <div className="w-2 h-2 rounded-full bg-blue-500" />
                         <span className="text-sm text-gray-500">Clicks</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">{formatNumber(clicks)}</p>
+                    <p className="text-3xl font-bold text-gray-900">{formatNumber(clicks)}</p>
                 </div>
-                <div className="text-center border-l border-r border-gray-100">
-                    <div className="flex items-center justify-center gap-2 mb-1">
+                <div className="text-left border-l border-gray-100 pl-4">
+                    <div className="flex items-center gap-2 mb-1">
                         <div className="w-2 h-2 rounded-full bg-purple-500" />
                         <span className="text-sm text-gray-500">Leads</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">{formatNumber(leads)}</p>
+                    <p className="text-3xl font-bold text-gray-900">{formatNumber(leads)}</p>
                 </div>
-                <div className="text-center">
-                    <div className="flex items-center justify-center gap-2 mb-1">
+                <div className="text-left border-l border-gray-100 pl-4">
+                    <div className="flex items-center gap-2 mb-1">
                         <div className="w-2 h-2 rounded-full bg-teal-500" />
                         <span className="text-sm text-gray-500">Sales</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(revenue)}</p>
+                    <p className="text-3xl font-bold text-gray-900">{formatCurrency(revenue)}</p>
                 </div>
             </div>
 
-            {/* Funnel Visualization */}
-            <div className="relative h-32 flex items-end">
-                {/* Clicks Bar (100%) */}
-                <div className="flex-1 relative">
-                    <div
-                        className="absolute inset-x-0 bottom-0 bg-gradient-to-r from-blue-400 to-blue-500 rounded-l-lg"
-                        style={{ height: '100%' }}
-                    >
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="bg-white/90 px-2 py-0.5 rounded text-xs font-semibold text-gray-700">
-                                100%
-                            </span>
-                        </div>
-                    </div>
-                </div>
+            {/* Funnel Visualization - SVG */}
+            <div className="relative overflow-hidden rounded-lg" style={{ backgroundColor: '#f8fafc' }}>
+                <svg
+                    viewBox={`0 0 ${width} ${height}`}
+                    className="w-full h-auto"
+                    style={{ minHeight: '160px' }}
+                >
+                    <defs>
+                        {/* Gradients */}
+                        <linearGradient id="clicksGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#3b82f6" />
+                            <stop offset="100%" stopColor="#60a5fa" />
+                        </linearGradient>
+                        <linearGradient id="leadsGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#a855f7" />
+                            <stop offset="100%" stopColor="#c084fc" />
+                        </linearGradient>
+                        <linearGradient id="salesGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#14b8a6" />
+                            <stop offset="100%" stopColor="#5eead4" />
+                        </linearGradient>
+                    </defs>
 
-                {/* Leads Bar */}
-                <div className="flex-1 relative">
-                    <div
-                        className="absolute inset-x-0 bottom-0 bg-gradient-to-r from-purple-400 to-purple-500"
-                        style={{ height: `${Math.max(leadsPercent, 10)}%` }}
-                    >
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="bg-white/90 px-2 py-0.5 rounded text-xs font-semibold text-gray-700">
-                                {leadsPercent}%
-                            </span>
-                        </div>
-                    </div>
-                </div>
+                    {/* Flow from Clicks to Leads */}
+                    <path
+                        d={generateFlowPath(0, clicksSvgHeight, sectionWidth, leadsSvgHeight, height)}
+                        fill="url(#clicksGradient)"
+                        opacity="0.9"
+                    />
 
-                {/* Sales Bar */}
-                <div className="flex-1 relative">
-                    <div
-                        className="absolute inset-x-0 bottom-0 bg-gradient-to-r from-teal-400 to-teal-500 rounded-r-lg"
-                        style={{ height: `${Math.max(salesPercent, 5)}%` }}
-                    >
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="bg-white/90 px-2 py-0.5 rounded text-xs font-semibold text-gray-700">
-                                {salesPercent}%
-                            </span>
-                        </div>
-                    </div>
-                </div>
+                    {/* Flow from Leads to Sales */}
+                    <path
+                        d={generateFlowPath(sectionWidth, leadsSvgHeight, sectionWidth * 2, salesSvgHeight, height)}
+                        fill="url(#leadsGradient)"
+                        opacity="0.9"
+                    />
+
+                    {/* Sales section (extends to end) */}
+                    <path
+                        d={generateFlowPath(sectionWidth * 2, salesSvgHeight, width, salesSvgHeight, height)}
+                        fill="url(#salesGradient)"
+                        opacity="0.9"
+                    />
+
+                    {/* Percentage labels */}
+                    <g className="text-xs font-semibold" fill="#374151">
+                        {/* 100% label */}
+                        <rect x={sectionWidth / 2 - 30} y={height / 2 - 12} width="60" height="24" rx="12" fill="white" opacity="0.95" />
+                        <text x={sectionWidth / 2} y={height / 2 + 4} textAnchor="middle" fontSize="12" fontWeight="600">100%</text>
+
+                        {/* Leads % label */}
+                        <rect x={sectionWidth * 1.5 - 30} y={height / 2 - 12} width="60" height="24" rx="12" fill="white" opacity="0.95" />
+                        <text x={sectionWidth * 1.5} y={height / 2 + 4} textAnchor="middle" fontSize="12" fontWeight="600">{leadsPercent}%</text>
+
+                        {/* Sales % label */}
+                        <rect x={sectionWidth * 2.5 - 30} y={height / 2 - 12} width="60" height="24" rx="12" fill="white" opacity="0.95" />
+                        <text x={sectionWidth * 2.5} y={height / 2 + 4} textAnchor="middle" fontSize="12" fontWeight="600">{salesPercent}%</text>
+                    </g>
+                </svg>
             </div>
         </div>
     )
