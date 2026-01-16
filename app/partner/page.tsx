@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, AlertCircle, ShoppingCart, DollarSign, ExternalLink, Copy, Check, MousePointer } from 'lucide-react'
+import { Loader2, AlertCircle, ExternalLink, Copy, Check, MousePointer, Users, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 import { getPartnerDashboard } from '@/app/actions/partners'
 import { getMyEnrollments } from '@/app/actions/marketplace'
@@ -34,18 +34,92 @@ function formatCurrency(cents: number): string {
     return (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 })
 }
 
-function StatCard({ icon: Icon, label, value, color }: {
-    icon: React.ElementType; label: string; value: string | number; color: string
+function formatNumber(n: number): string {
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}K`
+    return n.toString()
+}
+
+// =============================================
+// FUNNEL CHART COMPONENT
+// =============================================
+function FunnelChart({ clicks, leads, sales, revenue }: {
+    clicks: number; leads: number; sales: number; revenue: number
 }) {
+    // Calculate percentages
+    const leadsPercent = clicks > 0 ? Math.round((leads / clicks) * 100) : 0
+    const salesPercent = clicks > 0 ? Math.round((sales / clicks) * 100) : 0
+
     return (
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <div className="flex items-center gap-3 mb-3">
-                <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
-                    <Icon className="w-5 h-5" />
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8">
+            {/* Header Stats */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="text-center">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <span className="text-sm text-gray-500">Clicks</span>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{formatNumber(clicks)}</p>
                 </div>
-                <span className="text-sm font-medium text-gray-600">{label}</span>
+                <div className="text-center border-l border-r border-gray-100">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                        <div className="w-2 h-2 rounded-full bg-purple-500" />
+                        <span className="text-sm text-gray-500">Leads</span>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{formatNumber(leads)}</p>
+                </div>
+                <div className="text-center">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                        <div className="w-2 h-2 rounded-full bg-teal-500" />
+                        <span className="text-sm text-gray-500">Sales</span>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(revenue)}</p>
+                </div>
             </div>
-            <p className="text-2xl font-semibold text-gray-900">{value}</p>
+
+            {/* Funnel Visualization */}
+            <div className="relative h-32 flex items-end">
+                {/* Clicks Bar (100%) */}
+                <div className="flex-1 relative">
+                    <div
+                        className="absolute inset-x-0 bottom-0 bg-gradient-to-r from-blue-400 to-blue-500 rounded-l-lg"
+                        style={{ height: '100%' }}
+                    >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="bg-white/90 px-2 py-0.5 rounded text-xs font-semibold text-gray-700">
+                                100%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Leads Bar */}
+                <div className="flex-1 relative">
+                    <div
+                        className="absolute inset-x-0 bottom-0 bg-gradient-to-r from-purple-400 to-purple-500"
+                        style={{ height: `${Math.max(leadsPercent, 10)}%` }}
+                    >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="bg-white/90 px-2 py-0.5 rounded text-xs font-semibold text-gray-700">
+                                {leadsPercent}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sales Bar */}
+                <div className="flex-1 relative">
+                    <div
+                        className="absolute inset-x-0 bottom-0 bg-gradient-to-r from-teal-400 to-teal-500 rounded-r-lg"
+                        style={{ height: `${Math.max(salesPercent, 5)}%` }}
+                    >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="bg-white/90 px-2 py-0.5 rounded text-xs font-semibold text-gray-700">
+                                {salesPercent}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }
@@ -107,6 +181,7 @@ export default function PartnerDashboardPage() {
     const [loading, setLoading] = useState(true)
     const [stats, setStats] = useState<Stats | null>(null)
     const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+    const [totalClicks, setTotalClicks] = useState(0)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
@@ -122,6 +197,9 @@ export default function PartnerDashboardPage() {
                 }
                 if (enrollmentsRes.success && enrollmentsRes.enrollments) {
                     setEnrollments(enrollmentsRes.enrollments)
+                    // Calculate total clicks from all enrollments
+                    const clicks = enrollmentsRes.enrollments.reduce((sum, e) => sum + (e.link?.clicks || 0), 0)
+                    setTotalClicks(clicks)
                 }
                 if (!dashboardRes.success && !enrollmentsRes.success) {
                     setError(dashboardRes.error || enrollmentsRes.error || 'Erreur')
@@ -154,43 +232,28 @@ export default function PartnerDashboardPage() {
         )
     }
 
+    // Leads = 0 for now (not tracked yet), Sales = revenue from commissions
+    const leads = 0 // TODO: Get from Tinybird leads table
+    const sales = stats?.conversionCount || 0
+    const revenue = stats?.totalEarned || 0
+
     return (
         <div className="min-h-screen bg-[#FAFAFB]">
             <div className="max-w-6xl mx-auto px-8 py-10">
 
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Dashboard</h1>
+                    <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Analytics</h1>
                     <p className="text-gray-500 mt-1">Vue d'ensemble de vos performances</p>
                 </div>
 
-                {/* Stats Overview */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-                    <StatCard
-                        icon={ShoppingCart}
-                        label="Conversions"
-                        value={stats?.conversionCount || 0}
-                        color="bg-blue-50 text-blue-600"
-                    />
-                    <StatCard
-                        icon={DollarSign}
-                        label="Total Gagné"
-                        value={formatCurrency(stats?.totalEarned || 0)}
-                        color="bg-green-50 text-green-600"
-                    />
-                    <StatCard
-                        icon={DollarSign}
-                        label="En Attente"
-                        value={formatCurrency(stats?.pendingAmount || 0)}
-                        color="bg-orange-50 text-orange-600"
-                    />
-                    <StatCard
-                        icon={DollarSign}
-                        label="Disponible"
-                        value={formatCurrency(stats?.dueAmount || 0)}
-                        color="bg-purple-50 text-purple-600"
-                    />
-                </div>
+                {/* Funnel Chart */}
+                <FunnelChart
+                    clicks={totalClicks}
+                    leads={leads}
+                    sales={sales}
+                    revenue={revenue}
+                />
 
                 {/* Missions Section */}
                 <div>
