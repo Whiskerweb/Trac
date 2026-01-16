@@ -115,31 +115,39 @@ export async function POST(
                     }
 
                     // Extract core data
+                    // Click ID: Check multiple sources (Trac-style and Dub-style)
                     let clickId = session.client_reference_id ||
-                        session.metadata?.clk_id ||
+                        session.metadata?.tracClickId ||          // ✅ Trac recommended
+                        session.metadata?.clk_id ||               // ✅ Legacy
+                        session.metadata?.dubClickId ||           // ✅ Dub compatibility
                         null
                     const workspaceId = endpoint.workspace_id // Attribution to workspace of the endpoint
 
                     // ========================================
-                    // CUSTOMER EXTERNAL ID (Dub-style Priority)
-                    // 1. metadata.customer_id = Internal user ID from startup (BEST)
-                    // 2. metadata.user_id = Alternative key
-                    // 3. Stripe customer ID = Fallback
-                    // 4. Email = Last resort
+                    // CUSTOMER EXTERNAL ID (Trac-style + Dub-style)
+                    // Priority order:
+                    // 1. metadata.tracCustomerExternalId (Trac recommended)
+                    // 2. metadata.dubCustomerExternalId (Dub compatibility)
+                    // 3. metadata.customer_id (generic)
+                    // 4. metadata.user_id (alternative)
+                    // 5. Stripe customer ID (fallback)
+                    // 6. Email (last resort)
                     // ========================================
                     const customerExternalId =
-                        session.metadata?.customer_id ||      // ✅ Internal user ID (recommended)
-                        session.metadata?.user_id ||          // ✅ Alternative key
-                        session.metadata?.external_id ||      // ✅ Explicit external ID
+                        session.metadata?.tracCustomerExternalId || // ✅ Trac recommended
+                        session.metadata?.dubCustomerExternalId ||  // ✅ Dub compatibility
+                        session.metadata?.customer_id ||            // ✅ Generic
+                        session.metadata?.user_id ||                // ✅ Alternative key
+                        session.metadata?.external_id ||            // ✅ Explicit external ID
                         (typeof session.customer === 'string' ? session.customer : null) ||
                         session.customer_details?.email ||
                         'guest'
 
                     console.log(`[Webhook] 🔑 Customer External ID: ${customerExternalId} (source: ${session.metadata?.customer_id ? 'metadata.customer_id' :
-                            session.metadata?.user_id ? 'metadata.user_id' :
-                                session.metadata?.external_id ? 'metadata.external_id' :
-                                    typeof session.customer === 'string' ? 'stripe_customer' :
-                                        session.customer_details?.email ? 'email' : 'guest'
+                        session.metadata?.user_id ? 'metadata.user_id' :
+                            session.metadata?.external_id ? 'metadata.external_id' :
+                                typeof session.customer === 'string' ? 'stripe_customer' :
+                                    session.customer_details?.email ? 'email' : 'guest'
                         })`)
 
                     // ========================================
