@@ -98,7 +98,7 @@ async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<str
                 if (link_id && statsMap.has(link_id)) {
                     const stats = statsMap.get(link_id)!
                     stats.sales = parseInt(sales) || 0
-                    stats.revenue = (parseInt(revenue) || 0) / 100 // Convert cents to euros
+                    stats.revenue = parseInt(revenue) || 0 // Keep in cents
                 }
             }
         }
@@ -148,7 +148,7 @@ export async function getAffiliateStatsByUserId(userId: string): Promise<Affilia
             const text = await salesResponse.text()
             const [sales, revenue] = text.trim().split('\t')
             stats.sales = parseInt(sales) || 0
-            stats.revenue = (parseInt(revenue) || 0) / 100
+            stats.revenue = parseInt(revenue) || 0 // Keep in cents for proper formatting
         }
 
         console.log(`[Marketplace] 📊 Total stats for affiliate ${userId}: ${stats.clicks} clicks, ${stats.sales} sales, ${stats.revenue}€`)
