@@ -158,7 +158,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Production: Record to Tinybird
-        const tinybirdToken = process.env.TINYBIRD_TOKEN
+        // Import from constants for consistency with other routes
+        const tinybirdToken = process.env.TINYBIRD_API_KEY || process.env.TINYBIRD_ADMIN_TOKEN
+        const tinybirdHost = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
+
         if (tinybirdToken) {
             const clickData = {
                 timestamp: new Date().toISOString(),
@@ -172,7 +175,7 @@ export async function POST(request: NextRequest) {
                 device: getDeviceType(request.headers.get('user-agent') || '')
             }
 
-            await fetch('https://api.tinybird.co/v0/events?name=clicks', {
+            await fetch(`${tinybirdHost}/v0/events?name=clicks`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${tinybirdToken}`,
