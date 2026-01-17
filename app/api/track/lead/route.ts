@@ -191,6 +191,13 @@ export async function POST(request: NextRequest) {
         })
 
         // Record to Tinybird (async)
+        console.log('[track/lead] 📊 About to record to Tinybird:', {
+            mock_mode: process.env.TINYBIRD_MOCK_MODE,
+            workspace_id: workspaceId,
+            customer_id: customer.id,
+            event_name: eventName
+        })
+
         if (process.env.TINYBIRD_MOCK_MODE !== 'true') {
             recordLeadToTinybird({
                 timestamp: new Date().toISOString(),
@@ -202,7 +209,9 @@ export async function POST(request: NextRequest) {
                 affiliate_id: customer.affiliate_id,
                 event_name: eventName,
                 metadata: JSON.stringify(metadata || {})
-            }).catch(e => console.error('[track/lead] Tinybird error:', e))
+            }).then(() => {
+                console.log('[track/lead] ✅ Tinybird lead recorded successfully')
+            }).catch(e => console.error('[track/lead] ❌ Tinybird error:', e))
         } else {
             console.log('[🦁 MOCK] Lead tracked:', {
                 customer_id: customer.id,
