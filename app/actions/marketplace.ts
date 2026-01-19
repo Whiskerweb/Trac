@@ -64,8 +64,14 @@ async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<str
         statsMap.set(id, { clicks: 0, leads: 0, sales: 0, revenue: 0 })
     })
 
+    // SECURITY: Filter to only valid UUIDs to prevent SQL injection
+    const validLinkIds = linkIds.filter(id => isValidUUID(id))
+    if (validLinkIds.length === 0) {
+        return statsMap
+    }
+
     try {
-        const linkIdList = linkIds.map(id => `'${id}'`).join(',')
+        const linkIdList = validLinkIds.map(id => `'${id}'`).join(',')
 
         // 1. GET CLICKS by link_id
         const clicksQuery = `SELECT link_id, count() as clicks FROM clicks WHERE link_id IN (${linkIdList}) GROUP BY link_id`
@@ -121,6 +127,12 @@ export async function getAffiliateStatsByUserId(userId: string): Promise<Affilia
     const stats: AffiliateStats = { clicks: 0, leads: 0, sales: 0, revenue: 0 }
 
     if (!userId || !TINYBIRD_TOKEN) {
+        return stats
+    }
+
+    // SECURITY: Validate UUID format to prevent SQL injection
+    if (!isValidUUID(userId)) {
+        console.warn('[Marketplace] ⚠️ Invalid userId format, rejecting:', userId.slice(0, 20))
         return stats
     }
 

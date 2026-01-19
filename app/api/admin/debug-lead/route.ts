@@ -3,6 +3,11 @@ import { prisma } from '@/lib/db'
 import { redis } from '@/lib/redis'
 import { createClient } from '@/utils/supabase/server'
 
+// SECURITY: UUID validation to prevent injection
+function isValidUUID(id: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+}
+
 /**
  * GET /api/admin/debug-lead
  * Debug lead attribution issues
@@ -83,6 +88,17 @@ export async function POST(request: NextRequest) {
     }
 
     const { action, customerId, affiliateId: providedAffiliateId, linkId: providedLinkId } = await request.json()
+
+    // SECURITY: Validate all IDs are valid UUIDs
+    if (customerId && !isValidUUID(customerId)) {
+        return NextResponse.json({ error: 'Invalid customerId format' }, { status: 400 })
+    }
+    if (providedAffiliateId && !isValidUUID(providedAffiliateId)) {
+        return NextResponse.json({ error: 'Invalid affiliateId format' }, { status: 400 })
+    }
+    if (providedLinkId && !isValidUUID(providedLinkId)) {
+        return NextResponse.json({ error: 'Invalid linkId format' }, { status: 400 })
+    }
 
     if (action === 'fix_orphan') {
         // Find customer
