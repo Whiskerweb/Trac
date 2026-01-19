@@ -145,7 +145,7 @@ module.exports = {
 // Récupère le clickId depuis le cookie trac_id
 const clickId = cookies().get('trac_id')?.value;
 
-await fetch('https://yourdomain.com/_trac/api/track/lead', {
+await fetch('/_trac/api/track/lead', {
   method: 'POST',
   headers: { 
     'Content-Type': 'application/json',
@@ -160,6 +160,8 @@ await fetch('https://yourdomain.com/_trac/api/track/lead', {
   })
 });`
         : `// Backend - Track un signup/lead
+const clickId = cookies().get('trac_id')?.value;
+
 await fetch('https://traaaction.com/api/track/lead', {
   method: 'POST',
   headers: { 
@@ -169,7 +171,7 @@ await fetch('https://traaaction.com/api/track/lead', {
   body: JSON.stringify({
     eventName: 'sign_up',
     customerExternalId: user.id,  // Obligatoire
-    clickId: cookies.trac_id,      // Récupéré du cookie
+    clickId,                       // Récupéré du cookie
     customerEmail: user.email
   })
 });`
