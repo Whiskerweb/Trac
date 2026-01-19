@@ -112,9 +112,10 @@ export async function POST(request: NextRequest) {
         if (!affiliateId) {
             // For now, return guidance
             return NextResponse.json({
-                error: 'No affiliate found in Redis. Manual fix required.',
+                error: 'No affiliate found in Redis. Use fix_with_data action with affiliateId from Tinybird.',
                 customer,
-                redis_empty: true
+                redis_empty: true,
+                hint: 'POST with { action: "fix_with_data", customerId: "...", affiliateId: "...", linkId: "..." }'
             }, { status: 400 })
         }
 
@@ -134,5 +135,36 @@ export async function POST(request: NextRequest) {
         })
     }
 
-    return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+    // Action: fix_with_data - Fix customer with provided data (from Tinybird lookup)
+    if (action === 'fix_with_data') {
+        const body = await request.clone().json()
+        const { affiliateId, linkId } = body
+
+        if (!customerId || !affiliateId) {
+            return NextResponse.json({
+                error: 'Missing customerId or affiliateId',
+                usage: { action: 'fix_with_data', customerId: 'xxx', affiliateId: 'yyy', linkId: 'zzz' }
+            }, { status: 400 })
+        }
+
+        // Update customer
+        await prisma.customer.update({
+            where: { id: customerId },
+            data: {
+                affiliate_id: affiliateId,
+                ...(linkId && { link_id: linkId })
+            }
+        })
+
+        return NextResponse.json({
+            success: true,
+            fixed: {
+                customerId,
+                affiliateId,
+                linkId
+            }
+        })
+    }
+
+    return NextResponse.json({ error: 'Unknown action. Use fix_orphan or fix_with_data' }, { status: 400 })
 }
