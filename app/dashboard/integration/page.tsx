@@ -140,14 +140,36 @@ module.exports = {
   data-domains='{"refer":"short.yourdomain.com"}'
 ></script>`
 
-    const leadSnippet = `// Backend - Après création du compte utilisateur
+    const leadSnippet = customDomain
+        ? `// Backend (Next.js API ou Server Action)
+// Récupère le clickId depuis le cookie trac_id
+const clickId = cookies().get('trac_id')?.value;
+
+await fetch('https://yourdomain.com/_trac/api/track/lead', {
+  method: 'POST',
+  headers: { 
+    'Content-Type': 'application/json',
+    'x-publishable-key': '${publicKey}'  // Clé publique du workspace
+  },
+  body: JSON.stringify({
+    eventName: 'sign_up',
+    customerExternalId: user.id,  // Obligatoire - ID unique de l'utilisateur
+    clickId,                       // Attribution partenaire
+    customerEmail: user.email,
+    customerName: user.name
+  })
+});`
+        : `// Backend - Track un signup/lead
 await fetch('https://traaaction.com/api/track/lead', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 
+    'Content-Type': 'application/json',
+    'x-publishable-key': '${publicKey}'  // Clé publique de ton workspace
+  },
   body: JSON.stringify({
     eventName: 'sign_up',
     customerExternalId: user.id,  // Obligatoire
-    clickId: cookies.trac_click_id,
+    clickId: cookies.trac_id,      // Récupéré du cookie
     customerEmail: user.email
   })
 });`
@@ -238,9 +260,12 @@ const session = await stripe.checkout.sessions.create({
                         color="purple"
                     />
                     <CodeBlock code={leadSnippet} />
-                    <div className="mt-3">
+                    <div className="mt-3 space-y-2">
+                        <InfoBox type="success">
+                            <strong>🔑 x-publishable-key:</strong> Cette clé identifie ton workspace. Elle est affichée automatiquement dans le code ci-dessus.
+                        </InfoBox>
                         <InfoBox type="info">
-                            <strong>💡 Clé:</strong> Une fois le lead créé, toutes les ventes futures sont attribuées automatiquement.
+                            <strong>💡 Attribution automatique:</strong> Une fois le lead créé avec un <code className="bg-blue-100 px-1 rounded">clickId</code>, toutes les ventes futures de ce client sont attribuées au partenaire.
                         </InfoBox>
                     </div>
                 </section>
