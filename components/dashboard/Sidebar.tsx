@@ -1,6 +1,6 @@
 'use client'
 
-import { Home, Link2, ShoppingBag, Settings, Target, Puzzle, Globe, ChevronDown, User, LogOut } from 'lucide-react'
+import { Home, Link2, ShoppingBag, Settings, Target, Puzzle, Globe, ChevronDown, User, LogOut, DollarSign, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -16,6 +16,8 @@ const navigation: NavItem[] = [
     { name: 'My Links', href: '/dashboard/links', icon: Link2 },
     { name: 'Marketplace', href: '/dashboard/marketplace', icon: ShoppingBag },
     { name: 'Missions', href: '/dashboard/missions', icon: Target },
+    { name: 'Partners', href: '/dashboard/partners', icon: Users },
+    { name: 'Commissions', href: '/dashboard/commissions', icon: DollarSign },
     { name: 'Domains', href: '/dashboard/domains', icon: Globe },
     { name: 'Setup & Diagnostics', href: '/dashboard/integration', icon: Puzzle },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
