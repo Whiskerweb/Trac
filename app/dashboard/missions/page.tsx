@@ -99,13 +99,19 @@ function MissionListItem({
                     </div>
                     <div className="flex items-center gap-4 mt-1">
                         <a
-                            href={mission.target_url}
+                            href={mission.target_url || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 truncate max-w-[200px]"
                         >
                             <ExternalLink className="w-3 h-3" />
-                            {new URL(mission.target_url).hostname}
+                            {(() => {
+                                try {
+                                    return new URL(mission.target_url).hostname
+                                } catch {
+                                    return mission.target_url || 'No URL'
+                                }
+                            })()}
                         </a>
                         <span className="text-gray-300 text-xs">|</span>
                         <div className="flex items-center gap-1 text-xs text-gray-500">
