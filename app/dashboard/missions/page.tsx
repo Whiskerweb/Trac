@@ -574,7 +574,6 @@ function CreateMissionModal({
 function MissionsContent() {
     const [missions, setMissions] = useState<Mission[]>([])
     const [loading, setLoading] = useState(true)
-    const [modalOpen, setModalOpen] = useState(false)
 
     async function loadMissions() {
         const result = await getWorkspaceMissions()
@@ -598,13 +597,13 @@ function MissionsContent() {
                         Create and manage affiliate offers for your workspace.
                     </p>
                 </div>
-                <button
-                    onClick={() => setModalOpen(true)}
+                <Link
+                    href="/dashboard/missions/create"
                     className="flex items-center gap-2 px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md font-medium text-sm transition-all shadow-sm"
                 >
                     <Plus className="w-4 h-4" />
                     New Mission
-                </button>
+                </Link>
             </div>
 
             {/* Content */}
@@ -624,13 +623,13 @@ function MissionsContent() {
                     <p className="text-gray-500 mb-6 max-w-sm mx-auto">
                         Create your first mission to start recruiting affiliates for your product.
                     </p>
-                    <button
-                        onClick={() => setModalOpen(true)}
+                    <Link
+                        href="/dashboard/missions/create"
                         className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md font-medium text-sm transition-colors shadow-sm"
                     >
                         <Plus className="w-4 h-4" />
                         Create Mission
-                    </button>
+                    </Link>
                 </div>
             ) : (
                 <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
@@ -645,13 +644,6 @@ function MissionsContent() {
                     </div>
                 </div>
             )}
-
-            {/* Modal */}
-            <CreateMissionModal
-                isOpen={modalOpen}
-                onClose={() => setModalOpen(false)}
-                onSuccess={loadMissions}
-            />
         </div>
     )
 }
