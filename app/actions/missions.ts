@@ -6,6 +6,113 @@ import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 
 // Mission status type (mirrors Prisma enum)
 type MissionStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
+type RewardType = 'SALE' | 'LEAD'
+type CommissionStructure = 'ONE_OFF' | 'RECURRING'
+type RewardStructure = 'FLAT' | 'PERCENTAGE'
+
+// =============================================
+// WIZARD DATA TYPE
+// =============================================
+
+interface WizardData {
+    // Step 1: Getting Started
+    companyName: string
+    logoUrl: string
+    targetUrl: string
+    domainType: 'free' | 'custom'
+
+    // Step 2: Configure Rewards
+    rewardType: RewardType
+    commissionStructure: CommissionStructure
+    recurringDuration: number
+    rewardStructure: RewardStructure
+    rewardAmount: number
+
+    // Step 3: Help & Support
+    contactEmail: string
+    helpCenterUrl: string
+}
+
+// =============================================
+// CREATE MISSION FROM WIZARD
+// =============================================
+
+/**
+ * Create a mission from the full wizard flow
+ */
+export async function createMissionFromWizard(data: WizardData): Promise<{
+    success: boolean
+    mission?: { id: string }
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
+    // Validate required fields
+    if (!data.companyName?.trim()) {
+        return { success: false, error: 'Company name is required' }
+    }
+    if (!data.targetUrl?.trim()) {
+        return { success: false, error: 'Website URL is required' }
+    }
+    if (data.rewardAmount <= 0) {
+        return { success: false, error: 'Reward amount must be greater than 0' }
+    }
+
+    try {
+        // Build reward display string
+        const rewardDisplay = data.rewardStructure === 'FLAT'
+            ? `${data.rewardAmount}€`
+            : `${data.rewardAmount}%`
+
+        const mission = await prisma.mission.create({
+            data: {
+                workspace_id: workspace.workspaceId,
+                title: data.companyName.trim(),
+                description: `Partner program for ${data.companyName}`,
+                target_url: data.targetUrl.trim(),
+                reward: rewardDisplay,
+                status: 'ACTIVE',
+                visibility: 'PUBLIC',
+
+                // Reward configuration
+                reward_type: data.rewardType,
+                commission_structure: data.commissionStructure,
+                reward_structure: data.rewardStructure,
+                reward_amount: data.rewardAmount,
+                recurring_duration: data.commissionStructure === 'RECURRING' ? data.recurringDuration : null,
+
+                // Branding
+                company_name: data.companyName.trim(),
+                logo_url: data.logoUrl || null,
+
+                // Support
+                contact_email: data.contactEmail || null,
+                help_center_url: data.helpCenterUrl || null,
+            }
+        })
+
+        console.log('[Mission] ✅ Created from wizard:', mission.id, mission.title)
+
+        return {
+            success: true,
+            mission: { id: mission.id }
+        }
+
+    } catch (error) {
+        console.error('[Mission] ❌ Error creating from wizard:', error)
+        return { success: false, error: 'Failed to create mission' }
+    }
+}
 
 // =============================================
 // MISSION MANAGEMENT - Server Actions

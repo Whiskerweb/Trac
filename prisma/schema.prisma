@@ -25,24 +25,45 @@ model ApiKey {
 }
 
 model Mission {
-  id                String              @id @default(uuid())
-  workspace_id      String
-  title             String
-  description       String
-  target_url        String
-  reward            String
-  status            MissionStatus       @default(DRAFT)
-  created_at        DateTime            @default(now())
-  updated_at        DateTime            @updatedAt
+  id                   String               @id @default(uuid())
+  workspace_id         String
+  title                String
+  description          String
+  target_url           String
+  reward               String
+  status               MissionStatus        @default(DRAFT)
+  created_at           DateTime             @default(now())
+  updated_at           DateTime             @updatedAt
   /// Net Revenue, ROI, Fixed
-  gain_type         String?
+  gain_type            String?
   /// SaaS, E-commerce, Finance, etc.
-  industry          String?
-  visibility        MissionVisibility   @default(PUBLIC)
-  Workspace         Workspace           @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  Contents          MissionContent[]
-  MissionEnrollment MissionEnrollment[]
-  Requests          ProgramRequest[]
+  industry             String?
+  visibility           MissionVisibility    @default(PUBLIC)
+  
+  // === REWARD CONFIGURATION ===
+  /// Sale (for subscriptions/purchases) or Lead (for sign-ups)
+  reward_type          RewardType           @default(SALE)
+  /// One-off (first purchase) or Recurring (subscription)
+  commission_structure CommissionStructure  @default(ONE_OFF)
+  /// Flat ($) or Percentage (%)
+  reward_structure     RewardStructure      @default(FLAT)
+  /// Amount in cents (if Flat) or percentage (if %)
+  reward_amount        Float                @default(0)
+  /// Duration in months for recurring commissions (3-48)
+  recurring_duration   Int?
+  
+  // === COMPANY BRANDING ===
+  company_name         String?
+  logo_url             String?
+  
+  // === SUPPORT INFO ===
+  contact_email        String?
+  help_center_url      String?
+  
+  Workspace            Workspace            @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  Contents             MissionContent[]
+  MissionEnrollment    MissionEnrollment[]
+  Requests             ProgramRequest[]
 
   @@index([status])
   @@index([visibility])
@@ -543,4 +564,27 @@ enum DiscountType {
 enum SenderType {
   STARTUP
   PARTNER
+}
+
+// === MISSION REWARD ENUMS ===
+
+enum RewardType {
+  /// For sales and subscriptions
+  SALE
+  /// For sign-ups and leads
+  LEAD
+}
+
+enum CommissionStructure {
+  /// One-time payment on first purchase
+  ONE_OFF
+  /// Ongoing commission for subscriptions
+  RECURRING
+}
+
+enum RewardStructure {
+  /// Fixed amount (e.g., 10€)
+  FLAT
+  /// Percentage of sale (e.g., 20%)
+  PERCENTAGE
 }
