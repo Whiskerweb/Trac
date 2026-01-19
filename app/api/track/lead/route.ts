@@ -221,19 +221,24 @@ export async function POST(request: NextRequest) {
         })
 
         if (process.env.TINYBIRD_MOCK_MODE !== 'true') {
-            recordLeadToTinybird({
-                timestamp: new Date().toISOString(),
-                workspace_id: workspaceId,
-                customer_id: customer.id,
-                customer_external_id: customerExternalId,
-                click_id: customer.click_id,
-                link_id: customer.link_id,
-                affiliate_id: customer.affiliate_id,
-                event_name: eventName,
-                metadata: JSON.stringify(metadata || {})
-            }).then(() => {
+            // MUST await - otherwise Vercel terminates before fetch completes
+            try {
+                await recordLeadToTinybird({
+                    timestamp: new Date().toISOString(),
+                    workspace_id: workspaceId,
+                    customer_id: customer.id,
+                    customer_external_id: customerExternalId,
+                    click_id: customer.click_id,
+                    link_id: customer.link_id,
+                    affiliate_id: customer.affiliate_id,
+                    event_name: eventName,
+                    metadata: JSON.stringify(metadata || {})
+                })
                 console.log('[track/lead] ✅ Tinybird lead recorded successfully')
-            }).catch(e => console.error('[track/lead] ❌ Tinybird error:', e))
+            } catch (tinybirdError) {
+                // Log but don't fail the request - lead is already in Prisma
+                console.error('[track/lead] ❌ Tinybird error (non-blocking):', tinybirdError)
+            }
         } else {
             console.log('[🦁 MOCK] Lead tracked:', {
                 customer_id: customer.id,
