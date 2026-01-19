@@ -332,7 +332,8 @@ function Step2ConfigureRewards({
                         <option value={12}>12 months</option>
                         <option value={24}>24 months</option>
                         <option value={36}>36 months</option>
-                        <option value={48}>48 months (Lifetime)</option>
+                        <option value={48}>48 months</option>
+                        <option value={0}>Lifetime</option>
                     </select>
                 </div>
             )}
