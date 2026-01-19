@@ -19,7 +19,7 @@ interface WizardData {
     companyName: string
     logoUrl: string
     targetUrl: string
-    domainType: 'free' | 'custom'
+    customDomain: string
 
     // Step 2: Configure Rewards
     rewardType: RewardType

@@ -16,7 +16,7 @@ interface WizardData {
     companyName: string
     logoUrl: string
     targetUrl: string
-    domainType: 'free' | 'custom'
+    customDomain: string
 
     // Step 2: Configure Rewards
     rewardType: 'SALE' | 'LEAD'
@@ -92,6 +92,18 @@ function Step1GettingStarted({
     data: WizardData
     onChange: (updates: Partial<WizardData>) => void
 }) {
+    const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            // Convert to base64 data URL for preview
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                onChange({ logoUrl: reader.result as string })
+            }
+            reader.readAsDataURL(file)
+        }
+    }
+
     return (
         <div className="space-y-8">
             <div>
@@ -112,87 +124,71 @@ function Step1GettingStarted({
                 />
             </div>
 
-            {/* Logo */}
+            {/* Logo - Fixed upload */}
             <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">Logo</label>
                 <p className="text-sm text-gray-500 mb-2">A square logo that will be used in various parts of your program</p>
-                <div className="w-full h-32 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-gray-300 transition-colors">
+
+                <label className="w-full h-32 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-gray-300 transition-colors relative overflow-hidden">
+                    <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="sr-only"
+                    />
                     {data.logoUrl ? (
                         <img src={data.logoUrl} alt="Logo" className="w-20 h-20 object-contain" />
                     ) : (
                         <div className="text-center">
                             <Upload className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                            <span className="text-sm text-gray-400">Click to upload or paste URL</span>
+                            <span className="text-sm text-gray-400">Click to upload</span>
                         </div>
                     )}
+                </label>
+
+                {/* Or paste URL */}
+                <div className="mt-2 flex items-center gap-2">
+                    <span className="text-xs text-gray-400">or paste URL:</span>
+                    <input
+                        type="text"
+                        value={data.logoUrl.startsWith('data:') ? '' : data.logoUrl}
+                        onChange={(e) => onChange({ logoUrl: e.target.value })}
+                        placeholder="https://example.com/logo.png"
+                        className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                 </div>
-                <input
-                    type="text"
-                    value={data.logoUrl}
-                    onChange={(e) => onChange({ logoUrl: e.target.value })}
-                    placeholder="https://example.com/logo.png"
-                    className="w-full mt-2 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+
+                {data.logoUrl && (
+                    <button
+                        type="button"
+                        onClick={() => onChange({ logoUrl: '' })}
+                        className="mt-2 text-xs text-red-500 hover:text-red-700"
+                    >
+                        Remove logo
+                    </button>
+                )}
             </div>
 
-            {/* Referral Link Domain */}
+            {/* Custom Domain */}
             <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">Referral link</label>
-                <p className="text-sm text-gray-500 mb-3">Set the custom domain and destination URL for your referral links</p>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Custom domain</label>
+                <p className="text-sm text-gray-500 mb-3">Connect a domain you own for your referral links (DNS setup required)</p>
 
-                <p className="text-sm font-medium text-gray-700 mb-2">Program domain</p>
-                <div className="space-y-2">
-                    {/* Free domain option */}
-                    <label className={`
-                        flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition-all
-                        ${data.domainType === 'free' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}
-                    `}>
+                <div className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-gray-200">
+                        <Link2 className="w-5 h-5 text-gray-600" />
+                    </div>
+                    <div className="flex-1">
                         <input
-                            type="radio"
-                            name="domainType"
-                            value="free"
-                            checked={data.domainType === 'free'}
-                            onChange={() => onChange({ domainType: 'free' })}
-                            className="sr-only"
+                            type="text"
+                            value={data.customDomain || ''}
+                            onChange={(e) => onChange({ customDomain: e.target.value })}
+                            placeholder="go.yourcompany.com"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                         />
-                        <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center text-xl">
-                            👑
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                                <span className="font-medium text-gray-900">Claim a free .link domain</span>
-                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">No setup</span>
-                            </div>
-                            <p className="text-sm text-gray-500">Free for one year with your paid account.</p>
-                        </div>
-                    </label>
-
-                    {/* Custom domain option */}
-                    <label className={`
-                        flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition-all
-                        ${data.domainType === 'custom' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}
-                    `}>
-                        <input
-                            type="radio"
-                            name="domainType"
-                            value="custom"
-                            checked={data.domainType === 'custom'}
-                            onChange={() => onChange({ domainType: 'custom' })}
-                            className="sr-only"
-                        />
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <Link2 className="w-5 h-5 text-gray-600" />
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                                <span className="font-medium text-gray-900">Connect a domain you own</span>
-                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">DNS setup required</span>
-                            </div>
-                            <p className="text-sm text-gray-500">Dedicate a domain exclusively for your short links and program.</p>
-                        </div>
-                    </label>
+                        <p className="text-xs text-gray-400 mt-1">Add a CNAME record pointing to traaaction.com</p>
+                    </div>
                 </div>
-                <p className="text-xs text-gray-400 mt-2">This domain will be used for your program's referral links.</p>
             </div>
 
             {/* Website URL */}
@@ -477,7 +473,7 @@ export default function CreateMissionWizard() {
         companyName: '',
         logoUrl: '',
         targetUrl: '',
-        domainType: 'free',
+        customDomain: '',
         // Step 2
         rewardType: 'SALE',
         commissionStructure: 'ONE_OFF',
