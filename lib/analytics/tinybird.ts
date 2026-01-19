@@ -239,6 +239,15 @@ export async function recordSaleItemsToTinybird(
 }
 
 export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
+    console.log('[Tinybird] 📊 recordLeadToTinybird called with:', {
+        workspace_id: data.workspace_id,
+        customer_id: data.customer_id,
+        event_name: data.event_name,
+        IS_MOCK_MODE,
+        TINYBIRD_TOKEN: TINYBIRD_TOKEN ? 'SET' : 'NOT SET',
+        TINYBIRD_HOST
+    });
+
     // 🦁 Mock Mode: Intercept calls in development
     if (IS_MOCK_MODE) {
         console.log('[🦁 MOCK TINYBIRD] Lead Event:', {
@@ -253,7 +262,7 @@ export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
     }
 
     if (!TINYBIRD_TOKEN) {
-        console.error('[Tinybird] No API key configured');
+        console.error('[Tinybird] ❌ No API key configured');
         throw new Error('TINYBIRD_API_KEY not configured');
     }
 
@@ -273,6 +282,11 @@ export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
         metadata: data.metadata || null
     };
 
+    console.log('[Tinybird] 🚀 Sending lead to Tinybird:', {
+        url: `${TINYBIRD_HOST}/v0/events?name=leads`,
+        payload
+    });
+
     try {
         const response = await fetch(`${TINYBIRD_HOST}/v0/events?name=leads`, {
             method: 'POST',
@@ -283,19 +297,35 @@ export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
             body: JSON.stringify(payload)
         });
 
+        const responseBody = await response.text();
+        console.log('[Tinybird] 📥 Response:', {
+            status: response.status,
+            ok: response.ok,
+            body: responseBody
+        });
+
         if (!response.ok) {
-            const error = await response.text();
-            console.error('[Tinybird] Failed to record lead:', error);
+            console.error('[Tinybird] ❌ Failed to record lead:', responseBody);
             throw new Error(`Tinybird API error: ${response.status}`);
         }
 
-        console.log('[Tinybird] Lead recorded successfully:', {
-            customerId: data.customer_id,
-            eventName: data.event_name,
-            clickId: data.click_id
-        });
+        // Parse response to check for quarantine
+        try {
+            const result = JSON.parse(responseBody);
+            if (result.quarantined_rows > 0) {
+                console.warn('[Tinybird] ⚠️ Lead quarantined! Check schema:', result);
+            } else {
+                console.log('[Tinybird] ✅ Lead recorded successfully:', {
+                    customerId: data.customer_id,
+                    eventName: data.event_name,
+                    successful_rows: result.successful_rows
+                });
+            }
+        } catch {
+            // Response wasn't JSON, that's fine
+        }
     } catch (error) {
-        console.error('[Tinybird] Error recording lead:', error);
+        console.error('[Tinybird] ❌ Error recording lead:', error);
         throw error;
     }
 }
