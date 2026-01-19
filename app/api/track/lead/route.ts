@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { recordLeadToTinybird } from '@/lib/analytics/tinybird'
+import { validatePublicKey } from '@/lib/api-keys'
 
 /**
  * POST /api/track/lead
@@ -8,8 +9,12 @@ import { recordLeadToTinybird } from '@/lib/analytics/tinybird'
  * Track a lead conversion event (Dub-style)
  * Creates/updates a Customer and records the lead event
  * 
+ * Authentication (in priority order):
+ * 1. x-workspace-id header (from middleware domain lookup)
+ * 2. x-publishable-key header (pk_xxx token)
+ * 
  * Flow:
- * 1. Validate workspace via x-workspace-id header (from middleware)
+ * 1. Validate workspace via header or publishable key
  * 2. Create/Update Customer with click_id (first-click attribution)
  * 3. If mode !== "deferred", create LeadEvent
  * 4. Return customer + lead info
@@ -38,12 +43,29 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Get workspace from middleware headers
-        const workspaceId = request.headers.get('x-workspace-id')
+        // Get workspace from middleware headers (primary method)
+        let workspaceId = request.headers.get('x-workspace-id')
+
+        // Fallback: Try publishable key authentication (Dub-style)
+        if (!workspaceId) {
+            const publishableKey = request.headers.get('x-publishable-key')
+            if (publishableKey) {
+                const validation = await validatePublicKey(publishableKey)
+                if (validation.valid && validation.workspaceId) {
+                    workspaceId = validation.workspaceId
+                    console.log('[track/lead] 🔑 Authenticated via publishable key:', publishableKey.slice(0, 10) + '...')
+                } else {
+                    return NextResponse.json(
+                        { success: false, error: 'Invalid publishable key' },
+                        { status: 401, headers: corsHeaders }
+                    )
+                }
+            }
+        }
 
         if (!workspaceId) {
             return NextResponse.json(
-                { success: false, error: 'Workspace not identified. Ensure domain is configured.' },
+                { success: false, error: 'Workspace not identified. Provide x-workspace-id or x-publishable-key header.' },
                 { status: 400, headers: corsHeaders }
             )
         }
