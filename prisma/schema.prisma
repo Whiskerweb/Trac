@@ -363,7 +363,7 @@ model Commission {
   partner_id        String
   /// Denormalized for faster queries
   program_id        String
-  /// Stripe checkout session ID (cs_xxx)
+  /// Stripe checkout session ID (cs_xxx) or invoice ID (in_xxx)
   sale_id           String           @unique
   /// ShortLink that generated this sale
   link_id           String?
@@ -375,14 +375,28 @@ model Commission {
   stripe_fee        Int              @default(0)
   /// Tax in cents
   tax_amount        Int              @default(0)
-  /// Calculated commission in cents
+  /// Calculated commission in cents (what partner receives)
   commission_amount Int
+  /// Traaaction platform fee in cents (15%)
+  platform_fee      Int              @default(0)
   /// Original rate: "5€" or "10%"
   commission_rate   String
   commission_type   CommissionType
   currency          String           @default("EUR")
   status            CommissionStatus @default(PENDING)
-  /// When transitioned to DUE
+  
+  // === RECURRING TRACKING ===
+  /// Stripe subscription ID (sub_xxx) for recurring
+  subscription_id   String?
+  /// Invoice number for this commission (1, 2, 3...)
+  recurring_month   Int?
+  /// Max months configured in mission (null = Lifetime)
+  recurring_max     Int?
+  
+  // === MATURATION ===
+  /// Days before PENDING → PROCEED
+  hold_days         Int              @default(7)
+  /// When transitioned to PROCEED
   matured_at        DateTime?
   /// When payout completed
   paid_at           DateTime?
@@ -390,6 +404,7 @@ model Commission {
   clawback_at       DateTime?
   /// Reason for clawback
   clawback_reason   String?
+  
   created_at        DateTime         @default(now())
   updated_at        DateTime         @updatedAt
   Partner           Partner          @relation(fields: [partner_id], references: [id], onDelete: Cascade)
@@ -399,6 +414,7 @@ model Commission {
   @@index([status])
   @@index([created_at])
   @@index([sale_id])
+  @@index([subscription_id])
 }
 
 /// Partner Balance for tracking payouts and negative balances (clawbacks)
