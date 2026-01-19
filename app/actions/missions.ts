@@ -69,10 +69,18 @@ export async function createMissionFromWizard(data: WizardData): Promise<{
     }
 
     try {
+        // For LEAD, force FLAT structure
+        const effectiveRewardStructure = data.rewardType === 'LEAD' ? 'FLAT' : data.rewardStructure
+
         // Build reward display string
-        const rewardDisplay = data.rewardStructure === 'FLAT'
+        const rewardDisplay = effectiveRewardStructure === 'FLAT'
             ? `${data.rewardAmount}€`
             : `${data.rewardAmount}%`
+
+        // Handle recurring duration: 0 = Lifetime = stored as null
+        const recurringDuration = data.commissionStructure === 'RECURRING'
+            ? (data.recurringDuration === 0 ? null : data.recurringDuration)
+            : null
 
         const mission = await prisma.mission.create({
             data: {
@@ -86,10 +94,10 @@ export async function createMissionFromWizard(data: WizardData): Promise<{
 
                 // Reward configuration
                 reward_type: data.rewardType,
-                commission_structure: data.commissionStructure,
-                reward_structure: data.rewardStructure,
+                commission_structure: data.rewardType === 'LEAD' ? 'ONE_OFF' : data.commissionStructure,
+                reward_structure: effectiveRewardStructure,
                 reward_amount: data.rewardAmount,
-                recurring_duration: data.commissionStructure === 'RECURRING' ? data.recurringDuration : null,
+                recurring_duration: recurringDuration,
 
                 // Branding
                 company_name: data.companyName.trim(),
