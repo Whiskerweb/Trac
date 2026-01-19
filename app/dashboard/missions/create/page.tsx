@@ -169,28 +169,6 @@ function Step1GettingStarted({
                 )}
             </div>
 
-            {/* Custom Domain */}
-            <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">Custom domain</label>
-                <p className="text-sm text-gray-500 mb-3">Connect a domain you own for your referral links (DNS setup required)</p>
-
-                <div className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-gray-200">
-                        <Link2 className="w-5 h-5 text-gray-600" />
-                    </div>
-                    <div className="flex-1">
-                        <input
-                            type="text"
-                            value={data.customDomain || ''}
-                            onChange={(e) => onChange({ customDomain: e.target.value })}
-                            placeholder="go.yourcompany.com"
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                        />
-                        <p className="text-xs text-gray-400 mt-1">Add a CNAME record pointing to traaaction.com</p>
-                    </div>
-                </div>
-            </div>
-
             {/* Website URL */}
             <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">Website URL</label>
