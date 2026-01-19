@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { action, customerId } = await request.json()
+    const { action, customerId, affiliateId: providedAffiliateId, linkId: providedLinkId } = await request.json()
 
     if (action === 'fix_orphan') {
         // Find customer
@@ -137,10 +137,7 @@ export async function POST(request: NextRequest) {
 
     // Action: fix_with_data - Fix customer with provided data (from Tinybird lookup)
     if (action === 'fix_with_data') {
-        const body = await request.clone().json()
-        const { affiliateId, linkId } = body
-
-        if (!customerId || !affiliateId) {
+        if (!customerId || !providedAffiliateId) {
             return NextResponse.json({
                 error: 'Missing customerId or affiliateId',
                 usage: { action: 'fix_with_data', customerId: 'xxx', affiliateId: 'yyy', linkId: 'zzz' }
@@ -151,8 +148,8 @@ export async function POST(request: NextRequest) {
         await prisma.customer.update({
             where: { id: customerId },
             data: {
-                affiliate_id: affiliateId,
-                ...(linkId && { link_id: linkId })
+                affiliate_id: providedAffiliateId,
+                ...(providedLinkId && { link_id: providedLinkId })
             }
         })
 
@@ -160,8 +157,8 @@ export async function POST(request: NextRequest) {
             success: true,
             fixed: {
                 customerId,
-                affiliateId,
-                linkId
+                affiliateId: providedAffiliateId,
+                linkId: providedLinkId
             }
         })
     }
