@@ -610,20 +610,38 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             // 🔥 FIRE-AND-FORGET: Log click in background
             // User doesn't wait for tracking to complete
             event.waitUntil(
-                logClickToTinybird({
-                    timestamp: new Date().toISOString(),
-                    click_id,
-                    workspace_id: linkData.workspaceId,
-                    link_id: linkData.linkId,
-                    affiliate_id: linkData.affiliateId || null,
-                    url: linkData.url,
-                    user_agent: ua.ua || '',
-                    ip,
-                    country,
-                    city,
-                    referrer,
-                    device,
-                })
+                Promise.all([
+                    // 1. Log to Tinybird for analytics
+                    logClickToTinybird({
+                        timestamp: new Date().toISOString(),
+                        click_id,
+                        workspace_id: linkData.workspaceId,
+                        link_id: linkData.linkId,
+                        affiliate_id: linkData.affiliateId || null,
+                        url: linkData.url,
+                        user_agent: ua.ua || '',
+                        ip,
+                        country,
+                        city,
+                        referrer,
+                        device,
+                    }),
+                    // 2. CRITICAL: Store in Redis for Lead attribution lookup
+                    // Lead tracking looks up click:{clickId} to get affiliateId
+                    redis.set(
+                        `click:${click_id}`,
+                        JSON.stringify({
+                            linkId: linkData.linkId,
+                            affiliateId: linkData.affiliateId || null,
+                            workspaceId: linkData.workspaceId
+                        }),
+                        { ex: 90 * 24 * 60 * 60 } // 90 days (same as cookie)
+                    ).then(() => {
+                        console.log(`[Edge] ✅ Stored click:${click_id} in Redis for Lead attribution`)
+                    }).catch(err => {
+                        console.error('[Edge] ⚠️ Failed to store click in Redis:', err)
+                    })
+                ])
             )
 
             console.log('[Edge] 🚀 Redirect:', slug, '→', destinationUrl.hostname)
