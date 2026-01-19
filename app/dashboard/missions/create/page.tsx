@@ -339,25 +339,34 @@ function Step2ConfigureRewards({
 
             {/* Reward Amount */}
             <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">Reward amount</label>
-                <p className="text-sm text-gray-500 mb-3">Set how much the affiliate will get rewarded</p>
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                    {data.rewardType === 'LEAD' ? 'Amount per lead' : 'Reward amount'}
+                </label>
+                <p className="text-sm text-gray-500 mb-3">
+                    {data.rewardType === 'LEAD'
+                        ? 'Fixed amount paid for each qualified lead'
+                        : 'Set how much the affiliate will get rewarded'
+                    }
+                </p>
 
-                {/* Reward Structure */}
-                <div className="mb-3">
-                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Reward structure</label>
-                    <select
-                        value={data.rewardStructure}
-                        onChange={(e) => onChange({ rewardStructure: e.target.value as 'FLAT' | 'PERCENTAGE' })}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    >
-                        <option value="FLAT">Flat</option>
-                        <option value="PERCENTAGE">Percentage</option>
-                    </select>
-                </div>
+                {/* Reward Structure - Only for SALE */}
+                {data.rewardType === 'SALE' && (
+                    <div className="mb-3">
+                        <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Reward structure</label>
+                        <select
+                            value={data.rewardStructure}
+                            onChange={(e) => onChange({ rewardStructure: e.target.value as 'FLAT' | 'PERCENTAGE' })}
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        >
+                            <option value="FLAT">Flat</option>
+                            <option value="PERCENTAGE">Percentage</option>
+                        </select>
+                    </div>
+                )}
 
                 {/* Amount Input */}
                 <div className="relative">
-                    {data.rewardStructure === 'FLAT' && (
+                    {(data.rewardType === 'LEAD' || data.rewardStructure === 'FLAT') && (
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">€</span>
                     )}
                     <input
@@ -367,11 +376,11 @@ function Step2ConfigureRewards({
                         placeholder="0"
                         className={`
                             w-full py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500
-                            ${data.rewardStructure === 'FLAT' ? 'pl-8 pr-16' : 'pl-4 pr-16'}
+                            ${(data.rewardType === 'LEAD' || data.rewardStructure === 'FLAT') ? 'pl-8 pr-16' : 'pl-4 pr-16'}
                         `}
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                        {data.rewardStructure === 'PERCENTAGE' ? '%' : 'EUR'}
+                        {data.rewardType === 'SALE' && data.rewardStructure === 'PERCENTAGE' ? '%' : 'EUR'}
                     </span>
                 </div>
             </div>
