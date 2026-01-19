@@ -322,6 +322,17 @@ model Partner {
   payouts_enabled_at DateTime?
   /// 0-4 onboarding progress
   onboarding_step    Int              @default(0)
+  
+  // === MULTI-PAYOUT OPTIONS ===
+  /// Preferred payout method
+  payout_method      PayoutMethod     @default(PLATFORM)
+  /// PayPal email for payouts
+  paypal_email       String?
+  /// IBAN for SEPA transfers
+  iban               String?
+  /// BIC/SWIFT code
+  bic                String?
+  
   created_at         DateTime         @default(now())
   updated_at         DateTime         @updatedAt
   Commissions        Commission[]
@@ -329,6 +340,7 @@ model Partner {
   Program            Workspace?       @relation(fields: [program_id], references: [id], onDelete: Cascade)
   Profile            PartnerProfile?
   Requests           ProgramRequest[]
+  GiftCardRedemptions GiftCardRedemption[]
 
   @@unique([program_id, email])
   @@index([email])
@@ -603,4 +615,51 @@ enum RewardStructure {
   FLAT
   /// Percentage of sale (e.g., 20%)
   PERCENTAGE
+}
+
+// === PAYOUT METHOD ENUMS ===
+
+enum PayoutMethod {
+  /// Stripe Connect Express
+  STRIPE_CONNECT
+  /// PayPal email payout
+  PAYPAL
+  /// SEPA bank transfer
+  IBAN
+  /// Platform balance (for gift cards)
+  PLATFORM
+}
+
+enum GiftCardStatus {
+  /// Requested, awaiting processing
+  PENDING
+  /// Being processed
+  PROCESSING
+  /// Card code delivered
+  DELIVERED
+  /// Failed to deliver
+  FAILED
+}
+
+// === GIFT CARD REDEMPTION ===
+
+/// Gift card redemption from platform balance
+model GiftCardRedemption {
+  id            String          @id @default(cuid())
+  partner_id    String
+  /// Amount in cents
+  amount        Int
+  /// amazon, itunes, steam, paypal_gift
+  card_type     String
+  /// Card code (encrypted in production)
+  card_code     String?
+  status        GiftCardStatus  @default(PENDING)
+  /// Admin note
+  notes         String?
+  created_at    DateTime        @default(now())
+  fulfilled_at  DateTime?
+  Partner       Partner         @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+
+  @@index([partner_id])
+  @@index([status])
 }
