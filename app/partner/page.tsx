@@ -234,7 +234,7 @@ export default function PartnerDashboardPage() {
     const [loading, setLoading] = useState(true)
     const [stats, setStats] = useState<Stats | null>(null)
     const [enrollments, setEnrollments] = useState<Enrollment[]>([])
-    const [globalStats, setGlobalStats] = useState({ clicks: 0, sales: 0, revenue: 0 })
+    const [globalStats, setGlobalStats] = useState({ clicks: 0, leads: 0, sales: 0, revenue: 0 })
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
@@ -286,9 +286,8 @@ export default function PartnerDashboardPage() {
         )
     }
 
-    // Use globalStats from Tinybird (real clicks/sales by affiliate_id)
-    const leads = 0 // TODO: Get from Tinybird leads table
-    const { clicks: totalClicks, sales, revenue } = globalStats
+    // Use globalStats from Tinybird (real clicks/leads/sales by affiliate_id)
+    const { clicks: totalClicks, leads, sales, revenue } = globalStats
 
     return (
         <div className="min-h-screen bg-[#FAFAFB]">

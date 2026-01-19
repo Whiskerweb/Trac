@@ -18,6 +18,7 @@ const TINYBIRD_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
 
 interface AffiliateStats {
     clicks: number
+    leads: number
     sales: number
     revenue: number
 }
@@ -60,7 +61,7 @@ async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<str
 
     // Initialize all links with zero stats
     linkIds.forEach(id => {
-        statsMap.set(id, { clicks: 0, sales: 0, revenue: 0 })
+        statsMap.set(id, { clicks: 0, leads: 0, sales: 0, revenue: 0 })
     })
 
     try {
@@ -117,7 +118,7 @@ async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<str
  * This aggregates ALL clicks and sales for a partner, regardless of which link was used
  */
 export async function getAffiliateStatsByUserId(userId: string): Promise<AffiliateStats> {
-    const stats: AffiliateStats = { clicks: 0, sales: 0, revenue: 0 }
+    const stats: AffiliateStats = { clicks: 0, leads: 0, sales: 0, revenue: 0 }
 
     if (!userId || !TINYBIRD_TOKEN) {
         return stats
@@ -137,7 +138,20 @@ export async function getAffiliateStatsByUserId(userId: string): Promise<Affilia
             stats.clicks = clicks
         }
 
-        // 2. GET TOTAL SALES by affiliate_id
+        // 2. GET TOTAL LEADS by affiliate_id
+        const leadsQuery = `SELECT count() as leads FROM leads WHERE affiliate_id = '${userId}'`
+        const leadsResponse = await fetch(
+            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(leadsQuery)}`,
+            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+        )
+
+        if (leadsResponse.ok) {
+            const text = await leadsResponse.text()
+            const leads = parseInt(text.trim()) || 0
+            stats.leads = leads
+        }
+
+        // 3. GET TOTAL SALES by affiliate_id
         const salesQuery = `SELECT count() as sales, sum(amount) as revenue FROM sales WHERE affiliate_id = '${userId}'`
         const salesResponse = await fetch(
             `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
@@ -151,7 +165,7 @@ export async function getAffiliateStatsByUserId(userId: string): Promise<Affilia
             stats.revenue = parseInt(revenue) || 0 // Keep in cents for proper formatting
         }
 
-        console.log(`[Marketplace] 📊 Total stats for affiliate ${userId}: ${stats.clicks} clicks, ${stats.sales} sales, ${stats.revenue}€`)
+        console.log(`[Marketplace] 📊 Total stats for affiliate ${userId}: ${stats.clicks} clicks, ${stats.leads} leads, ${stats.sales} sales, ${stats.revenue}€`)
 
     } catch (error) {
         console.error('[Marketplace] ⚠️ Error fetching affiliate stats:', error)
@@ -278,6 +292,7 @@ export async function getAllMissions(): Promise<{
             const realStats = linkId ? statsMap.get(linkId) : null
             const stats: AffiliateStats = realStats || {
                 clicks: enrollment?.ShortLink?.clicks || 0,
+                leads: 0,
                 sales: 0,
                 revenue: 0,
             }

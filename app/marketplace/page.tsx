@@ -12,6 +12,7 @@ import { ActivityLog } from '@/components/ActivityLog'
 
 interface AffiliateStats {
     clicks: number
+    leads: number
     sales: number
     revenue: number
 }
