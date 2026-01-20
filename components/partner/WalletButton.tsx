@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Wallet, X, CreditCard, Building2, Gift, Check, Loader2, ExternalLink } from 'lucide-react'
 
 interface WalletData {
@@ -22,6 +23,12 @@ export function WalletButton() {
     const [connecting, setConnecting] = useState(false)
     const [data, setData] = useState<WalletData | null>(null)
     const [selectedMethod, setSelectedMethod] = useState<string>('PLATFORM')
+    const [mounted, setMounted] = useState(false)
+
+    // Mount check for portal
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     useEffect(() => {
         if (isOpen) {
@@ -91,8 +98,8 @@ export function WalletButton() {
                 </span>
             </button>
 
-            {/* Modal */}
-            {isOpen && (
+            {/* Modal - rendered via Portal to bypass backdrop-filter containment */}
+            {mounted && isOpen && createPortal(
                 <div className="fixed inset-0 z-[9999]">
                     {/* Backdrop */}
                     <div
@@ -254,7 +261,8 @@ export function WalletButton() {
                             )}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </>
     )
