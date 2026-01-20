@@ -17,6 +17,7 @@ import {
     Banknote,
     Store
 } from 'lucide-react'
+import { WalletButton } from '@/components/partner/WalletButton'
 
 // ==========================================
 // STRICT DESIGN SYSTEM - DUB.CO STYLE
@@ -214,7 +215,17 @@ export default function PartnerDualLayout({
 
             {/* 3. MAIN CONTENT */}
             <main className={`flex-1 ${showSidebar ? 'ml-[296px]' : 'ml-[56px]'} min-h-screen ${DS.content.bg}`}>
-                {children}
+                {/* Top Header with Wallet Button */}
+                <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-gray-100">
+                    <div className="flex items-center justify-end px-6 py-3">
+                        <WalletButton />
+                    </div>
+                </div>
+
+                {/* Page Content */}
+                <div className="p-6">
+                    {children}
+                </div>
             </main>
 
         </div>
