@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics/tinybird'
 import { waitUntil } from '@vercel/functions'
-import { createCommission, findPartnerForSale, handleClawback } from '@/lib/commission/engine'
+import { createCommission, findPartnerForSale, handleClawback, getMissionReward } from '@/lib/commission/engine'
 
 export const dynamic = 'force-dynamic'
 
@@ -375,9 +375,11 @@ export async function POST(
                             })
 
                             if (partnerId) {
-                                // Get mission reward for commission calculation
-                                // For now, use a default - should be fetched from Mission
-                                const missionReward = '10%' // TODO: Fetch from Mission.reward
+                                // Get mission reward dynamically
+                                const missionReward = await getMissionReward({
+                                    linkId,
+                                    programId: workspaceId
+                                })
 
                                 await createCommission({
                                     partnerId,
@@ -389,9 +391,13 @@ export async function POST(
                                     stripeFee,
                                     taxAmount: tax,
                                     missionReward,
-                                    currency
+                                    currency,
+                                    // Subscription tracking if applicable
+                                    subscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
+                                    recurringMonth: 1,
+                                    holdDays: 7
                                 })
-                                console.log(`[Webhook] 💰 Commission created for partner ${partnerId}`)
+                                console.log(`[Webhook] 💰 Commission created for partner ${partnerId} with reward ${missionReward}`)
                             } else {
                                 console.log(`[Webhook] ⚠️ No approved partner found for affiliate ${affiliateId}`)
                             }
@@ -514,6 +520,62 @@ export async function POST(
                             workspaceId: workspaceId,
                             lineItems: products
                         }, eventId)
+                    }
+
+                    // ========================================
+                    // CREATE RECURRING COMMISSION
+                    // ========================================
+                    if (clickId && clickId !== 'recurring') {
+                        try {
+                            // Get link_id from click (via Tinybird query already done upstream)
+                            // For now, find partner via customer lookup
+                            const customer = await prisma.customer.findFirst({
+                                where: {
+                                    workspace_id: workspaceId,
+                                    OR: [
+                                        { external_id: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id },
+                                        { email: invoice.customer_email || undefined }
+                                    ]
+                                }
+                            })
+
+                            if (customer?.click_id) {
+                                const partnerId = await findPartnerForSale({
+                                    linkId: customer.link_id,
+                                    programId: workspaceId
+                                })
+
+                                if (partnerId) {
+                                    // Get mission reward
+                                    const missionReward = await getMissionReward({
+                                        linkId: customer.link_id,
+                                        programId: workspaceId
+                                    })
+
+                                    // Calculate recurring month from invoice number
+                                    const recurringMonth = invoice.number ? parseInt(invoice.number.split('-').pop() || '1') : 1
+
+                                    await createCommission({
+                                        partnerId,
+                                        programId: workspaceId,
+                                        saleId: invoice.id,
+                                        linkId: customer.link_id,
+                                        grossAmount: amount,
+                                        netAmount,
+                                        stripeFee: 0, // Not easily available on invoice
+                                        taxAmount: (invoice as any).tax || 0,
+                                        missionReward,
+                                        currency,
+                                        subscriptionId: typeof (invoice as any).subscription === 'string' ? (invoice as any).subscription : null,
+                                        recurringMonth,
+                                        holdDays: 7
+                                    })
+                                    console.log(`[Webhook] 💰 Recurring commission created for partner ${partnerId} (month ${recurringMonth})`)
+                                }
+                            }
+                        } catch (commError) {
+                            console.error('[Webhook] ⚠️ Recurring commission failed (non-blocking):', commError)
+                        }
                     }
 
                 } catch (err) {

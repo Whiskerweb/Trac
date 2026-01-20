@@ -7,6 +7,9 @@ import { CommissionType, CommissionStatus } from '@/lib/generated/prisma/client'
 // COMMISSION ENGINE (Dub.co Style)
 // =============================================
 
+// Platform fee rate (15% for Traaaction)
+const PLATFORM_FEE_RATE = 0.15
+
 /**
  * Parse a reward string like "5€" or "10%" into structured data
  */
@@ -64,6 +67,11 @@ export function calculateCommission(params: {
 /**
  * Create a PENDING commission after checkout.session.completed
  * Uses upsert for idempotency based on sale_id
+ * 
+ * Supports:
+ * - Platform fee (15%)
+ * - Recurring subscription tracking
+ * - Hold period before maturation
  */
 export async function createCommission(params: {
     partnerId: string
@@ -76,7 +84,12 @@ export async function createCommission(params: {
     taxAmount: number
     missionReward: string
     currency: string
-}): Promise<{ success: boolean; commission?: { id: string; commission_amount: number }; error?: string }> {
+    // Recurring support
+    subscriptionId?: string | null
+    recurringMonth?: number
+    recurringMax?: number
+    holdDays?: number
+}): Promise<{ success: boolean; commission?: { id: string; commission_amount: number; platform_fee: number }; error?: string }> {
     const {
         partnerId,
         programId,
@@ -87,12 +100,22 @@ export async function createCommission(params: {
         stripeFee,
         taxAmount,
         missionReward,
-        currency
+        currency,
+        subscriptionId = null,
+        recurringMonth = null,
+        recurringMax = null,
+        holdDays = 7
     } = params
 
     try {
         // Calculate commission
         const { amount, type } = calculateCommission({ netAmount, missionReward })
+
+        // Calculate platform fee (15% of partner commission)
+        const platformFee = Math.floor(amount * PLATFORM_FEE_RATE)
+        const partnerAmount = amount - platformFee
+
+        console.log(`[Commission] 💰 Breakdown: Partner ${partnerAmount / 100}€, Platform ${platformFee / 100}€`)
 
         // Idempotent upsert by sale_id
         const result = await prisma.commission.upsert({
@@ -106,21 +129,27 @@ export async function createCommission(params: {
                 net_amount: netAmount,
                 stripe_fee: stripeFee,
                 tax_amount: taxAmount,
-                commission_amount: amount,
+                commission_amount: partnerAmount,
+                platform_fee: platformFee,
                 commission_rate: missionReward,
                 commission_type: type,
                 currency: currency.toUpperCase(),
-                status: 'PENDING'
+                status: 'PENDING',
+                // Recurring tracking
+                subscription_id: subscriptionId,
+                recurring_month: recurringMonth,
+                recurring_max: recurringMax,
+                hold_days: holdDays
             },
             update: {} // No update on duplicate - idempotent
         })
 
-        console.log(`[Commission] ✅ Created commission ${result.id} for partner ${partnerId}: ${amount / 100}€`)
+        console.log(`[Commission] ✅ Created commission ${result.id} for partner ${partnerId}: ${partnerAmount / 100}€ (fee: ${platformFee / 100}€)`)
 
         // Update partner's pending balance
         await updatePartnerBalance(partnerId)
 
-        return { success: true, commission: result }
+        return { success: true, commission: { ...result, platform_fee: platformFee } }
 
     } catch (error) {
         console.error('[Commission] ❌ Failed to create commission:', error)
@@ -320,5 +349,124 @@ export async function findPartnerForSale(params: {
     } catch (error) {
         console.error('[Commission] ❌ Error finding partner:', error)
         return null
+    }
+}
+
+// =============================================
+// COMMISSION MATURATION
+// Called by cron job daily to transition PENDING → PROCEED
+// =============================================
+
+/**
+ * Mature pending commissions that have passed their hold period
+ * PENDING → PROCEED (ready for payout)
+ */
+export async function matureCommissions(): Promise<{ matured: number; errors: number }> {
+    const now = new Date()
+    let matured = 0
+    let errors = 0
+
+    try {
+        // Find all PENDING commissions where hold period has passed
+        const pendingCommissions = await prisma.commission.findMany({
+            where: { status: 'PENDING' }
+        })
+
+        for (const commission of pendingCommissions) {
+            try {
+                // Calculate maturity date based on hold_days (default 7)
+                const holdDays = commission.hold_days || 7
+                const createdAt = new Date(commission.created_at)
+                const maturityDate = new Date(createdAt.getTime() + holdDays * 24 * 60 * 60 * 1000)
+
+                if (now >= maturityDate) {
+                    await prisma.commission.update({
+                        where: { id: commission.id },
+                        data: {
+                            status: 'PROCEED',
+                            matured_at: now
+                        }
+                    })
+
+                    // Update partner balance
+                    await updatePartnerBalance(commission.partner_id)
+
+                    matured++
+                    console.log(`[Commission] ⏰ Matured: ${commission.id} (${holdDays} days hold)`)
+                }
+            } catch (err) {
+                errors++
+                console.error(`[Commission] ❌ Failed to mature ${commission.id}:`, err)
+            }
+        }
+
+        console.log(`[Commission] 📊 Maturation complete: ${matured} matured, ${errors} errors`)
+        return { matured, errors }
+
+    } catch (error) {
+        console.error('[Commission] ❌ Maturation job failed:', error)
+        return { matured, errors: errors + 1 }
+    }
+}
+
+// =============================================
+// GET MISSION REWARD (Helper for webhook)
+// =============================================
+
+/**
+ * Get the reward configuration for a mission
+ */
+export async function getMissionReward(params: {
+    linkId?: string | null
+    programId: string
+}): Promise<string> {
+    const { linkId, programId } = params
+
+    try {
+        if (linkId) {
+            // Get mission from link
+            const link = await prisma.shortLink.findUnique({
+                where: { id: linkId },
+                include: {
+                    MissionEnrollment: {
+                        include: { Mission: true }
+                    }
+                }
+            })
+
+            if (link?.MissionEnrollment?.Mission) {
+                const mission = link.MissionEnrollment.Mission
+                // Format reward: "10€" or "15%"
+                if (mission.reward_structure === 'PERCENTAGE') {
+                    return `${mission.reward_amount}%`
+                } else {
+                    return `${mission.reward_amount}€`
+                }
+            }
+        }
+
+        // Fallback: Get first active mission for the program
+        const mission = await prisma.mission.findFirst({
+            where: {
+                workspace_id: programId,
+                status: 'ACTIVE'
+            }
+        })
+
+        if (mission) {
+            if (mission.reward_structure === 'PERCENTAGE') {
+                return `${mission.reward_amount}%`
+            } else {
+                return `${mission.reward_amount}€`
+            }
+        }
+
+        // Default fallback
+        console.log(`[Commission] ⚠️ No mission found for program ${programId}, using default 10%`)
+        return '10%'
+
+    } catch (error) {
+        console.error('[Commission] ❌ Error getting mission reward:', error)
+        return '10%'
     }
 }

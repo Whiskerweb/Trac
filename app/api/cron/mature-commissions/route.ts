@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { matureCommissions } from '@/lib/commission-engine'
+import { matureCommissions } from '@/lib/commission/engine'
 
 // =============================================
 // CRON HANDLER
@@ -25,11 +25,12 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const maturedCount = await matureCommissions()
+        const result = await matureCommissions()
 
         return NextResponse.json({
             success: true,
-            maturedCount,
+            matured: result.matured,
+            errors: result.errors,
             timestamp: new Date().toISOString()
         })
     } catch (error) {

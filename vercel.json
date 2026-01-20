@@ -1,6 +1,10 @@
 {
     "crons": [
         {
+            "path": "/api/cron/mature-commissions",
+            "schedule": "0 6 * * *"
+        },
+        {
             "path": "/api/cron/commissions",
             "schedule": "0 2 * * *"
         },
