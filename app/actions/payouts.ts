@@ -62,13 +62,7 @@ export async function getUnpaidCommissions(): Promise<{
                 status: 'PROCEED' // Only matured commissions
             },
             include: {
-                Partner: {
-                    include: {
-                        user: {
-                            select: { email: true }
-                        }
-                    }
-                }
+                Partner: true
             },
             orderBy: { created_at: 'desc' }
         })
@@ -77,7 +71,7 @@ export async function getUnpaidCommissions(): Promise<{
         const mapped: UnpaidCommission[] = commissions.map(c => ({
             id: c.id,
             partner_id: c.partner_id,
-            partner_name: c.Partner.name || c.Partner.user?.email || 'Unknown',
+            partner_name: c.Partner.name || c.Partner.email,
             sale_id: c.sale_id,
             net_amount: c.net_amount,
             commission_amount: c.commission_amount,
