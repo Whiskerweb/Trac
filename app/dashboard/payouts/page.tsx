@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { DollarSign, Users, CreditCard, Check, AlertCircle, Loader2 } from 'lucide-react'
 import { getUnpaidCommissions, createPaymentSession, PartnerSummary } from '@/app/actions/payouts'
 import { useSearchParams } from 'next/navigation'
 
-export default function PayoutsPage() {
+function PayoutsContent() {
     const [loading, setLoading] = useState(true)
     const [paying, setPaying] = useState(false)
     const [partnerSummary, setPartnerSummary] = useState<PartnerSummary[]>([])
@@ -275,5 +275,18 @@ export default function PayoutsPage() {
                 </div>
             )}
         </div>
+    )
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function PayoutsPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            </div>
+        }>
+            <PayoutsContent />
+        </Suspense>
     )
 }
