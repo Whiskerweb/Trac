@@ -4,10 +4,12 @@ import { useState, useEffect, use } from 'react'
 import {
     ArrowLeft, Loader2, Gift, Copy, Check, ExternalLink,
     Play, FileText, Link as LinkIcon, FileType, Building,
-    Lock, Globe, AlertCircle
+    Lock, Globe, AlertCircle, DollarSign, MousePointer, Users, Trophy,
+    Activity, TrendingUp
 } from 'lucide-react'
 import Link from 'next/link'
 import { getMissionWithResources } from '@/app/actions/marketplace-actions'
+import { getMissionStatsForPartner, getPartnerActivityLog, MissionStatsForPartner, ActivityLogEntry } from '@/app/actions/mission-stats'
 
 interface Resource {
     id: string
@@ -132,6 +134,10 @@ export default function MissionDetailPage({
     const [error, setError] = useState<string | null>(null)
     const [copied, setCopied] = useState(false)
 
+    // NEW: Personal stats and activity log
+    const [myStats, setMyStats] = useState<MissionStatsForPartner | null>(null)
+    const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([])
+
     useEffect(() => {
         async function load() {
             const result = await getMissionWithResources(resolvedParams.missionId)
@@ -146,6 +152,18 @@ export default function MissionDetailPage({
                 setMission(result.mission as MissionData)
                 setResources((result.resources || []) as Resource[])
                 setEnrollment(result.enrollment as EnrollmentData | null)
+
+                // Load personal stats
+                const statsResult = await getMissionStatsForPartner(resolvedParams.missionId)
+                if (statsResult.success && statsResult.stats) {
+                    setMyStats(statsResult.stats)
+                }
+
+                // Load activity log
+                const logResult = await getPartnerActivityLog(resolvedParams.missionId)
+                if (logResult.success && logResult.entries) {
+                    setActivityLog(logResult.entries)
+                }
             }
             setLoading(false)
         }
@@ -270,6 +288,86 @@ export default function MissionDetailPage({
                                     </>
                                 )}
                             </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Personal Stats Cards */}
+                {myStats && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="bg-white border border-gray-200 rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-2 bg-green-50 rounded-lg">
+                                    <DollarSign className="w-4 h-4 text-green-600" />
+                                </div>
+                            </div>
+                            <p className="text-2xl font-bold text-gray-900">{(myStats.my_commission / 100).toFixed(2)}€</p>
+                            <p className="text-xs text-gray-500">Mes gains</p>
+                        </div>
+                        <div className="bg-white border border-gray-200 rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-2 bg-blue-50 rounded-lg">
+                                    <Users className="w-4 h-4 text-blue-600" />
+                                </div>
+                            </div>
+                            <p className="text-2xl font-bold text-gray-900">{myStats.my_leads}</p>
+                            <p className="text-xs text-gray-500">Mes leads</p>
+                        </div>
+                        <div className="bg-white border border-gray-200 rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-2 bg-purple-50 rounded-lg">
+                                    <MousePointer className="w-4 h-4 text-purple-600" />
+                                </div>
+                            </div>
+                            <p className="text-2xl font-bold text-gray-900">{myStats.my_clicks}</p>
+                            <p className="text-xs text-gray-500">Mes clicks</p>
+                        </div>
+                        <div className="bg-white border border-gray-200 rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-2 bg-yellow-50 rounded-lg">
+                                    <Trophy className="w-4 h-4 text-yellow-600" />
+                                </div>
+                            </div>
+                            <p className="text-2xl font-bold text-gray-900">#{myStats.my_rank}</p>
+                            <p className="text-xs text-gray-500">sur {myStats.total_partners}</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Activity Log */}
+                {activityLog.length > 0 && (
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
+                        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-gray-400" />
+                            <h3 className="font-semibold text-gray-900">Historique</h3>
+                        </div>
+                        <div className="divide-y divide-gray-100 max-h-[300px] overflow-y-auto">
+                            {activityLog.map((entry) => (
+                                <div key={entry.id} className="px-5 py-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${entry.type === 'sale' ? 'bg-green-100' :
+                                                entry.type === 'lead' ? 'bg-blue-100' : 'bg-gray-100'
+                                            }`}>
+                                            {entry.type === 'sale' ? <DollarSign className="w-4 h-4 text-green-600" /> :
+                                                entry.type === 'lead' ? <Users className="w-4 h-4 text-blue-600" /> :
+                                                    <MousePointer className="w-4 h-4 text-gray-600" />}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">{entry.details}</p>
+                                            <p className="text-xs text-gray-400">
+                                                {new Date(entry.timestamp).toLocaleString('fr-FR', {
+                                                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {entry.commission && (
+                                        <span className="text-sm font-semibold text-green-600">
+                                            +{(entry.commission / 100).toFixed(2)}€
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
