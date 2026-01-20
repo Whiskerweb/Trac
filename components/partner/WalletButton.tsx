@@ -93,17 +93,17 @@ export function WalletButton() {
 
             {/* Modal */}
             {isOpen && (
-                <div className="fixed inset-0 z-[100] overflow-y-auto">
+                <div className="fixed inset-0 z-[9999]">
                     {/* Backdrop */}
                     <div
-                        className="fixed inset-0 bg-black/30"
+                        className="fixed inset-0 bg-black/50 z-[9999]"
                         onClick={() => setIsOpen(false)}
                     />
 
                     {/* Centering Container */}
-                    <div className="min-h-full flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 overflow-y-auto">
                         {/* Modal Content */}
-                        <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
                             {/* Header */}
                             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                                 <h2 className="text-lg font-semibold text-gray-900">Configuration des paiements</h2>
