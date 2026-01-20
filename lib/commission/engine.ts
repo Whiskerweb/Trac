@@ -108,14 +108,20 @@ export async function createCommission(params: {
     } = params
 
     try {
-        // Calculate commission
-        const { amount, type } = calculateCommission({ netAmount, missionReward })
+        // Calculate partner commission based on mission reward
+        const { amount: partnerCommission, type } = calculateCommission({ netAmount, missionReward })
 
-        // Calculate platform fee (15% of partner commission)
-        const platformFee = Math.floor(amount * PLATFORM_FEE_RATE)
-        const partnerAmount = amount - platformFee
+        // IMPORTANT: Platform fee = 15% of HT (netAmount), NOT of commission
+        // This is a separate charge to the startup, not deducted from partner
+        const traaactionFee = Math.floor(netAmount * PLATFORM_FEE_RATE)
 
-        console.log(`[Commission] 💰 Breakdown: Partner ${partnerAmount / 100}€, Platform ${platformFee / 100}€`)
+        // Partner gets their FULL commission (no deduction)
+        // Startup pays: partnerCommission + traaactionFee
+
+        console.log(`[Commission] 💰 Sale HT: ${netAmount / 100}€`)
+        console.log(`[Commission] 💰 Partner commission: ${partnerCommission / 100}€ (${missionReward})`)
+        console.log(`[Commission] 💰 Traaaction fee: ${traaactionFee / 100}€ (15% of HT)`)
+        console.log(`[Commission] 💰 Startup owes: ${(partnerCommission + traaactionFee) / 100}€`)
 
         // Idempotent upsert by sale_id
         const result = await prisma.commission.upsert({
@@ -129,12 +135,15 @@ export async function createCommission(params: {
                 net_amount: netAmount,
                 stripe_fee: stripeFee,
                 tax_amount: taxAmount,
-                commission_amount: partnerAmount,
-                platform_fee: platformFee,
+                // Partner gets FULL commission
+                commission_amount: partnerCommission,
+                // Traaaction fee = 15% of HT (separate from commission)
+                platform_fee: traaactionFee,
                 commission_rate: missionReward,
                 commission_type: type,
                 currency: currency.toUpperCase(),
                 status: 'PENDING',
+                startup_payment_status: 'UNPAID',
                 // Recurring tracking
                 subscription_id: subscriptionId,
                 recurring_month: recurringMonth,
@@ -144,12 +153,12 @@ export async function createCommission(params: {
             update: {} // No update on duplicate - idempotent
         })
 
-        console.log(`[Commission] ✅ Created commission ${result.id} for partner ${partnerId}: ${partnerAmount / 100}€ (fee: ${platformFee / 100}€)`)
+        console.log(`[Commission] ✅ Created commission ${result.id} for partner ${partnerId}`)
 
         // Update partner's pending balance
         await updatePartnerBalance(partnerId)
 
-        return { success: true, commission: { ...result, platform_fee: platformFee } }
+        return { success: true, commission: { ...result, platform_fee: traaactionFee } }
 
     } catch (error) {
         console.error('[Commission] ❌ Failed to create commission:', error)

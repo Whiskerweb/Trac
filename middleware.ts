@@ -766,7 +766,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
         const pathParts = pathname.split('/') // ['', 'dashboard', 'slug', ...]
 
         // Reserved slugs that are actual page routes, not workspace slugs
-        const reservedSlugs = ['new', 'links', 'settings', 'domains', 'integration', 'marketplace', 'missions', 'affiliate', 'startup', 'partners', 'commissions', 'messages']
+        const reservedSlugs = ['new', 'links', 'settings', 'domains', 'integration', 'marketplace', 'missions', 'affiliate', 'startup', 'partners', 'commissions', 'messages', 'payouts']
 
         if (pathParts.length >= 3 && !reservedSlugs.includes(pathParts[2])) {
             const slug = pathParts[2]

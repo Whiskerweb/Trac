@@ -163,6 +163,7 @@ model Workspace {
   ShortLink       ShortLink[]
   WebhookEndpoint WebhookEndpoint[]
   WorkspaceMember WorkspaceMember[]
+  StartupPayment  StartupPayment[]
 
   @@index([owner_id])
   @@index([slug])
@@ -417,9 +418,16 @@ model Commission {
   /// Reason for clawback
   clawback_reason   String?
   
+  // === STARTUP PAYMENT STATUS ===
+  /// Has startup paid this commission to partners?
+  startup_payment_status StartupPaymentStatus @default(UNPAID)
+  /// Reference to batch payment
+  startup_payment_id String?
+  
   created_at        DateTime         @default(now())
   updated_at        DateTime         @updatedAt
   Partner           Partner          @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+  StartupPayment    StartupPayment?  @relation(fields: [startup_payment_id], references: [id])
 
   @@index([partner_id])
   @@index([program_id])
@@ -427,6 +435,7 @@ model Commission {
   @@index([created_at])
   @@index([sale_id])
   @@index([subscription_id])
+  @@index([startup_payment_status])
 }
 
 /// Partner Balance for tracking payouts and negative balances (clawbacks)
@@ -662,4 +671,48 @@ model GiftCardRedemption {
 
   @@index([partner_id])
   @@index([status])
+}
+
+// === STARTUP PAYMENT STATUS ===
+
+/// Payment status from startup perspective
+enum StartupPaymentStatus {
+  /// Startup hasn't paid this commission yet
+  UNPAID
+  /// Startup has paid, commission ready for partner payout
+  PAID
+}
+
+// === STARTUP BATCH PAYMENT ===
+
+/// Batch payment from startup to pay multiple commissions at once
+model StartupPayment {
+  id                String    @id @default(cuid())
+  /// Workspace making the payment
+  workspace_id      String
+  /// Total amount paid in cents
+  total_amount      Int
+  /// Sum of partner commissions in cents
+  partner_total     Int
+  /// Sum of Traaaction platform fees in cents (15%)
+  platform_total    Int
+  /// Number of commissions in this batch
+  commission_count  Int
+  /// Stripe payment intent ID
+  stripe_payment_id String?   @unique
+  /// Stripe checkout session ID
+  stripe_session_id String?   @unique
+  /// Payment status
+  status            String    @default("PENDING")
+  /// When payment was initiated
+  created_at        DateTime  @default(now())
+  /// When payment was confirmed
+  paid_at           DateTime?
+  
+  Workspace         Workspace @relation(fields: [workspace_id], references: [id])
+  Commissions       Commission[]
+
+  @@index([workspace_id])
+  @@index([status])
+  @@index([created_at])
 }
