@@ -180,7 +180,9 @@ function FunnelChart({ clicks, leads, sales, revenue }: {
 function MissionCard({ data }: { data: Enrollment }) {
     const [copied, setCopied] = useState(false)
 
-    const copyLink = () => {
+    const copyLink = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
         if (!data.link) return
         navigator.clipboard.writeText(data.link.full_url)
         setCopied(true)
@@ -188,45 +190,87 @@ function MissionCard({ data }: { data: Enrollment }) {
     }
 
     return (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center font-bold text-lg">
-                        {data.mission.title.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-gray-900">{data.mission.title}</h3>
-                        <div className="flex items-center gap-3 text-sm text-gray-500">
-                            <span>{data.mission.reward}</span>
-                            {data.link && (
-                                <span className="flex items-center gap-1">
-                                    <MousePointer className="w-3 h-3" />
-                                    {data.link.clicks} clics
+        <Link href={`/partner/marketplace/${data.mission.id}`}>
+            <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group">
+                <div className="flex items-start justify-between gap-4">
+                    {/* Left: Info */}
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
+                        {/* Icon */}
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center font-bold text-xl flex-shrink-0">
+                            {data.mission.title.charAt(0).toUpperCase()}
+                        </div>
+
+                        {/* Title & Meta */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
+                                    {data.mission.title}
+                                </h3>
+                                <ExternalLink className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+
+                            {/* Reward badge */}
+                            <div className="flex items-center gap-2 mt-1.5">
+                                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700 border border-green-200 rounded-full">
+                                    💰 {data.mission.reward}
                                 </span>
+                                <span className="text-xs text-gray-400">par conversion</span>
+                            </div>
+
+                            {/* Stats row */}
+                            {data.link && (
+                                <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                                    <span className="flex items-center gap-1.5">
+                                        <MousePointer className="w-3.5 h-3.5 text-blue-500" />
+                                        <span className="font-medium text-gray-700">{data.link.clicks}</span> clicks
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <Users className="w-3.5 h-3.5 text-purple-500" />
+                                        <span className="font-medium text-gray-700">0</span> leads
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <ShoppingCart className="w-3.5 h-3.5 text-teal-500" />
+                                        <span className="font-medium text-gray-700">0</span> ventes
+                                    </span>
+                                </div>
                             )}
                         </div>
                     </div>
+
+                    {/* Right: Copy button */}
+                    {data.link && (
+                        <button
+                            onClick={copyLink}
+                            className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors flex-shrink-0"
+                        >
+                            {copied ? (
+                                <>
+                                    <Check className="w-4 h-4 text-green-600" />
+                                    <span className="text-green-600 font-medium">Copié!</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="w-4 h-4 text-gray-500" />
+                                    <span className="text-gray-600">Copier lien</span>
+                                </>
+                            )}
+                        </button>
+                    )}
                 </div>
+
+                {/* Tracking link preview */}
                 {data.link && (
-                    <button
-                        onClick={copyLink}
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                    >
-                        {copied ? (
-                            <>
-                                <Check className="w-4 h-4 text-green-600" />
-                                <span className="text-green-600">Copié!</span>
-                            </>
-                        ) : (
-                            <>
-                                <Copy className="w-4 h-4 text-gray-600" />
-                                <span className="text-gray-600">Copier lien</span>
-                            </>
-                        )}
-                    </button>
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                            <span>🔗</span>
+                            <code className="bg-gray-50 px-2 py-0.5 rounded font-mono truncate">
+                                {data.link.full_url}
+                            </code>
+                        </div>
+                    </div>
                 )}
             </div>
-        </div>
+        </Link>
     )
 }
 
