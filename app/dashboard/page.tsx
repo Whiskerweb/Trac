@@ -67,7 +67,10 @@ interface AnalyticsItem {
 }
 
 const kpiFetcher = async (url: string): Promise<KPIResponse> => {
-    const res = await fetch(`${url}&_t=${Date.now()}`, { cache: 'no-store' })
+    const res = await fetch(`${url}&_t=${Date.now()}`, {
+        cache: 'no-store',
+        credentials: 'include'
+    })
     if (!res.ok) throw new Error('Failed to fetch')
     return res.json()
 }
@@ -378,7 +381,10 @@ export default function DashboardPage() {
 
     // Fetch breakdown data from real API
     const breakdownFetcher = async (url: string) => {
-        const res = await fetch(url, { cache: 'no-store' })
+        const res = await fetch(url, {
+            cache: 'no-store',
+            credentials: 'include'
+        })
         if (!res.ok) return { data: [] }
         return res.json()
     }

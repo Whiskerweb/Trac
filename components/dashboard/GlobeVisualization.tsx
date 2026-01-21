@@ -81,7 +81,10 @@ const CITY_COORDINATES: Record<string, { lat: number; lng: number; country: stri
 
 // Fetcher for SWR
 const fetcher = async (url: string) => {
-    const res = await fetch(url, { cache: 'no-store' })
+    const res = await fetch(url, {
+        cache: 'no-store',
+        credentials: 'include'
+    })
     if (!res.ok) return { data: [] }
     return res.json()
 }
