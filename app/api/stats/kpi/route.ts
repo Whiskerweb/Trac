@@ -183,11 +183,23 @@ export async function GET(request: NextRequest) {
             dateTo = `${dateTo}T23:59:59`  // Include entire day
         }
 
+        // Parse filter params
+        const countryFilter = searchParams.get('country')
+        const deviceFilter = searchParams.get('device')
+        const browserFilter = searchParams.get('browser')
+        const osFilter = searchParams.get('os')
+
         const baseParams = new URLSearchParams({
             workspace_id: workspaceId,
             date_from: dateFrom,
             date_to: dateTo,
         })
+
+        // Add filters to params if present
+        if (countryFilter) baseParams.set('country', countryFilter)
+        if (deviceFilter) baseParams.set('device', deviceFilter)
+        if (browserFilter) baseParams.set('browser', browserFilter)
+        if (osFilter) baseParams.set('os', osFilter)
 
         const kpisUrl = `${TINYBIRD_HOST}/v0/pipes/kpis.json?${baseParams}`
         const trendUrl = `${TINYBIRD_HOST}/v0/pipes/trend.json?${baseParams}`

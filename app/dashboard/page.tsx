@@ -372,9 +372,25 @@ export default function DashboardPage() {
         : format(subDays(new Date(), selectedRange.days), 'yyyy-MM-dd')
     const dateTo = format(new Date(), 'yyyy-MM-dd')
 
-    // Fetch KPIs with date range
+    // Build filter params for KPI (no exclusion - apply all filters)
+    const buildKpiFilterParams = () => {
+        const params: string[] = []
+        const countryFilters = activeFilters.filter(f => f.type === 'country').map(f => f.value)
+        const deviceFilters = activeFilters.filter(f => f.type === 'device').map(f => f.value)
+        const browserFilters = activeFilters.filter(f => f.type === 'browser').map(f => f.value)
+        const osFilters = activeFilters.filter(f => f.type === 'os').map(f => f.value)
+
+        if (countryFilters.length) params.push(`country=${countryFilters.join(',')}`)
+        if (deviceFilters.length) params.push(`device=${deviceFilters.join(',')}`)
+        if (browserFilters.length) params.push(`browser=${browserFilters.join(',')}`)
+        if (osFilters.length) params.push(`os=${osFilters.join(',')}`)
+
+        return params.length ? '&' + params.join('&') : ''
+    }
+
+    // Fetch KPIs with date range and filters
     const { data: kpiData, mutate, isValidating } = useSWR<KPIResponse>(
-        `/api/stats/kpi?date_from=${dateFrom}&date_to=${dateTo}`,
+        `/api/stats/kpi?date_from=${dateFrom}&date_to=${dateTo}${buildKpiFilterParams()}`,
         kpiFetcher,
         { revalidateOnFocus: false }
     )
