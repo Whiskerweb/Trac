@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
+import { getCurrentUser } from '@/lib/auth'
 
 // =============================================
 // GET MY PARTNERS (Partners who joined our missions)
@@ -284,5 +285,78 @@ export async function claimPartners(userId: string, email: string) {
     } catch (error) {
         console.error('Error claiming partners:', error)
         return { success: false, error: 'Failed to claim partners' }
+    }
+}
+
+// =============================================
+// GET PARTNER BY USER ID (For Analytics Token)
+// =============================================
+
+export async function getPartnerByUserId(userId: string) {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true, email: true }
+    })
+    return user
+}
+
+// =============================================
+// GET PARTNER DASHBOARD (For Portal Homepage)
+// =============================================
+
+export async function getPartnerDashboard() {
+    try {
+        const currentUser = await getCurrentUser()
+        if (!currentUser) return { error: 'Non authentifié' }
+
+        // Fetch recent enrollments
+        const enrollments = await prisma.missionEnrollment.findMany({
+            where: { user_id: currentUser.userId },
+            include: { mission: true, link: true },
+            orderBy: { created_at: 'desc' },
+            take: 5
+        })
+
+        // Calc stats (Mocked Tinybird aggregation for now)
+        const totalClicks = enrollments.reduce((sum, e) => sum + (e.link?.clicks || 0), 0)
+
+        return {
+            partner: {
+                id: currentUser.userId,
+                name: currentUser.email.split('@')[0],
+            },
+            stats: {
+                totalClicks,
+                totalEarnings: 0,
+                totalSales: 0,
+                conversionRate: 0,
+                activeMissions: enrollments.length
+            },
+            recentActivity: enrollments.map(e => ({
+                id: e.id,
+                mission: e.mission.title,
+                date: e.created_at,
+                clicks: e.link?.clicks || 0
+            }))
+        }
+    } catch (error) {
+        console.error('Error fetching partner dashboard:', error)
+        return { error: 'Erreur load dashboard' }
+    }
+}
+
+// =============================================
+// GET PARTNER COMMISSIONS (For Portal Earnings)
+// =============================================
+
+export async function getPartnerCommissions() {
+    // Return empty list/mock for now as Commission table might be empty
+    return {
+        commissions: [],
+        summary: {
+            pending: 0,
+            available: 0,
+            paid: 0
+        }
     }
 }
