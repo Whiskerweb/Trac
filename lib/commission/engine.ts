@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db'
 import { CommissionType, CommissionStatus } from '@/lib/generated/prisma/client'
 
 // =============================================
-// COMMISSION ENGINE (Dub.co Style)
+// COMMISSION ENGINE (Traaaction Style)
 // =============================================
 
 // Platform fee rate (15% for Traaaction)

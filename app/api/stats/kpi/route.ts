@@ -27,19 +27,48 @@ export async function GET(request: NextRequest) {
     if (process.env.TINYBIRD_MOCK_MODE === 'true') {
         console.log('[🦁 MOCK STATS] Serving fake data for /api/stats/kpi')
 
-        // Generate realistic mock timeseries data (last 30 days)
-        const timeseries = []
+        // Parse date range from query params
+        const { searchParams } = new URL(request.url)
+        const dateFromParam = searchParams.get('date_from')
+        const dateToParam = searchParams.get('date_to')
+
         const now = new Date()
-        for (let i = 29; i >= 0; i--) {
-            const date = new Date(now)
-            date.setDate(date.getDate() - i)
-            timeseries.push({
-                date: date.toISOString().split('T')[0],
-                clicks: Math.floor(Math.random() * 50) + 10,
-                leads: Math.floor(Math.random() * 5),
-                sales: Math.floor(Math.random() * 3),
-                revenue: Math.floor(Math.random() * 200) + 50,
-            })
+        const dateTo = dateToParam ? new Date(dateToParam) : now
+        const dateFrom = dateFromParam ? new Date(dateFromParam) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+        // Calculate diff in hours and days
+        const hoursDiff = Math.max(1, Math.ceil((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60)))
+        const daysDiff = Math.max(1, Math.ceil(hoursDiff / 24))
+
+        // Use hourly granularity for periods of 2 days or less, otherwise daily
+        const useHourly = daysDiff <= 2
+        const timeseries = []
+
+        if (useHourly) {
+            // Generate hourly data points
+            for (let i = 0; i < Math.min(hoursDiff, 48); i++) {
+                const date = new Date(dateFrom.getTime() + i * 60 * 60 * 1000)
+                timeseries.push({
+                    date: date.toISOString(),
+                    clicks: Math.floor(Math.random() * 10) + 1,
+                    leads: Math.floor(Math.random() * 2),
+                    sales: Math.random() > 0.7 ? 1 : 0,
+                    revenue: Math.random() > 0.7 ? Math.floor(Math.random() * 3000) + 500 : 0,
+                })
+            }
+        } else {
+            // Generate daily data points
+            for (let i = 0; i < daysDiff; i++) {
+                const date = new Date(dateFrom)
+                date.setDate(date.getDate() + i)
+                timeseries.push({
+                    date: date.toISOString().split('T')[0],
+                    clicks: Math.floor(Math.random() * 50) + 10,
+                    leads: Math.floor(Math.random() * 5),
+                    sales: Math.floor(Math.random() * 3),
+                    revenue: Math.floor(Math.random() * 5000) + 500,
+                })
+            }
         }
 
         // Calculate totals from timeseries

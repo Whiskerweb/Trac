@@ -4,6 +4,8 @@ import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
 import { nanoid } from 'nanoid'
 import { revalidatePath } from 'next/cache'
+import { IS_MOCK_MODE } from '@/lib/config/constants'
+import { MOCK_ENROLLMENTS, MOCK_GLOBAL_STATS } from '@/lib/mock/data'
 
 // =============================================
 // TINYBIRD CONFIGURATION
@@ -196,6 +198,15 @@ export async function getMyGlobalStats(): Promise<{
     userId?: string
     error?: string
 }> {
+    // Mock mode: return fake data for UX testing
+    if (IS_MOCK_MODE) {
+        return {
+            success: true,
+            stats: MOCK_GLOBAL_STATS,
+            userId: 'mock-user-id'
+        }
+    }
+
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -529,6 +540,14 @@ export async function getMyEnrollments(): Promise<{
     }[]
     error?: string
 }> {
+    // Mock mode: return fake enrollments for UX testing
+    if (IS_MOCK_MODE) {
+        return {
+            success: true,
+            enrollments: MOCK_ENROLLMENTS
+        }
+    }
+
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 

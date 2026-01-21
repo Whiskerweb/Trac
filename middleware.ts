@@ -19,7 +19,7 @@ const redis = new Redis({
 })
 
 // =============================================
-// RATE LIMITING CONFIGURATION (Dub-Style)
+// RATE LIMITING CONFIGURATION (Traaaction-Style)
 // =============================================
 
 /**
@@ -338,7 +338,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     }
 
     // ============================================
-    // RATE LIMITING (Dub-Style)
+    // RATE LIMITING (Traaaction-Style)
     // ============================================
 
     // 🏠 BYPASS: Skip rate limiting for localhost in development
@@ -766,7 +766,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
         const pathParts = pathname.split('/') // ['', 'dashboard', 'slug', ...]
 
         // Reserved slugs that are actual page routes, not workspace slugs
-        const reservedSlugs = ['new', 'links', 'settings', 'domains', 'integration', 'marketplace', 'missions', 'affiliate', 'startup', 'partners', 'commissions', 'messages', 'payouts']
+        const reservedSlugs = ['new', 'links', 'settings', 'domains', 'integration', 'marketplace', 'missions', 'affiliate', 'startup', 'partners', 'commissions', 'messages', 'payouts', 'customers', 'analytics', 'fraud', 'bounties', 'campaigns', 'resources']
 
         if (pathParts.length >= 3 && !reservedSlugs.includes(pathParts[2])) {
             const slug = pathParts[2]

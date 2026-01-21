@@ -379,11 +379,11 @@
     // URL UTILITIES + MULTI-SOURCE TRACKING
     // =============================================
 
-    // Multi-source click tracking (Dub.co architecture)
+    // Multi-source click tracking (Traaaction architecture)
     var CLICK_SOURCES = {
         'gclid': { cookie: '_trac_gclid', duration: 90 },
         'fbclid': { cookie: '_trac_fbclid', duration: 90 },
-        'dub_id': { cookie: '_trac_dub_id', duration: 30 },
+        'trac_id': { cookie: '_trac_click_id', duration: 30 },
         'ref': { cookie: '_trac_ref', duration: 30 },
         'via': { cookie: '_trac_via', duration: 90 },
         'clk': { cookie: 'clk_id', duration: 90 }  // Primary
@@ -429,7 +429,7 @@
         return getCookie('clk_id') ||
             getCookie('_trac_gclid') ||
             getCookie('_trac_fbclid') ||
-            getCookie('_trac_dub_id') ||
+            getCookie('_trac_click_id') ||
             getCookie('_trac_ref');
     }
 
@@ -1146,7 +1146,7 @@
             return {
                 gclid: getCookie('_trac_gclid'),
                 fbclid: getCookie('_trac_fbclid'),
-                dub_id: getCookie('_trac_dub_id'),
+                trac_id: getCookie('_trac_click_id'),
                 clk: getCookie('clk_id'),
                 primary: getPrimaryClickId()
             };

@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/db'
 import { createClient } from '@/utils/supabase/server'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
+import { IS_MOCK_MODE } from '@/lib/config/constants'
+import { MOCK_MISSION_STATS, MOCK_PARTNER_STATS, MOCK_ACTIVITY_LOG } from '@/lib/mock/data'
 
 // =============================================
 // TYPES
@@ -70,6 +72,17 @@ export async function getMissionStatsForStartup(missionId: string): Promise<{
     stats?: MissionStatsForStartup
     error?: string
 }> {
+    // Mock mode: return fake data for UX testing
+    if (IS_MOCK_MODE) {
+        return {
+            success: true,
+            stats: {
+                ...MOCK_MISSION_STATS,
+                mission_id: missionId
+            }
+        }
+    }
+
     try {
         const supabase = await createClient()
         const { data: { user }, error } = await supabase.auth.getUser()
@@ -174,6 +187,17 @@ export async function getMissionStatsForPartner(missionId: string): Promise<{
     stats?: MissionStatsForPartner
     error?: string
 }> {
+    // Mock mode: return fake data for UX testing
+    if (IS_MOCK_MODE) {
+        return {
+            success: true,
+            stats: {
+                ...MOCK_PARTNER_STATS,
+                mission_id: missionId
+            }
+        }
+    }
+
     try {
         const supabase = await createClient()
         const { data: { user }, error } = await supabase.auth.getUser()
@@ -258,6 +282,14 @@ export async function getPartnerActivityLog(missionId: string): Promise<{
     entries?: ActivityLogEntry[]
     error?: string
 }> {
+    // Mock mode: return fake activity log for UX testing
+    if (IS_MOCK_MODE) {
+        return {
+            success: true,
+            entries: MOCK_ACTIVITY_LOG
+        }
+    }
+
     try {
         const supabase = await createClient()
         const { data: { user }, error } = await supabase.auth.getUser()

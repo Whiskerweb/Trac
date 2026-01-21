@@ -1,35 +1,81 @@
 'use client'
 
-import { Home, Link2, ShoppingBag, Settings, Target, Puzzle, Globe, ChevronDown, User, LogOut, DollarSign, Users, CreditCard } from 'lucide-react'
+import {
+    Home, MessageSquare, CreditCard, Users, UserCheck, UserPlus,
+    BarChart3, Contact, Coins, Shield, Gift, Mail, FileText,
+    Puzzle, ChevronDown, User, ExternalLink, Target
+} from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
+
+// =============================================
+// NAVIGATION STRUCTURE (Traaaction style)
+// =============================================
 
 interface NavItem {
     name: string
     href: string
     icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+    external?: boolean
 }
 
-const navigation: NavItem[] = [
-    { name: 'Overview', href: '/dashboard', icon: Home },
-    { name: 'My Links', href: '/dashboard/links', icon: Link2 },
-    { name: 'Marketplace', href: '/dashboard/marketplace', icon: ShoppingBag },
-    { name: 'Missions', href: '/dashboard/missions', icon: Target },
-    { name: 'Partners', href: '/dashboard/partners', icon: Users },
-    { name: 'Commissions', href: '/dashboard/commissions', icon: DollarSign },
-    { name: 'Payouts', href: '/dashboard/payouts', icon: CreditCard },
-    { name: 'Domains', href: '/dashboard/domains', icon: Globe },
-    { name: 'Setup & Diagnostics', href: '/dashboard/integration', icon: Puzzle },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+interface NavSection {
+    title: string
+    items: NavItem[]
+}
+
+const navigation: NavSection[] = [
+    {
+        title: 'Partner Program',
+        items: [
+            { name: 'Overview', href: '/dashboard', icon: Home },
+            { name: 'Payouts', href: '/dashboard/payouts', icon: CreditCard },
+            { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
+        ]
+    },
+    {
+        title: 'Partners',
+        items: [
+            { name: 'All Partners', href: '/dashboard/partners', icon: Users },
+            { name: 'Groups', href: '/dashboard/partners/groups', icon: Users },
+            { name: 'My Partner', href: '/dashboard/partners/applications', icon: UserPlus },
+        ]
+    },
+    {
+        title: 'Insights',
+        items: [
+            { name: 'Missions', href: '/dashboard/missions', icon: Target },
+            { name: 'Customers', href: '/dashboard/customers', icon: Contact },
+            { name: 'Commissions', href: '/dashboard/commissions', icon: Coins },
+            { name: 'Fraud Detection', href: '/dashboard/fraud', icon: Shield },
+        ]
+    },
+    {
+        title: 'Engagement',
+        items: [
+            { name: 'Bounties', href: '/dashboard/bounties', icon: Gift },
+            { name: 'Email Campaigns', href: '/dashboard/campaigns', icon: Mail },
+            { name: 'Resources', href: '/dashboard/resources', icon: FileText },
+        ]
+    },
+    {
+        title: 'Configuration',
+        items: [
+            { name: 'Intégration', href: '/dashboard/integration', icon: Puzzle, external: true },
+        ]
+    },
 ]
+
+// =============================================
+// SIDEBAR COMPONENT
+// =============================================
 
 export function Sidebar() {
     const pathname = usePathname()
     const [userEmail, setUserEmail] = useState<string>('')
 
     useEffect(() => {
-        // Simple fetch to get user email for the profile section
         fetch('/api/auth/me')
             .then(res => res.json())
             .then(data => setUserEmail(data.user?.email || 'User'))
@@ -37,56 +83,77 @@ export function Sidebar() {
     }, [])
 
     return (
-        <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-[#E5E7EB] flex flex-col z-50">
-            {/* Logo/Workspace Switcher Mockup */}
-            <div className="h-16 flex items-center px-4 border-b border-[#E5E7EB]">
+        <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-50">
+            {/* Logo/Workspace Switcher */}
+            <div className="h-16 flex items-center px-4 border-b border-gray-100">
                 <button className="flex items-center gap-2 w-full hover:bg-gray-50 p-2 rounded-lg transition-colors text-left group">
                     <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg">
                         T
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">Trac App</p>
-                        <p className="text-xs text-gray-500 truncate group-hover:text-gray-700">Free Plan</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate">Partner Program</p>
+                        <p className="text-xs text-gray-500 truncate">Free Plan</p>
                     </div>
-                    <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
                 </button>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-3 py-6 overflow-y-auto">
-                <div className="mb-2 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    Menu
-                </div>
-                <ul className="space-y-0.5">
-                    {navigation.map((item) => {
-                        const isActive = pathname === item.href
-                        const Icon = item.icon
+            <nav className="flex-1 px-3 py-4 overflow-y-auto">
+                {navigation.map((section, idx) => (
+                    <div key={section.title} className={idx > 0 ? 'mt-6' : ''}>
+                        {/* Section Title */}
+                        <p className="px-3 mb-2 text-xs font-medium text-gray-400 uppercase tracking-wide">
+                            {section.title}
+                        </p>
 
-                        return (
-                            <li key={item.name}>
-                                <Link
-                                    href={item.href}
-                                    className={`
-                                        flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 text-sm
-                                        ${isActive
-                                            ? 'bg-gray-100 text-black font-medium'
-                                            : 'text-gray-500 hover:text-black hover:bg-gray-50'
-                                        }
-                                    `}
-                                >
-                                    <Icon className={`w-4 h-4 ${isActive ? 'text-black' : 'text-gray-500'}`} strokeWidth={2} />
-                                    <span>{item.name}</span>
-                                </Link>
-                            </li>
-                        )
-                    })}
-                </ul>
+                        {/* Section Items */}
+                        <ul className="space-y-0.5">
+                            {section.items.map((item) => {
+                                // Routes that need exact matching (have sub-routes that should NOT trigger parent active state)
+                                const exactMatchRoutes = ['/dashboard/partners']
+                                const needsExactMatch = exactMatchRoutes.includes(item.href)
+
+                                const isActive = needsExactMatch
+                                    ? pathname === item.href
+                                    : pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+                                const Icon = item.icon
+
+                                return (
+                                    <li key={item.name}>
+                                        <Link
+                                            href={item.href}
+                                            className={`
+                                                flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all duration-150 text-sm
+                                                ${isActive
+                                                    ? 'bg-blue-50 text-blue-700 font-medium'
+                                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                                }
+                                            `}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Icon
+                                                    className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
+                                                    strokeWidth={2}
+                                                />
+                                                <span>{item.name}</span>
+                                            </div>
+                                            {item.external && (
+                                                <ExternalLink className="w-3 h-3 text-gray-400" />
+                                            )}
+                                        </Link>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    </div>
+                ))}
             </nav>
 
             {/* Profile Section */}
-            <div className="p-3 border-t border-[#E5E7EB]">
+            <div className="p-3 border-t border-gray-100">
                 <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-100 to-gray-200 border border-gray-100 flex items-center justify-center text-gray-500">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-100 to-gray-200 border border-gray-200 flex items-center justify-center text-gray-500">
                         <User className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">

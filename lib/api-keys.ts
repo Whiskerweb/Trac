@@ -1,5 +1,5 @@
 /**
- * API Key Management Library (Dub.co Style)
+ * API Key Management Library (Traaaction Style)
  * 
  * Security Model:
  * - Public keys (pk_*): Stored in plain text, for client-side tracking

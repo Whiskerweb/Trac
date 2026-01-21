@@ -20,7 +20,7 @@ import {
 import { WalletButton } from '@/components/partner/WalletButton'
 
 // ==========================================
-// STRICT DESIGN SYSTEM - DUB.CO STYLE
+// STRICT DESIGN SYSTEM - TRAAACTION STYLE
 // ==========================================
 const DS = {
     rail: {

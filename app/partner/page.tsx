@@ -40,7 +40,7 @@ function formatNumber(n: number): string {
 }
 
 // =============================================
-// FUNNEL CHART COMPONENT (Dub.co style)
+// FUNNEL CHART COMPONENT (Traaaction style)
 // =============================================
 function FunnelChart({ clicks, leads, sales, revenue }: {
     clicks: number; leads: number; sales: number; revenue: number

@@ -593,53 +593,80 @@ function MissionsContent() {
         loadMissions()
     }, [])
 
+    // Compute stats
+    const stats = {
+        total: missions.length,
+        active: missions.filter(m => m.status === 'ACTIVE').length,
+        draft: missions.filter(m => m.status === 'DRAFT').length,
+        totalParticipants: missions.reduce((sum, m) => sum + (m._count?.enrollments || 0), 0)
+    }
+
     return (
-        <div className="w-full max-w-6xl mx-auto px-6 py-8">
+        <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Missions</h1>
-                    <p className="text-gray-500 mt-1">
-                        Create and manage affiliate offers for your workspace.
-                    </p>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-semibold text-gray-900">Missions</h1>
                 </div>
                 <Link
                     href="/dashboard/missions/create"
-                    className="flex items-center gap-2 px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md font-medium text-sm transition-all shadow-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded-lg font-medium text-sm transition-colors"
                 >
                     <Plus className="w-4 h-4" />
-                    New Mission
+                    Créer une mission
                 </Link>
+            </div>
+
+            {/* Stats Bar */}
+            <div className="flex gap-6 p-5 bg-white border border-gray-200 rounded-xl">
+                <div className="flex-1">
+                    <p className="text-sm text-gray-500">Total</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
+                </div>
+                <div className="w-px bg-gray-200" />
+                <div className="flex-1">
+                    <p className="text-sm text-gray-500">Actives</p>
+                    <p className="text-2xl font-semibold text-green-600">{stats.active}</p>
+                </div>
+                <div className="w-px bg-gray-200" />
+                <div className="flex-1">
+                    <p className="text-sm text-gray-500">Brouillons</p>
+                    <p className="text-2xl font-semibold text-gray-400">{stats.draft}</p>
+                </div>
+                <div className="w-px bg-gray-200" />
+                <div className="flex-1">
+                    <p className="text-sm text-gray-500">Participants</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.totalParticipants}</p>
+                </div>
             </div>
 
             {/* Content */}
             {loading ? (
-                <div className="flex items-center justify-center py-20 text-gray-500">
-                    <Loader2 className="w-6 h-6 animate-spin mb-2" />
-                    <p className="text-sm">Loading missions...</p>
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                 </div>
             ) : missions.length === 0 ? (
                 <div className="bg-white border border-gray-200 rounded-xl p-16 text-center">
-                    <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
+                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
                         <Target className="w-6 h-6 text-gray-400" />
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        No missions created
+                        Aucune mission
                     </h3>
                     <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-                        Create your first mission to start recruiting affiliates for your product.
+                        Créez votre première mission pour recruter des affiliés.
                     </p>
                     <Link
                         href="/dashboard/missions/create"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md font-medium text-sm transition-colors shadow-sm"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded-lg font-medium text-sm transition-colors"
                     >
                         <Plus className="w-4 h-4" />
-                        Create Mission
+                        Créer une mission
                     </Link>
                 </div>
             ) : (
-                <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                    <div className="divide-y divide-gray-100">
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="divide-y divide-gray-50">
                         {missions.map((mission) => (
                             <MissionListItem
                                 key={mission.id}

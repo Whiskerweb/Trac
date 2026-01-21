@@ -83,12 +83,12 @@ function generateFirstPartyScript(config: {
         workspaceId: '${config.workspaceId}',
         // Attribution model: 'first-click' (preserve original) or 'last-click' (overwrite)
         attributionModel: 'first-click',
-        // Query params to listen for (Dub-style data-query-params)
+        // Query params to listen for (Traaaction-style data-query-params)
         queryParams: ['via', 'ref', 'trac_id', 'clk_id'],
-        // Domains config (Dub-style data-domains)
+        // Domains config (Traaaction-style data-domains)
         // { refer: "short.link" } = short link domain for referral tracking
         domains: null,
-        // API host for reverse proxy (Dub-style data-api-host)
+        // API host for reverse proxy (Traaaction-style data-api-host)
         apiHost: null,
         debug: false
     };
@@ -172,7 +172,7 @@ function generateFirstPartyScript(config: {
             }
         },
         delete: function(name) {
-            // Delete cookie by setting expiry in the past (Dub pattern)
+            // Delete cookie by setting expiry in the past (Traaaction pattern)
             try {
                 var domainAttr = CONFIG.rootDomain ? '; domain=' + CONFIG.rootDomain : '';
                 document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/' + domainAttr;
@@ -196,7 +196,7 @@ function generateFirstPartyScript(config: {
             var existing = ${varNames.storage}.get(CONFIG.cookieName);
             
             if (fromUrl) {
-                // Attribution model check (Dub-style)
+                // Attribution model check (Traaaction-style)
                 if (CONFIG.attributionModel === 'first-click' && existing) {
                     // First-click: preserve original attribution, don't overwrite
                     if (CONFIG.debug) console.log('[Trac] First-click: keeping existing', existing);
@@ -251,7 +251,7 @@ function generateFirstPartyScript(config: {
             this.trackPageview();
         },
         
-        // Call /track/click API to get partner data (Dub-style)
+        // Call /track/click API to get partner data (Traaaction-style)
         trackClick: function(key) {
             var self = this;
             var existing = ${varNames.storage}.get(CONFIG.cookieName);
@@ -402,9 +402,9 @@ function generateFirstPartyScript(config: {
         injectStripe: function() { ${varNames.tracker}.injectStripe(); },
         
         // ========================================
-        // CUSTOMER ID (Dub-style Attribution)
+        // CUSTOMER ID (Traaaction-style Attribution)
         // Store internal user ID for lifetime attribution
-        // Uses cookie (not localStorage) per Dub's approach
+        // Uses cookie (not localStorage) per Traaaction's approach
         // ========================================
         setCustomerId: function(customerId) {
             if (!customerId) return;
@@ -439,7 +439,7 @@ function generateFirstPartyScript(config: {
                 })
             }).then(function(r) { 
                 return r.json().then(function(data) {
-                    // Delete click_id cookie after successful lead creation (Dub pattern)
+                    // Delete click_id cookie after successful lead creation (Traaaction pattern)
                     // customerExternalId is now the source of truth for all future attributions
                     if (data && !data.error) {
                         ${varNames.storage}.delete(CONFIG.cookieName);
@@ -458,7 +458,7 @@ function generateFirstPartyScript(config: {
             };
         },
         
-        // Get partner data from cookie (Dub-style for UI banners)
+        // Get partner data from cookie (Traaaction-style for UI banners)
         getPartnerData: function() {
             try {
                 var data = ${varNames.storage}.get(CONFIG.partnerDataCookieName);
@@ -468,7 +468,7 @@ function generateFirstPartyScript(config: {
             }
         },
         
-        // Partner and discount data accessible as properties (Dub-style)
+        // Partner and discount data accessible as properties (Traaaction-style)
         partner: null,
         discount: null,
         
@@ -479,7 +479,7 @@ function generateFirstPartyScript(config: {
     var _callbacks = { ready: [] };
     var _isReady = false;
     
-    // tracAnalytics function (like Dub's dubAnalytics)
+    // tracAnalytics function (like Traaaction's dubAnalytics)
     // Usage: tracAnalytics("ready", function() { console.log(Trac.partner); })
     window.tracAnalytics = function(event, callback) {
         if (typeof event === 'string' && typeof callback === 'function') {
@@ -493,7 +493,7 @@ function generateFirstPartyScript(config: {
         }
     };
     
-    // Alias for console verification (like Dub's _dubAnalytics)
+    // Alias for console verification (like Traaaction's _dubAnalytics)
     window._tracAnalytics = window.Trac;
 
     // Initialize when DOM is ready

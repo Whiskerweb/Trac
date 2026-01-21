@@ -346,7 +346,7 @@ export default function MissionDetailPage({
                                 <div key={entry.id} className="px-5 py-3 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${entry.type === 'sale' ? 'bg-green-100' :
-                                                entry.type === 'lead' ? 'bg-blue-100' : 'bg-gray-100'
+                                            entry.type === 'lead' ? 'bg-blue-100' : 'bg-gray-100'
                                             }`}>
                                             {entry.type === 'sale' ? <DollarSign className="w-4 h-4 text-green-600" /> :
                                                 entry.type === 'lead' ? <Users className="w-4 h-4 text-blue-600" /> :

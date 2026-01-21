@@ -6,7 +6,7 @@ import { validatePublicKey } from '@/lib/api-keys'
 /**
  * POST /api/track/lead
  * 
- * Track a lead conversion event (Dub-style)
+ * Track a lead conversion event (Traaaction-style)
  * Creates/updates a Customer and records the lead event
  * 
  * Authentication (in priority order):
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         // Get workspace from middleware headers (primary method)
         let workspaceId = request.headers.get('x-workspace-id')
 
-        // Fallback: Try publishable key authentication (Dub-style)
+        // Fallback: Try publishable key authentication (Traaaction-style)
         if (!workspaceId) {
             const publishableKey = request.headers.get('x-publishable-key')
             if (publishableKey) {

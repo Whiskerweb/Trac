@@ -74,7 +74,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
     if (!isOpen) return null
 
     const handleRandomizeSlug = () => {
-        setSlug(nanoid(7)) // 7 chars like Dub/Bitly
+        setSlug(nanoid(7)) // 7 chars like Traaaction/Bitly
     }
 
     async function handleSubmit(e: React.FormEvent) {
@@ -204,7 +204,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                             id="url"
                                             value={url}
                                             onChange={(e) => setUrl(e.target.value)}
-                                            placeholder="https://dub.co/help/article/what-is-dub"
+                                            placeholder="https://traaaction.com/help/article/what-is-dub"
                                             className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm text-base"
                                             autoFocus
                                             required

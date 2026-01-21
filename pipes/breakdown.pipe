@@ -1,0 +1,94 @@
+DESCRIPTION >
+    Analytics breakdown by dimension (country, device, city)
+    For dashboard filtering and cross-dimensional analysis
+
+TOKEN "dashboard_endpoint" READ
+
+NODE countries
+SQL >
+    %
+    SELECT 
+        country,
+        count() as clicks
+    FROM clicks
+    WHERE 
+        workspace_id = {{ String(workspace_id, '') }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+    GROUP BY country
+    ORDER BY clicks DESC
+    LIMIT 20
+
+NODE cities
+SQL >
+    %
+    SELECT 
+        city,
+        country,
+        count() as clicks
+    FROM clicks
+    WHERE 
+        workspace_id = {{ String(workspace_id, '') }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+    GROUP BY city, country
+    ORDER BY clicks DESC
+    LIMIT 20
+
+NODE devices
+SQL >
+    %
+    SELECT 
+        device,
+        count() as clicks
+    FROM clicks
+    WHERE 
+        workspace_id = {{ String(workspace_id, '') }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+    GROUP BY device
+    ORDER BY clicks DESC
+
+NODE browsers
+SQL >
+    %
+    SELECT 
+        -- Extract browser from user_agent (simplified)
+        CASE
+            WHEN positionCaseInsensitive(user_agent, 'Chrome') > 0 AND positionCaseInsensitive(user_agent, 'Edg') = 0 THEN 'Chrome'
+            WHEN positionCaseInsensitive(user_agent, 'Firefox') > 0 THEN 'Firefox'
+            WHEN positionCaseInsensitive(user_agent, 'Safari') > 0 AND positionCaseInsensitive(user_agent, 'Chrome') = 0 THEN 'Safari'
+            WHEN positionCaseInsensitive(user_agent, 'Edg') > 0 THEN 'Edge'
+            WHEN positionCaseInsensitive(user_agent, 'Opera') > 0 OR positionCaseInsensitive(user_agent, 'OPR') > 0 THEN 'Opera'
+            ELSE 'Other'
+        END as browser,
+        count() as clicks
+    FROM clicks
+    WHERE 
+        workspace_id = {{ String(workspace_id, '') }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+    GROUP BY browser
+    ORDER BY clicks DESC
+
+NODE os
+SQL >
+    %
+    SELECT 
+        -- Extract OS from user_agent (simplified)
+        CASE
+            WHEN positionCaseInsensitive(user_agent, 'Windows') > 0 THEN 'Windows'
+            WHEN positionCaseInsensitive(user_agent, 'Mac OS X') > 0 OR positionCaseInsensitive(user_agent, 'Macintosh') > 0 THEN 'macOS'
+            WHEN positionCaseInsensitive(user_agent, 'iPhone') > 0 OR positionCaseInsensitive(user_agent, 'iPad') > 0 THEN 'iOS'
+            WHEN positionCaseInsensitive(user_agent, 'Android') > 0 THEN 'Android'
+            WHEN positionCaseInsensitive(user_agent, 'Linux') > 0 THEN 'Linux'
+            ELSE 'Other'
+        END as os,
+        count() as clicks
+    FROM clicks
+    WHERE 
+        workspace_id = {{ String(workspace_id, '') }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+    GROUP BY os
+    ORDER BY clicks DESC

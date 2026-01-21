@@ -265,3 +265,156 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
         return false
     }
 }
+
+// =============================================
+// GET PAYOUT HISTORY WITH PAGINATION
+// =============================================
+
+export interface PayoutItem {
+    id: string
+    period: string
+    partnerId: string
+    partnerName: string
+    partnerAvatar: string
+    status: 'pending' | 'completed'
+    paidDate: string | null
+    amount: number
+    platformFee: number
+    type: 'partner' | 'platform_fee'
+}
+
+export interface PayoutHistoryResponse {
+    success: boolean
+    payouts?: PayoutItem[]
+    totals?: {
+        pendingTotal: number
+        paidTotal: number
+        pendingCount: number
+        paidCount: number
+    }
+    pagination?: {
+        total: number
+        page: number
+        perPage: number
+        totalPages: number
+    }
+    error?: string
+}
+
+export async function getPayoutHistory(page: number = 1, perPage: number = 10): Promise<PayoutHistoryResponse> {
+    try {
+        const supabase = await createClient()
+        const { data: { user }, error } = await supabase.auth.getUser()
+
+        if (error || !user) {
+            return { success: false, error: 'Not authenticated' }
+        }
+
+        const workspace = await getActiveWorkspaceForUser()
+        if (!workspace) {
+            return { success: false, error: 'No active workspace' }
+        }
+
+        // Get all commissions (both paid and unpaid) with pagination
+        const [commissions, totalCount] = await Promise.all([
+            prisma.commission.findMany({
+                where: {
+                    program_id: workspace.workspaceId,
+                    status: 'PROCEED'
+                },
+                include: {
+                    Partner: true,
+                    StartupPayment: true
+                },
+                orderBy: { created_at: 'desc' },
+                skip: (page - 1) * perPage,
+                take: perPage
+            }),
+            prisma.commission.count({
+                where: {
+                    program_id: workspace.workspaceId,
+                    status: 'PROCEED'
+                }
+            })
+        ])
+
+        // Get totals for stats
+        const [pendingCommissions, paidCommissions] = await Promise.all([
+            prisma.commission.aggregate({
+                where: {
+                    program_id: workspace.workspaceId,
+                    status: 'PROCEED',
+                    startup_payment_status: 'UNPAID'
+                },
+                _sum: { commission_amount: true, platform_fee: true },
+                _count: true
+            }),
+            prisma.commission.aggregate({
+                where: {
+                    program_id: workspace.workspaceId,
+                    status: 'PROCEED',
+                    startup_payment_status: 'PAID'
+                },
+                _sum: { commission_amount: true, platform_fee: true },
+                _count: true
+            })
+        ])
+
+        // Helper to format date as period
+        const formatPeriod = (date: Date) => {
+            const start = new Date(date)
+            start.setDate(start.getDate() - 30) // Assume 30-day period
+            const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' }
+            return `${start.toLocaleDateString('en-US', options)} - ${date.toLocaleDateString('en-US', options)}`
+        }
+
+        // Get initials from name
+        const getInitials = (name: string) => {
+            const parts = name.split(' ')
+            return parts.length >= 2
+                ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+                : name.substring(0, 2).toUpperCase()
+        }
+
+        // Format paid date
+        const formatPaidDate = (date: Date | null) => {
+            if (!date) return null
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        }
+
+        // Map to response format
+        const payouts: PayoutItem[] = commissions.map(c => ({
+            id: c.id,
+            period: formatPeriod(c.created_at),
+            partnerId: c.partner_id,
+            partnerName: c.Partner.name || c.Partner.email,
+            partnerAvatar: getInitials(c.Partner.name || c.Partner.email),
+            status: c.startup_payment_status === 'PAID' ? 'completed' as const : 'pending' as const,
+            paidDate: c.StartupPayment?.paid_at ? formatPaidDate(c.StartupPayment.paid_at) : null,
+            amount: c.commission_amount / 100, // Convert from cents
+            platformFee: c.platform_fee / 100,
+            type: 'partner' as const
+        }))
+
+        return {
+            success: true,
+            payouts,
+            totals: {
+                pendingTotal: (pendingCommissions._sum.commission_amount || 0) / 100,
+                paidTotal: (paidCommissions._sum.commission_amount || 0) / 100,
+                pendingCount: pendingCommissions._count,
+                paidCount: paidCommissions._count
+            },
+            pagination: {
+                total: totalCount,
+                page,
+                perPage,
+                totalPages: Math.ceil(totalCount / perPage)
+            }
+        }
+    } catch (err) {
+        console.error('[Payouts] Error fetching history:', err)
+        return { success: false, error: 'Failed to fetch payout history' }
+    }
+}
+

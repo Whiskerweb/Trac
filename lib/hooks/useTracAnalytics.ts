@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 
 /**
  * Partner and Discount data from trac_partner_data cookie
- * Equivalent to Dub's useAnalytics() hook
+ * Equivalent to Traaaction's useAnalytics() hook
  */
 export interface TracPartnerData {
     clickId: string
@@ -21,7 +21,7 @@ export interface TracPartnerData {
 }
 
 /**
- * useTracAnalytics - React hook for Dub-style partner data
+ * useTracAnalytics - React hook for Traaaction-style partner data
  * 
  * Reads from trac_partner_data cookie set by the tracking script
  * when a user arrives via ?via=john or similar query param.

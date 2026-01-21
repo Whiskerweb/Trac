@@ -172,7 +172,9 @@ export async function POST(request: NextRequest) {
                 key: key || null,
                 source: isFirstParty ? 'first_party' : 'client_side',
                 country: request.headers.get('x-vercel-ip-country') || 'unknown',
-                device: getDeviceType(request.headers.get('user-agent') || '')
+                city: request.headers.get('x-vercel-ip-city') || 'unknown',
+                device: getDeviceType(request.headers.get('user-agent') || ''),
+                user_agent: request.headers.get('user-agent') || 'unknown'
             }
 
             await fetch(`${tinybirdHost}/v0/events?name=clicks`, {

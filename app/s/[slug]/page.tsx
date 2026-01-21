@@ -1,6 +1,6 @@
 /**
  * =============================================
- * TRAC LINK REDIRECT - Dub.co Architecture
+ * TRAC LINK REDIRECT - Traaaction Architecture
  * =============================================
  * 
  * This page acts as an "Identity Transporter":

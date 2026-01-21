@@ -8,7 +8,7 @@ interface DiscountBannerProps {
 }
 
 /**
- * DiscountBanner - Dub-style referral banner
+ * DiscountBanner - Traaaction-style referral banner
  * 
  * Displays "{partner} vous offre {discount}% de réduction" when a user
  * arrives via ?via=john or similar referral link.

@@ -1,28 +1,39 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import {
-    DollarSign, Users, Clock, CheckCircle,
-    Loader2, TrendingUp, Receipt, Gift,
-    ChevronRight, AlertCircle
-} from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Loader2, Search, Info, Download, Filter, ChevronRight, ArrowRight, CreditCard } from 'lucide-react'
 import {
     getWorkspaceCommissionStats,
-    getPendingGiftCardRequests,
-    fulfillGiftCard,
     type CommissionStats
 } from '@/app/actions/commissions'
+
+// =============================================
+// TYPES
+// =============================================
+
+interface Commission {
+    id: string
+    partnerName: string
+    partnerEmail: string
+    missionName: string
+    grossAmount: number
+    netAmount: number
+    commissionAmount: number
+    platformFee: number
+    status: 'PENDING' | 'PROCEED' | 'COMPLETE'
+    createdAt: Date
+    maturedAt?: Date
+    paidAt?: Date
+}
 
 // =============================================
 // FORMAT HELPERS
 // =============================================
 
 function formatCurrency(cents: number): string {
-    return (cents / 100).toLocaleString('fr-FR', {
-        style: 'currency',
-        currency: 'EUR',
-        maximumFractionDigits: 0
-    })
+    return `€${(cents / 100).toLocaleString('fr-FR', { maximumFractionDigits: 0 })}`
 }
 
 function formatDate(date: Date): string {
@@ -34,63 +45,98 @@ function formatDate(date: Date): string {
 }
 
 // =============================================
-// STATS CARD
-// =============================================
-
-function StatsCard({
-    title,
-    value,
-    icon: Icon,
-    color = 'blue',
-    description
-}: {
-    title: string
-    value: string
-    icon: React.ElementType
-    color?: 'blue' | 'green' | 'orange' | 'purple'
-    description?: string
-}) {
-    const colors = {
-        blue: 'bg-blue-50 text-blue-600',
-        green: 'bg-green-50 text-green-600',
-        orange: 'bg-orange-50 text-orange-600',
-        purple: 'bg-purple-50 text-purple-600',
-    }
-
-    return (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-lg ${colors[color]} flex items-center justify-center`}>
-                    <Icon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium text-gray-500">{title}</span>
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{value}</div>
-            {description && (
-                <p className="text-sm text-gray-500">{description}</p>
-            )}
-        </div>
-    )
-}
-
-// =============================================
 // STATUS BADGE
 // =============================================
 
-function StatusBadge({ status }: { status: string }) {
-    const styles: Record<string, string> = {
-        PENDING: 'bg-orange-100 text-orange-700',
-        PROCEED: 'bg-blue-100 text-blue-700',
-        COMPLETE: 'bg-green-100 text-green-700',
-        PROCESSING: 'bg-blue-100 text-blue-700',
-        DELIVERED: 'bg-green-100 text-green-700',
+function StatusBadge({ status }: { status: Commission['status'] }) {
+    const styles = {
+        PENDING: 'bg-orange-50 text-orange-700',
+        PROCEED: 'bg-blue-50 text-blue-700',
+        COMPLETE: 'bg-green-50 text-green-700',
+    }
+    const labels = {
+        PENDING: 'En attente',
+        PROCEED: 'À payer',
+        COMPLETE: 'Payé',
     }
     return (
-        <span className={`px-2 py-1 text-xs font-medium rounded ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
-            {status}
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}>
+            {labels[status]}
         </span>
     )
 }
+
+// =============================================
+// MOCK DATA
+// =============================================
+
+const MOCK_COMMISSIONS: Commission[] = [
+    {
+        id: 'c1',
+        partnerName: 'Sophie Anderson',
+        partnerEmail: 'sophie@creator.io',
+        missionName: 'Summer Campaign',
+        grossAmount: 9900,
+        netAmount: 8910,
+        commissionAmount: 2000,
+        platformFee: 300,
+        status: 'COMPLETE',
+        createdAt: new Date('2025-01-18'),
+        maturedAt: new Date('2025-01-25'),
+        paidAt: new Date('2025-01-26')
+    },
+    {
+        id: 'c2',
+        partnerName: 'Luca Romano',
+        partnerEmail: 'luca@influencer.com',
+        missionName: 'Black Friday',
+        grossAmount: 19900,
+        netAmount: 17910,
+        commissionAmount: 3980,
+        platformFee: 597,
+        status: 'PROCEED',
+        createdAt: new Date('2025-01-15'),
+        maturedAt: new Date('2025-01-22'),
+    },
+    {
+        id: 'c3',
+        partnerName: 'Emma Stevenson',
+        partnerEmail: 'emma@content.co',
+        missionName: 'New Year Promo',
+        grossAmount: 4900,
+        netAmount: 4410,
+        commissionAmount: 980,
+        platformFee: 147,
+        status: 'PENDING',
+        createdAt: new Date('2025-01-19'),
+    },
+    {
+        id: 'c4',
+        partnerName: 'Sophie Anderson',
+        partnerEmail: 'sophie@creator.io',
+        missionName: 'Summer Campaign',
+        grossAmount: 14900,
+        netAmount: 13410,
+        commissionAmount: 2980,
+        platformFee: 447,
+        status: 'COMPLETE',
+        createdAt: new Date('2025-01-10'),
+        maturedAt: new Date('2025-01-17'),
+        paidAt: new Date('2025-01-18')
+    },
+    {
+        id: 'c5',
+        partnerName: 'Mia Thompson',
+        partnerEmail: 'mia@social.media',
+        missionName: 'Referral Program',
+        grossAmount: 2900,
+        netAmount: 2610,
+        commissionAmount: 580,
+        platformFee: 87,
+        status: 'PENDING',
+        createdAt: new Date('2025-01-20'),
+    },
+]
 
 // =============================================
 // MAIN PAGE
@@ -98,9 +144,10 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function CommissionsPage() {
     const [stats, setStats] = useState<CommissionStats | null>(null)
-    const [giftCardRequests, setGiftCardRequests] = useState<any[]>([])
+    const [commissions, setCommissions] = useState<Commission[]>([])
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState<'overview' | 'partners' | 'giftcards'>('overview')
+    const [statusFilter, setStatusFilter] = useState<'all' | 'PENDING' | 'PROCEED' | 'COMPLETE'>('all')
+    const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
         loadData()
@@ -108,37 +155,42 @@ export default function CommissionsPage() {
 
     async function loadData() {
         setLoading(true)
-        const [statsResult, giftCardsResult] = await Promise.all([
+        const [statsResult] = await Promise.all([
             getWorkspaceCommissionStats(),
-            getPendingGiftCardRequests()
         ])
 
         if (statsResult.success && statsResult.stats) {
             setStats(statsResult.stats)
         }
-        if (giftCardsResult.success && giftCardsResult.requests) {
-            setGiftCardRequests(giftCardsResult.requests)
-        }
+
+        // Use mock data for now - replace with real data fetch
+        setCommissions(MOCK_COMMISSIONS)
         setLoading(false)
     }
 
-    async function handleFulfillGiftCard(requestId: string) {
-        const code = prompt('Enter gift card code:')
-        if (!code) return
+    const filteredCommissions = useMemo(() => {
+        return commissions.filter(c => {
+            const matchesSearch = searchQuery === '' ||
+                c.partnerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                c.partnerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                c.missionName.toLowerCase().includes(searchQuery.toLowerCase())
+            const matchesStatus = statusFilter === 'all' || c.status === statusFilter
+            return matchesSearch && matchesStatus
+        })
+    }, [commissions, searchQuery, statusFilter])
 
-        const result = await fulfillGiftCard(requestId, code)
-        if (result.success) {
-            alert('Gift card fulfilled!')
-            loadData()
-        } else {
-            alert(result.error || 'Failed to fulfill')
-        }
-    }
+    const computedStats = useMemo(() => ({
+        total: commissions.reduce((sum, c) => sum + c.commissionAmount, 0),
+        pending: commissions.filter(c => c.status === 'PENDING').reduce((sum, c) => sum + c.commissionAmount, 0),
+        proceed: commissions.filter(c => c.status === 'PROCEED').reduce((sum, c) => sum + c.commissionAmount, 0),
+        complete: commissions.filter(c => c.status === 'COMPLETE').reduce((sum, c) => sum + c.commissionAmount, 0),
+        platformFees: commissions.reduce((sum, c) => sum + c.platformFee, 0),
+    }), [commissions])
 
     if (loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
             </div>
         )
     }
@@ -147,205 +199,146 @@ export default function CommissionsPage() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Commissions</h1>
-                    <p className="text-gray-500 text-sm mt-1">
-                        Track partner payouts and platform fees
-                    </p>
+                <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-semibold text-gray-900">Commissions</h1>
+                    <Info className="w-4 h-4 text-gray-400" />
+                </div>
+                <div className="flex items-center gap-3">
+                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <Download className="w-4 h-4" />
+                        Export
+                    </button>
+                    {commissions.filter(c => c.status === 'PROCEED').length > 0 && (
+                        <Link
+                            href="/dashboard/payouts"
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+                        >
+                            <CreditCard className="w-4 h-4" />
+                            Payer ({commissions.filter(c => c.status === 'PROCEED').length})
+                            <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    )}
                 </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatsCard
-                    title="Commissions Paid"
-                    value={formatCurrency(stats?.totalCommissionsPaid || 0)}
-                    icon={CheckCircle}
-                    color="green"
-                    description="Paid to partners"
-                />
-                <StatsCard
-                    title="Platform Fees"
-                    value={formatCurrency(stats?.totalPlatformFees || 0)}
-                    icon={Receipt}
-                    color="purple"
-                    description="15% per sale"
-                />
-                <StatsCard
-                    title="Pending"
-                    value={formatCurrency(stats?.pendingCommissions || 0)}
-                    icon={Clock}
-                    color="orange"
-                    description="Maturing"
-                />
-                <StatsCard
-                    title="Due"
-                    value={formatCurrency(stats?.dueCommissions || 0)}
-                    icon={TrendingUp}
-                    color="blue"
-                    description="Ready to pay"
-                />
+            {/* Stats Bar */}
+            <div className="flex gap-6 p-5 bg-white border border-gray-200 rounded-xl">
+                <div className="flex-1">
+                    <p className="text-sm text-gray-500">Total commissions</p>
+                    <p className="text-2xl font-semibold text-gray-900">{formatCurrency(computedStats.total)}</p>
+                </div>
+                <div className="w-px bg-gray-200" />
+                <div className="flex-1">
+                    <p className="text-sm text-gray-500">En attente</p>
+                    <p className="text-2xl font-semibold text-orange-600">{formatCurrency(computedStats.pending)}</p>
+                </div>
+                <div className="w-px bg-gray-200" />
+                <Link
+                    href="/dashboard/payouts"
+                    className="flex-1 group cursor-pointer hover:bg-gray-50 p-3 -m-3 rounded-lg transition-colors"
+                >
+                    <p className="text-sm text-gray-500">À payer</p>
+                    <div className="flex items-center gap-2">
+                        <p className="text-2xl font-semibold text-blue-600">{formatCurrency(computedStats.proceed)}</p>
+                        <ArrowRight className="w-4 h-4 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                </Link>
+                <div className="w-px bg-gray-200" />
+                <div className="flex-1">
+                    <p className="text-sm text-gray-500">Payés</p>
+                    <p className="text-2xl font-semibold text-green-600">{formatCurrency(computedStats.complete)}</p>
+                </div>
+                <div className="w-px bg-gray-200" />
+                <div className="flex-1">
+                    <p className="text-sm text-gray-500">Frais plateforme</p>
+                    <p className="text-2xl font-semibold text-gray-900">{formatCurrency(computedStats.platformFees)}</p>
+                </div>
             </div>
 
-            {/* Tabs */}
-            <div className="border-b border-gray-200">
-                <div className="flex gap-6">
-                    {(['overview', 'partners', 'giftcards'] as const).map(tab => (
+            {/* Search and Filters */}
+            <div className="flex items-center gap-3">
+                <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Rechercher par partner ou mission..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                    />
+                </div>
+                <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                    {(['all', 'PENDING', 'PROCEED', 'COMPLETE'] as const).map((status) => (
                         <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab
-                                    ? 'border-black text-black'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                            key={status}
+                            onClick={() => setStatusFilter(status)}
+                            className={`px-3 py-2 text-sm font-medium transition-colors ${statusFilter === status
+                                ? 'bg-gray-900 text-white'
+                                : 'bg-white text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
-                            {tab === 'overview' && 'Recent Activity'}
-                            {tab === 'partners' && `Partners (${stats?.partnerBreakdown.length || 0})`}
-                            {tab === 'giftcards' && `Gift Cards (${giftCardRequests.length})`}
+                            {status === 'all' && 'Tous'}
+                            {status === 'PENDING' && 'En attente'}
+                            {status === 'PROCEED' && 'À payer'}
+                            {status === 'COMPLETE' && 'Payés'}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Tab Content */}
-            <div className="bg-white rounded-xl border border-gray-200">
-                {/* Recent Activity */}
-                {activeTab === 'overview' && (
-                    <div className="divide-y divide-gray-100">
-                        {(stats?.recentCommissions || []).length === 0 ? (
-                            <div className="p-12 text-center">
-                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <DollarSign className="w-8 h-8 text-gray-400" />
-                                </div>
-                                <h3 className="text-base font-medium text-gray-900 mb-2">
-                                    No commissions yet
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                    Commissions will appear here when partners generate sales.
-                                </p>
-                            </div>
-                        ) : (
-                            stats?.recentCommissions.map(c => (
-                                <div key={c.id} className="px-5 py-4 flex items-center justify-between hover:bg-gray-50">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                                            <Users className="w-5 h-5 text-gray-500" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{c.partnerEmail}</p>
-                                            <p className="text-xs text-gray-500">{formatDate(c.createdAt)}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-right">
-                                            <p className="text-sm font-semibold text-gray-900">
-                                                {formatCurrency(c.amount)}
-                                            </p>
-                                            <p className="text-xs text-gray-500">
-                                                Fee: {formatCurrency(c.platformFee)}
-                                            </p>
-                                        </div>
-                                        <StatusBadge status={c.status} />
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                )}
+            {/* Table */}
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="grid grid-cols-7 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="col-span-2">Partner</div>
+                    <div>Mission</div>
+                    <div>Vente</div>
+                    <div>Commission</div>
+                    <div>Status</div>
+                    <div className="text-right">Date</div>
+                </div>
 
-                {/* Partners Breakdown */}
-                {activeTab === 'partners' && (
-                    <div className="divide-y divide-gray-100">
-                        {(stats?.partnerBreakdown || []).length === 0 ? (
-                            <div className="p-12 text-center">
-                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Users className="w-8 h-8 text-gray-400" />
-                                </div>
-                                <h3 className="text-base font-medium text-gray-900 mb-2">
-                                    No partners yet
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                    Partner earnings will appear here.
-                                </p>
-                            </div>
-                        ) : (
-                            stats?.partnerBreakdown.map(p => (
-                                <div key={p.partnerId} className="px-5 py-4 flex items-center justify-between hover:bg-gray-50">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
-                                            {(p.partnerName || p.partnerEmail)[0].toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">
-                                                {p.partnerName || p.partnerEmail}
-                                            </p>
-                                            <p className="text-xs text-gray-500">{p.partnerEmail}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-right">
-                                            <p className="text-sm font-semibold text-gray-900">
-                                                {formatCurrency(p.totalEarned)}
-                                            </p>
-                                            <p className="text-xs text-gray-500">Total earned</p>
-                                        </div>
-                                        <ChevronRight className="w-4 h-4 text-gray-400" />
-                                    </div>
-                                </div>
-                            ))
-                        )}
+                {filteredCommissions.length === 0 ? (
+                    <div className="px-6 py-12 text-center">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Filter className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <p className="text-gray-900 font-medium">Aucune commission</p>
+                        <p className="text-gray-500 text-sm mt-1">Les commissions apparaîtront ici quand vos partners génèrent des ventes</p>
                     </div>
-                )}
-
-                {/* Gift Card Requests */}
-                {activeTab === 'giftcards' && (
-                    <div className="divide-y divide-gray-100">
-                        {giftCardRequests.length === 0 ? (
-                            <div className="p-12 text-center">
-                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Gift className="w-8 h-8 text-gray-400" />
+                ) : (
+                    <div className="divide-y divide-gray-50">
+                        {filteredCommissions.map((commission) => (
+                            <div
+                                key={commission.id}
+                                className="grid grid-cols-7 gap-4 px-6 py-4 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
+                            >
+                                <div className="col-span-2 flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
+                                        {commission.partnerName.split(' ').map(n => n[0]).join('')}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900">{commission.partnerName}</p>
+                                        <p className="text-xs text-gray-500">{commission.partnerEmail}</p>
+                                    </div>
                                 </div>
-                                <h3 className="text-base font-medium text-gray-900 mb-2">
-                                    No pending requests
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                    Gift card redemption requests will appear here.
-                                </p>
+                                <div className="text-sm text-gray-600 truncate">
+                                    {commission.missionName}
+                                </div>
+                                <div className="text-sm text-gray-900">
+                                    {formatCurrency(commission.grossAmount)}
+                                </div>
+                                <div className="text-sm font-medium text-green-600">
+                                    {formatCurrency(commission.commissionAmount)}
+                                </div>
+                                <div>
+                                    <StatusBadge status={commission.status} />
+                                </div>
+                                <div className="flex items-center justify-end gap-2">
+                                    <span className="text-sm text-gray-500">{formatDate(commission.createdAt)}</span>
+                                    <ChevronRight className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
                             </div>
-                        ) : (
-                            giftCardRequests.map(r => (
-                                <div key={r.id} className="px-5 py-4 flex items-center justify-between hover:bg-gray-50">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-pink-500 rounded-lg flex items-center justify-center text-white">
-                                            <Gift className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">
-                                                {r.cardType.toUpperCase()} Gift Card
-                                            </p>
-                                            <p className="text-xs text-gray-500">{r.partnerEmail}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-right">
-                                            <p className="text-sm font-semibold text-gray-900">
-                                                {formatCurrency(r.amount)}
-                                            </p>
-                                            <p className="text-xs text-gray-500">{formatDate(r.createdAt)}</p>
-                                        </div>
-                                        <StatusBadge status={r.status} />
-                                        {r.status === 'PENDING' && (
-                                            <button
-                                                onClick={() => handleFulfillGiftCard(r.id)}
-                                                className="px-3 py-1.5 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-800"
-                                            >
-                                                Fulfill
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))
-                        )}
+                        ))}
                     </div>
                 )}
             </div>

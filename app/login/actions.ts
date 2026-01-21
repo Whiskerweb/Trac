@@ -90,7 +90,7 @@ export async function login(formData: FormData) {
     }
 
     // =============================================
-    // SHADOW PARTNER CLAIM (Dub.co Style)
+    // SHADOW PARTNER CLAIM (Traaaction Style)
     // =============================================
     if (data.user) {
         const claimed = await claimPartners(data.user.id, email)
@@ -189,7 +189,7 @@ export async function signup(formData: FormData) {
     }
 
     // =============================================
-    // SHADOW PARTNER CLAIM (Dub.co Style)
+    // SHADOW PARTNER CLAIM (Traaaction Style)
     // =============================================
     if (data.user) {
         const claimed = await claimPartners(data.user.id, email)

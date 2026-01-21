@@ -6,7 +6,7 @@ export const redis = new Redis({
 })
 
 // =============================================
-// REDIS KEY STRATEGY (Dub.co Pattern)
+// REDIS KEY STRATEGY (Traaaction Pattern)
 // =============================================
 // Key format: shortlink:{domain}:{slug}
 // Example: shortlink:trac.sh:summer-sale
