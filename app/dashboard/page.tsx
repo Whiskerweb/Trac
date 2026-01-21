@@ -436,11 +436,79 @@ export default function DashboardPage() {
     // KPI from API (no filtering on mock data needed anymore)
     const displayKPI = kpi
 
+    // Country ISO to name and flag mapping
+    const COUNTRY_INFO: Record<string, { name: string; flag: string }> = {
+        // Full names (already correct)
+        'France': { name: 'France', flag: '🇫🇷' },
+        'Germany': { name: 'Germany', flag: '🇩🇪' },
+        'United Kingdom': { name: 'United Kingdom', flag: '🇬🇧' },
+        'United States': { name: 'United States', flag: '🇺🇸' },
+        'Morocco': { name: 'Morocco', flag: '🇲🇦' },
+        'Spain': { name: 'Spain', flag: '🇪🇸' },
+        'Italy': { name: 'Italy', flag: '🇮🇹' },
+        'Canada': { name: 'Canada', flag: '🇨🇦' },
+        'Netherlands': { name: 'Netherlands', flag: '🇳🇱' },
+        'Belgium': { name: 'Belgium', flag: '🇧🇪' },
+        'Switzerland': { name: 'Switzerland', flag: '🇨🇭' },
+        'Japan': { name: 'Japan', flag: '🇯🇵' },
+        'Australia': { name: 'Australia', flag: '🇦🇺' },
+        'Brazil': { name: 'Brazil', flag: '🇧🇷' },
+        // ISO codes
+        'FR': { name: 'France', flag: '🇫🇷' },
+        'DE': { name: 'Germany', flag: '🇩🇪' },
+        'GB': { name: 'United Kingdom', flag: '🇬🇧' },
+        'UK': { name: 'United Kingdom', flag: '🇬🇧' },
+        'US': { name: 'United States', flag: '🇺🇸' },
+        'MA': { name: 'Morocco', flag: '🇲🇦' },
+        'ES': { name: 'Spain', flag: '🇪🇸' },
+        'IT': { name: 'Italy', flag: '🇮🇹' },
+        'CA': { name: 'Canada', flag: '🇨🇦' },
+        'NL': { name: 'Netherlands', flag: '🇳🇱' },
+        'BE': { name: 'Belgium', flag: '🇧🇪' },
+        'CH': { name: 'Switzerland', flag: '🇨🇭' },
+        'JP': { name: 'Japan', flag: '🇯🇵' },
+        'AU': { name: 'Australia', flag: '🇦🇺' },
+        'BR': { name: 'Brazil', flag: '🇧🇷' },
+        'PT': { name: 'Portugal', flag: '🇵🇹' },
+        'PL': { name: 'Poland', flag: '🇵🇱' },
+        'AT': { name: 'Austria', flag: '🇦🇹' },
+        'SE': { name: 'Sweden', flag: '🇸🇪' },
+        'NO': { name: 'Norway', flag: '🇳🇴' },
+        'DK': { name: 'Denmark', flag: '🇩🇰' },
+        'FI': { name: 'Finland', flag: '🇫🇮' },
+        'IE': { name: 'Ireland', flag: '🇮🇪' },
+        'MX': { name: 'Mexico', flag: '🇲🇽' },
+        'AR': { name: 'Argentina', flag: '🇦🇷' },
+        'CL': { name: 'Chile', flag: '🇨🇱' },
+        'CO': { name: 'Colombia', flag: '🇨🇴' },
+        'CN': { name: 'China', flag: '🇨🇳' },
+        'IN': { name: 'India', flag: '🇮🇳' },
+        'KR': { name: 'South Korea', flag: '🇰🇷' },
+        'SG': { name: 'Singapore', flag: '🇸🇬' },
+        'HK': { name: 'Hong Kong', flag: '🇭🇰' },
+        'TH': { name: 'Thailand', flag: '🇹🇭' },
+        'VN': { name: 'Vietnam', flag: '🇻🇳' },
+        'ID': { name: 'Indonesia', flag: '🇮🇩' },
+        'MY': { name: 'Malaysia', flag: '🇲🇾' },
+        'PH': { name: 'Philippines', flag: '🇵🇭' },
+        'NZ': { name: 'New Zealand', flag: '🇳🇿' },
+        'ZA': { name: 'South Africa', flag: '🇿🇦' },
+        'EG': { name: 'Egypt', flag: '🇪🇬' },
+        'NG': { name: 'Nigeria', flag: '🇳🇬' },
+        'AE': { name: 'United Arab Emirates', flag: '🇦🇪' },
+        'IL': { name: 'Israel', flag: '🇮🇱' },
+        'TR': { name: 'Turkey', flag: '🇹🇷' },
+        'RU': { name: 'Russia', flag: '🇷🇺' },
+    }
+
     // Display data - API DATA ONLY (no mock fallback)
     const displayLocations = useMemo((): LocationItem[] => {
         // Use API data directly
         if (apiCountries.length > 0) {
-            return apiCountries.map((c: any) => ({ name: c.name, flag: c.flag || '🌍', count: c.clicks || 0 }))
+            return apiCountries.map((c: any) => {
+                const info = COUNTRY_INFO[c.name] || { name: c.name, flag: '🌍' }
+                return { name: info.name, flag: info.flag, count: c.clicks || 0 }
+            })
         }
         // Return empty if no data
         return []
