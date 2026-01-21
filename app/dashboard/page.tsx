@@ -464,11 +464,73 @@ export default function DashboardPage() {
         return []
     }, [apiCities])
 
-    // Regions - Not available in Tinybird yet, return empty
-    const displayRegions = useMemo((): LocationItem[] => [], [])
+    // Regions - Derived from cities
+    const displayRegions = useMemo((): LocationItem[] => {
+        if (apiCities.length === 0) return []
 
-    // Continents - Not available in Tinybird yet, return empty
-    const displayContinents = useMemo((): LocationItem[] => [], [])
+        // City to Region mapping
+        const CITY_TO_REGION: Record<string, string> = {
+            // Brittany
+            'Brest': 'Bretagne', 'Concarneau': 'Bretagne', 'Quimper': 'Bretagne',
+            'Guilers': 'Bretagne', 'Lorient': 'Bretagne', 'Vannes': 'Bretagne',
+            'Saint-Brieuc': 'Bretagne', 'Morlaix': 'Bretagne', 'Rennes': 'Bretagne',
+            // Normandy
+            'Pont-Audemer': 'Normandie', 'Rouen': 'Normandie', 'Le Havre': 'Normandie', 'Caen': 'Normandie',
+            // Île-de-France
+            'Paris': 'Île-de-France',
+            // Other French regions
+            'Lyon': 'Auvergne-Rhône-Alpes', 'Marseille': 'Provence-Alpes-Côte d\'Azur',
+            'Bordeaux': 'Nouvelle-Aquitaine', 'Toulouse': 'Occitanie', 'Nantes': 'Pays de la Loire',
+            'Nice': 'Provence-Alpes-Côte d\'Azur', 'Lille': 'Hauts-de-France', 'Strasbourg': 'Grand Est',
+            // Morocco
+            'Rabat': 'Rabat-Salé-Kénitra', 'Casablanca': 'Casablanca-Settat', 'Marrakech': 'Marrakech-Safi',
+        }
+
+        const regionCounts: Record<string, number> = {}
+        apiCities.forEach((city: any) => {
+            const region = CITY_TO_REGION[city.name] || 'Other'
+            regionCounts[region] = (regionCounts[region] || 0) + (city.clicks || 0)
+        })
+
+        return Object.entries(regionCounts)
+            .map(([name, count]) => ({ name, flag: '📍', count }))
+            .sort((a, b) => b.count - a.count)
+    }, [apiCities])
+
+    // Continents - Derived from countries
+    const displayContinents = useMemo((): LocationItem[] => {
+        if (apiCountries.length === 0) return []
+
+        const COUNTRY_TO_CONTINENT: Record<string, string> = {
+            'France': 'Europe', 'Germany': 'Europe', 'United Kingdom': 'Europe', 'Spain': 'Europe',
+            'Italy': 'Europe', 'Netherlands': 'Europe', 'Belgium': 'Europe', 'Switzerland': 'Europe',
+            'Portugal': 'Europe', 'Poland': 'Europe', 'Austria': 'Europe', 'Sweden': 'Europe',
+            'Norway': 'Europe', 'Denmark': 'Europe', 'Finland': 'Europe', 'Ireland': 'Europe',
+            'United States': 'North America', 'Canada': 'North America', 'Mexico': 'North America',
+            'Brazil': 'South America', 'Argentina': 'South America', 'Chile': 'South America', 'Colombia': 'South America',
+            'Japan': 'Asia', 'China': 'Asia', 'South Korea': 'Asia', 'India': 'Asia',
+            'Singapore': 'Asia', 'Thailand': 'Asia', 'Vietnam': 'Asia', 'Indonesia': 'Asia',
+            'Malaysia': 'Asia', 'Philippines': 'Asia', 'Hong Kong': 'Asia',
+            'Australia': 'Oceania', 'New Zealand': 'Oceania',
+            'Morocco': 'Africa', 'South Africa': 'Africa', 'Egypt': 'Africa', 'Nigeria': 'Africa',
+            'United Arab Emirates': 'Asia', 'Israel': 'Asia', 'Turkey': 'Europe', 'Russia': 'Europe',
+        }
+
+        const continentCounts: Record<string, number> = {}
+        apiCountries.forEach((country: any) => {
+            const continent = COUNTRY_TO_CONTINENT[country.name] || 'Other'
+            continentCounts[continent] = (continentCounts[continent] || 0) + (country.clicks || 0)
+        })
+
+        const CONTINENT_FLAGS: Record<string, string> = {
+            'Europe': '🇪🇺', 'North America': '🌎', 'South America': '🌎',
+            'Asia': '🌏', 'Africa': '🌍', 'Oceania': '🌏', 'Other': '🌐'
+        }
+
+        return Object.entries(continentCounts)
+            .map(([name, count]) => ({ name, flag: CONTINENT_FLAGS[name] || '🌐', count }))
+            .sort((a, b) => b.count - a.count)
+    }, [apiCountries])
 
     const displayBrowsers = useMemo((): AnalyticsItem[] => {
         if (apiBrowsers.length > 0) {
