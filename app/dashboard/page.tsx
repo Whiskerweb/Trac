@@ -88,192 +88,27 @@ const DATE_RANGES = [
 ]
 
 // =============================================
-// MOCK DATA FOR ANALYTICS CARDS
-// Cross-referenced data for linked filtering
+// COUNTRY FLAGS FOR DISPLAY
 // =============================================
 
-// Raw click events with ALL dimensions for cross-filtering
-const MOCK_EVENTS = [
-    // France - Paris
-    { country: 'France', city: 'Paris', region: 'Île-de-France', continent: 'Europe', device: 'Desktop', browser: 'Chrome', os: 'Windows', clicks: 280, leads: 15, sales: 4, revenue: 8500 },
-    { country: 'France', city: 'Paris', region: 'Île-de-France', continent: 'Europe', device: 'Desktop', browser: 'Safari', os: 'macOS', clicks: 140, leads: 8, sales: 2, revenue: 4200 },
-    { country: 'France', city: 'Paris', region: 'Île-de-France', continent: 'Europe', device: 'Mobile', browser: 'Safari', os: 'iOS', clicks: 180, leads: 8, sales: 2, revenue: 4800 },
-    { country: 'France', city: 'Paris', region: 'Île-de-France', continent: 'Europe', device: 'Mobile', browser: 'Chrome', os: 'Android', clicks: 100, leads: 4, sales: 1, revenue: 2500 },
-    { country: 'France', city: 'Lyon', region: 'Auvergne-Rhône-Alpes', continent: 'Europe', device: 'Desktop', browser: 'Chrome', os: 'Windows', clicks: 85, leads: 4, sales: 1, revenue: 2100 },
-    { country: 'France', city: 'Lyon', region: 'Auvergne-Rhône-Alpes', continent: 'Europe', device: 'Mobile', browser: 'Safari', os: 'iOS', clicks: 62, leads: 3, sales: 1, revenue: 1800 },
-    // United States - New York
-    { country: 'United States', city: 'New York', region: 'New York', continent: 'North America', device: 'Desktop', browser: 'Chrome', os: 'Windows', clicks: 150, leads: 10, sales: 3, revenue: 6800 },
-    { country: 'United States', city: 'New York', region: 'New York', continent: 'North America', device: 'Mobile', browser: 'Safari', os: 'iOS', clicks: 85, leads: 5, sales: 1, revenue: 3200 },
-    // United States - Los Angeles
-    { country: 'United States', city: 'Los Angeles', region: 'California', continent: 'North America', device: 'Desktop', browser: 'Chrome', os: 'macOS', clicks: 95, leads: 6, sales: 2, revenue: 4500 },
-    { country: 'United States', city: 'Los Angeles', region: 'California', continent: 'North America', device: 'Mobile', browser: 'Chrome', os: 'Android', clicks: 93, leads: 5, sales: 1, revenue: 2700 },
-    // Germany
-    { country: 'Germany', city: 'Berlin', region: 'Berlin', continent: 'Europe', device: 'Desktop', browser: 'Firefox', os: 'Windows', clicks: 120, leads: 7, sales: 2, revenue: 4100 },
-    { country: 'Germany', city: 'Berlin', region: 'Berlin', continent: 'Europe', device: 'Mobile', browser: 'Chrome', os: 'Android', clicks: 68, leads: 4, sales: 1, revenue: 1800 },
-    { country: 'Germany', city: 'Munich', region: 'Bavaria', continent: 'Europe', device: 'Desktop', browser: 'Chrome', os: 'Windows', clicks: 90, leads: 5, sales: 2, revenue: 3100 },
-    { country: 'Germany', city: 'Munich', region: 'Bavaria', continent: 'Europe', device: 'Mobile', browser: 'Safari', os: 'iOS', clicks: 34, leads: 2, sales: 0, revenue: 700 },
-    // United Kingdom
-    { country: 'United Kingdom', city: 'London', region: 'England', continent: 'Europe', device: 'Desktop', browser: 'Chrome', os: 'Windows', clicks: 80, leads: 5, sales: 1, revenue: 3200 },
-    { country: 'United Kingdom', city: 'London', region: 'England', continent: 'Europe', device: 'Mobile', browser: 'Safari', os: 'iOS', clicks: 64, leads: 4, sales: 1, revenue: 1600 },
-    { country: 'United Kingdom', city: 'Manchester', region: 'England', continent: 'Europe', device: 'Desktop', browser: 'Edge', os: 'Windows', clicks: 45, leads: 3, sales: 1, revenue: 1600 },
-    // Spain
-    { country: 'Spain', city: 'Madrid', region: 'Madrid', continent: 'Europe', device: 'Desktop', browser: 'Chrome', os: 'Windows', clicks: 60, leads: 3, sales: 1, revenue: 2000 },
-    { country: 'Spain', city: 'Madrid', region: 'Madrid', continent: 'Europe', device: 'Mobile', browser: 'Chrome', os: 'Android', clicks: 35, leads: 2, sales: 0, revenue: 600 },
-    { country: 'Spain', city: 'Barcelona', region: 'Catalonia', continent: 'Europe', device: 'Desktop', browser: 'Firefox', os: 'Linux', clicks: 35, leads: 2, sales: 1, revenue: 1200 },
-    { country: 'Spain', city: 'Barcelona', region: 'Catalonia', continent: 'Europe', device: 'Mobile', browser: 'Safari', os: 'iOS', clicks: 15, leads: 1, sales: 0, revenue: 400 },
-]
-
-// Country metadata
 const COUNTRY_FLAGS: Record<string, string> = {
     'France': '🇫🇷',
     'United States': '🇺🇸',
     'Germany': '🇩🇪',
     'United Kingdom': '🇬🇧',
     'Spain': '🇪🇸',
+    'Italy': '🇮🇹',
+    'Canada': '🇨🇦',
+    'Netherlands': '🇳🇱',
+    'Belgium': '🇧🇪',
+    'Switzerland': '🇨🇭',
+    'Japan': '🇯🇵',
+    'Australia': '🇦🇺',
+    'Brazil': '🇧🇷',
+    'Mexico': '🇲🇽',
+    'India': '🇮🇳',
+    'China': '🇨🇳',
 }
-
-// Derive aggregated locations from events
-const MOCK_LOCATIONS = Object.entries(
-    MOCK_EVENTS.reduce((acc, e) => {
-        if (!acc[e.country]) acc[e.country] = { clicks: 0, leads: 0, sales: 0, revenue: 0 }
-        acc[e.country].clicks += e.clicks
-        acc[e.country].leads += e.leads
-        acc[e.country].sales += e.sales
-        acc[e.country].revenue += e.revenue
-        return acc
-    }, {} as Record<string, { clicks: number; leads: number; sales: number; revenue: number }>)
-).map(([name, stats]) => ({
-    name,
-    flag: COUNTRY_FLAGS[name] || '🌍',
-    count: stats.clicks,
-    ...stats
-}))
-
-// Derive aggregated devices from events
-const MOCK_DEVICES = [
-    { name: 'Desktop', icon: Laptop },
-    { name: 'Mobile', icon: Smartphone },
-].map(d => {
-    const stats = MOCK_EVENTS.filter(e => e.device === d.name).reduce(
-        (acc, e) => ({
-            clicks: acc.clicks + e.clicks,
-            leads: acc.leads + e.leads,
-            sales: acc.sales + e.sales,
-            revenue: acc.revenue + e.revenue,
-        }),
-        { clicks: 0, leads: 0, sales: 0, revenue: 0 }
-    )
-    return { ...d, count: stats.clicks, ...stats }
-})
-
-// Derive cities from events
-const MOCK_CITIES = Object.entries(
-    MOCK_EVENTS.reduce((acc, e) => {
-        if (!acc[e.city]) acc[e.city] = { clicks: 0, country: e.country }
-        acc[e.city].clicks += e.clicks
-        return acc
-    }, {} as Record<string, { clicks: number; country: string }>)
-).map(([name, stats]) => ({
-    name,
-    flag: COUNTRY_FLAGS[stats.country] || '🌍',
-    count: stats.clicks,
-})).sort((a, b) => b.count - a.count)
-
-// Derive regions from events
-const MOCK_REGIONS = Object.entries(
-    MOCK_EVENTS.reduce((acc, e) => {
-        if (!acc[e.region]) acc[e.region] = { clicks: 0, country: e.country }
-        acc[e.region].clicks += e.clicks
-        return acc
-    }, {} as Record<string, { clicks: number; country: string }>)
-).map(([name, stats]) => ({
-    name,
-    flag: COUNTRY_FLAGS[stats.country] || '🌍',
-    count: stats.clicks,
-})).sort((a, b) => b.count - a.count)
-
-// Derive continents from events
-const MOCK_CONTINENTS = Object.entries(
-    MOCK_EVENTS.reduce((acc, e) => {
-        if (!acc[e.continent]) acc[e.continent] = { clicks: 0 }
-        acc[e.continent].clicks += e.clicks
-        return acc
-    }, {} as Record<string, { clicks: number }>)
-).map(([name, stats]) => ({
-    name,
-    flag: name === 'Europe' ? '🌍' : name === 'North America' ? '🌎' : '🌏',
-    count: stats.clicks,
-})).sort((a, b) => b.count - a.count)
-
-// Derive browsers from events
-const MOCK_BROWSERS = Object.entries(
-    MOCK_EVENTS.reduce((acc, e) => {
-        if (!acc[e.browser]) acc[e.browser] = { clicks: 0 }
-        acc[e.browser].clicks += e.clicks
-        return acc
-    }, {} as Record<string, { clicks: number }>)
-).map(([name, stats]) => ({
-    name,
-    count: stats.clicks,
-})).sort((a, b) => b.count - a.count)
-
-// Derive OS from events
-const MOCK_OS = Object.entries(
-    MOCK_EVENTS.reduce((acc, e) => {
-        if (!acc[e.os]) acc[e.os] = { clicks: 0 }
-        acc[e.os].clicks += e.clicks
-        return acc
-    }, {} as Record<string, { clicks: number }>)
-).map(([name, stats]) => ({
-    name,
-    count: stats.clicks,
-})).sort((a, b) => b.count - a.count)
-
-// Generate mock timeseries data (400 days for long range views) with country+device breakdown
-const generateTimeseriesData = () => {
-    const data: Array<{
-        date: string
-        country: string
-        device: string
-        clicks: number
-        leads: number
-        sales: number
-        revenue: number
-    }> = []
-
-    const today = new Date()
-    const totalDays = 400 // Cover more than a year
-
-    for (let i = totalDays - 1; i >= 0; i--) {
-        const date = new Date(today)
-        date.setDate(date.getDate() - i)
-        const dateStr = date.toISOString().split('T')[0]
-
-        // Use deterministic pseudo-random based on date for consistency
-        const seed = date.getDate() + date.getMonth() * 31
-
-        // Generate data for each country+device combo
-        MOCK_EVENTS.forEach((event, idx) => {
-            // Seeded variation (60-140% of daily average)
-            const variation = 0.6 + ((seed + idx * 7) % 80) / 100
-            const dailyFactor = event.clicks / 30 // Daily average
-
-            data.push({
-                date: dateStr,
-                country: event.country,
-                device: event.device,
-                clicks: Math.round(dailyFactor * variation),
-                leads: Math.round((event.leads / 30) * variation),
-                sales: Math.round((event.sales / 30) * variation),
-                revenue: Math.round((event.revenue / 30) * variation),
-            })
-        })
-    }
-
-    return data
-}
-
-const MOCK_TIMESERIES_RAW = generateTimeseriesData()
 
 // Helper: Bucket timeseries data to max N points
 function bucketTimeseriesData(
@@ -592,160 +427,69 @@ export default function DashboardPage() {
     const browserFilters = activeFilters.filter(f => f.type === 'browser').map(f => f.value)
     const osFilters = activeFilters.filter(f => f.type === 'os').map(f => f.value)
 
-    // Filter events based on ALL active filters
-    const getFilteredEvents = useCallback(() => {
-        let events = MOCK_EVENTS
+    // KPI from API (no filtering on mock data needed anymore)
+    const displayKPI = kpi
 
-        if (countryFilters.length > 0) events = events.filter(e => countryFilters.includes(e.country))
-        if (deviceFilters.length > 0) events = events.filter(e => deviceFilters.includes(e.device))
-        if (cityFilters.length > 0) events = events.filter(e => cityFilters.includes(e.city))
-        if (regionFilters.length > 0) events = events.filter(e => regionFilters.includes(e.region))
-        if (continentFilters.length > 0) events = events.filter(e => continentFilters.includes(e.continent))
-        if (browserFilters.length > 0) events = events.filter(e => browserFilters.includes(e.browser))
-        if (osFilters.length > 0) events = events.filter(e => osFilters.includes(e.os))
-
-        return events
-    }, [countryFilters, deviceFilters, cityFilters, regionFilters, continentFilters, browserFilters, osFilters])
-
-    const filteredEvents = getFilteredEvents()
-
-    // Calculate KPIs from filtered events
-    const displayKPI = useMemo(() => {
-        if (activeFilters.length === 0) return kpi
-
-        const stats = filteredEvents.reduce(
-            (acc, e) => ({
-                clicks: acc.clicks + e.clicks,
-                leads: acc.leads + e.leads,
-                sales: acc.sales + e.sales,
-                revenue: acc.revenue + e.revenue,
-            }),
-            { clicks: 0, leads: 0, sales: 0, revenue: 0 }
-        )
-
-        return { ...stats, timeseries: kpi.timeseries }
-    }, [activeFilters.length, filteredEvents, kpi])
-
-    // Helper: Aggregate filtered events by a property
-    const aggregateBy = useCallback((events: typeof MOCK_EVENTS, prop: keyof typeof MOCK_EVENTS[0]) => {
-        return Object.entries(
-            events.reduce((acc, e) => {
-                const key = e[prop] as string
-                if (!acc[key]) acc[key] = { clicks: 0, leads: 0, sales: 0, revenue: 0, country: e.country }
-                acc[key].clicks += e.clicks
-                acc[key].leads += e.leads
-                acc[key].sales += e.sales
-                acc[key].revenue += e.revenue
-                return acc
-            }, {} as Record<string, { clicks: number; leads: number; sales: number; revenue: number; country: string }>)
-        ).map(([name, stats]) => ({ name, count: stats.clicks, ...stats }))
-    }, [])
-
-    // Helper: Filter events excluding a specific filter type (for multi-selection within category)
-    const getEventsExcludingFilterType = useCallback((excludeType: ActiveFilter['type']) => {
-        let events = MOCK_EVENTS
-        if (excludeType !== 'country' && countryFilters.length > 0) events = events.filter(e => countryFilters.includes(e.country))
-        if (excludeType !== 'device' && deviceFilters.length > 0) events = events.filter(e => deviceFilters.includes(e.device))
-        if (excludeType !== 'city' && cityFilters.length > 0) events = events.filter(e => cityFilters.includes(e.city))
-        if (excludeType !== 'region' && regionFilters.length > 0) events = events.filter(e => regionFilters.includes(e.region))
-        if (excludeType !== 'continent' && continentFilters.length > 0) events = events.filter(e => continentFilters.includes(e.continent))
-        if (excludeType !== 'browser' && browserFilters.length > 0) events = events.filter(e => browserFilters.includes(e.browser))
-        if (excludeType !== 'os' && osFilters.length > 0) events = events.filter(e => osFilters.includes(e.os))
-        return events
-    }, [countryFilters, deviceFilters, cityFilters, regionFilters, continentFilters, browserFilters, osFilters])
-
-    // Display data - USE API DATA with mock fallback for cross-filtering
+    // Display data - API DATA ONLY (no mock fallback)
     const displayLocations = useMemo((): LocationItem[] => {
-        // If we have API data and no filters, use it
-        if (apiCountries.length > 0 && activeFilters.length === 0) {
+        // Use API data directly
+        if (apiCountries.length > 0) {
             return apiCountries.map((c: any) => ({ name: c.name, flag: c.flag || '🌍', count: c.clicks || 0 }))
         }
-        // Fallback to filtered mock data for cross-filtering
-        return aggregateBy(getEventsExcludingFilterType('country'), 'country')
-            .map(l => ({ ...l, flag: COUNTRY_FLAGS[l.name] || '🌍' }))
-            .sort((a, b) => b.count - a.count)
-    }, [apiCountries, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
+        // Return empty if no data
+        return []
+    }, [apiCountries])
 
     const displayDevices = useMemo((): DeviceItem[] => {
-        if (apiDevices.length > 0 && activeFilters.length === 0) {
+        if (apiDevices.length > 0) {
             return apiDevices.map((d: any) => ({
                 name: d.name,
                 icon: d.name === 'Desktop' ? Laptop : Smartphone,
                 count: d.clicks || 0
             }))
         }
-        return aggregateBy(getEventsExcludingFilterType('device'), 'device')
-            .map(d => ({ ...d, icon: d.name === 'Desktop' ? Laptop : Smartphone }))
-            .sort((a, b) => b.count - a.count)
-    }, [apiDevices, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
+        return []
+    }, [apiDevices])
 
     const displayCities = useMemo((): LocationItem[] => {
-        if (apiCities.length > 0 && activeFilters.length === 0) {
+        if (apiCities.length > 0) {
             return apiCities.map((c: any) => ({ name: c.name, country: c.country || '', flag: c.flag || '🌍', count: c.clicks || 0 }))
         }
-        return aggregateBy(getEventsExcludingFilterType('city'), 'city')
-            .map(c => ({ ...c, flag: COUNTRY_FLAGS[c.country] || '🌍' }))
-            .sort((a, b) => b.count - a.count)
-    }, [apiCities, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
+        return []
+    }, [apiCities])
 
-    const displayRegions = useMemo((): LocationItem[] => aggregateBy(getEventsExcludingFilterType('region'), 'region')
-        .map(r => ({ ...r, flag: COUNTRY_FLAGS[r.country] || '🌍' }))
-        .sort((a, b) => b.count - a.count), [getEventsExcludingFilterType, aggregateBy])
+    // Regions - Not available in Tinybird yet, return empty
+    const displayRegions = useMemo((): LocationItem[] => [], [])
 
-    const displayContinents = useMemo((): LocationItem[] => aggregateBy(getEventsExcludingFilterType('continent'), 'continent')
-        .map(c => ({ ...c, flag: c.name === 'Europe' ? '🌍' : c.name === 'North America' ? '🌎' : '🌏' }))
-        .sort((a, b) => b.count - a.count), [getEventsExcludingFilterType, aggregateBy])
+    // Continents - Not available in Tinybird yet, return empty
+    const displayContinents = useMemo((): LocationItem[] => [], [])
 
     const displayBrowsers = useMemo((): AnalyticsItem[] => {
-        if (apiBrowsers.length > 0 && activeFilters.length === 0) {
+        if (apiBrowsers.length > 0) {
             return apiBrowsers.map((b: any) => ({ name: b.name, count: b.clicks || 0 }))
         }
-        return aggregateBy(getEventsExcludingFilterType('browser'), 'browser')
-            .sort((a, b) => b.count - a.count)
-    }, [apiBrowsers, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
+        return []
+    }, [apiBrowsers])
 
     const displayOS = useMemo((): AnalyticsItem[] => {
-        if (apiOS.length > 0 && activeFilters.length === 0) {
+        if (apiOS.length > 0) {
             return apiOS.map((o: any) => ({ name: o.name, count: o.clicks || 0 }))
         }
-        return aggregateBy(getEventsExcludingFilterType('os'), 'os')
-            .sort((a, b) => b.count - a.count)
-    }, [apiOS, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
+        return []
+    }, [apiOS])
 
-    // Get filtered and aggregated timeseries for the chart
+    // Get timeseries from KPI API data
     const getFilteredTimeseries = useCallback(() => {
-        let rawData = MOCK_TIMESERIES_RAW
+        const apiTimeseries = kpi.timeseries || []
 
-        // Apply date range filter
-        rawData = rawData.filter(d => d.date >= dateFrom && d.date <= dateTo)
-
-        // Apply country filters
-        if (countryFilters.length > 0) {
-            rawData = rawData.filter(d => countryFilters.includes(d.country))
+        // If no API data, return empty array
+        if (apiTimeseries.length === 0) {
+            return []
         }
-
-        // Apply device filters
-        if (deviceFilters.length > 0) {
-            rawData = rawData.filter(d => deviceFilters.includes(d.device))
-        }
-
-        // Aggregate by date
-        const grouped = rawData.reduce((acc, d) => {
-            if (!acc[d.date]) {
-                acc[d.date] = { date: d.date, clicks: 0, leads: 0, sales: 0, revenue: 0 }
-            }
-            acc[d.date].clicks += d.clicks
-            acc[d.date].leads += d.leads
-            acc[d.date].sales += d.sales
-            acc[d.date].revenue += d.revenue
-            return acc
-        }, {} as Record<string, { date: string; clicks: number; leads: number; sales: number; revenue: number }>)
-
-        const sorted = Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date))
 
         // Bucket to max 20 points for long date ranges
-        return bucketTimeseriesData(sorted, 20)
-    }, [dateFrom, dateTo, countryFilters, deviceFilters])
+        return bucketTimeseriesData(apiTimeseries, 20)
+    }, [kpi.timeseries])
 
     const displayTimeseries = getFilteredTimeseries()
 
