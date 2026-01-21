@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { login, signup } from './actions'
-import { Building2, Users } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowRight, ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
     const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -15,6 +16,9 @@ export default function LoginPage() {
         setError('')
 
         try {
+            // Append role to formData since we removed the hidden input or need to ensure it's correct
+            formData.set('role', role)
+
             const result = mode === 'login'
                 ? await login(formData)
                 : await signup(formData)
@@ -29,139 +33,148 @@ export default function LoginPage() {
         }
     }
 
+    const isStartup = role === 'startup';
+
     return (
-        <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                        Trac
-                    </h1>
-                    <p className="text-zinc-400 mt-2">
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
+            {/* Back Button */}
+            <Link
+                href="/"
+                className="absolute top-6 left-6 p-2 text-gray-400 hover:text-black transition-colors rounded-full hover:bg-gray-100 z-50"
+            >
+                <ArrowLeft className="w-5 h-5" />
+            </Link>
+
+            {/* Background Grid */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
+
+            <div className="w-full max-w-sm relative z-10">
+                {/* Logo */}
+                <div className="text-center mb-10">
+                    <Link href="/" className="inline-flex items-center justify-center w-12 h-12 bg-black text-white rounded-xl font-bold text-xl shadow-lg mb-6">
+                        T
+                    </Link>
+                    <h1 className="text-2xl font-semibold text-slate-900 tracking-tight mb-2">
                         {mode === 'login'
-                            ? (role === 'startup' ? 'Connexion Startup' : 'Espace Partenaire')
-                            : (role === 'startup' ? 'Lancer votre Startup' : 'Devenir Partenaire')
+                            ? (isStartup ? 'Log in to Traaaction' : 'Partner Login')
+                            : (isStartup ? 'Create your Traaaction account' : 'Become a Partner')
+                        }
+                    </h1>
+                    <p className="text-gray-500 text-sm">
+                        {mode === 'login'
+                            ? (isStartup
+                                ? 'Welcome back. Log in to your startup dashboard.'
+                                : 'Welcome back. Log in to your partner dashboard.')
+                            : (isStartup
+                                ? 'Start growing your business with intelligent partnerships.'
+                                : 'Join the ecosystem and start earning commissions.')
                         }
                     </p>
                 </div>
 
-                {/* Role Switcher */}
-                <div className="flex bg-zinc-900/50 p-1 rounded-lg mb-6 relative">
-                    <div
-                        className={`absolute inset-y-1 w-[calc(50%-4px)] bg-zinc-800 rounded-md transition-all duration-300 ease-out shadow-sm ${role === 'partner' ? 'translate-x-[calc(100%+4px)]' : 'translate-x-1'
-                            }`}
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setRole('startup')}
-                        className={`relative flex-1 py-2.5 text-sm font-medium transition-colors z-10 flex items-center justify-center gap-2 ${role === 'startup' ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
-                            }`}
-                    >
-                        <Building2 className="w-4 h-4" />
-                        Startup
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setRole('partner')}
-                        className={`relative flex-1 py-2.5 text-sm font-medium transition-colors z-10 flex items-center justify-center gap-2 ${role === 'partner' ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
-                            }`}
-                    >
-                        <Users className="w-4 h-4" />
-                        Partenaire
-                    </button>
-                </div>
-
-                {/* Mode Toggle */}
-                <div className="flex mb-6 bg-zinc-900 rounded-lg p-1">
-                    <button
-                        type="button"
-                        onClick={() => setMode('login')}
-                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === 'login'
-                            ? 'bg-zinc-800 text-white'
-                            : 'text-zinc-400 hover:text-white'
-                            }`}
-                    >
-                        Se connecter
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setMode('signup')}
-                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === 'signup'
-                            ? 'bg-zinc-800 text-white'
-                            : 'text-zinc-400 hover:text-white'
-                            }`}
-                    >
-                        Créer un compte
-                    </button>
-                </div>
-
-                <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-                    <form action={handleSubmit} className="space-y-4">
-                        <input type="hidden" name="role" value={role} />
-                        {mode === 'signup' && (
-                            <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-zinc-300 mb-2">
-                                    Full Name
-                                </label>
-                                <input
-                                    type="text"
-                                    id="name"
-                                    name="name"
-                                    required={mode === 'signup'}
-                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="John Doe"
-                                />
-                            </div>
-                        )}
-
+                {/* Form */}
+                <form action={handleSubmit} className="space-y-4">
+                    {mode === 'signup' && (
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-zinc-300 mb-2">
-                                Email
+                            <label htmlFor="name" className="block text-xs font-medium text-gray-700 mb-1.5 uppercase tracking-wider">
+                                Full Name
                             </label>
                             <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                required
-                                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="you@example.com"
+                                type="text"
+                                id="name"
+                                name="name"
+                                required={mode === 'signup'}
+                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-slate-900 placeholder-gray-400 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all shadow-sm"
+                                placeholder="John Doe"
                             />
                         </div>
+                    )}
 
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-2">
-                                Password
-                            </label>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                required
-                                minLength={6}
-                                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="••••••••"
-                            />
-                            {mode === 'signup' && (
-                                <p className="text-xs text-zinc-500 mt-1">Minimum 6 characters</p>
-                            )}
+                    <div>
+                        <label htmlFor="email" className="block text-xs font-medium text-gray-700 mb-1.5 uppercase tracking-wider">
+                            Email
+                        </label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            required
+                            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-slate-900 placeholder-gray-400 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all shadow-sm"
+                            placeholder="panic@thedis.co"
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="password" className="block text-xs font-medium text-gray-700 mb-1.5 uppercase tracking-wider">
+                            Password
+                        </label>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            required
+                            minLength={6}
+                            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-slate-900 placeholder-gray-400 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all shadow-sm"
+                            placeholder="••••••••"
+                        />
+                    </div>
+
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">
+                            {error}
                         </div>
+                    )}
 
-                        {error && (
-                            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                                <p className="text-sm text-red-400">{error}</p>
-                            </div>
-                        )}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-black hover:bg-zinc-800 disabled:opacity-50 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-200 shadow-lg shadow-gray-200/50 flex items-center justify-center group"
+                    >
+                        {loading ? 'Processing...' : (mode === 'login' ? 'Sign In' : 'Sign Up')}
+                        {!loading && <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />}
+                    </button>
 
+                    {/* Toggle Login/Signup */}
+                    <div className="pt-2 text-center">
+                        <p className="text-sm text-gray-500">
+                            {mode === 'login' ? "Don't have an account?" : "Already have an account?"}{' '}
+                            <button
+                                type="button"
+                                onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+                                className="text-black font-medium hover:underline"
+                            >
+                                {mode === 'login' ? 'Sign up' : 'Log in'}
+                            </button>
+                        </p>
+                    </div>
+                </form>
+
+                {/* Partner/Startup Link Box */}
+                <div className="mt-8 pt-8 border-t border-gray-100">
+                    <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/50 p-4 text-center">
+                        <p className="text-sm text-gray-500 mb-1">
+                            {mode === 'login'
+                                ? (isStartup ? "Looking for your Partner account?" : "Looking for your Startup account?")
+                                : (isStartup ? "Looking to create a Partner account?" : "Looking to create a Startup account?")
+                            }
+                        </p>
                         <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-zinc-700 disabled:to-zinc-700 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200"
+                            type="button"
+                            onClick={() => setRole(isStartup ? 'partner' : 'startup')}
+                            className="text-sm font-semibold text-slate-900 hover:text-black hover:underline transition-colors"
                         >
-                            {loading
-                                ? 'Chargement...'
-                                : (mode === 'login' ? 'Se connecter' : 'Créer un compte')
+                            {mode === 'login'
+                                ? (isStartup ? "Sign in to Partner Dashboard" : "Sign in to Startup Dashboard")
+                                : (isStartup ? "Sign up as a Partner" : "Sign up as a Startup")
                             }
                         </button>
-                    </form>
+                    </div>
+                </div>
+
+                <div className="mt-8 text-center">
+                    <p className="text-xs text-gray-400">
+                        By continuing, you agree to Traaaction's <Link href="/terms" className="underline hover:text-gray-500">Terms of Service</Link> and <Link href="/privacy" className="underline hover:text-gray-500">Privacy Policy</Link>.
+                    </p>
                 </div>
             </div>
         </div>

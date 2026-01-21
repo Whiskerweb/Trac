@@ -1,46 +1,75 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutDashboard, ArrowRight } from 'lucide-react';
+import { ArrowRight, LayoutDashboard } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
+import { useEffect, useState } from 'react';
+import { User } from '@supabase/supabase-js';
 
 export function Navbar() {
+    const [user, setUser] = useState<User | null>(null);
+    const supabase = createClient();
+
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+        };
+        getUser();
+    }, [supabase]);
+
     return (
-        <nav className="fixed top-0 w-full z-50 glass-nav transition-all duration-300">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
-                    <div className="flex-shrink-0 flex items-center gap-2">
-                        <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold">
-                            T
-                        </div>
-                        <span className="font-bold text-xl tracking-tight">Traaaction</span>
-                    </div>
+        <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
+            <div className="w-full max-w-5xl rounded-2xl bg-white/90 backdrop-blur-md border border-gray-200/50 shadow-xl flex items-center justify-between px-6 py-3 transition-all duration-300">
 
-                    <div className="hidden md:flex items-center space-x-8">
-                        <Link href="#features" className="text-sm font-medium text-gray-500 hover:text-black transition-colors">
-                            Features
-                        </Link>
-                        <Link href="#pricing" className="text-sm font-medium text-gray-500 hover:text-black transition-colors">
-                            Pricing
-                        </Link>
-                        <Link href="#about" className="text-sm font-medium text-gray-500 hover:text-black transition-colors">
-                            About
-                        </Link>
+                {/* Logo */}
+                <div className="flex-shrink-0 flex items-center gap-3">
+                    {/* Logo Icon */}
+                    <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold shadow-sm">
+                        T
                     </div>
+                    <span className="font-bold text-lg tracking-tight text-slate-900">Traaaction</span>
+                </div>
 
-                    <div className="flex items-center gap-4">
+                {/* Links */}
+                <div className="hidden md:flex items-center space-x-8">
+                    {['Features', 'Pricing', 'About'].map((item) => (
                         <Link
-                            href="/login"
-                            className="text-sm font-medium text-gray-600 hover:text-black transition-colors hidden sm:block"
+                            key={item}
+                            href={`#${item.toLowerCase()}`}
+                            className="text-sm font-medium text-gray-500 hover:text-black transition-colors"
                         >
-                            Log in
+                            {item}
                         </Link>
+                    ))}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-4">
+                    {user ? (
                         <Link
                             href="/dashboard"
-                            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-black rounded-full hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                            className="inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-white bg-gradient-to-b from-neutral-700 to-neutral-900 border border-neutral-700 rounded-xl hover:from-neutral-600 hover:to-neutral-800 transition-all shadow-[0px_2px_4px_rgba(0,0,0,0.2),0px_1px_0px_rgba(255,255,255,0.1)_inset] hover:shadow-[0px_4px_8px_rgba(0,0,0,0.3),0px_1px_0px_rgba(255,255,255,0.1)_inset] group"
                         >
-                            Get Started <ArrowRight className="ml-2 w-4 h-4" />
+                            <LayoutDashboard className="mr-2 w-4 h-4 text-neutral-300 group-hover:text-white transition-colors" />
+                            Dashboard
                         </Link>
-                    </div>
+                    ) : (
+                        <>
+                            <Link
+                                href="/login"
+                                className="text-sm font-medium text-gray-600 hover:text-black transition-colors hidden sm:block"
+                            >
+                                Log in
+                            </Link>
+                            <Link
+                                href="/dashboard"
+                                className="inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-white bg-gradient-to-b from-neutral-700 to-neutral-900 border border-neutral-700 rounded-xl hover:from-neutral-600 hover:to-neutral-800 transition-all shadow-[0px_2px_4px_rgba(0,0,0,0.2),0px_1px_0px_rgba(255,255,255,0.1)_inset] hover:shadow-[0px_4px_8px_rgba(0,0,0,0.3),0px_1px_0px_rgba(255,255,255,0.1)_inset]"
+                            >
+                                Get Started <ArrowRight className="ml-2 w-4 h-4 text-neutral-300" />
+                            </Link>
+                        </>
+                    )}
                 </div>
             </div>
         </nav>

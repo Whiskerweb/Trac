@@ -8,7 +8,42 @@ export const revalidate = 0
 const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
 const TINYBIRD_ADMIN_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
 
-// Country flags for display
+// ISO code to country name mapping
+const ISO_TO_COUNTRY: Record<string, string> = {
+    'FR': 'France',
+    'US': 'United States',
+    'DE': 'Germany',
+    'GB': 'United Kingdom',
+    'UK': 'United Kingdom',
+    'ES': 'Spain',
+    'IT': 'Italy',
+    'CA': 'Canada',
+    'NL': 'Netherlands',
+    'BE': 'Belgium',
+    'CH': 'Switzerland',
+    'JP': 'Japan',
+    'AU': 'Australia',
+    'BR': 'Brazil',
+    'MX': 'Mexico',
+    'IN': 'India',
+    'CN': 'China',
+    'KR': 'South Korea',
+    'SG': 'Singapore',
+    'HK': 'Hong Kong',
+    'AE': 'United Arab Emirates',
+    'MA': 'Morocco',
+    'SE': 'Sweden',
+    'NO': 'Norway',
+    'DK': 'Denmark',
+    'FI': 'Finland',
+    'AT': 'Austria',
+    'PL': 'Poland',
+    'PT': 'Portugal',
+    'IE': 'Ireland',
+    'NZ': 'New Zealand',
+}
+
+// Country flags for display (by name)
 const COUNTRY_FLAGS: Record<string, string> = {
     'France': '🇫🇷',
     'United States': '🇺🇸',
@@ -26,6 +61,19 @@ const COUNTRY_FLAGS: Record<string, string> = {
     'Mexico': '🇲🇽',
     'India': '🇮🇳',
     'China': '🇨🇳',
+    'Morocco': '🇲🇦',
+    'South Korea': '🇰🇷',
+    'Singapore': '🇸🇬',
+}
+
+// Helper to normalize country (ISO code or name -> name)
+function normalizeCountry(raw: string): string {
+    if (!raw || raw === 'unknown') return 'Unknown'
+    // If it's a 2-letter code, map it
+    if (raw.length <= 3 && ISO_TO_COUNTRY[raw.toUpperCase()]) {
+        return ISO_TO_COUNTRY[raw.toUpperCase()]
+    }
+    return raw
 }
 
 // SQL queries for each dimension
@@ -214,18 +262,24 @@ export async function GET(request: NextRequest) {
         let data: any[] = []
 
         if (dimension === 'countries') {
-            data = rawData.map((item: any) => ({
-                name: item.country || 'Unknown',
-                flag: COUNTRY_FLAGS[item.country] || '🌍',
-                clicks: item.clicks || 0,
-            }))
+            data = rawData.map((item: any) => {
+                const countryName = normalizeCountry(item.country)
+                return {
+                    name: countryName,
+                    flag: COUNTRY_FLAGS[countryName] || '🌍',
+                    clicks: item.clicks || 0,
+                }
+            })
         } else if (dimension === 'cities') {
-            data = rawData.map((item: any) => ({
-                name: item.city || 'Unknown',
-                country: item.country || 'Unknown',
-                flag: COUNTRY_FLAGS[item.country] || '🌍',
-                clicks: item.clicks || 0,
-            }))
+            data = rawData.map((item: any) => {
+                const countryName = normalizeCountry(item.country)
+                return {
+                    name: item.city || 'Unknown',
+                    country: countryName,
+                    flag: COUNTRY_FLAGS[countryName] || '🌍',
+                    clicks: item.clicks || 0,
+                }
+            })
         } else if (dimension === 'devices') {
             data = rawData.map((item: any) => ({
                 name: item.device || 'Unknown',

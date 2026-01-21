@@ -1,39 +1,34 @@
 'use client';
 
-// Placeholder logos - just simple geometric shapes or text for now
+import Image from 'next/image';
+
 const logos = [
-    "Acme Corp", "Global Bank", "Starlight", "Neptune", "ProLine", "TechSavvy", "BlueSky", "Horizon"
+    { name: 'Alix', src: '/partn/Alix.png', width: 100, height: 40 },
+    { name: 'Beo', src: '/partn/beo.png', width: 100, height: 40 },
+    { name: 'KeepCalls', src: '/partn/keepcalls.png', width: 120, height: 40 },
+    { name: 'MyWai', src: '/partn/mywai.png', width: 100, height: 40 },
+    { name: 'Reevy', src: '/partn/reevy.png', width: 100, height: 40 },
 ];
 
 export function Logos() {
     return (
-        <section className="py-12 border-y border-gray-100 bg-white/50 backdrop-blur-sm relative overflow-hidden">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-                <p className="text-center text-sm font-medium text-gray-500 mb-8 uppercase tracking-widest">
-                    Trusted by innovative teams worldwide
-                </p>
-
-                <div className="relative flex overflow-x-hidden group">
-                    {/* Gradient Masks */}
-                    <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-white to-transparent z-10" />
-                    <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-white to-transparent z-10" />
-
-                    <div className="animate-marquee whitespace-nowrap flex gap-16 py-2">
-                        {[...logos, ...logos, ...logos].map((logo, idx) => (
-                            <span key={idx} className="text-xl font-bold text-gray-300 hover:text-gray-500 transition-colors uppercase tracking-tight select-none">
-                                {logo}
-                            </span>
-                        ))}
-                    </div>
-                    {/* Duplicate for infinite loop smoothness if needed, but the marquee css usually handles it by duplicating content inside */}
+        <section className="pt-4 pb-12 bg-white border-b border-gray-100">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {/* Static Row of 5 Logos */}
+                <div className="flex flex-wrap justify-between items-center gap-8 md:gap-16 opacity-70 grayscale hover:grayscale-0 transition-all duration-500">
+                    {logos.map((logo, idx) => (
+                        <div key={`${logo.name}-${idx}`} className="flex items-center justify-center transition-transform hover:scale-110 duration-300">
+                            <img
+                                src={logo.src}
+                                alt={`${logo.name} logo`}
+                                // Increased size to 48px, kept brightness(0) for black silhouette
+                                style={{ height: '48px', width: 'auto', filter: 'brightness(0)' }}
+                                className="object-contain"
+                            />
+                        </div>
+                    ))}
                 </div>
             </div>
         </section>
     );
 }
-
-// Ensure you add this keyframe to globals.css if not already present
-// @keyframes marquee {
-//   0% { transform: translateX(0); }
-//   100% { transform: translateX(-50%); }
-// }
