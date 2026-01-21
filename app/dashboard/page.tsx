@@ -637,18 +637,18 @@ export default function DashboardPage() {
 
     // Display data - USE API DATA with mock fallback for cross-filtering
     const displayLocations = useMemo(() => {
-        // If API fetched successfully (even if empty), use it
-        if (countriesData?.data) {
+        // If we have API data and no filters, use it
+        if (apiCountries.length > 0 && activeFilters.length === 0) {
             return apiCountries.map((c: any) => ({ name: c.name, flag: c.flag || '🌍', count: c.clicks || 0 }))
         }
-        // Fallback to mock only if API hasn't loaded or failed
+        // Fallback to filtered mock data for cross-filtering
         return aggregateBy(getEventsExcludingFilterType('country'), 'country')
             .map(l => ({ ...l, flag: COUNTRY_FLAGS[l.name] || '🌍' }))
             .sort((a, b) => b.count - a.count)
-    }, [countriesData, apiCountries, getEventsExcludingFilterType, aggregateBy])
+    }, [apiCountries, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
 
     const displayDevices = useMemo(() => {
-        if (devicesData?.data) {
+        if (apiDevices.length > 0 && activeFilters.length === 0) {
             return apiDevices.map((d: any) => ({
                 name: d.name,
                 icon: d.name === 'Desktop' ? Laptop : Smartphone,
@@ -658,16 +658,16 @@ export default function DashboardPage() {
         return aggregateBy(getEventsExcludingFilterType('device'), 'device')
             .map(d => ({ ...d, icon: d.name === 'Desktop' ? Laptop : Smartphone }))
             .sort((a, b) => b.count - a.count)
-    }, [devicesData, apiDevices, getEventsExcludingFilterType, aggregateBy])
+    }, [apiDevices, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
 
     const displayCities = useMemo(() => {
-        if (citiesData?.data) {
+        if (apiCities.length > 0 && activeFilters.length === 0) {
             return apiCities.map((c: any) => ({ name: c.name, country: c.country || '', flag: c.flag || '🌍', count: c.clicks || 0 }))
         }
         return aggregateBy(getEventsExcludingFilterType('city'), 'city')
             .map(c => ({ ...c, flag: COUNTRY_FLAGS[c.country] || '🌍' }))
             .sort((a, b) => b.count - a.count)
-    }, [citiesData, apiCities, getEventsExcludingFilterType, aggregateBy])
+    }, [apiCities, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
 
     const displayRegions = useMemo(() => aggregateBy(getEventsExcludingFilterType('region'), 'region')
         .map(r => ({ ...r, flag: COUNTRY_FLAGS[r.country] || '🌍' }))
@@ -678,20 +678,20 @@ export default function DashboardPage() {
         .sort((a, b) => b.count - a.count), [getEventsExcludingFilterType, aggregateBy])
 
     const displayBrowsers = useMemo(() => {
-        if (browsersData?.data) {
+        if (apiBrowsers.length > 0 && activeFilters.length === 0) {
             return apiBrowsers.map((b: any) => ({ name: b.name, count: b.clicks || 0 }))
         }
         return aggregateBy(getEventsExcludingFilterType('browser'), 'browser')
             .sort((a, b) => b.count - a.count)
-    }, [browsersData, apiBrowsers, getEventsExcludingFilterType, aggregateBy])
+    }, [apiBrowsers, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
 
     const displayOS = useMemo(() => {
-        if (osData?.data) {
+        if (apiOS.length > 0 && activeFilters.length === 0) {
             return apiOS.map((o: any) => ({ name: o.name, count: o.clicks || 0 }))
         }
         return aggregateBy(getEventsExcludingFilterType('os'), 'os')
             .sort((a, b) => b.count - a.count)
-    }, [osData, apiOS, getEventsExcludingFilterType, aggregateBy])
+    }, [apiOS, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
 
     // Get filtered and aggregated timeseries for the chart
     const getFilteredTimeseries = useCallback(() => {

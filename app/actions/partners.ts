@@ -1,8 +1,7 @@
 'use server'
 
-import { prisma } from '@/lib/db'
-import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
-import { getCurrentUser } from '@/lib/auth'
+import { prisma } from '@/prisma'
+import { getWorkspaceFromCookie } from '@/lib/auth-utils'
 
 // =============================================
 // GET MY PARTNERS (Partners who joined our missions)
@@ -10,7 +9,7 @@ import { getCurrentUser } from '@/lib/auth'
 
 export async function getMyPartners() {
     try {
-        const workspace = await getActiveWorkspaceForUser()
+        const workspace = await getWorkspaceFromCookie()
         if (!workspace) {
             return { success: false, error: 'Non authentifié' }
         }
@@ -18,13 +17,13 @@ export async function getMyPartners() {
         // Get all enrollments for this workspace's missions
         const enrollments = await prisma.missionEnrollment.findMany({
             where: {
-                Mission: {
-                    workspace_id: workspace.workspaceId
+                mission: {
+                    workspace_id: workspace.id
                 }
             },
             include: {
                 user: true,
-                Mission: true,
+                mission: true,
                 link: true
             },
             orderBy: {
@@ -168,7 +167,7 @@ export async function getAllPlatformPartners(filters?: {
 
 export async function getPartnerProfile(partnerId: string) {
     try {
-        const workspace = await getActiveWorkspaceForUser()
+        const workspace = await getWorkspaceFromCookie()
         if (!workspace) {
             return { success: false, error: 'Non authentifié' }
         }
@@ -178,7 +177,7 @@ export async function getPartnerProfile(partnerId: string) {
             include: {
                 enrollments: {
                     include: {
-                        Mission: true,
+                        mission: true,
                         link: true
                     }
                 }
@@ -190,7 +189,7 @@ export async function getPartnerProfile(partnerId: string) {
         }
 
         // Separate enrollments by workspace
-        const ourEnrollments = user.enrollments.filter(e => e.Mission.workspace_id === workspace.workspaceId)
+        const ourEnrollments = user.enrollments.filter(e => e.mission.workspace_id === workspace.id)
         const allEnrollments = user.enrollments
 
         // Calculate global stats
@@ -213,8 +212,8 @@ export async function getPartnerProfile(partnerId: string) {
 
         // Format missions
         const missions = ourEnrollments.map(e => ({
-            id: e.Mission.id,
-            name: e.Mission.title,
+            id: e.mission.id,
+            name: e.mission.title,
             clicks: e.link?.clicks || 0,
             sales: 0,
             earnings: 0,
@@ -247,116 +246,5 @@ export async function getPartnerProfile(partnerId: string) {
     } catch (error) {
         console.error('Error fetching partner profile:', error)
         return { success: false, error: 'Erreur lors du chargement' }
-    }
-}
-
-// =============================================
-// CREATE GLOBAL PARTNER
-// =============================================
-
-export async function createGlobalPartner(data: {
-    userId: string
-    email: string
-    name: string
-}) {
-    try {
-        await prisma.user.update({
-            where: { id: data.userId },
-            data: {
-                name: data.name,
-            }
-        })
-
-        return { success: true }
-    } catch (error) {
-        console.error('Error creating global partner:', error)
-        return { success: false, error: 'Failed to create partner profile' }
-    }
-}
-
-// =============================================
-// CLAIM SHADOW PARTNERS
-// =============================================
-
-export async function claimPartners(userId: string, email: string) {
-    try {
-        // Placeholder for legacy shadow partner claiming logic
-        return { success: true, claimed: 0 }
-    } catch (error) {
-        console.error('Error claiming partners:', error)
-        return { success: false, error: 'Failed to claim partners' }
-    }
-}
-
-// =============================================
-// GET PARTNER BY USER ID (For Analytics Token)
-// =============================================
-
-export async function getPartnerByUserId(userId: string) {
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, name: true, email: true }
-    })
-    return user
-}
-
-// =============================================
-// GET PARTNER DASHBOARD (For Portal Homepage)
-// =============================================
-
-export async function getPartnerDashboard() {
-    try {
-        const currentUser = await getCurrentUser()
-        if (!currentUser) return { error: 'Non authentifié' }
-
-        // Fetch recent enrollments
-        const enrollments = await prisma.missionEnrollment.findMany({
-            where: { user_id: currentUser.userId },
-            include: { Mission: true, link: true },
-            orderBy: { created_at: 'desc' },
-            take: 5
-        })
-
-        // Calc stats (Mocked Tinybird aggregation for now)
-        const totalClicks = enrollments.reduce((sum, e) => sum + (e.link?.clicks || 0), 0)
-
-        return {
-            partner: {
-                id: currentUser.userId,
-                name: currentUser.email.split('@')[0],
-            },
-            stats: {
-                totalClicks,
-                totalEarnings: 0,
-                totalSales: 0,
-                conversionRate: 0,
-                activeMissions: enrollments.length
-            },
-            recentActivity: enrollments.map(e => ({
-                id: e.id,
-                mission: e.Mission.title,
-                date: e.created_at,
-                clicks: e.link?.clicks || 0
-            }))
-        }
-    } catch (error) {
-        console.error('Error fetching partner dashboard:', error)
-        return { error: 'Erreur load dashboard' }
-    }
-}
-
-// =============================================
-// GET PARTNER COMMISSIONS (For Portal Earnings)
-// =============================================
-
-export async function getPartnerCommissions() {
-    // Return empty list/mock for now as Commission table might be empty
-    return {
-        commissions: [],
-        summary: {
-            pending: 0,
-            available: 0,
-            paid: 0
-        }
     }
 }
