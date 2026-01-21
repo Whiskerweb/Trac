@@ -525,9 +525,24 @@ export default function DashboardPage() {
         return []
     }, [apiDevices])
 
+    // Country code to flag mapping
+    const COUNTRY_FLAGS: Record<string, string> = {
+        'France': '🇫🇷', 'FR': '🇫🇷', 'Germany': '🇩🇪', 'DE': '🇩🇪',
+        'United Kingdom': '🇬🇧', 'GB': '🇬🇧', 'UK': '🇬🇧',
+        'United States': '🇺🇸', 'US': '🇺🇸', 'Morocco': '🇲🇦', 'MA': '🇲🇦',
+        'Spain': '🇪🇸', 'ES': '🇪🇸', 'Italy': '🇮🇹', 'IT': '🇮🇹',
+        'Canada': '🇨🇦', 'CA': '🇨🇦', 'Netherlands': '🇳🇱', 'NL': '🇳🇱',
+        'Belgium': '🇧🇪', 'BE': '🇧🇪', 'Switzerland': '🇨🇭', 'CH': '🇨🇭',
+        'Japan': '🇯🇵', 'JP': '🇯🇵', 'Australia': '🇦🇺', 'AU': '🇦🇺',
+        'Brazil': '🇧🇷', 'BR': '🇧🇷', 'Portugal': '🇵🇹', 'PT': '🇵🇹',
+    }
+
     const displayCities = useMemo((): LocationItem[] => {
         if (apiCities.length > 0) {
-            return apiCities.map((c: any) => ({ name: c.name, country: c.country || '', flag: c.flag || '🌍', count: c.clicks || 0 }))
+            return apiCities.map((c: any) => {
+                const flag = COUNTRY_FLAGS[c.country] || '🌍'
+                return { name: c.name, country: c.country || '', flag, count: c.clicks || 0 }
+            })
         }
         return []
     }, [apiCities])
@@ -560,8 +575,18 @@ export default function DashboardPage() {
             regionCounts[region] = (regionCounts[region] || 0) + (city.clicks || 0)
         })
 
+        // Region to country flag mapping
+        const REGION_FLAGS: Record<string, string> = {
+            'Bretagne': '🇫🇷', 'Normandie': '🇫🇷', 'Île-de-France': '🇫🇷',
+            'Auvergne-Rhône-Alpes': '🇫🇷', 'Provence-Alpes-Côte d\'Azur': '🇫🇷',
+            'Nouvelle-Aquitaine': '🇫🇷', 'Occitanie': '🇫🇷', 'Pays de la Loire': '🇫🇷',
+            'Hauts-de-France': '🇫🇷', 'Grand Est': '🇫🇷',
+            'Rabat-Salé-Kénitra': '🇲🇦', 'Casablanca-Settat': '🇲🇦', 'Marrakech-Safi': '🇲🇦',
+            'Other': '🌍',
+        }
+
         return Object.entries(regionCounts)
-            .map(([name, count]) => ({ name, flag: '📍', count }))
+            .map(([name, count]) => ({ name, flag: REGION_FLAGS[name] || '📍', count }))
             .sort((a, b) => b.count - a.count)
     }, [apiCities])
 
