@@ -522,12 +522,13 @@ export default function DashboardPage() {
     }
 
     // Display data - API DATA ONLY (no mock fallback)
-    const displayLocations = useMemo((): LocationItem[] => {
+    const displayLocations = useMemo((): (LocationItem & { code: string })[] => {
         // Use API data directly
         if (apiCountries.length > 0) {
             return apiCountries.map((c: any) => {
                 const info = COUNTRY_INFO[c.name] || { name: c.name, flag: '🌍' }
-                return { name: info.name, flag: info.flag, count: c.clicks || 0 }
+                // Keep original code for filtering, display name for UI
+                return { name: info.name, flag: info.flag, count: c.clicks || 0, code: c.name }
             })
         }
         // Return empty if no data
@@ -818,13 +819,13 @@ export default function DashboardPage() {
                 >
                     {locationTab === 'Countries' && displayLocations.map((loc) => (
                         <SimpleListItem
-                            key={loc.name}
+                            key={loc.code}
                             icon={<span className="text-lg">{loc.flag}</span>}
                             label={loc.name}
                             count={loc.count}
                             percentage={(loc.count / maxLocation) * 100}
-                            isSelected={isCountrySelected(loc.name)}
-                            onClick={() => toggleFilter('country', loc.name, loc.name, <span className="text-sm">{loc.flag}</span>)}
+                            isSelected={activeFilters.some(f => f.type === 'country' && f.value === loc.code)}
+                            onClick={() => toggleFilter('country', loc.code, loc.name, <span className="text-sm">{loc.flag}</span>)}
                         />
                     ))}
                     {locationTab === 'Cities' && displayCities.map((city) => (
