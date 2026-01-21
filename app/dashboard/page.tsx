@@ -389,8 +389,8 @@ export default function DashboardPage() {
         return res.json()
     }
 
-    // Build filter query string from active filters
-    const buildFilterParams = () => {
+    // Build filter query string from active filters, excluding a specific type for cross-filtering
+    const buildFilterParams = (excludeType?: string) => {
         const params: string[] = []
         const countryFilters = activeFilters.filter(f => f.type === 'country').map(f => f.value)
         const cityFilters = activeFilters.filter(f => f.type === 'city').map(f => f.value)
@@ -398,38 +398,39 @@ export default function DashboardPage() {
         const browserFilters = activeFilters.filter(f => f.type === 'browser').map(f => f.value)
         const osFilters = activeFilters.filter(f => f.type === 'os').map(f => f.value)
 
-        if (countryFilters.length) params.push(`country=${countryFilters.join(',')}`)
-        if (cityFilters.length) params.push(`city=${cityFilters.join(',')}`)
-        if (deviceFilters.length) params.push(`device=${deviceFilters.join(',')}`)
-        if (browserFilters.length) params.push(`browser=${browserFilters.join(',')}`)
-        if (osFilters.length) params.push(`os=${osFilters.join(',')}`)
+        // Each dimension excludes its own type to show all values in that dimension
+        if (countryFilters.length && excludeType !== 'country') params.push(`country=${countryFilters.join(',')}`)
+        if (cityFilters.length && excludeType !== 'city') params.push(`city=${cityFilters.join(',')}`)
+        if (deviceFilters.length && excludeType !== 'device') params.push(`device=${deviceFilters.join(',')}`)
+        if (browserFilters.length && excludeType !== 'browser') params.push(`browser=${browserFilters.join(',')}`)
+        if (osFilters.length && excludeType !== 'os') params.push(`os=${osFilters.join(',')}`)
 
         return params.length ? '&' + params.join('&') : ''
     }
-    const filterParams = buildFilterParams()
 
+    // Each dimension uses filters EXCEPT its own type (cross-filtering)
     const { data: countriesData } = useSWR(
-        `/api/stats/breakdown?dimension=countries&date_from=${dateFrom}&date_to=${dateTo}${filterParams}`,
+        `/api/stats/breakdown?dimension=countries&date_from=${dateFrom}&date_to=${dateTo}${buildFilterParams('country')}`,
         breakdownFetcher,
         { revalidateOnFocus: false }
     )
     const { data: citiesData } = useSWR(
-        `/api/stats/breakdown?dimension=cities&date_from=${dateFrom}&date_to=${dateTo}${filterParams}`,
+        `/api/stats/breakdown?dimension=cities&date_from=${dateFrom}&date_to=${dateTo}${buildFilterParams('city')}`,
         breakdownFetcher,
         { revalidateOnFocus: false }
     )
     const { data: devicesData } = useSWR(
-        `/api/stats/breakdown?dimension=devices&date_from=${dateFrom}&date_to=${dateTo}${filterParams}`,
+        `/api/stats/breakdown?dimension=devices&date_from=${dateFrom}&date_to=${dateTo}${buildFilterParams('device')}`,
         breakdownFetcher,
         { revalidateOnFocus: false }
     )
     const { data: browsersData } = useSWR(
-        `/api/stats/breakdown?dimension=browsers&date_from=${dateFrom}&date_to=${dateTo}${filterParams}`,
+        `/api/stats/breakdown?dimension=browsers&date_from=${dateFrom}&date_to=${dateTo}${buildFilterParams('browser')}`,
         breakdownFetcher,
         { revalidateOnFocus: false }
     )
     const { data: osData } = useSWR(
-        `/api/stats/breakdown?dimension=os&date_from=${dateFrom}&date_to=${dateTo}${filterParams}`,
+        `/api/stats/breakdown?dimension=os&date_from=${dateFrom}&date_to=${dateTo}${buildFilterParams('os')}`,
         breakdownFetcher,
         { revalidateOnFocus: false }
     )
