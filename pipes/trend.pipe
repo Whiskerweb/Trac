@@ -17,6 +17,12 @@ SQL >
         workspace_id = {{ String(workspace_id, '') }}
         AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
         AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+        {% if defined(country) %}
+        AND country IN splitByChar(',', {{ String(country, '') }})
+        {% end %}
+        {% if defined(device) %}
+        AND device IN splitByChar(',', {{ String(device, '') }})
+        {% end %}
     GROUP BY date
 
 NODE sales_by_day
