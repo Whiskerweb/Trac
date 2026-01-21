@@ -215,15 +215,14 @@ export async function GET(request: NextRequest) {
         }
 
         const sql = queryBuilder(workspaceId, dateFrom, dateTo)
+        console.log('[Breakdown API] Executing SQL:', sql)
 
-        // Use Tinybird SQL endpoint directly (no pipe needed)
-        const response = await fetch(`${TINYBIRD_HOST}/v0/sql`, {
-            method: 'POST',
+        // Use Tinybird SQL endpoint directly with JSON format
+        const response = await fetch(`${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(sql)}`, {
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${TINYBIRD_ADMIN_TOKEN}`,
-                'Content-Type': 'text/plain',
             },
-            body: sql,
             cache: 'no-store',
         })
 
