@@ -280,6 +280,14 @@ export async function GET(request: NextRequest) {
 
     } catch (error) {
         console.error('[Breakdown API] Error:', error)
-        return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 })
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const errorStack = error instanceof Error ? error.stack : undefined
+        return NextResponse.json({
+            error: 'Failed to fetch analytics',
+            debug: {
+                message: errorMessage,
+                stack: errorStack?.split('\n').slice(0, 5)
+            }
+        }, { status: 500 })
     }
 }
