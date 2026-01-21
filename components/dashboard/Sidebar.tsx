@@ -74,11 +74,17 @@ const navigation: NavSection[] = [
 export function Sidebar() {
     const pathname = usePathname()
     const [userEmail, setUserEmail] = useState<string>('')
+    const [startupName, setStartupName] = useState<string>('Partner Program')
 
     useEffect(() => {
-        fetch('/api/auth/me')
+        fetch('/api/auth/user-roles')
             .then(res => res.json())
-            .then(data => setUserEmail(data.user?.email || 'User'))
+            .then(data => {
+                setUserEmail(data.email || 'User')
+                if (data.workspaces && data.workspaces.length > 0) {
+                    setStartupName(data.workspaces[0].name)
+                }
+            })
             .catch(() => { })
     }, [])
 
@@ -86,16 +92,17 @@ export function Sidebar() {
         <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-50">
             {/* Logo/Workspace Switcher */}
             <div className="h-16 flex items-center px-4 border-b border-gray-100">
-                <button className="flex items-center gap-2 w-full hover:bg-gray-50 p-2 rounded-lg transition-colors text-left group">
-                    <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                        T
-                    </div>
+                <div className="flex items-center gap-2 w-full p-2 rounded-lg text-left">
+                    <img
+                        src="/Logotrac/logo1.png"
+                        alt="Logo"
+                        className="w-12 h-12 rounded-lg object-contain"
+                    />
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">Partner Program</p>
-                        <p className="text-xs text-gray-500 truncate">Free Plan</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate">{startupName}</p>
+                        <p className="text-xs text-gray-500 truncate">Startup Program</p>
                     </div>
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                </button>
+                </div>
             </div>
 
             {/* Navigation */}
@@ -126,14 +133,14 @@ export function Sidebar() {
                                             className={`
                                                 flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all duration-150 text-sm
                                                 ${isActive
-                                                    ? 'bg-blue-50 text-blue-700 font-medium'
+                                                    ? 'bg-purple-50 text-purple-700 font-medium'
                                                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                                 }
                                             `}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <Icon
-                                                    className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
+                                                    className={`w-4 h-4 ${isActive ? 'text-purple-600' : 'text-gray-400'}`}
                                                     strokeWidth={2}
                                                 />
                                                 <span>{item.name}</span>

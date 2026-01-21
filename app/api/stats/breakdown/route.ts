@@ -8,42 +8,7 @@ export const revalidate = 0
 const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
 const TINYBIRD_ADMIN_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
 
-// ISO code to country name mapping
-const ISO_TO_COUNTRY: Record<string, string> = {
-    'FR': 'France',
-    'US': 'United States',
-    'DE': 'Germany',
-    'GB': 'United Kingdom',
-    'UK': 'United Kingdom',
-    'ES': 'Spain',
-    'IT': 'Italy',
-    'CA': 'Canada',
-    'NL': 'Netherlands',
-    'BE': 'Belgium',
-    'CH': 'Switzerland',
-    'JP': 'Japan',
-    'AU': 'Australia',
-    'BR': 'Brazil',
-    'MX': 'Mexico',
-    'IN': 'India',
-    'CN': 'China',
-    'KR': 'South Korea',
-    'SG': 'Singapore',
-    'HK': 'Hong Kong',
-    'AE': 'United Arab Emirates',
-    'MA': 'Morocco',
-    'SE': 'Sweden',
-    'NO': 'Norway',
-    'DK': 'Denmark',
-    'FI': 'Finland',
-    'AT': 'Austria',
-    'PL': 'Poland',
-    'PT': 'Portugal',
-    'IE': 'Ireland',
-    'NZ': 'New Zealand',
-}
-
-// Country flags for display (by name)
+// Country flags for display
 const COUNTRY_FLAGS: Record<string, string> = {
     'France': '🇫🇷',
     'United States': '🇺🇸',
@@ -61,19 +26,6 @@ const COUNTRY_FLAGS: Record<string, string> = {
     'Mexico': '🇲🇽',
     'India': '🇮🇳',
     'China': '🇨🇳',
-    'Morocco': '🇲🇦',
-    'South Korea': '🇰🇷',
-    'Singapore': '🇸🇬',
-}
-
-// Helper to normalize country (ISO code or name -> name)
-function normalizeCountry(raw: string): string {
-    if (!raw || raw === 'unknown') return 'Unknown'
-    // If it's a 2-letter code, map it
-    if (raw.length <= 3 && ISO_TO_COUNTRY[raw.toUpperCase()]) {
-        return ISO_TO_COUNTRY[raw.toUpperCase()]
-    }
-    return raw
 }
 
 // SQL queries for each dimension
@@ -203,20 +155,46 @@ export async function GET(request: NextRequest) {
     // ========================================
     // SECURITY CHECKS
     // ========================================
+    console.log('[Breakdown API] Starting request...')
+
     if (!TINYBIRD_ADMIN_TOKEN) {
+        console.error('[Breakdown API] Missing TINYBIRD_ADMIN_TOKEN')
         return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
     }
 
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    let user
+    try {
+        const supabase = await createClient()
+        const result = await supabase.auth.getUser()
+        user = result.data?.user
 
-    if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        if (result.error) {
+            console.error('[Breakdown API] Auth error:', result.error.message)
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        if (!user) {
+            console.error('[Breakdown API] No user found')
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        console.log('[Breakdown API] User authenticated:', user.id)
+    } catch (authErr) {
+        console.error('[Breakdown API] Auth exception:', authErr)
+        return NextResponse.json({ error: 'Auth failed' }, { status: 500 })
     }
 
-    const workspace = await getActiveWorkspaceForUser()
-    if (!workspace) {
-        return NextResponse.json({ error: 'No workspace found' }, { status: 400 })
+    let workspace
+    try {
+        workspace = await getActiveWorkspaceForUser()
+        if (!workspace) {
+            console.error('[Breakdown API] No workspace found for user:', user.id)
+            return NextResponse.json({ error: 'No workspace found' }, { status: 400 })
+        }
+        console.log('[Breakdown API] Workspace:', workspace.workspaceId)
+    } catch (wsErr) {
+        console.error('[Breakdown API] Workspace exception:', wsErr)
+        return NextResponse.json({ error: 'Workspace error' }, { status: 500 })
     }
 
     const workspaceId = workspace.workspaceId
@@ -262,24 +240,18 @@ export async function GET(request: NextRequest) {
         let data: any[] = []
 
         if (dimension === 'countries') {
-            data = rawData.map((item: any) => {
-                const countryName = normalizeCountry(item.country)
-                return {
-                    name: countryName,
-                    flag: COUNTRY_FLAGS[countryName] || '🌍',
-                    clicks: item.clicks || 0,
-                }
-            })
+            data = rawData.map((item: any) => ({
+                name: item.country || 'Unknown',
+                flag: COUNTRY_FLAGS[item.country] || '🌍',
+                clicks: item.clicks || 0,
+            }))
         } else if (dimension === 'cities') {
-            data = rawData.map((item: any) => {
-                const countryName = normalizeCountry(item.country)
-                return {
-                    name: item.city || 'Unknown',
-                    country: countryName,
-                    flag: COUNTRY_FLAGS[countryName] || '🌍',
-                    clicks: item.clicks || 0,
-                }
-            })
+            data = rawData.map((item: any) => ({
+                name: item.city || 'Unknown',
+                country: item.country || 'Unknown',
+                flag: COUNTRY_FLAGS[item.country] || '🌍',
+                clicks: item.clicks || 0,
+            }))
         } else if (dimension === 'devices') {
             data = rawData.map((item: any) => ({
                 name: item.device || 'Unknown',
