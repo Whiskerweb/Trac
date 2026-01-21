@@ -163,6 +163,14 @@ export async function POST(request: NextRequest) {
         const tinybirdHost = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
 
         if (tinybirdToken) {
+            // Map country ISO code to name
+            const countryCode = request.headers.get('x-vercel-ip-country') || ''
+            const countryName = getCountryName(countryCode)
+
+            // City comes URL-encoded from Vercel
+            const rawCity = request.headers.get('x-vercel-ip-city') || 'unknown'
+            const cityName = rawCity !== 'unknown' ? decodeURIComponent(rawCity) : 'unknown'
+
             const clickData = {
                 timestamp: new Date().toISOString(),
                 workspace_id: resolvedWorkspaceId || 'unknown',
@@ -171,8 +179,8 @@ export async function POST(request: NextRequest) {
                 affiliate_id: affiliateId,
                 key: key || null,
                 source: isFirstParty ? 'first_party' : 'client_side',
-                country: request.headers.get('x-vercel-ip-country') || 'unknown',
-                city: request.headers.get('x-vercel-ip-city') || 'unknown',
+                country: countryName,
+                city: cityName,
                 device: getDeviceType(request.headers.get('user-agent') || ''),
                 user_agent: request.headers.get('user-agent') || 'unknown'
             }
@@ -310,4 +318,53 @@ function getDeviceType(userAgent: string): string {
     if (/mobile|android|iphone|ipad|ipod/.test(ua)) return 'mobile'
     if (/tablet|ipad/.test(ua)) return 'tablet'
     return 'desktop'
+}
+
+// ISO country code to name mapping
+const COUNTRY_NAMES: Record<string, string> = {
+    'FR': 'France',
+    'US': 'United States',
+    'DE': 'Germany',
+    'GB': 'United Kingdom',
+    'ES': 'Spain',
+    'IT': 'Italy',
+    'CA': 'Canada',
+    'NL': 'Netherlands',
+    'BE': 'Belgium',
+    'CH': 'Switzerland',
+    'JP': 'Japan',
+    'AU': 'Australia',
+    'BR': 'Brazil',
+    'MX': 'Mexico',
+    'IN': 'India',
+    'CN': 'China',
+    'KR': 'South Korea',
+    'SG': 'Singapore',
+    'HK': 'Hong Kong',
+    'AE': 'United Arab Emirates',
+    'SE': 'Sweden',
+    'NO': 'Norway',
+    'DK': 'Denmark',
+    'FI': 'Finland',
+    'AT': 'Austria',
+    'PL': 'Poland',
+    'PT': 'Portugal',
+    'IE': 'Ireland',
+    'NZ': 'New Zealand',
+    'AR': 'Argentina',
+    'CL': 'Chile',
+    'CO': 'Colombia',
+    'ZA': 'South Africa',
+    'IL': 'Israel',
+    'RU': 'Russia',
+    'TR': 'Turkey',
+    'TH': 'Thailand',
+    'ID': 'Indonesia',
+    'MY': 'Malaysia',
+    'PH': 'Philippines',
+    'VN': 'Vietnam',
+}
+
+function getCountryName(isoCode: string): string {
+    return COUNTRY_NAMES[isoCode.toUpperCase()] || isoCode || 'unknown'
 }
