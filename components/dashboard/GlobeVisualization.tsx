@@ -19,13 +19,36 @@ interface LocationData {
 
 // City coordinates mapping (expand as needed)
 const CITY_COORDINATES: Record<string, { lat: number; lng: number; country: string }> = {
-    // France
+    // France - Major cities
     'Paris': { lat: 48.8566, lng: 2.3522, country: 'France' },
     'Lyon': { lat: 45.7640, lng: 4.8357, country: 'France' },
     'Marseille': { lat: 43.2965, lng: 5.3698, country: 'France' },
     'Toulouse': { lat: 43.6047, lng: 1.4442, country: 'France' },
     'Nice': { lat: 43.7102, lng: 7.2620, country: 'France' },
     'Bordeaux': { lat: 44.8378, lng: -0.5792, country: 'France' },
+    'Nantes': { lat: 47.2184, lng: -1.5536, country: 'France' },
+    'Strasbourg': { lat: 48.5734, lng: 7.7521, country: 'France' },
+    'Lille': { lat: 50.6292, lng: 3.0573, country: 'France' },
+    'Rennes': { lat: 48.1173, lng: -1.6778, country: 'France' },
+    'Montpellier': { lat: 43.6108, lng: 3.8767, country: 'France' },
+    // France - Brittany region
+    'Brest': { lat: 48.3904, lng: -4.4861, country: 'France' },
+    'Concarneau': { lat: 47.8739, lng: -3.9214, country: 'France' },
+    'Quimper': { lat: 47.9960, lng: -4.0979, country: 'France' },
+    'Guilers': { lat: 48.4269, lng: -4.5577, country: 'France' },
+    'Lorient': { lat: 47.7500, lng: -3.3667, country: 'France' },
+    'Vannes': { lat: 47.6559, lng: -2.7603, country: 'France' },
+    'Saint-Brieuc': { lat: 48.5140, lng: -2.7600, country: 'France' },
+    'Morlaix': { lat: 48.5772, lng: -3.8261, country: 'France' },
+    // France - Normandy
+    'Pont-Audemer': { lat: 49.3561, lng: 0.5144, country: 'France' },
+    'Rouen': { lat: 49.4432, lng: 1.0999, country: 'France' },
+    'Le Havre': { lat: 49.4944, lng: 0.1079, country: 'France' },
+    'Caen': { lat: 49.1829, lng: -0.3707, country: 'France' },
+    // Morocco
+    'Rabat': { lat: 34.0209, lng: -6.8416, country: 'Morocco' },
+    'Casablanca': { lat: 33.5731, lng: -7.5898, country: 'Morocco' },
+    'Marrakech': { lat: 31.6295, lng: -7.9811, country: 'Morocco' },
     // USA
     'New York': { lat: 40.7128, lng: -74.0060, country: 'USA' },
     'Los Angeles': { lat: 34.0522, lng: -118.2437, country: 'USA' },
