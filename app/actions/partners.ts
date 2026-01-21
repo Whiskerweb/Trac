@@ -18,13 +18,13 @@ export async function getMyPartners() {
         // Get all enrollments for this workspace's missions
         const enrollments = await prisma.missionEnrollment.findMany({
             where: {
-                mission: {
+                Mission: {
                     workspace_id: workspace.workspaceId
                 }
             },
             include: {
                 user: true,
-                mission: true,
+                Mission: true,
                 link: true
             },
             orderBy: {
@@ -178,7 +178,7 @@ export async function getPartnerProfile(partnerId: string) {
             include: {
                 enrollments: {
                     include: {
-                        mission: true,
+                        Mission: true,
                         link: true
                     }
                 }
@@ -190,7 +190,7 @@ export async function getPartnerProfile(partnerId: string) {
         }
 
         // Separate enrollments by workspace
-        const ourEnrollments = user.enrollments.filter(e => e.mission.workspace_id === workspace.workspaceId)
+        const ourEnrollments = user.enrollments.filter(e => e.Mission.workspace_id === workspace.workspaceId)
         const allEnrollments = user.enrollments
 
         // Calculate global stats
@@ -213,8 +213,8 @@ export async function getPartnerProfile(partnerId: string) {
 
         // Format missions
         const missions = ourEnrollments.map(e => ({
-            id: e.mission.id,
-            name: e.mission.title,
+            id: e.Mission.id,
+            name: e.Mission.title,
             clicks: e.link?.clicks || 0,
             sales: 0,
             earnings: 0,
@@ -312,7 +312,7 @@ export async function getPartnerDashboard() {
         // Fetch recent enrollments
         const enrollments = await prisma.missionEnrollment.findMany({
             where: { user_id: currentUser.userId },
-            include: { mission: true, link: true },
+            include: { Mission: true, link: true },
             orderBy: { created_at: 'desc' },
             take: 5
         })
@@ -334,7 +334,7 @@ export async function getPartnerDashboard() {
             },
             recentActivity: enrollments.map(e => ({
                 id: e.id,
-                mission: e.mission.title,
+                mission: e.Mission.title,
                 date: e.created_at,
                 clicks: e.link?.clicks || 0
             }))
