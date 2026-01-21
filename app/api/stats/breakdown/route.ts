@@ -28,7 +28,7 @@ const COUNTRY_FLAGS: Record<string, string> = {
     'China': '🇨🇳',
 }
 
-// SQL queries for each dimension
+// SQL queries for each dimension (FORMAT JSON required for proper response)
 const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, dateTo: string) => string> = {
     countries: (workspaceId, dateFrom, dateTo) => `
         SELECT country, count() as clicks
@@ -39,6 +39,7 @@ const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, 
         GROUP BY country
         ORDER BY clicks DESC
         LIMIT 20
+        FORMAT JSON
     `,
     cities: (workspaceId, dateFrom, dateTo) => `
         SELECT city, country, count() as clicks
@@ -49,6 +50,7 @@ const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, 
         GROUP BY city, country
         ORDER BY clicks DESC
         LIMIT 20
+        FORMAT JSON
     `,
     devices: (workspaceId, dateFrom, dateTo) => `
         SELECT device, count() as clicks
@@ -58,6 +60,7 @@ const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, 
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
         GROUP BY device
         ORDER BY clicks DESC
+        FORMAT JSON
     `,
     browsers: (workspaceId, dateFrom, dateTo) => `
         SELECT 
@@ -76,6 +79,7 @@ const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, 
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
         GROUP BY browser
         ORDER BY clicks DESC
+        FORMAT JSON
     `,
     os: (workspaceId, dateFrom, dateTo) => `
         SELECT 
@@ -94,8 +98,10 @@ const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, 
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
         GROUP BY os
         ORDER BY clicks DESC
+        FORMAT JSON
     `,
 }
+
 
 /**
  * Analytics Breakdown API
