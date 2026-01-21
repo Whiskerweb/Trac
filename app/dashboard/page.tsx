@@ -389,28 +389,47 @@ export default function DashboardPage() {
         return res.json()
     }
 
+    // Build filter query string from active filters
+    const buildFilterParams = () => {
+        const params: string[] = []
+        const countryFilters = activeFilters.filter(f => f.type === 'country').map(f => f.value)
+        const cityFilters = activeFilters.filter(f => f.type === 'city').map(f => f.value)
+        const deviceFilters = activeFilters.filter(f => f.type === 'device').map(f => f.value)
+        const browserFilters = activeFilters.filter(f => f.type === 'browser').map(f => f.value)
+        const osFilters = activeFilters.filter(f => f.type === 'os').map(f => f.value)
+
+        if (countryFilters.length) params.push(`country=${countryFilters.join(',')}`)
+        if (cityFilters.length) params.push(`city=${cityFilters.join(',')}`)
+        if (deviceFilters.length) params.push(`device=${deviceFilters.join(',')}`)
+        if (browserFilters.length) params.push(`browser=${browserFilters.join(',')}`)
+        if (osFilters.length) params.push(`os=${osFilters.join(',')}`)
+
+        return params.length ? '&' + params.join('&') : ''
+    }
+    const filterParams = buildFilterParams()
+
     const { data: countriesData } = useSWR(
-        `/api/stats/breakdown?dimension=countries&date_from=${dateFrom}&date_to=${dateTo}`,
+        `/api/stats/breakdown?dimension=countries&date_from=${dateFrom}&date_to=${dateTo}${filterParams}`,
         breakdownFetcher,
         { revalidateOnFocus: false }
     )
     const { data: citiesData } = useSWR(
-        `/api/stats/breakdown?dimension=cities&date_from=${dateFrom}&date_to=${dateTo}`,
+        `/api/stats/breakdown?dimension=cities&date_from=${dateFrom}&date_to=${dateTo}${filterParams}`,
         breakdownFetcher,
         { revalidateOnFocus: false }
     )
     const { data: devicesData } = useSWR(
-        `/api/stats/breakdown?dimension=devices&date_from=${dateFrom}&date_to=${dateTo}`,
+        `/api/stats/breakdown?dimension=devices&date_from=${dateFrom}&date_to=${dateTo}${filterParams}`,
         breakdownFetcher,
         { revalidateOnFocus: false }
     )
     const { data: browsersData } = useSWR(
-        `/api/stats/breakdown?dimension=browsers&date_from=${dateFrom}&date_to=${dateTo}`,
+        `/api/stats/breakdown?dimension=browsers&date_from=${dateFrom}&date_to=${dateTo}${filterParams}`,
         breakdownFetcher,
         { revalidateOnFocus: false }
     )
     const { data: osData } = useSWR(
-        `/api/stats/breakdown?dimension=os&date_from=${dateFrom}&date_to=${dateTo}`,
+        `/api/stats/breakdown?dimension=os&date_from=${dateFrom}&date_to=${dateTo}${filterParams}`,
         breakdownFetcher,
         { revalidateOnFocus: false }
     )

@@ -28,41 +28,100 @@ const COUNTRY_FLAGS: Record<string, string> = {
     'China': '🇨🇳',
 }
 
+// Filter interface
+interface Filters {
+    country?: string[]
+    city?: string[]
+    device?: string[]
+    browser?: string[]
+    os?: string[]
+}
+
+// Build filter WHERE clauses
+function buildFilterClauses(filters: Filters): string {
+    const clauses: string[] = []
+
+    if (filters.country && filters.country.length > 0) {
+        const countries = filters.country.map(c => `'${c}'`).join(',')
+        clauses.push(`country IN (${countries})`)
+    }
+    if (filters.city && filters.city.length > 0) {
+        const cities = filters.city.map(c => `'${c}'`).join(',')
+        clauses.push(`city IN (${cities})`)
+    }
+    if (filters.device && filters.device.length > 0) {
+        const devices = filters.device.map(d => `'${d}'`).join(',')
+        clauses.push(`device IN (${devices})`)
+    }
+    // Browser and OS require special handling since they're derived from user_agent
+    if (filters.browser && filters.browser.length > 0) {
+        const browserConditions = filters.browser.map(b => {
+            switch (b) {
+                case 'Chrome': return `(positionCaseInsensitive(user_agent, 'Chrome') > 0 AND positionCaseInsensitive(user_agent, 'Edg') = 0)`
+                case 'Safari': return `(positionCaseInsensitive(user_agent, 'Safari') > 0 AND positionCaseInsensitive(user_agent, 'Chrome') = 0)`
+                case 'Firefox': return `positionCaseInsensitive(user_agent, 'Firefox') > 0`
+                case 'Edge': return `positionCaseInsensitive(user_agent, 'Edg') > 0`
+                case 'Opera': return `(positionCaseInsensitive(user_agent, 'Opera') > 0 OR positionCaseInsensitive(user_agent, 'OPR') > 0)`
+                default: return '1=1'
+            }
+        }).join(' OR ')
+        clauses.push(`(${browserConditions})`)
+    }
+    if (filters.os && filters.os.length > 0) {
+        const osConditions = filters.os.map(o => {
+            switch (o) {
+                case 'Windows': return `positionCaseInsensitive(user_agent, 'Windows') > 0`
+                case 'macOS': return `(positionCaseInsensitive(user_agent, 'Mac OS X') > 0 OR positionCaseInsensitive(user_agent, 'Macintosh') > 0)`
+                case 'iOS': return `(positionCaseInsensitive(user_agent, 'iPhone') > 0 OR positionCaseInsensitive(user_agent, 'iPad') > 0)`
+                case 'Android': return `positionCaseInsensitive(user_agent, 'Android') > 0`
+                case 'Linux': return `positionCaseInsensitive(user_agent, 'Linux') > 0`
+                default: return '1=1'
+            }
+        }).join(' OR ')
+        clauses.push(`(${osConditions})`)
+    }
+
+    return clauses.length > 0 ? ' AND ' + clauses.join(' AND ') : ''
+}
+
 // SQL queries for each dimension (FORMAT JSON required for proper response)
-const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, dateTo: string) => string> = {
-    countries: (workspaceId, dateFrom, dateTo) => `
+const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, dateTo: string, filters: Filters) => string> = {
+    countries: (workspaceId, dateFrom, dateTo, filters) => `
         SELECT country, count() as clicks
         FROM clicks
         WHERE workspace_id = '${workspaceId}'
           AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+          ${buildFilterClauses(filters)}
         GROUP BY country
         ORDER BY clicks DESC
         LIMIT 20
         FORMAT JSON
     `,
-    cities: (workspaceId, dateFrom, dateTo) => `
+    cities: (workspaceId, dateFrom, dateTo, filters) => `
         SELECT city, country, count() as clicks
         FROM clicks
         WHERE workspace_id = '${workspaceId}'
           AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+          ${buildFilterClauses(filters)}
         GROUP BY city, country
         ORDER BY clicks DESC
         LIMIT 20
         FORMAT JSON
     `,
-    devices: (workspaceId, dateFrom, dateTo) => `
+    devices: (workspaceId, dateFrom, dateTo, filters) => `
         SELECT device, count() as clicks
         FROM clicks
         WHERE workspace_id = '${workspaceId}'
           AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+          ${buildFilterClauses(filters)}
         GROUP BY device
         ORDER BY clicks DESC
         FORMAT JSON
     `,
-    browsers: (workspaceId, dateFrom, dateTo) => `
+    browsers: (workspaceId, dateFrom, dateTo, filters) => `
         SELECT 
             CASE
                 WHEN positionCaseInsensitive(user_agent, 'Chrome') > 0 AND positionCaseInsensitive(user_agent, 'Edg') = 0 THEN 'Chrome'
@@ -77,11 +136,12 @@ const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, 
         WHERE workspace_id = '${workspaceId}'
           AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+          ${buildFilterClauses(filters)}
         GROUP BY browser
         ORDER BY clicks DESC
         FORMAT JSON
     `,
-    os: (workspaceId, dateFrom, dateTo) => `
+    os: (workspaceId, dateFrom, dateTo, filters) => `
         SELECT 
             CASE
                 WHEN positionCaseInsensitive(user_agent, 'Windows') > 0 THEN 'Windows'
@@ -96,11 +156,13 @@ const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, 
         WHERE workspace_id = '${workspaceId}'
           AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+          ${buildFilterClauses(filters)}
         GROUP BY os
         ORDER BY clicks DESC
         FORMAT JSON
     `,
 }
+
 
 
 /**
@@ -214,13 +276,27 @@ export async function GET(request: NextRequest) {
             dateTo = `${dateTo}T23:59:59`
         }
 
+        // Parse filters from query params
+        const filters: Filters = {}
+        const countryFilter = searchParams.get('country')
+        const cityFilter = searchParams.get('city')
+        const deviceFilter = searchParams.get('device')
+        const browserFilter = searchParams.get('browser')
+        const osFilter = searchParams.get('os')
+
+        if (countryFilter) filters.country = countryFilter.split(',')
+        if (cityFilter) filters.city = cityFilter.split(',')
+        if (deviceFilter) filters.device = deviceFilter.split(',')
+        if (browserFilter) filters.browser = browserFilter.split(',')
+        if (osFilter) filters.os = osFilter.split(',')
+
         // Get SQL query for dimension
         const queryBuilder = DIMENSION_QUERIES[dimension]
         if (!queryBuilder) {
             return NextResponse.json({ error: 'Invalid dimension' }, { status: 400 })
         }
 
-        const sql = queryBuilder(workspaceId, dateFrom, dateTo)
+        const sql = queryBuilder(workspaceId, dateFrom, dateTo, filters)
         console.log('[Breakdown API] Executing SQL:', sql)
 
         // Use Tinybird SQL endpoint directly with JSON format
