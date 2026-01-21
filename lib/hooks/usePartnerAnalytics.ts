@@ -116,13 +116,13 @@ export function usePartnerAnalytics(): UsePartnerAnalyticsResult {
             const { getPartnerDashboard } = await import('@/app/actions/partners')
             const result = await getPartnerDashboard()
 
-            if (result.success && result.stats) {
+            if ('stats' in result && result.stats) {
                 setStats({
-                    totalClicks: 0, // Not available in DB fallback
-                    totalSales: result.stats.conversionCount || 0,
-                    totalRevenue: result.stats.totalEarned || 0,
-                    totalCommission: result.stats.totalEarned || 0,
-                    pendingPayout: result.stats.pendingAmount || 0
+                    totalClicks: result.stats.totalClicks || 0,
+                    totalSales: result.stats.totalSales || 0,
+                    totalRevenue: result.stats.totalEarnings || 0,
+                    totalCommission: result.stats.totalEarnings || 0,
+                    pendingPayout: 0
                 })
             }
         } catch (fallbackError) {

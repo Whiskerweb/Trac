@@ -48,14 +48,20 @@ export default function PayoutsPage() {
             try {
                 const [dashboardResult, commissionsResult] = await Promise.all([
                     getPartnerDashboard(),
-                    getPartnerCommissions(50)
+                    getPartnerCommissions()
                 ])
 
-                if (dashboardResult.success && dashboardResult.stats) {
-                    setStats(dashboardResult.stats)
+                if ('stats' in dashboardResult && dashboardResult.stats) {
+                    // Map stats to expected format
+                    setStats({
+                        pendingAmount: 0,
+                        dueAmount: 0,
+                        paidAmount: 0,
+                        totalEarned: dashboardResult.stats.totalEarnings
+                    })
                 }
-                if (commissionsResult.success && commissionsResult.commissions) {
-                    setCommissions(commissionsResult.commissions)
+                if ('commissions' in commissionsResult && commissionsResult.commissions) {
+                    setCommissions(commissionsResult.commissions as Commission[])
                 }
             } catch (error) {
                 console.error('Failed to fetch payouts data:', error)

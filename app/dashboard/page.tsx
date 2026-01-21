@@ -47,6 +47,25 @@ interface ActiveFilter {
     icon?: React.ReactNode
 }
 
+// Analytics display item types
+interface LocationItem {
+    name: string
+    flag: string
+    count: number
+    country?: string
+}
+
+interface DeviceItem {
+    name: string
+    count: number
+    icon: React.ComponentType<{ className?: string }>
+}
+
+interface AnalyticsItem {
+    name: string
+    count: number
+}
+
 const kpiFetcher = async (url: string): Promise<KPIResponse> => {
     const res = await fetch(`${url}&_t=${Date.now()}`, { cache: 'no-store' })
     if (!res.ok) throw new Error('Failed to fetch')
@@ -636,7 +655,7 @@ export default function DashboardPage() {
     }, [countryFilters, deviceFilters, cityFilters, regionFilters, continentFilters, browserFilters, osFilters])
 
     // Display data - USE API DATA with mock fallback for cross-filtering
-    const displayLocations = useMemo(() => {
+    const displayLocations = useMemo((): LocationItem[] => {
         // If we have API data and no filters, use it
         if (apiCountries.length > 0 && activeFilters.length === 0) {
             return apiCountries.map((c: any) => ({ name: c.name, flag: c.flag || '🌍', count: c.clicks || 0 }))
@@ -647,7 +666,7 @@ export default function DashboardPage() {
             .sort((a, b) => b.count - a.count)
     }, [apiCountries, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
 
-    const displayDevices = useMemo(() => {
+    const displayDevices = useMemo((): DeviceItem[] => {
         if (apiDevices.length > 0 && activeFilters.length === 0) {
             return apiDevices.map((d: any) => ({
                 name: d.name,
@@ -660,7 +679,7 @@ export default function DashboardPage() {
             .sort((a, b) => b.count - a.count)
     }, [apiDevices, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
 
-    const displayCities = useMemo(() => {
+    const displayCities = useMemo((): LocationItem[] => {
         if (apiCities.length > 0 && activeFilters.length === 0) {
             return apiCities.map((c: any) => ({ name: c.name, country: c.country || '', flag: c.flag || '🌍', count: c.clicks || 0 }))
         }
@@ -669,15 +688,15 @@ export default function DashboardPage() {
             .sort((a, b) => b.count - a.count)
     }, [apiCities, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
 
-    const displayRegions = useMemo(() => aggregateBy(getEventsExcludingFilterType('region'), 'region')
+    const displayRegions = useMemo((): LocationItem[] => aggregateBy(getEventsExcludingFilterType('region'), 'region')
         .map(r => ({ ...r, flag: COUNTRY_FLAGS[r.country] || '🌍' }))
         .sort((a, b) => b.count - a.count), [getEventsExcludingFilterType, aggregateBy])
 
-    const displayContinents = useMemo(() => aggregateBy(getEventsExcludingFilterType('continent'), 'continent')
+    const displayContinents = useMemo((): LocationItem[] => aggregateBy(getEventsExcludingFilterType('continent'), 'continent')
         .map(c => ({ ...c, flag: c.name === 'Europe' ? '🌍' : c.name === 'North America' ? '🌎' : '🌏' }))
         .sort((a, b) => b.count - a.count), [getEventsExcludingFilterType, aggregateBy])
 
-    const displayBrowsers = useMemo(() => {
+    const displayBrowsers = useMemo((): AnalyticsItem[] => {
         if (apiBrowsers.length > 0 && activeFilters.length === 0) {
             return apiBrowsers.map((b: any) => ({ name: b.name, count: b.clicks || 0 }))
         }
@@ -685,7 +704,7 @@ export default function DashboardPage() {
             .sort((a, b) => b.count - a.count)
     }, [apiBrowsers, activeFilters.length, getEventsExcludingFilterType, aggregateBy])
 
-    const displayOS = useMemo(() => {
+    const displayOS = useMemo((): AnalyticsItem[] => {
         if (apiOS.length > 0 && activeFilters.length === 0) {
             return apiOS.map((o: any) => ({ name: o.name, count: o.clicks || 0 }))
         }
@@ -730,13 +749,13 @@ export default function DashboardPage() {
 
     const displayTimeseries = getFilteredTimeseries()
 
-    const maxLocation = Math.max(...displayLocations.map(l => l.count), 1)
-    const maxDevice = Math.max(...displayDevices.map(d => d.count), 1)
-    const maxCity = Math.max(...displayCities.map(c => c.count), 1)
-    const maxRegion = Math.max(...displayRegions.map(r => r.count), 1)
-    const maxContinent = Math.max(...displayContinents.map(c => c.count), 1)
-    const maxBrowser = Math.max(...displayBrowsers.map(b => b.count), 1)
-    const maxOS = Math.max(...displayOS.map(o => o.count), 1)
+    const maxLocation = Math.max(...displayLocations.map((l: { count: number }) => l.count), 1)
+    const maxDevice = Math.max(...displayDevices.map((d: { count: number }) => d.count), 1)
+    const maxCity = Math.max(...displayCities.map((c: { count: number }) => c.count), 1)
+    const maxRegion = Math.max(...displayRegions.map((r: { count: number }) => r.count), 1)
+    const maxContinent = Math.max(...displayContinents.map((c: { count: number }) => c.count), 1)
+    const maxBrowser = Math.max(...displayBrowsers.map((b: { count: number }) => b.count), 1)
+    const maxOS = Math.max(...displayOS.map((o: { count: number }) => o.count), 1)
 
     const handleSelectRange = (range: typeof DATE_RANGES[0]) => {
         setSelectedRange(range)

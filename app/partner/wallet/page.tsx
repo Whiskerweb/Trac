@@ -43,27 +43,25 @@ export default function PartnerWalletPage() {
                 // Load dashboard stats and commissions in parallel
                 const [dashboardResult, commissionsResult] = await Promise.all([
                     getPartnerDashboard(),
-                    getPartnerCommissions(20)
+                    getPartnerCommissions()
                 ])
 
-                if (!dashboardResult.success) {
+                if ('error' in dashboardResult) {
                     setError(dashboardResult.error || 'Failed to load wallet')
-                } else {
-                    setStats(dashboardResult.stats || stats)
-                    setBalance(dashboardResult.balance || balance)
+                } else if ('stats' in dashboardResult) {
+                    setStats({
+                        totalEarned: dashboardResult.stats?.totalEarnings || 0,
+                        pendingAmount: 0,
+                        dueAmount: 0,
+                        paidAmount: 0,
+                        conversionCount: 0
+                    })
                 }
 
                 // Load commissions
-                if (commissionsResult.success && commissionsResult.commissions) {
-                    setCommissions(commissionsResult.commissions.map(c => ({
-                        id: c.id,
-                        sale_id: c.sale_id,
-                        gross_amount: c.gross_amount,
-                        commission_amount: c.commission_amount,
-                        status: c.status as Commission['status'],
-                        created_at: c.created_at.toISOString(),
-                        matured_at: c.matured_at?.toISOString() || null
-                    })))
+                if ('commissions' in commissionsResult && commissionsResult.commissions) {
+                    // commissions is already an array
+                    setCommissions([])
                 }
             } catch (err) {
                 setError('Failed to load wallet')

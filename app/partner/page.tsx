@@ -7,11 +7,11 @@ import { getPartnerDashboard } from '@/app/actions/partners'
 import { getMyEnrollments, getMyGlobalStats } from '@/app/actions/marketplace'
 
 interface Stats {
-    totalEarned: number
-    pendingAmount: number
-    dueAmount: number
-    paidAmount: number
-    conversionCount: number
+    totalClicks: number
+    totalEarnings: number
+    totalSales: number
+    conversionRate: number
+    activeMissions: number
 }
 
 interface Enrollment {
@@ -290,16 +290,16 @@ export default function PartnerDashboardPage() {
                     getMyGlobalStats()
                 ])
 
-                if (dashboardRes.success && dashboardRes.stats) {
-                    setStats(dashboardRes.stats)
+                if ('stats' in dashboardRes && dashboardRes.stats) {
+                    setStats(dashboardRes.stats as Stats)
                 }
-                if (enrollmentsRes.success && enrollmentsRes.enrollments) {
-                    setEnrollments(enrollmentsRes.enrollments)
+                if ('enrollments' in enrollmentsRes && enrollmentsRes.enrollments) {
+                    setEnrollments(enrollmentsRes.enrollments as Enrollment[])
                 }
-                if (globalStatsRes.success && globalStatsRes.stats) {
+                if ('stats' in globalStatsRes && globalStatsRes.stats) {
                     setGlobalStats(globalStatsRes.stats)
                 }
-                if (!dashboardRes.success && !enrollmentsRes.success) {
+                if ('error' in dashboardRes && 'error' in enrollmentsRes) {
                     setError(dashboardRes.error || enrollmentsRes.error || 'Erreur')
                 }
             } catch (e) {

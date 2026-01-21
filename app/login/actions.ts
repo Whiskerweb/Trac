@@ -94,7 +94,7 @@ export async function login(formData: FormData) {
     // =============================================
     if (data.user) {
         const claimed = await claimPartners(data.user.id, email)
-        if (claimed.claimed > 0) {
+        if (claimed.success && claimed.claimed && claimed.claimed > 0) {
             console.log(`[Auth] ✨ Claimed ${claimed.claimed} shadow partners for ${email}`)
         }
     }
@@ -193,7 +193,7 @@ export async function signup(formData: FormData) {
     // =============================================
     if (data.user) {
         const claimed = await claimPartners(data.user.id, email)
-        if (claimed.claimed > 0) {
+        if (claimed.success && claimed.claimed && claimed.claimed > 0) {
             console.log(`[Auth] ✨ Claimed ${claimed.claimed} shadow partners for ${email}`)
         }
     }

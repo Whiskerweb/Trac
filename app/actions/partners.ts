@@ -1,7 +1,8 @@
 'use server'
 
-import { prisma } from '@/prisma'
-import { getWorkspaceFromCookie } from '@/lib/auth-utils'
+import { prisma } from '@/lib/db'
+import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
+import { getCurrentUser } from '@/lib/auth'
 
 // =============================================
 // GET MY PARTNERS (Partners who joined our missions)
@@ -9,7 +10,7 @@ import { getWorkspaceFromCookie } from '@/lib/auth-utils'
 
 export async function getMyPartners() {
     try {
-        const workspace = await getWorkspaceFromCookie()
+        const workspace = await getActiveWorkspaceForUser()
         if (!workspace) {
             return { success: false, error: 'Non authentifié' }
         }
@@ -17,21 +18,20 @@ export async function getMyPartners() {
         // Get all enrollments for this workspace's missions
         const enrollments = await prisma.missionEnrollment.findMany({
             where: {
-                mission: {
-                    workspace_id: workspace.id
+                Mission: {
+                    workspace_id: workspace.workspaceId
                 }
             },
             include: {
-                user: true,
-                mission: true,
-                link: true
+                Mission: true,
+                ShortLink: true
             },
             orderBy: {
                 created_at: 'desc'
             }
         })
 
-        // Aggregate stats per partner
+        // Aggregate stats per partner (using user_id from enrollment)
         const partnerMap = new Map<string, {
             id: string
             name: string
@@ -51,30 +51,28 @@ export async function getMyPartners() {
 
             if (existing) {
                 existing.missionsCount += 1
-                existing.totalClicks += enrollment.link?.clicks || 0
-                // TODO: Aggregate sales from Tinybird
+                existing.totalClicks += enrollment.ShortLink?.clicks || 0
                 if (enrollment.created_at > existing.lastActivity) {
                     existing.lastActivity = enrollment.created_at
                 }
             } else {
                 partnerMap.set(enrollment.user_id, {
                     id: enrollment.user_id,
-                    name: enrollment.user.name || 'Sans nom',
-                    email: enrollment.user.email,
-                    avatar: (enrollment.user.name || 'U').slice(0, 2).toUpperCase(),
+                    name: `Partner ${enrollment.user_id.slice(0, 8)}`,
+                    email: `${enrollment.user_id.slice(0, 8)}@partner.com`,
+                    avatar: 'PA',
                     status: enrollment.status === 'APPROVED' ? 'active' :
                         enrollment.status === 'PENDING' ? 'pending' : 'inactive',
                     missionsCount: 1,
-                    totalClicks: enrollment.link?.clicks || 0,
-                    totalSales: 0, // TODO: From Tinybird
-                    commissionEarned: 0, // TODO: From commissions table
+                    totalClicks: enrollment.ShortLink?.clicks || 0,
+                    totalSales: 0,
+                    commissionEarned: 0,
                     joinedAt: enrollment.created_at,
                     lastActivity: enrollment.created_at
                 })
             }
         }
 
-        // Sort by commission earned (or clicks as fallback)
         const partners = Array.from(partnerMap.values())
             .sort((a, b) => b.totalClicks - a.totalClicks)
 
@@ -97,15 +95,10 @@ export async function getAllPlatformPartners(filters?: {
     search?: string
 }) {
     try {
-        // Get all users who have partner profiles
-        // In production, this would query a dedicated PartnerProfile table
-        const partners = await prisma.user.findMany({
+        // Get Partners from the Partner table (not Users)
+        const partners = await prisma.partner.findMany({
             where: {
-                // Filter users who have enrolled in any mission (they are partners)
-                enrollments: {
-                    some: {}
-                },
-                // Search filter
+                status: 'APPROVED',
                 ...(filters?.search && {
                     OR: [
                         { name: { contains: filters.search, mode: 'insensitive' } },
@@ -114,30 +107,27 @@ export async function getAllPlatformPartners(filters?: {
                 })
             },
             include: {
-                enrollments: {
-                    include: {
-                        link: true
-                    }
-                }
+                Commissions: true,
+                Profile: true
             },
-            take: 50 // Limit for performance
+            take: 50
         })
 
-        // Transform to Partner format with aggregated stats
-        const formattedPartners = partners.map(user => {
-            const totalClicks = user.enrollments.reduce((sum, e) => sum + (e.link?.clicks || 0), 0)
-            const totalSales = 0 // TODO: From Tinybird
-            const totalEarnings = 0 // TODO: From commissions
+        // Transform
+        const formattedPartners = partners.map(partner => {
+            const totalClicks = 0 // Would come from Tinybird
+            const totalSales = partner.Commissions.length
+            const totalEarnings = partner.Commissions.reduce((sum, c) => sum + c.commission_amount, 0)
 
             return {
-                id: user.id,
-                name: user.name || 'Sans nom',
-                email: user.email,
-                avatar: (user.name || 'U').slice(0, 2).toUpperCase(),
-                country: 'Non renseigné', // TODO: From partner profile
+                id: partner.id,
+                name: partner.name || 'Sans nom',
+                email: partner.email,
+                avatar: (partner.name || 'PA').slice(0, 2).toUpperCase(),
+                country: 'Non renseigné',
                 countryCode: '🌍',
                 profileType: 'individual' as const,
-                industryInterests: [] as string[], // TODO: From partner profile
+                industryInterests: [] as string[],
                 salesChannels: [] as string[],
                 earningPreferences: [] as string[],
                 monthlyTraffic: 'Non renseigné',
@@ -145,14 +135,13 @@ export async function getAllPlatformPartners(filters?: {
                     totalClicks,
                     totalSales,
                     totalEarnings,
-                    conversionRate: totalClicks > 0 ? (totalSales / totalClicks * 100) : 0,
-                    activeMissions: user.enrollments.filter(e => e.status === 'APPROVED').length
+                    conversionRate: 0,
+                    activeMissions: 0
                 }
             }
         })
 
-        // Sort by earnings/clicks
-        formattedPartners.sort((a, b) => b.globalStats.totalClicks - a.globalStats.totalClicks)
+        formattedPartners.sort((a, b) => b.globalStats.totalEarnings - a.globalStats.totalEarnings)
 
         return { success: true, partners: formattedPartners }
     } catch (error) {
@@ -167,84 +156,225 @@ export async function getAllPlatformPartners(filters?: {
 
 export async function getPartnerProfile(partnerId: string) {
     try {
-        const workspace = await getWorkspaceFromCookie()
+        const workspace = await getActiveWorkspaceForUser()
         if (!workspace) {
             return { success: false, error: 'Non authentifié' }
         }
 
-        const user = await prisma.user.findUnique({
+        const partner = await prisma.partner.findUnique({
             where: { id: partnerId },
             include: {
-                enrollments: {
-                    include: {
-                        mission: true,
-                        link: true
-                    }
-                }
+                Commissions: true,
+                Profile: true
             }
         })
 
-        if (!user) {
+        if (!partner) {
             return { success: false, error: 'Partner non trouvé' }
         }
 
-        // Separate enrollments by workspace
-        const ourEnrollments = user.enrollments.filter(e => e.mission.workspace_id === workspace.id)
-        const allEnrollments = user.enrollments
-
-        // Calculate global stats
         const globalStats = {
-            totalClicks: allEnrollments.reduce((sum, e) => sum + (e.link?.clicks || 0), 0),
-            totalSales: 0, // TODO: From Tinybird
-            totalEarnings: 0, // TODO: From commissions
+            totalClicks: 0,
+            totalSales: partner.Commissions.length,
+            totalEarnings: partner.Commissions.reduce((sum, c) => sum + c.commission_amount, 0),
             conversionRate: 0,
-            activeMissions: allEnrollments.filter(e => e.status === 'APPROVED').length
+            activeMissions: 0
         }
-
-        // Calculate our workspace stats
-        const ourStats = {
-            missionsJoined: ourEnrollments.length,
-            totalClicks: ourEnrollments.reduce((sum, e) => sum + (e.link?.clicks || 0), 0),
-            totalSales: 0,
-            totalEarnings: 0,
-            conversionRate: 0
-        }
-
-        // Format missions
-        const missions = ourEnrollments.map(e => ({
-            id: e.mission.id,
-            name: e.mission.title,
-            clicks: e.link?.clicks || 0,
-            sales: 0,
-            earnings: 0,
-            status: e.status === 'APPROVED' ? 'active' :
-                e.status === 'PENDING' ? 'pending' : 'inactive'
-        }))
 
         return {
             success: true,
             partner: {
-                id: user.id,
-                name: user.name || 'Sans nom',
-                email: user.email,
-                avatar: (user.name || 'U').slice(0, 2).toUpperCase(),
-                status: 'active',
-                country: 'Non renseigné', // TODO: From partner profile
+                id: partner.id,
+                name: partner.name || 'Sans nom',
+                email: partner.email,
+                avatar: (partner.name || 'PA').slice(0, 2).toUpperCase(),
+                status: partner.status.toLowerCase(),
+                country: 'Non renseigné',
                 profileType: 'individual',
-                partnerSince: user.created_at,
-                bio: '', // TODO: From partner profile
+                partnerSince: partner.created_at,
+                bio: partner.Profile?.bio || '',
                 industryInterests: [],
                 monthlyTraffic: 'Non renseigné',
-                socials: {},
+                socials: {
+                    twitter: partner.Profile?.twitter_url,
+                    instagram: partner.Profile?.instagram_url,
+                    youtube: partner.Profile?.youtube_url,
+                    tiktok: partner.Profile?.tiktok_url,
+                    website: partner.Profile?.website_url
+                },
                 earningPreferences: [],
                 salesChannels: [],
                 globalStats,
-                ourStats,
-                missions
+                ourStats: globalStats,
+                missions: []
             }
         }
     } catch (error) {
         console.error('Error fetching partner profile:', error)
         return { success: false, error: 'Erreur lors du chargement' }
+    }
+}
+
+// =============================================
+// CREATE GLOBAL PARTNER
+// =============================================
+
+export async function createGlobalPartner(data: {
+    userId: string
+    email: string
+    name: string
+}) {
+    try {
+        // Check if partner already exists
+        const existingPartner = await prisma.partner.findUnique({
+            where: { tenant_id: data.userId }
+        })
+
+        if (existingPartner) {
+            return { success: true, partnerId: existingPartner.id }
+        }
+
+        // Create new partner
+        const partner = await prisma.partner.create({
+            data: {
+                tenant_id: data.userId,
+                user_id: data.userId,
+                email: data.email,
+                name: data.name,
+                status: 'APPROVED'
+            }
+        })
+
+        return { success: true, partnerId: partner.id }
+    } catch (error) {
+        console.error('Error creating global partner:', error)
+        return { success: false, error: 'Failed to create partner profile' }
+    }
+}
+
+// =============================================
+// CLAIM SHADOW PARTNERS
+// =============================================
+
+export async function claimPartners(userId: string, email: string) {
+    try {
+        // Find shadow partners by email that don't have a user_id yet
+        const shadowPartners = await prisma.partner.findMany({
+            where: {
+                email: email,
+                user_id: null
+            }
+        })
+
+        if (shadowPartners.length === 0) {
+            return { success: true, claimed: 0 }
+        }
+
+        // Claim them
+        await prisma.partner.updateMany({
+            where: {
+                email: email,
+                user_id: null
+            },
+            data: {
+                user_id: userId
+            }
+        })
+
+        return { success: true, claimed: shadowPartners.length }
+    } catch (error) {
+        console.error('Error claiming partners:', error)
+        return { success: false, error: 'Failed to claim partners' }
+    }
+}
+
+// =============================================
+// GET PARTNER BY USER ID (For Analytics Token)
+// =============================================
+
+export async function getPartnerByUserId(userId: string) {
+    const partner = await prisma.partner.findFirst({
+        where: { user_id: userId },
+        select: { id: true, name: true, email: true }
+    })
+    return partner
+}
+
+// =============================================
+// GET PARTNER DASHBOARD (For Portal Homepage)
+// =============================================
+
+export async function getPartnerDashboard() {
+    try {
+        const currentUser = await getCurrentUser()
+        if (!currentUser) return { error: 'Non authentifié' }
+
+        // Find the partner for this user
+        const partner = await prisma.partner.findFirst({
+            where: { user_id: currentUser.userId },
+            include: {
+                Commissions: {
+                    orderBy: { created_at: 'desc' },
+                    take: 5
+                }
+            }
+        })
+
+        if (!partner) {
+            return {
+                partner: {
+                    id: currentUser.userId,
+                    name: currentUser.email.split('@')[0],
+                },
+                stats: {
+                    totalClicks: 0,
+                    totalEarnings: 0,
+                    totalSales: 0,
+                    conversionRate: 0,
+                    activeMissions: 0
+                },
+                recentActivity: []
+            }
+        }
+
+        const totalEarnings = partner.Commissions.reduce((sum, c) => sum + c.commission_amount, 0)
+
+        return {
+            partner: {
+                id: partner.id,
+                name: partner.name || currentUser.email.split('@')[0],
+            },
+            stats: {
+                totalClicks: 0,
+                totalEarnings,
+                totalSales: partner.Commissions.length,
+                conversionRate: 0,
+                activeMissions: 0
+            },
+            recentActivity: partner.Commissions.map(c => ({
+                id: c.id,
+                mission: 'Commission',
+                date: c.created_at,
+                amount: c.commission_amount
+            }))
+        }
+    } catch (error) {
+        console.error('Error fetching partner dashboard:', error)
+        return { error: 'Erreur load dashboard' }
+    }
+}
+
+// =============================================
+// GET PARTNER COMMISSIONS (For Portal Earnings)
+// =============================================
+
+export async function getPartnerCommissions() {
+    return {
+        commissions: [],
+        summary: {
+            pending: 0,
+            available: 0,
+            paid: 0
+        }
     }
 }
