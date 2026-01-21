@@ -502,6 +502,7 @@ export default function DashboardPage() {
         if (apiCountries.length === 0) return []
 
         const COUNTRY_TO_CONTINENT: Record<string, string> = {
+            // Full names
             'France': 'Europe', 'Germany': 'Europe', 'United Kingdom': 'Europe', 'Spain': 'Europe',
             'Italy': 'Europe', 'Netherlands': 'Europe', 'Belgium': 'Europe', 'Switzerland': 'Europe',
             'Portugal': 'Europe', 'Poland': 'Europe', 'Austria': 'Europe', 'Sweden': 'Europe',
@@ -514,6 +515,18 @@ export default function DashboardPage() {
             'Australia': 'Oceania', 'New Zealand': 'Oceania',
             'Morocco': 'Africa', 'South Africa': 'Africa', 'Egypt': 'Africa', 'Nigeria': 'Africa',
             'United Arab Emirates': 'Asia', 'Israel': 'Asia', 'Turkey': 'Europe', 'Russia': 'Europe',
+            // ISO codes
+            'FR': 'Europe', 'DE': 'Europe', 'GB': 'Europe', 'UK': 'Europe', 'ES': 'Europe',
+            'IT': 'Europe', 'NL': 'Europe', 'BE': 'Europe', 'CH': 'Europe', 'PT': 'Europe',
+            'PL': 'Europe', 'AT': 'Europe', 'SE': 'Europe', 'NO': 'Europe', 'DK': 'Europe',
+            'FI': 'Europe', 'IE': 'Europe', 'TR': 'Europe', 'RU': 'Europe',
+            'US': 'North America', 'CA': 'North America', 'MX': 'North America',
+            'BR': 'South America', 'AR': 'South America', 'CL': 'South America', 'CO': 'South America',
+            'JP': 'Asia', 'CN': 'Asia', 'KR': 'Asia', 'IN': 'Asia', 'SG': 'Asia',
+            'TH': 'Asia', 'VN': 'Asia', 'ID': 'Asia', 'MY': 'Asia', 'PH': 'Asia', 'HK': 'Asia',
+            'AU': 'Oceania', 'NZ': 'Oceania',
+            'MA': 'Africa', 'ZA': 'Africa', 'EG': 'Africa', 'NG': 'Africa',
+            'AE': 'Asia', 'IL': 'Asia',
         }
 
         const continentCounts: Record<string, number> = {}
