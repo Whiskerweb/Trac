@@ -15,7 +15,7 @@ const faqs = [
     },
     {
         question: "Est-ce que traaaction.com est gratuit ?",
-        answer: "L'inscription est totalement gratuite pour les vendeurs. Pour les startups, nous proposons différents plans adaptés à vos besoins de croissance, avec une tarification transparente basée sur la performance et l'accès aux fonctionnalités premium."
+        answer: "Oui, traaaction.com ne propose aucune feature payante. Nous nous rémunérons uniquement à la commission, à hauteur de 15% par vente générée."
     },
     {
         question: "En quoi traaaction.com est différent de Bitly, Linktree ou Rebrandly ?",
