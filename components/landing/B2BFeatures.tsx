@@ -65,19 +65,42 @@ export const B2BFeatures = () => {
 
 
             {/* Testimonial Section - Kate B. Masson */}
-            <div className="border-t border-slate-200 bg-slate-50/50">
-                <div className="container mx-auto px-4 max-w-4xl py-20">
-                    <div className="flex flex-col items-center text-center space-y-6">
-                        <div className="w-16 h-16 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm">
-                            <Image src="/Logotrac/katemasson.png" alt="Kate B. Masson" width={64} height={64} className="object-cover w-full h-full" />
-                        </div>
-                        <blockquote className="text-xl md:text-2xl font-medium text-slate-900 leading-relaxed max-w-2xl">
+            {/* Testimonial Section - Kate B. Masson */}
+            <div className="border-t border-slate-200 bg-white relative overflow-hidden">
+                {/* Dot Grid Background */}
+                <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px] opacity-60" />
+
+                <div className="container mx-auto px-4 max-w-5xl py-24 relative z-10">
+                    <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-12 md:gap-20">
+
+                        {/* Left: Quote */}
+                        <blockquote className="flex-1 text-xl md:text-2xl font-medium text-slate-900 leading-tight tracking-tight text-center md:text-left">
                             &quot;Traaaction is solving a major painpoint in Europe and in the rest of the world: start-ups need sales traction to raise money. Young professionals are keen to work on sales missions to kick-off their careers and generate revenue. Traaaction is there to connect start-ups and young professionals for the best!&quot;
                         </blockquote>
-                        <div>
-                            <div className="font-bold text-slate-900">Kate B. Masson</div>
-                            <div className="text-sm text-slate-500">Co-founder Traaaction</div>
+
+                        {/* Right: Profile Stack */}
+                        <div className="flex flex-col items-center md:items-end gap-6 shrink-0">
+                            <div className="text-center md:text-right">
+                                <div className="font-bold text-slate-900 text-lg">Kate B. Masson</div>
+                                <div className="text-sm text-slate-500 font-medium">Co-founder Traaaction</div>
+                            </div>
+
+                            {/* Avatar at bottom right like reference */}
+                            <a
+                                href="https://www.linkedin.com/in/catherine-kate-bourlier-masson/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border border-slate-200 shadow-sm relative grayscale hover:grayscale-0 transition-all duration-500 block"
+                            >
+                                <Image
+                                    src="/Logotrac/katemasson.png"
+                                    alt="Kate B. Masson"
+                                    fill
+                                    className="object-cover"
+                                />
+                            </a>
                         </div>
+
                     </div>
                 </div>
             </div>
