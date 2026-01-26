@@ -147,7 +147,7 @@ const SecondaryFeatures = () => {
     return (
         <div className="flex flex-col gap-12">
             {/* 1. Large Visual Display Area (Top) */}
-            <div className="w-full aspect-[16/10] md:h-[500px] bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden relative shadow-[inset_0_0_40px_rgba(0,0,0,0.02)]">
+            <div className="w-full min-h-[400px] md:h-[500px] bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden relative shadow-[inset_0_0_40px_rgba(0,0,0,0.02)]">
                 {/* Subtle Grid Background */}
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] opacity-50" />
 
