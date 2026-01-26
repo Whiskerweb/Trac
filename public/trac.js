@@ -45,9 +45,6 @@
 (function () {
     'use strict';
 
-    // =============================================
-    // TRAC UTILS (DUB.CO ARCHITECTURE)
-    // =============================================
 
     if (typeof window.TracUtils === 'undefined') {
         window.TracUtils = {
