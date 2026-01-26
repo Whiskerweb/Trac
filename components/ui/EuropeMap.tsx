@@ -87,8 +87,8 @@ export default function EuropeMap() {
                 style={{ width: "100%", height: "100%" }}
             >
                 <Geographies geography={geoUrl}>
-                    {({ geographies }) =>
-                        geographies.map((geo) => {
+                    {({ geographies }: { geographies: any[] }) =>
+                        geographies.map((geo: any) => {
                             const countryName = geo.properties.name;
                             // Highlight if ANY active event belongs to this country
                             const isActive = activeEvents.some(e => e.countryId === countryName);
