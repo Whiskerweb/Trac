@@ -32,16 +32,25 @@ export function Navbar() {
                 </div>
 
                 {/* Links */}
-                <div className="hidden md:flex items-center space-x-8">
-                    {['Features', 'Pricing', 'About'].map((item) => (
-                        <Link
-                            key={item}
-                            href={`#${item.toLowerCase()}`}
-                            className="text-sm font-medium text-gray-500 hover:text-black transition-colors"
-                        >
-                            {item}
-                        </Link>
-                    ))}
+                <div className="hidden md:flex items-center space-x-6">
+                    <Link
+                        href="#startups"
+                        className="text-sm font-medium text-gray-500 hover:text-black transition-colors"
+                    >
+                        For Startups
+                    </Link>
+                    <Link
+                        href="#sellers"
+                        className="text-sm font-medium text-gray-500 hover:text-black transition-colors"
+                    >
+                        For Sellers
+                    </Link>
+                    <Link
+                        href="#"
+                        className="text-sm font-medium text-gray-500 hover:text-black transition-colors"
+                    >
+                        Roadmap
+                    </Link>
                 </div>
 
                 {/* Actions */}

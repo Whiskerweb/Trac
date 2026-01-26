@@ -7,7 +7,7 @@ import SellerEarningsVisual from "../ui/SellerEarningsVisual";
 
 export const CutThroughTheNoise = () => {
     return (
-        <section className="bg-white border-y border-slate-200">
+        <section id="sellers" className="bg-white border-y border-slate-200">
             <div className="container mx-auto px-4 max-w-5xl py-24">
 
                 {/* Header - Centered per reference */}

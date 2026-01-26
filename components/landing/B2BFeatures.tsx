@@ -15,7 +15,7 @@ import { AdvancedFeatures, Tab } from "./AdvancedFeatures";
 
 export const B2BFeatures = () => {
     return (
-        <section className="bg-white border-y border-slate-200">
+        <section id="startups" className="bg-white border-y border-slate-200">
             <div className="container mx-auto px-4 max-w-5xl pt-16">
 
                 {/* Header - Centered per reference */}
