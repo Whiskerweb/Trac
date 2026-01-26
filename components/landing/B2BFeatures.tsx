@@ -11,6 +11,7 @@ import DetailedAnalyticsChart from "../ui/DetailedAnalyticsChart";
 // ... (skipping other lines for brevity in thought, but tool needs exact target)
 import MissionSelectorVisual from "../ui/MissionSelectorVisual";
 import SellerCardsVisual from "../ui/SellerCardsVisual";
+import { AdvancedFeatures, Tab } from "./AdvancedFeatures";
 
 export const B2BFeatures = () => {
     return (
@@ -108,97 +109,37 @@ export const B2BFeatures = () => {
             {/* Secondary Features Switcher (Dub.co Analytics/Insights Style) */}
             <div className="bg-white border-t border-slate-200">
                 <div className="container mx-auto px-4 max-w-5xl py-24">
-                    <SecondaryFeatures />
+                    <AdvancedFeatures tabs={managementTabs} />
                 </div>
             </div>
         </section >
     );
 };
 
-// --- Secondary Features Component (Bottom Nav + Top Visual) ---
+const managementTabs: Tab[] = [
+    {
+        id: 0,
+        title: "Connection domains",
+        desc: "Bypass ad-blockers and ensure every click is counted with our advanced link infrastructure.",
+        color: "emerald",
+        visual: ConnectionVisual
+    },
+    {
+        id: 1,
+        title: "Cross-border Expansion",
+        desc: "Scale across Europe. Select and manage local experts in France, Germany, or Spain directly.",
+        color: "blue",
+        visual: EuropeMap
+    },
+    {
+        id: 2,
+        title: "Global Payouts",
+        desc: "Pay all your partners instantly and simultaneously, anywhere in the world.",
+        color: "violet",
+        visual: PayoutsVisual
+    }
+];
 
-const SecondaryFeatures = () => {
-    const [activeTab, setActiveTab] = useState(0);
-
-    const tabs = [
-        {
-            id: 0,
-            title: "Connection domains",
-            desc: "Bypass ad-blockers and ensure every click is counted with our advanced link infrastructure.",
-            color: "emerald", // Green like provided screenshot
-            visual: ConnectionVisual
-        },
-        {
-            id: 1,
-            title: "Cross-border Expansion",
-            desc: "Scale across Europe. Select and manage local experts in France, Germany, or Spain directly.",
-            color: "blue",
-            visual: EuropeMap
-        },
-        {
-            id: 2,
-            title: "Global Payouts",
-            desc: "Pay all your partners instantly and simultaneously, anywhere in the world.",
-            color: "violet",
-            visual: PayoutsVisual
-        }
-    ];
-
-    return (
-        <div className="flex flex-col gap-12">
-            {/* 1. Large Visual Display Area (Top) */}
-            <div className="w-full min-h-[400px] md:h-[500px] bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden relative shadow-[inset_0_0_40px_rgba(0,0,0,0.02)]">
-                {/* Subtle Grid Background */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] opacity-50" />
-
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={activeTab}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="absolute inset-0 flex items-center justify-center p-4 md:p-8"
-                    >
-                        {createElement(tabs[activeTab].visual)}
-                    </motion.div>
-                </AnimatePresence>
-            </div>
-
-            {/* 2. Tab Navigation (Bottom Columns) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {tabs.map((tab, i) => {
-                    const isActive = activeTab === i;
-                    // Dynamic border color class
-                    const borderColor = isActive
-                        ? tab.color === "emerald" ? "border-emerald-500" : tab.color === "blue" ? "border-blue-500" : "border-violet-500"
-                        : "border-transparent";
-
-                    const titleColor = isActive ? "text-slate-900" : "text-slate-500";
-                    const linkColor = tab.color === "emerald" ? "text-emerald-600" : tab.color === "blue" ? "text-blue-600" : "text-violet-600";
-
-                    return (
-                        <button
-                            key={i}
-                            onClick={() => setActiveTab(i)}
-                            className={`flex flex-col text-left group pl-6 border-l-[3px] transition-all duration-300 ${borderColor} hover:border-slate-200`}
-                        >
-                            <h3 className={`text-lg font-bold mb-2 transition-colors ${titleColor} group-hover:text-slate-700`}>
-                                {tab.title}
-                            </h3>
-                            <p className="text-sm text-slate-500 leading-relaxed mb-3">
-                                {tab.desc}
-                            </p>
-                            <div className={`text-sm font-semibold flex items-center gap-1 ${isActive ? linkColor : "text-slate-400"} group-hover:${linkColor} transition-colors`}>
-                                Learn more <ArrowRight className="w-3.5 h-3.5" />
-                            </div>
-                        </button>
-                    )
-                })}
-            </div>
-        </div>
-    )
-}
 
 // --- Sub-components ---
 

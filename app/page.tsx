@@ -6,6 +6,7 @@ import { Footer } from '@/components/landing/Footer';
 import { Logos } from '@/components/landing/Logos';
 import { MissionSelector } from '@/components/landing/MissionSelector';
 import { B2BFeatures } from '@/components/landing/B2BFeatures';
+import { FAQ } from '@/components/landing/FAQ';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ export default function Home() {
         <B2BFeatures />
         {/* <ValueProps /> Keeping old value props for now, can perform cleanup later if redundant */}
         <Features />
+        <FAQ />
       </main>
       <Footer />
     </div>
