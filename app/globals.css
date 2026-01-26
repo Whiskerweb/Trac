@@ -5,6 +5,10 @@
   --font-geist-mono: 'Geist Mono', monospace;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
   --background: #FAFAFA;
   /* Dub.co light grey background */
