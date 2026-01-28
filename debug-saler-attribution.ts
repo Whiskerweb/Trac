@@ -28,10 +28,10 @@ async function debugSalerAttribution() {
     console.log(`   - Status: ${seller.status}`)
 
     // Also get the user info
-    const user = await prisma.user.findUnique({
+    const user = seller.user_id ? await prisma.user.findUnique({
         where: { id: seller.user_id },
         select: { id: true, email: true }
-    })
+    }) : null
     if (user) {
         console.log(`   - User Email: ${user.email}`)
     }
@@ -59,7 +59,7 @@ async function debugSalerAttribution() {
 
     // 3. Check enrollment
     console.log('\n📝 Step 3: Checking Enrollment')
-    const enrollment = await prisma.missionEnrollment.findFirst({
+    const enrollment = seller.user_id ? await prisma.missionEnrollment.findFirst({
         where: {
             user_id: seller.user_id,
             mission_id: mission?.id
@@ -67,7 +67,7 @@ async function debugSalerAttribution() {
         include: {
             ShortLink: true
         }
-    })
+    }) : null
 
     if (!enrollment) {
         console.log('❌ No enrollment found for this seller and mission')

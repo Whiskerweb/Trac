@@ -50,29 +50,29 @@ export async function GET(request: Request) {
         }
 
         // Step 2: Find user
-        const user2 = await prisma.user.findUnique({
+        const user2 = seller.user_id ? await prisma.user.findUnique({
             where: { id: seller.user_id }
-        })
+        }) : null
 
         debug.steps.step2_user = {
-            status: user2 ? 'success' : 'failed',
+            status: seller.user_id ? (user2 ? 'success' : 'failed') : 'no_user_id',
             data: user2 ? { email: user2.email } : null
         }
 
         // Step 3: Find missions joined
-        const enrollments = await prisma.missionEnrollment.findMany({
+        const enrollments = seller.user_id ? await prisma.missionEnrollment.findMany({
             where: { user_id: seller.user_id },
             include: {
                 Mission: { select: { title: true, id: true } },
                 ShortLink: { select: { id: true, slug: true, affiliate_id: true } }
             },
             take: 10
-        })
+        }) : []
 
         debug.steps.step3_enrollments = {
             status: 'success',
             count: enrollments.length,
-            data: enrollments.map(e => ({
+            data: enrollments.map((e: any) => ({
                 mission_title: e.Mission.title,
                 mission_id: e.Mission.id,
                 enrollment_status: e.status,

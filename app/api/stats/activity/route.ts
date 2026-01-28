@@ -619,21 +619,25 @@ export async function GET(req: NextRequest) {
             // Create seller info map
             const sellerInfoMap = new Map<string, { id: string; name: string; avatar?: string }>()
             sellers.forEach(seller => {
-                const name = seller.name || seller.email.split('@')[0]
-                sellerInfoMap.set(seller.user_id, {
-                    id: seller.user_id,
-                    name: name,
-                    avatar: undefined
-                })
-                console.log(`[Activity API] 💼 Seller ${seller.user_id} → ${name}`)
+                if (seller.user_id) {
+                    const name = seller.name || seller.email.split('@')[0]
+                    sellerInfoMap.set(seller.user_id, {
+                        id: seller.user_id,
+                        name: name,
+                        avatar: undefined
+                    })
+                    console.log(`[Activity API] 💼 Seller ${seller.user_id} → ${name}`)
+                }
             })
 
             // Add avatars
             profiles.forEach(profile => {
                 const userId = profile.Seller.user_id
-                const existing = sellerInfoMap.get(userId)
-                if (existing && profile.avatar_url) {
-                    existing.avatar = profile.avatar_url
+                if (userId) {
+                    const existing = sellerInfoMap.get(userId)
+                    if (existing && profile.avatar_url) {
+                        existing.avatar = profile.avatar_url
+                    }
                 }
             })
 

@@ -55,19 +55,22 @@ async function debugSellerAttribution() {
     const enrollments = await prisma.missionEnrollment.findMany({
         include: {
             Mission: { select: { title: true } },
-            ShortLink: { select: { slug: true, affiliate_id: true } },
-            User: { select: { email: true } }
+            ShortLink: { select: { slug: true, affiliate_id: true } }
         },
         take: 10
     })
 
-    enrollments.forEach(enrollment => {
-        console.log(`  • ${enrollment.User.email} joined "${enrollment.Mission.title}"`)
+    for (const enrollment of enrollments) {
+        const enrollmentUser = await prisma.user.findUnique({
+            where: { id: enrollment.user_id },
+            select: { email: true }
+        })
+        console.log(`  • ${enrollmentUser?.email || 'Unknown'} joined "${enrollment.Mission.title}"`)
         console.log(`    - Link: ${enrollment.ShortLink?.slug || 'no link'}`)
         console.log(`    - Affiliate ID in link: ${enrollment.ShortLink?.affiliate_id || '❌ NULL'}`)
         console.log(`    - Match: ${enrollment.ShortLink?.affiliate_id === enrollment.user_id ? '✅ Yes' : '❌ No'}`)
         console.log()
-    })
+    }
 
     // 4. Find missing attributions
     console.log('\n⚠️  Links without affiliate_id:')
