@@ -13,10 +13,10 @@ interface Seller {
     id: string
     name: string
     avatar: string
-    avatarUrl?: string
+    avatarUrl?: string | null
     status: 'active' | 'pending' | 'inactive'
     activityType: string
-    country?: string
+    country?: string | null
     globalStats: {
         totalClicks: number
         totalSales: number
@@ -323,7 +323,7 @@ export default function AllSellersPage() {
                                     >
                                         <td className="px-6 py-3">
                                             <div className="flex items-center gap-3">
-                                                <Avatar initials={seller.avatar} imageUrl={seller.avatarUrl} />
+                                                <Avatar initials={seller.avatar} imageUrl={seller.avatarUrl || undefined} />
                                                 <div className="min-w-0">
                                                     <div className="font-semibold text-slate-900 truncate text-xs">
                                                         {seller.name}

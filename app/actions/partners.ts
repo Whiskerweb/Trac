@@ -29,7 +29,7 @@ interface CreateShadowPartnerParams {
  */
 export async function createShadowPartner(params: CreateShadowPartnerParams): Promise<{
     success: boolean
-    partner?: Awaited<ReturnType<typeof prisma.partner.findUnique>>
+    partner?: Awaited<ReturnType<typeof prisma.seller.findUnique>>
     isNew?: boolean
     error?: string
 }> {
@@ -43,7 +43,7 @@ export async function createShadowPartner(params: CreateShadowPartnerParams): Pr
 
     try {
         // Check if partner already exists for this program
-        const existing = await prisma.partner.findUnique({
+        const existing = await prisma.seller.findUnique({
             where: {
                 program_id_email: {
                     program_id: programId,
@@ -61,7 +61,7 @@ export async function createShadowPartner(params: CreateShadowPartnerParams): Pr
         const finalTenantId = tenantId || generateTenantId(programId, normalizedEmail)
 
         // Create shadow partner (no user_id)
-        const partner = await prisma.partner.create({
+        const partner = await prisma.seller.create({
             data: {
                 program_id: programId,
                 email: normalizedEmail,
@@ -98,14 +98,14 @@ export async function createShadowPartner(params: CreateShadowPartnerParams): Pr
 export async function claimPartners(userId: string, email: string): Promise<{
     success: boolean
     claimed: number
-    partners?: Awaited<ReturnType<typeof prisma.partner.findMany>>
+    partners?: Awaited<ReturnType<typeof prisma.seller.findMany>>
     error?: string
 }> {
     const normalizedEmail = email.toLowerCase().trim()
 
     try {
         // Find all shadow partners with this email
-        const shadowPartners = await prisma.partner.findMany({
+        const shadowPartners = await prisma.seller.findMany({
             where: {
                 email: normalizedEmail,
                 user_id: null // Only unclaimed
@@ -118,7 +118,7 @@ export async function claimPartners(userId: string, email: string): Promise<{
         }
 
         // Claim all shadow partners
-        await prisma.partner.updateMany({
+        await prisma.seller.updateMany({
             where: {
                 email: normalizedEmail,
                 user_id: null
@@ -129,7 +129,7 @@ export async function claimPartners(userId: string, email: string): Promise<{
         })
 
         // Get updated records
-        const claimedPartners = await prisma.partner.findMany({
+        const claimedPartners = await prisma.seller.findMany({
             where: {
                 email: normalizedEmail,
                 user_id: userId
@@ -160,11 +160,11 @@ export async function claimPartners(userId: string, email: string): Promise<{
  */
 export async function approvePartner(partnerId: string): Promise<{
     success: boolean
-    partner?: Awaited<ReturnType<typeof prisma.partner.findUnique>>
+    partner?: Awaited<ReturnType<typeof prisma.seller.findUnique>>
     error?: string
 }> {
     try {
-        const partner = await prisma.partner.update({
+        const partner = await prisma.seller.update({
             where: { id: partnerId },
             data: { status: 'APPROVED' }
         })
@@ -189,7 +189,7 @@ export async function banPartner(partnerId: string): Promise<{
     error?: string
 }> {
     try {
-        await prisma.partner.update({
+        await prisma.seller.update({
             where: { id: partnerId },
             data: { status: 'BANNED' }
         })
@@ -209,8 +209,8 @@ export async function banPartner(partnerId: string): Promise<{
 /**
  * Get partner by user ID
  */
-export async function getPartnerByUserId(userId: string): Promise<Awaited<ReturnType<typeof prisma.partner.findFirst>> | null> {
-    return prisma.partner.findFirst({
+export async function getPartnerByUserId(userId: string): Promise<Awaited<ReturnType<typeof prisma.seller.findFirst>> | null> {
+    return prisma.seller.findFirst({
         where: { user_id: userId },
         include: {
             Program: true,
@@ -227,8 +227,8 @@ export async function getPartnerByUserId(userId: string): Promise<Awaited<Return
  */
 export async function getPartnerDashboard(userId: string): Promise<{
     success: boolean
-    partner?: Awaited<ReturnType<typeof prisma.partner.findFirst>>
-    balance?: Awaited<ReturnType<typeof prisma.partnerBalance.findUnique>>
+    partner?: Awaited<ReturnType<typeof prisma.seller.findFirst>>
+    balance?: Awaited<ReturnType<typeof prisma.sellerBalance.findUnique>>
     stats?: {
         totalEarned: number
         pendingAmount: number
@@ -239,7 +239,7 @@ export async function getPartnerDashboard(userId: string): Promise<{
     error?: string
 }> {
     try {
-        const partner = await prisma.partner.findFirst({
+        const partner = await prisma.seller.findFirst({
             where: { user_id: userId },
             include: { Program: true }
         })
@@ -252,14 +252,14 @@ export async function getPartnerDashboard(userId: string): Promise<{
         }
 
         // Get balance
-        const balance = await prisma.partnerBalance.findUnique({
-            where: { partner_id: partner.id }
+        const balance = await prisma.sellerBalance.findUnique({
+            where: { seller_id: partner.id }
         })
 
         // Get commission stats
         const commissions = await prisma.commission.groupBy({
             by: ['status'],
-            where: { partner_id: partner.id },
+            where: { seller_id: partner.id },
             _sum: { commission_amount: true },
             _count: true
         })
@@ -273,13 +273,14 @@ export async function getPartnerDashboard(userId: string): Promise<{
         }
 
         for (const c of commissions) {
-            const amount = c._sum.commission_amount || 0
+            const amount = c._sum?.commission_amount || 0
+            const count = c._count || 0
             stats.totalEarned += amount
-            stats.conversionCount += c._count
+            stats.conversionCount += count
 
             if (c.status === 'PENDING') stats.pendingAmount = amount
-            else if (c.status === 'DUE') stats.dueAmount = amount
-            else if (c.status === 'PAID') stats.paidAmount = amount
+            else if (c.status === 'PROCEED') stats.dueAmount = amount
+            else if (c.status === 'COMPLETE') stats.paidAmount = amount
         }
 
         return {

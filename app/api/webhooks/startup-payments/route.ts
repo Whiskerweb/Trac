@@ -90,10 +90,3 @@ export async function POST(req: NextRequest) {
     // Always return 200 to acknowledge receipt
     return NextResponse.json({ received: true })
 }
-
-// Disable body parsing (Stripe needs raw body for signature verification)
-export const config = {
-    api: {
-        bodyParser: false
-    }
-}
