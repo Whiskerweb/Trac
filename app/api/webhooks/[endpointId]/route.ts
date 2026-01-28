@@ -207,14 +207,19 @@ export async function POST(
                         stripeFee = Math.floor(grossAmount * 0.029 + 30)
                     }
 
-                    // TRUE NET REVENUE = Gross - Stripe Fee - Tax
-                    const netAmount = grossAmount - stripeFee - tax
+                    // ✅ FIXED: Calculate HT (price excluding VAT) first
+                    // This is the base for platform fee calculation (15% of HT, not of net)
+                    const htAmount = grossAmount - tax  // HT = Hors Taxes (before Stripe fees)
+
+                    // TRUE NET REVENUE = HT - Stripe Fee (available for seller + platform split)
+                    const netAmount = htAmount - stripeFee
 
                     console.log(`[Webhook] 📊 Revenue Breakdown:`)
-                    console.log(`  Gross: ${grossAmount / 100} ${currency}`)
+                    console.log(`  Gross (TTC): ${grossAmount / 100} ${currency}`)
+                    console.log(`  Tax (TVA 20%): ${tax / 100} ${currency}`)
+                    console.log(`  HT (before Stripe): ${htAmount / 100} ${currency}`)
                     console.log(`  Stripe Fee: ${stripeFee / 100} ${currency}`)
-                    console.log(`  Tax: ${tax / 100} ${currency}`)
-                    console.log(`  Net: ${netAmount / 100} ${currency}`)
+                    console.log(`  Net (for split): ${netAmount / 100} ${currency}`)
 
                     // Update Customer with clk_id for future recurring payments (invoice.paid)
                     if (clickId && typeof session.customer === 'string') {
@@ -308,22 +313,48 @@ export async function POST(
                                 }
                             }
 
-                            // Step 2: If Redis miss, fallback to Tinybird query
-                            if (!linkId) {
-                                console.log(`[Multi-Tenant Webhook] 📦 Redis miss, trying Tinybird...`)
-                                const tinybirdQuery = `SELECT link_id FROM clicks WHERE click_id = '${clickId}' LIMIT 1`
-                                const tinybirdResponse = await fetch(
-                                    `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(tinybirdQuery)}`,
-                                    { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-                                )
+                            // ✅ IMPROVED: Step 2: If Redis miss, fallback to Tinybird query with timeout
+                            if (!linkId && clickId) {
+                                console.log(`[Multi-Tenant Webhook] 🔄 Redis miss, falling back to Tinybird for clickId=${clickId}`)
 
-                                if (tinybirdResponse.ok) {
-                                    const tinybirdText = await tinybirdResponse.text()
-                                    const lines = tinybirdText.trim().split('\n')
-                                    if (lines.length > 0 && lines[0].trim()) {
-                                        linkId = lines[0].trim()
-                                        console.log(`[Multi-Tenant Webhook] ✅ Found link_id from Tinybird: ${linkId}`)
+                                try {
+                                    // Query both link_id AND affiliate_id from Tinybird
+                                    const tinybirdSQL = `
+                                        SELECT link_id, affiliate_id
+                                        FROM clicks
+                                        WHERE click_id = '${clickId}' AND workspace_id = '${workspaceId}'
+                                        LIMIT 1
+                                        FORMAT JSON
+                                    `
+
+                                    const tinybirdResponse = await fetch(`${TINYBIRD_HOST}/v0/sql`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Authorization': `Bearer ${TINYBIRD_TOKEN}`,
+                                            'Content-Type': 'text/plain',
+                                        },
+                                        body: tinybirdSQL,
+                                        signal: AbortSignal.timeout(5000)  // ✅ 5s timeout to prevent blocking
+                                    })
+
+                                    if (tinybirdResponse.ok) {
+                                        const result = await tinybirdResponse.json()
+                                        if (result.data?.[0]?.link_id) {
+                                            linkId = result.data[0].link_id
+                                            // Also get affiliate_id if available
+                                            if (result.data[0].affiliate_id) {
+                                                sellerId = result.data[0].affiliate_id
+                                            }
+                                            console.log(`[Multi-Tenant Webhook] ✅ Tinybird recovery: linkId=${linkId}, sellerId=${sellerId}`)
+                                        } else {
+                                            console.log(`[Multi-Tenant Webhook] ⚠️ Tinybird: No click found for clickId=${clickId}`)
+                                        }
+                                    } else {
+                                        console.error(`[Multi-Tenant Webhook] ❌ Tinybird error: ${tinybirdResponse.status}`)
                                     }
+                                } catch (tinybirdError) {
+                                    console.error('[Multi-Tenant Webhook] ❌ Tinybird fallback failed:', tinybirdError)
+                                    // Continue without linkId (will be orphaned sale)
                                 }
                             }
 
@@ -417,6 +448,7 @@ export async function POST(
                                     saleId: session.id,
                                     linkId,
                                     grossAmount,
+                                    htAmount,  // ✅ FIXED: Pass HT for correct platform fee calculation
                                     netAmount,
                                     stripeFee,
                                     taxAmount: tax,
@@ -487,11 +519,33 @@ export async function POST(
                         }
                     }
 
-                    // 2. Net Amount Calculation
-                    const amount = invoice.amount_paid || 0
+                    // 2. Revenue Calculation (same as checkout.session)
+                    const grossAmount = invoice.amount_paid || 0
                     const tax = (invoice as any).tax || 0
-                    const netAmount = amount - tax
                     const currency = invoice.currency || 'eur'
+
+                    // Fetch Stripe fee from balance_transaction
+                    let stripeFee = 0
+                    try {
+                        if (invoice.charge) {
+                            const chargeId = typeof invoice.charge === 'string' ? invoice.charge : invoice.charge.id
+                            const charge = await stripe.charges.retrieve(chargeId, {
+                                expand: ['balance_transaction']
+                            })
+                            if (charge.balance_transaction && typeof charge.balance_transaction !== 'string') {
+                                stripeFee = charge.balance_transaction.fee || 0
+                                console.log(`[Webhook] 💰 Recurring Stripe fee: ${stripeFee / 100} ${currency}`)
+                            }
+                        }
+                    } catch (feeError) {
+                        console.error('[Webhook] ⚠️ Failed to fetch recurring Stripe fee:', feeError)
+                        // Fallback estimate
+                        stripeFee = Math.floor(grossAmount * 0.029 + 30)
+                    }
+
+                    // ✅ FIXED: Calculate HT and net amounts correctly
+                    const htAmount = grossAmount - tax  // HT before Stripe fees
+                    const netAmount = htAmount - stripeFee  // Net after Stripe fees
 
                     // 3. Extract Line Items (Products)
                     let products: any[] = []
@@ -520,12 +574,12 @@ export async function POST(
                     // 4. Record to Tinybird
                     const eventId = crypto.randomUUID()
 
-                    console.log(`[Webhook] 💰 Recurring Payment: ${amount / 100} ${currency} (Net: ${netAmount / 100}) - Click: ${clickId || 'none'}`)
+                    console.log(`[Webhook] 💰 Recurring Payment: ${grossAmount / 100} ${currency} (HT: ${htAmount / 100}, Net: ${netAmount / 100}) - Click: ${clickId || 'none'}`)
 
                     await recordSaleToTinybird({
                         clickId: clickId || 'recurring', // Tag as recurring if lost
                         orderId: invoice.id,
-                        amount: amount / 100,
+                        amount: grossAmount / 100,
                         netAmount: netAmount / 100,
                         currency: currency.toUpperCase(),
                         timestamp: new Date().toISOString(),
@@ -542,7 +596,7 @@ export async function POST(
                         await recordSaleItemsToTinybird({
                             clickId: clickId || 'recurring',
                             orderId: invoice.id,
-                            amount: amount / 100,
+                            amount: grossAmount / 100,
                             netAmount: netAmount / 100,
                             currency: currency.toUpperCase(),
                             timestamp: new Date().toISOString(),
@@ -590,10 +644,11 @@ export async function POST(
                                         programId: workspaceId,
                                         saleId: invoice.id,
                                         linkId: customer.link_id,
-                                        grossAmount: amount,
+                                        grossAmount,
+                                        htAmount,  // ✅ FIXED: Pass HT for correct platform fee
                                         netAmount,
-                                        stripeFee: 0, // Not easily available on invoice
-                                        taxAmount: (invoice as any).tax || 0,
+                                        stripeFee,  // ✅ FIXED: Now fetched from balance_transaction
+                                        taxAmount: tax,
                                         missionReward,
                                         currency,
                                         subscriptionId: typeof (invoice as any).subscription === 'string' ? (invoice as any).subscription : null,

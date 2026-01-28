@@ -496,8 +496,8 @@ model Commission {
   recurring_max   Int?
 
   // === MATURATION ===
-  /// Days before PENDING → PROCEED
-  hold_days       Int       @default(7)
+  /// Days before PENDING → PROCEED (30 days = refund protection)
+  hold_days       Int       @default(30)
   /// When transitioned to PROCEED
   matured_at      DateTime?
   /// When payout completed

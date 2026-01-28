@@ -79,6 +79,7 @@ export async function createCommission(params: {
     saleId: string
     linkId?: string | null
     grossAmount: number
+    htAmount: number  // ✅ FIXED: HT amount (gross - tax) for platform fee calculation
     netAmount: number
     stripeFee: number
     taxAmount: number
@@ -96,6 +97,7 @@ export async function createCommission(params: {
         saleId,
         linkId,
         grossAmount,
+        htAmount,  // ✅ FIXED: Extract htAmount parameter
         netAmount,
         stripeFee,
         taxAmount,
@@ -108,19 +110,21 @@ export async function createCommission(params: {
     } = params
 
     try {
-        // Calculate partner commission based on mission reward
+        // Calculate partner commission based on mission reward (using netAmount = HT - Stripe fees)
         const { amount: partnerCommission, type } = calculateCommission({ netAmount, missionReward })
 
-        // IMPORTANT: Platform fee = 15% of HT (netAmount), NOT of commission
-        // This is a separate charge to the startup, not deducted from partner
-        const traaactionFee = Math.floor(netAmount * PLATFORM_FEE_RATE)
+        // ✅ FIXED: Platform fee = 15% of HT (BEFORE Stripe fees), NOT of netAmount
+        // This ensures Traaaction gets 15% of the business revenue (HT), not affected by Stripe fees
+        const traaactionFee = Math.floor(htAmount * PLATFORM_FEE_RATE)
 
         // Partner gets their FULL commission (no deduction)
         // Startup pays: partnerCommission + traaactionFee
 
-        console.log(`[Commission] 💰 Sale HT: ${netAmount / 100}€`)
+        console.log(`[Commission] 💰 Sale Gross (TTC): ${grossAmount / 100}€`)
+        console.log(`[Commission] 💰 Sale HT (before Stripe): ${htAmount / 100}€`)
+        console.log(`[Commission] 💰 Sale Net (after Stripe): ${netAmount / 100}€`)
         console.log(`[Commission] 💰 Partner commission: ${partnerCommission / 100}€ (${missionReward})`)
-        console.log(`[Commission] 💰 Traaaction fee: ${traaactionFee / 100}€ (15% of HT)`)
+        console.log(`[Commission] 💰 Traaaction fee: ${traaactionFee / 100}€ (15% of HT = ${htAmount / 100}€)`)
         console.log(`[Commission] 💰 Startup owes: ${(partnerCommission + traaactionFee) / 100}€`)
 
         // Idempotent upsert by sale_id

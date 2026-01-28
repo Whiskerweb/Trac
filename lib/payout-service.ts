@@ -333,7 +333,7 @@ export async function requestGiftCard(request: GiftCardRequest): Promise<{
 // =============================================
 
 export async function getSellerWallet(sellerId: string) {
-    const [seller, balance, pendingRedemptions] = await Promise.all([
+    const [seller, balance, pendingRedemptions, commissions] = await Promise.all([
         prisma.seller.findUnique({
             where: { id: sellerId },
             select: {
@@ -353,6 +353,21 @@ export async function getSellerWallet(sellerId: string) {
                 seller_id: sellerId,
                 status: { in: ['PENDING', 'PROCESSING'] }
             }
+        }),
+        prisma.commission.findMany({
+            where: { seller_id: sellerId },
+            select: {
+                id: true,
+                sale_id: true,
+                gross_amount: true,
+                commission_amount: true,
+                status: true,
+                created_at: true,
+                matured_at: true,
+                hold_days: true,
+            },
+            orderBy: { created_at: 'desc' },
+            take: 50
         })
     ])
 
@@ -366,9 +381,11 @@ export async function getSellerWallet(sellerId: string) {
         hasIBAN: !!seller.iban,
         payoutsEnabled: !!seller.payouts_enabled_at,
 
-        // Balances in cents
+        // Balances in cents (matching UI expectations)
+        balance: balance?.balance || 0,
         pending: balance?.pending || 0,
         due: balance?.due || 0,
+        paid_total: balance?.paid_total || 0,
         platformBalance: balance?.balance || 0,
         totalEarned: balance?.paid_total || 0,
 
@@ -378,10 +395,23 @@ export async function getSellerWallet(sellerId: string) {
         platformBalanceFormatted: `${((balance?.balance || 0) / 100).toFixed(2)}€`,
         totalEarnedFormatted: `${((balance?.paid_total || 0) / 100).toFixed(2)}€`,
 
+        // Commissions
+        commissions: commissions.map(c => ({
+            id: c.id,
+            sale_id: c.sale_id || '',
+            gross_amount: c.gross_amount,
+            commission_amount: c.commission_amount,
+            status: c.status,
+            created_at: c.created_at.toISOString(),
+            matured_at: c.matured_at?.toISOString() || null,
+            hold_days: c.hold_days
+        })),
+
         pendingRedemptions,
 
         // Can withdraw?
         canWithdraw: (balance?.due || 0) >= MIN_PAYOUT[seller.payout_method],
         minWithdraw: MIN_PAYOUT[seller.payout_method] / 100,
+        method: seller.payout_method,
     }
 }

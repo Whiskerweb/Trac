@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
 import { getCurrentUser } from '@/lib/auth'
+import { createClient } from '@/utils/supabase/server'
 
 /**
  * POST /api/upload
- * Upload avatar images or CV PDFs
+ * Upload avatar images or CV PDFs to Supabase Storage
  *
  * Body: FormData with:
  * - file: the file to upload
@@ -64,7 +63,7 @@ export async function POST(request: NextRequest) {
         const extension = file.name.split('.').pop()
         const filename = `${currentUser.userId}_${timestamp}.${extension}`
 
-        // Determine upload directory
+        // Determine bucket folder
         const dirMap: Record<string, string> = {
             avatar: 'avatars',
             cv: 'cvs',
@@ -72,25 +71,34 @@ export async function POST(request: NextRequest) {
             pitch_deck: 'documents',
             doc: 'documents'
         }
-        const uploadDir = dirMap[type] || 'uploads'
-        const publicPath = join(process.cwd(), 'public', uploadDir)
+        const folder = dirMap[type] || 'uploads'
+        const storagePath = `${folder}/${filename}`
 
-        // Create directory if it doesn't exist
-        try {
-            await mkdir(publicPath, { recursive: true })
-        } catch (err) {
-            // Directory might already exist, ignore error
-        }
-
-        // Convert file to buffer and write
+        // Upload to Supabase Storage
+        const supabase = await createClient()
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
-        const filePath = join(publicPath, filename)
 
-        await writeFile(filePath, buffer)
+        const { data, error } = await supabase.storage
+            .from('uploads')
+            .upload(storagePath, buffer, {
+                contentType: file.type,
+                upsert: true
+            })
 
-        // Return public URL
-        const url = `/${uploadDir}/${filename}`
+        if (error) {
+            console.error('Supabase upload error:', error)
+            return NextResponse.json({
+                error: 'Erreur lors de l\'upload du fichier'
+            }, { status: 500 })
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+            .from('uploads')
+            .getPublicUrl(storagePath)
+
+        const url = urlData.publicUrl
 
         return NextResponse.json({
             success: true,

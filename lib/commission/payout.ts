@@ -10,6 +10,7 @@
 
 import { prisma } from '@/lib/db'
 import Stripe from 'stripe'
+import { checkPayoutsEnabled } from '@/lib/stripe-connect'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -48,24 +49,44 @@ export interface PayoutResult {
  */
 export async function preparePayoutBatches(): Promise<PayoutBatch[]> {
     // Find all partners with PROCEED commissions and valid Stripe Connect
+    // CRITICAL: Only include commissions where startup has PAID (startup_payment_status = 'PAID')
     const partnersWithProceed = await prisma.seller.findMany({
         where: {
             stripe_connect_id: { not: null },
             status: 'APPROVED',
             Commissions: {
-                some: { status: 'PROCEED' }
+                some: {
+                    status: 'PROCEED',
+                    startup_payment_status: 'PAID'  // ✅ FIXED: Prevent paying sellers before startup pays
+                }
             }
         },
         include: {
             Commissions: {
-                where: { status: 'PROCEED' }
+                where: {
+                    status: 'PROCEED',
+                    startup_payment_status: 'PAID'  // ✅ FIXED: Only fetch paid commissions
+                }
             }
         }
     })
 
     const batches: PayoutBatch[] = []
 
+    // ✅ FIXED: Verify Stripe Connect payouts_enabled before processing
+    console.log(`[Payout] 🔍 Verifying Stripe Connect status for ${partnersWithProceed.length} partners...`)
+
     for (const partner of partnersWithProceed) {
+        // Verify payouts are enabled on Stripe Connect account
+        if (partner.stripe_connect_id) {
+            const { enabled } = await checkPayoutsEnabled(partner.stripe_connect_id)
+
+            if (!enabled) {
+                console.warn(`[Payout] ⚠️ Partner ${partner.id} (${partner.name}): Stripe Connect not verified, skipping payout`)
+                continue  // Skip this partner
+            }
+        }
+
         // Get partner's current balance (may be negative from clawbacks)
         const balance = await prisma.sellerBalance.findUnique({
             where: { seller_id: partner.id }

@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Clock, TrendingUp, Send, CheckCircle, Loader2, DollarSign } from 'lucide-react'
-import { getSellerDashboard, getSellerCommissions } from '@/app/actions/sellers'
+import { Clock, TrendingUp, Send, CheckCircle, Loader2, DollarSign, AlertCircle, X, ArrowDownToLine } from 'lucide-react'
 
 interface Commission {
     id: string
@@ -10,15 +9,18 @@ interface Commission {
     gross_amount: number
     commission_amount: number
     status: string
-    created_at: Date
-    matured_at: Date | null
+    created_at: string
+    matured_at: string | null
 }
 
-interface Stats {
-    pendingAmount: number
-    dueAmount: number
-    paidAmount: number
-    totalEarned: number
+interface WalletData {
+    balance: number
+    pending: number
+    due: number
+    paid_total: number
+    canWithdraw: boolean
+    method: string | null
+    commissions: Commission[]
 }
 
 function formatCurrency(cents: number): string {
@@ -40,42 +42,80 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function PayoutsPage() {
     const [loading, setLoading] = useState(true)
-    const [stats, setStats] = useState<Stats>({ pendingAmount: 0, dueAmount: 0, paidAmount: 0, totalEarned: 0 })
-    const [commissions, setCommissions] = useState<Commission[]>([])
+    const [withdrawing, setWithdrawing] = useState(false)
+    const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+    const [wallet, setWallet] = useState<WalletData>({
+        balance: 0,
+        pending: 0,
+        due: 0,
+        paid_total: 0,
+        canWithdraw: false,
+        method: null,
+        commissions: []
+    })
 
     useEffect(() => {
-        async function fetchData() {
-            try {
-                const [dashboardResult, commissionsResult] = await Promise.all([
-                    getSellerDashboard(),
-                    getSellerCommissions()
-                ])
-
-                if ('stats' in dashboardResult && dashboardResult.stats) {
-                    // Map stats to expected format
-                    setStats({
-                        pendingAmount: 0,
-                        dueAmount: 0,
-                        paidAmount: 0,
-                        totalEarned: dashboardResult.stats.totalEarnings
-                    })
-                }
-                if ('commissions' in commissionsResult && commissionsResult.commissions) {
-                    setCommissions(commissionsResult.commissions as Commission[])
-                }
-            } catch (error) {
-                console.error('Failed to fetch payouts data:', error)
-            }
-            setLoading(false)
-        }
-        fetchData()
+        loadWallet()
     }, [])
 
+    async function loadWallet() {
+        try {
+            setLoading(true)
+            const response = await fetch('/api/seller/wallet')
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to load wallet')
+            }
+
+            if (data.success && data.wallet) {
+                setWallet(data.wallet)
+            }
+        } catch (error) {
+            console.error('Failed to fetch payouts data:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    async function handleWithdraw() {
+        try {
+            setWithdrawing(true)
+            setNotification(null)
+
+            const response = await fetch('/api/seller/withdraw', {
+                method: 'POST'
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Withdraw failed')
+            }
+
+            if (data.success) {
+                setNotification({
+                    type: 'success',
+                    message: `Paiement de ${data.amountFormatted} envoyé avec succès !`
+                })
+                // Reload wallet data
+                await loadWallet()
+            }
+        } catch (err) {
+            setNotification({
+                type: 'error',
+                message: err instanceof Error ? err.message : 'Erreur lors du retrait'
+            })
+        } finally {
+            setWithdrawing(false)
+        }
+    }
+
     const STATUS_CARDS = [
-        { icon: Clock, label: 'Pending', amount: stats.pendingAmount, color: 'text-orange-600 bg-orange-50' },
-        { icon: TrendingUp, label: 'Due', amount: stats.dueAmount, color: 'text-blue-600 bg-blue-50' },
-        { icon: CheckCircle, label: 'Paid', amount: stats.paidAmount, color: 'text-green-600 bg-green-50' },
-        { icon: DollarSign, label: 'Total Earned', amount: stats.totalEarned, color: 'text-purple-600 bg-purple-50' },
+        { icon: Clock, label: 'Pending', amount: wallet.pending, color: 'text-orange-600 bg-orange-50' },
+        { icon: TrendingUp, label: 'Due', amount: wallet.due, color: 'text-blue-600 bg-blue-50' },
+        { icon: CheckCircle, label: 'Paid', amount: wallet.paid_total, color: 'text-green-600 bg-green-50' },
+        { icon: DollarSign, label: 'Total Earned', amount: wallet.pending + wallet.due + wallet.paid_total, color: 'text-purple-600 bg-purple-50' },
     ]
 
     if (loading) {
@@ -90,11 +130,52 @@ export default function PayoutsPage() {
         <div className="min-h-screen bg-[#FAFAFA]">
             <div className="max-w-6xl mx-auto px-8 py-10">
 
+                {/* Notification */}
+                {notification && (
+                    <div className={`mb-6 p-4 rounded-xl flex items-center justify-between ${
+                        notification.type === 'success'
+                            ? 'bg-green-50 border border-green-200 text-green-800'
+                            : 'bg-red-50 border border-red-200 text-red-800'
+                    }`}>
+                        <div className="flex items-center gap-3">
+                            {notification.type === 'success' ? (
+                                <CheckCircle className="w-5 h-5" />
+                            ) : (
+                                <AlertCircle className="w-5 h-5" />
+                            )}
+                            <span className="font-medium">{notification.message}</span>
+                        </div>
+                        <button
+                            onClick={() => setNotification(null)}
+                            className="text-current opacity-60 hover:opacity-100"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">
                         Payouts
                     </h1>
+                    <button
+                        onClick={handleWithdraw}
+                        disabled={!wallet.canWithdraw || withdrawing}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors flex items-center gap-2"
+                    >
+                        {withdrawing ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Traitement...
+                            </>
+                        ) : (
+                            <>
+                                <ArrowDownToLine className="w-4 h-4" />
+                                Demander un versement
+                            </>
+                        )}
+                    </button>
                 </div>
 
                 {/* Status Cards */}
@@ -122,7 +203,7 @@ export default function PayoutsPage() {
                         <h2 className="font-medium text-gray-900">Commission History</h2>
                     </div>
 
-                    {commissions.length === 0 ? (
+                    {wallet.commissions.length === 0 ? (
                         <div className="p-12 text-center">
                             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <DollarSign className="w-8 h-8 text-gray-400" />
@@ -136,7 +217,7 @@ export default function PayoutsPage() {
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
-                            {commissions.map((commission) => (
+                            {wallet.commissions.map((commission) => (
                                 <div key={commission.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50">
                                     <div>
                                         <p className="text-sm font-medium text-gray-900">

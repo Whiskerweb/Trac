@@ -92,18 +92,61 @@ export async function POST(request: NextRequest) {
 
         if (resolvedClickId) {
             // Try to find the link from the click
-            // In a real implementation, you'd lookup from Tinybird or Redis
-            // For now, we parse click_id format or use Redis cache
+            // PRIORITY 1: Try Redis (fast)
             try {
                 const { redis } = await import('@/lib/redis')
                 const clickData = await redis.get<{ linkId: string; affiliateId?: string }>(`click:${resolvedClickId}`)
                 if (clickData) {
                     linkId = clickData.linkId
                     affiliateId = clickData.affiliateId || null
+                    console.log(`[track/lead] ✅ Redis hit: linkId=${linkId}, affiliateId=${affiliateId}`)
                 }
             } catch (e) {
-                // Redis lookup failed, continue without link data
-                console.log('[track/lead] Click lookup failed:', e)
+                console.log('[track/lead] ⚠️ Redis lookup failed:', e)
+            }
+
+            // ✅ FIXED: PRIORITY 2: Fallback to Tinybird if Redis miss
+            if (!linkId && resolvedClickId) {
+                console.log(`[track/lead] 🔄 Redis miss, falling back to Tinybird for clickId=${resolvedClickId}`)
+
+                try {
+                    const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
+                    const TINYBIRD_ADMIN_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
+
+                    const tinybirdSQL = `
+                        SELECT link_id, affiliate_id, workspace_id
+                        FROM clicks
+                        WHERE click_id = '${resolvedClickId}'
+                        LIMIT 1
+                        FORMAT JSON
+                    `
+
+                    const response = await fetch(`${TINYBIRD_HOST}/v0/sql`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${TINYBIRD_ADMIN_TOKEN}`,
+                            'Content-Type': 'text/plain',
+                        },
+                        body: tinybirdSQL,
+                        signal: AbortSignal.timeout(5000)  // 5s timeout
+                    })
+
+                    if (response.ok) {
+                        const result = await response.json()
+                        if (result.data?.[0]) {
+                            linkId = result.data[0].link_id || null
+                            affiliateId = result.data[0].affiliate_id || null
+                            console.log(`[track/lead] ✅ Tinybird recovery: linkId=${linkId}, affiliateId=${affiliateId}`)
+                        } else {
+                            console.log(`[track/lead] ⚠️ Tinybird: No click found for clickId=${resolvedClickId}`)
+                        }
+                    } else {
+                        console.error(`[track/lead] ❌ Tinybird error: ${response.status}`)
+                    }
+                } catch (tinybirdError) {
+                    console.error('[track/lead] ❌ Tinybird fallback failed:', tinybirdError)
+                    // Continue without link data (will be orphaned)
+                }
             }
         }
 

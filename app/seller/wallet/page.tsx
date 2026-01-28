@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react'
 import {
     Wallet, TrendingUp, Clock, CheckCircle2,
     ArrowDownToLine, DollarSign, Loader2,
-    AlertCircle, ExternalLink
+    AlertCircle, ExternalLink, X
 } from 'lucide-react'
 import Link from 'next/link'
-import { getSellerDashboard, getSellerCommissions } from '@/app/actions/sellers'
 
 interface Commission {
     id: string
@@ -17,61 +16,90 @@ interface Commission {
     status: 'PENDING' | 'PROCEED' | 'COMPLETE'
     created_at: string
     matured_at?: string | null
+    hold_days?: number
+}
+
+interface WalletData {
+    balance: number
+    pending: number
+    due: number
+    paid_total: number
+    canWithdraw: boolean
+    method: string | null
+    commissions: Commission[]
 }
 
 export default function SellerWalletPage() {
     const [loading, setLoading] = useState(true)
+    const [withdrawing, setWithdrawing] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [stats, setStats] = useState({
-        totalEarned: 0,
-        pendingAmount: 0,
-        dueAmount: 0,
-        paidAmount: 0,
-        conversionCount: 0
-    })
-    const [balance, setBalance] = useState({
+    const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+    const [wallet, setWallet] = useState<WalletData>({
         balance: 0,
         pending: 0,
         due: 0,
-        paid_total: 0
+        paid_total: 0,
+        canWithdraw: false,
+        method: null,
+        commissions: []
     })
-    const [commissions, setCommissions] = useState<Commission[]>([])
 
     useEffect(() => {
-        async function loadWallet() {
-            try {
-                // Load dashboard stats and commissions in parallel
-                const [dashboardResult, commissionsResult] = await Promise.all([
-                    getSellerDashboard(),
-                    getSellerCommissions()
-                ])
-
-                if ('error' in dashboardResult) {
-                    setError(dashboardResult.error || 'Failed to load wallet')
-                } else if ('stats' in dashboardResult) {
-                    setStats({
-                        totalEarned: dashboardResult.stats?.totalEarnings || 0,
-                        pendingAmount: 0,
-                        dueAmount: 0,
-                        paidAmount: 0,
-                        conversionCount: 0
-                    })
-                }
-
-                // Load commissions
-                if ('commissions' in commissionsResult && commissionsResult.commissions) {
-                    // commissions is already an array
-                    setCommissions([])
-                }
-            } catch (err) {
-                setError('Failed to load wallet')
-            } finally {
-                setLoading(false)
-            }
-        }
-
         loadWallet()
     }, [])
+
+    async function loadWallet() {
+        try {
+            setLoading(true)
+            const response = await fetch('/api/seller/wallet')
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to load wallet')
+            }
+
+            if (data.success && data.wallet) {
+                setWallet(data.wallet)
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load wallet')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    async function handleWithdraw() {
+        try {
+            setWithdrawing(true)
+            setNotification(null)
+
+            const response = await fetch('/api/seller/withdraw', {
+                method: 'POST'
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Withdraw failed')
+            }
+
+            if (data.success) {
+                setNotification({
+                    type: 'success',
+                    message: `Paiement de ${data.amountFormatted} envoyé avec succès !`
+                })
+                // Reload wallet data
+                await loadWallet()
+            }
+        } catch (err) {
+            setNotification({
+                type: 'error',
+                message: err instanceof Error ? err.message : 'Erreur lors du retrait'
+            })
+        } finally {
+            setWithdrawing(false)
+        }
+    }
 
     const formatCurrency = (cents: number) => {
         return new Intl.NumberFormat('fr-FR', {
@@ -90,6 +118,29 @@ export default function SellerWalletPage() {
         return (
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
                 {badge.label}
+            </span>
+        )
+    }
+
+    const getMaturationInfo = (commission: Commission) => {
+        if (commission.status !== 'PENDING') return null
+
+        const holdDays = commission.hold_days || 30
+        const createdAt = new Date(commission.created_at)
+        const maturesAt = new Date(createdAt.getTime() + holdDays * 24 * 60 * 60 * 1000)
+        const now = new Date()
+        const daysLeft = Math.ceil((maturesAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+
+        if (daysLeft > 0) {
+            return (
+                <span className="text-xs text-orange-600">
+                    Mature dans {daysLeft}j
+                </span>
+            )
+        }
+        return (
+            <span className="text-xs text-green-600">
+                Prêt pour payout
             </span>
         )
     }
@@ -123,6 +174,30 @@ export default function SellerWalletPage() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
             <div className="max-w-6xl mx-auto px-6 py-12">
+                {/* Notification */}
+                {notification && (
+                    <div className={`mb-6 p-4 rounded-xl flex items-center justify-between ${
+                        notification.type === 'success'
+                            ? 'bg-green-50 border border-green-200 text-green-800'
+                            : 'bg-red-50 border border-red-200 text-red-800'
+                    }`}>
+                        <div className="flex items-center gap-3">
+                            {notification.type === 'success' ? (
+                                <CheckCircle2 className="w-5 h-5" />
+                            ) : (
+                                <AlertCircle className="w-5 h-5" />
+                            )}
+                            <span className="font-medium">{notification.message}</span>
+                        </div>
+                        <button
+                            onClick={() => setNotification(null)}
+                            className="text-current opacity-60 hover:opacity-100"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
@@ -139,17 +214,27 @@ export default function SellerWalletPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-purple-200 text-sm mb-1">Solde disponible</p>
-                            <p className="text-4xl font-bold">{formatCurrency(balance.due || 0)}</p>
+                            <p className="text-4xl font-bold">{formatCurrency(wallet.due || 0)}</p>
                             <p className="text-purple-200 text-sm mt-2">
-                                +{formatCurrency(balance.pending || 0)} en maturation (30j)
+                                +{formatCurrency(wallet.pending || 0)} en maturation (30j)
                             </p>
                         </div>
                         <button
-                            disabled={!balance.due || balance.due <= 0}
+                            onClick={handleWithdraw}
+                            disabled={!wallet.canWithdraw || withdrawing}
                             className="px-6 py-3 bg-white text-purple-700 font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-50 transition-colors flex items-center gap-2"
                         >
-                            <ArrowDownToLine className="w-5 h-5" />
-                            Demander un versement
+                            {withdrawing ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    Traitement...
+                                </>
+                            ) : (
+                                <>
+                                    <ArrowDownToLine className="w-5 h-5" />
+                                    Demander un versement
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -163,8 +248,10 @@ export default function SellerWalletPage() {
                             </div>
                             <span className="text-slate-600 text-sm">Total gagné</span>
                         </div>
-                        <div className="text-2xl font-bold text-slate-900">{formatCurrency(stats.totalEarned || 0)}</div>
-                        <div className="text-sm text-slate-500 mt-1">{stats.conversionCount || 0} conversions</div>
+                        <div className="text-2xl font-bold text-slate-900">
+                            {formatCurrency(wallet.pending + wallet.due + wallet.paid_total)}
+                        </div>
+                        <div className="text-sm text-slate-500 mt-1">{wallet.commissions.length} commissions</div>
                     </div>
 
                     <div className="bg-white border border-slate-200 rounded-2xl p-6">
@@ -174,7 +261,7 @@ export default function SellerWalletPage() {
                             </div>
                             <span className="text-slate-600 text-sm">En attente</span>
                         </div>
-                        <div className="text-2xl font-bold text-slate-900">{formatCurrency(stats.pendingAmount || 0)}</div>
+                        <div className="text-2xl font-bold text-slate-900">{formatCurrency(wallet.pending || 0)}</div>
                         <div className="text-sm text-slate-500 mt-1">Maturation 30 jours</div>
                     </div>
 
@@ -185,7 +272,7 @@ export default function SellerWalletPage() {
                             </div>
                             <span className="text-slate-600 text-sm">Disponible</span>
                         </div>
-                        <div className="text-2xl font-bold text-slate-900">{formatCurrency(stats.dueAmount || 0)}</div>
+                        <div className="text-2xl font-bold text-slate-900">{formatCurrency(wallet.due || 0)}</div>
                         <div className="text-sm text-slate-500 mt-1">Prêt pour le retrait</div>
                     </div>
 
@@ -196,7 +283,7 @@ export default function SellerWalletPage() {
                             </div>
                             <span className="text-slate-600 text-sm">Versé</span>
                         </div>
-                        <div className="text-2xl font-bold text-slate-900">{formatCurrency(stats.paidAmount || 0)}</div>
+                        <div className="text-2xl font-bold text-slate-900">{formatCurrency(wallet.paid_total || 0)}</div>
                         <div className="text-sm text-slate-500 mt-1">Total des versements</div>
                     </div>
                 </div>
@@ -205,7 +292,7 @@ export default function SellerWalletPage() {
                 <div className="bg-white border border-slate-200 rounded-2xl p-6">
                     <h2 className="text-lg font-semibold text-slate-900 mb-4">Historique des commissions</h2>
 
-                    {commissions.length === 0 ? (
+                    {wallet.commissions.length === 0 ? (
                         <div className="text-center py-12">
                             <TrendingUp className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                             <p className="text-slate-600 mb-2">Aucune commission pour le moment</p>
@@ -215,7 +302,7 @@ export default function SellerWalletPage() {
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {commissions.map((commission) => (
+                            {wallet.commissions.map((commission) => (
                                 <div
                                     key={commission.id}
                                     className="flex items-center justify-between p-4 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors"
@@ -226,6 +313,7 @@ export default function SellerWalletPage() {
                                                 {formatCurrency(commission.commission_amount)}
                                             </span>
                                             {getStatusBadge(commission.status)}
+                                            {getMaturationInfo(commission)}
                                         </div>
                                         <p className="text-sm text-slate-500">
                                             Vente: {formatCurrency(commission.gross_amount)} • {new Date(commission.created_at).toLocaleDateString('fr-FR')}
