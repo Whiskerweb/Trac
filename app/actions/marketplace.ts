@@ -187,8 +187,8 @@ export async function getAffiliateStatsByUserId(userId: string): Promise<Affilia
             }
         }
 
-        // 3. GET TOTAL LEADS by affiliate_id (leads table uses affiliate_id)
-        const leadsQuery = `SELECT count() as leads FROM leads WHERE affiliate_id = '${userId}'`
+        // 3. GET TOTAL LEADS by seller_id (leads table uses seller_id, which is Customer.affiliate_id)
+        const leadsQuery = `SELECT count() as leads FROM leads WHERE seller_id = '${userId}'`
         const leadsResponse = await fetch(
             `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(leadsQuery)}`,
             { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
