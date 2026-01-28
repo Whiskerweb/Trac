@@ -53,21 +53,21 @@ export const MOCK_ENROLLMENTS = [
     {
         id: 'enroll-1',
         mission: { id: 'mission-1', title: 'SaaS Premium', reward: '15%' },
-        link: { slug: 'alice-saas', full_url: 'https://trac.to/alice-saas', clicks: 1240 },
+        link: { slug: 'alice-saas', full_url: 'https://trac.to/alice-saas', clicks: 1240, leads: 45, sales: 12, revenue: 340000 },
         status: 'APPROVED',
         created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30)
     },
     {
         id: 'enroll-2',
         mission: { id: 'mission-2', title: 'E-commerce Pro', reward: '5€' },
-        link: { slug: 'alice-ecom', full_url: 'https://trac.to/alice-ecom', clicks: 456 },
+        link: { slug: 'alice-ecom', full_url: 'https://trac.to/alice-ecom', clicks: 456, leads: 32, sales: 8, revenue: 112000 },
         status: 'APPROVED',
         created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15)
     },
     {
         id: 'enroll-3',
         mission: { id: 'mission-3', title: 'Finance App', reward: '25€' },
-        link: { slug: 'alice-finance', full_url: 'https://trac.to/alice-finance', clicks: 89 },
+        link: { slug: 'alice-finance', full_url: 'https://trac.to/alice-finance', clicks: 89, leads: 8, sales: 2, revenue: 45000 },
         status: 'APPROVED',
         created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7)
     }
