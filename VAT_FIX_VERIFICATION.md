@@ -2,9 +2,12 @@
 
 ## Problem Fixed
 
-**Bug**: Platform fee was being calculated on `netAmount` (HT - Stripe fees) instead of `htAmount` (HT only).
+**Bug**: BOTH seller commission AND platform fee were being calculated on `netAmount` (HT - Stripe fees) instead of `htAmount` (HT only).
 
-**Impact**: Platform was getting less than 15% of HT because Stripe fees were deducted before calculating the platform fee.
+**Impact**:
+- Platform was getting less than 15% of HT
+- Seller was getting less commission than configured
+- Stripe fees were incorrectly deducted BEFORE calculating commissions
 
 ## Changes Made
 
@@ -15,11 +18,14 @@
 // BEFORE (BUGGY):
 const netAmount = grossAmount - stripeFee - tax
 const platformFee = netAmount * 15%  // Wrong! This is (HT - Stripe) * 15%
+const sellerCommission = netAmount * reward%  // Wrong! Should be on HT
 
 // AFTER (FIXED):
-const htAmount = grossAmount - tax  // HT = Hors Taxes
-const netAmount = htAmount - stripeFee  // Net = HT - Stripe fees
+const htAmount = grossAmount - tax  // HT = Hors Taxes (base for ALL commissions)
+const netAmount = htAmount - stripeFee  // Net = what startup receives after Stripe
 const platformFee = htAmount * 15%  // Correct! 15% of HT
+const sellerCommission = htAmount * reward%  // Correct! reward% of HT
+// Startup keeps: netAmount - platformFee - sellerCommission
 ```
 
 **invoice.paid event (recurring):**
@@ -60,14 +66,20 @@ const traaactionFee = Math.floor(htAmount * PLATFORM_FEE_RATE)
 
 ```
 1. Gross Amount (TTC):           1.00€ = 100 cents
-2. Tax (20% VAT):                0.17€ = 17 cents (1.00 / 1.20 * 0.20)
-3. HT Amount (before Stripe):    0.83€ = 83 cents (1.00 - 0.17)
+2. Tax (20% VAT):                0.17€ = 17 cents (calculated by Stripe)
+3. HT Amount (base):             0.83€ = 83 cents (1.00 - 0.17)
 4. Stripe Fee (2.9% + 0.30€):    0.33€ = 33 cents (estimated)
-5. Net Amount (for commission):  0.50€ = 50 cents (0.83 - 0.33)
+5. Net Amount (startup receives): 0.50€ = 50 cents (0.83 - 0.33)
+
+COMMISSIONS (calculated on HT, NOT net):
 6. Platform Fee (15% of HT):     0.12€ = 12 cents (0.83 * 0.15)
 7. Seller Commission (depends on mission reward):
-   - If 10% reward: 0.05€ = 5 cents (0.50 * 0.10)
+   - If 10% reward: 0.08€ = 8 cents (0.83 * 0.10)  ← FIXED!
    - If 5€ flat reward: 5.00€ = 500 cents
+
+STARTUP SHARE:
+8. Startup keeps: Net - Platform - Seller
+   = 0.50 - 0.12 - 0.08 = 0.30€ = 30 cents
 ```
 
 #### What to Verify:
@@ -98,33 +110,46 @@ Look for these lines in the webhook logs:
   Stripe Fee: 0.33 eur
   Net (for split): 0.50 eur
 
-[Commission] 💰 Sale Gross (TTC): 1.00€
-[Commission] 💰 Sale HT (before Stripe): 0.83€
-[Commission] 💰 Sale Net (after Stripe): 0.50€
-[Commission] 💰 Partner commission: 0.05€ (10%)
-[Commission] 💰 Traaaction fee: 0.12€ (15% of HT = 0.83€)
-[Commission] 💰 Startup owes: 0.17€
+[Commission] 💰 Breakdown:
+  Gross (TTC): 1.00€
+  Tax (TVA): -0.17€
+  HT (base): 0.83€
+  Seller 10%: -0.08€
+  Platform 15%: -0.12€
+  Stripe fees: -0.33€
+  → Startup keeps: 0.30€
 ```
 
 3. **Math Verification:**
 ```
+Base for ALL commissions = HT = 0.83€
+
 Platform Fee = HT * 15%
              = 0.83€ * 15%
              = 0.12€ ✅
 
-NOT:
-Platform Fee = Net * 15%
-             = 0.50€ * 15%
-             = 0.08€ ❌ (This was the bug!)
+Seller Commission (10%) = HT * 10%
+                        = 0.83€ * 10%
+                        = 0.08€ ✅
+
+Startup receives after Stripe = 0.50€
+Startup pays out = 0.12 + 0.08 = 0.20€
+Startup keeps = 0.50 - 0.20 = 0.30€ ✅
+
+BEFORE (BUGGY):
+Platform Fee = Net * 15% = 0.50€ * 15% = 0.08€ ❌
+Seller Commission = Net * 10% = 0.50€ * 10% = 0.05€ ❌
 ```
 
 ## Key Differences: Before vs After
 
 | Metric | Before (Buggy) | After (Fixed) | Difference |
 |--------|---------------|---------------|------------|
-| Base for platform fee | Net (HT - Stripe) | HT | Stripe fees excluded |
+| Base for commissions | Net (HT - Stripe) | HT | Stripe fees excluded |
 | Platform fee (1€ sale) | ~0.08€ | ~0.12€ | +0.04€ (+50%) |
-| Platform fee accuracy | Incorrect | Correct | N/A |
+| Seller commission 10% (1€ sale) | ~0.05€ | ~0.08€ | +0.03€ (+60%) |
+| Startup share (1€ sale) | ~0.37€ | ~0.30€ | -0.07€ (-19%) |
+| Correctness | Incorrect | Correct | N/A |
 
 ## Testing Steps
 

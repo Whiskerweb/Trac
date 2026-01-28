@@ -110,22 +110,27 @@ export async function createCommission(params: {
     } = params
 
     try {
-        // Calculate partner commission based on mission reward (using netAmount = HT - Stripe fees)
-        const { amount: partnerCommission, type } = calculateCommission({ netAmount, missionReward })
-
-        // ✅ FIXED: Platform fee = 15% of HT (BEFORE Stripe fees), NOT of netAmount
-        // This ensures Traaaction gets 15% of the business revenue (HT), not affected by Stripe fees
+        // ✅ FIXED: Calculate BOTH commissions on HT (before Stripe fees)
+        // Seller commission = reward% of HT
+        // Platform fee = 15% of HT
+        // Stripe fees are paid by the startup from their remaining share
+        const { amount: partnerCommission, type } = calculateCommission({ netAmount: htAmount, missionReward })
         const traaactionFee = Math.floor(htAmount * PLATFORM_FEE_RATE)
 
-        // Partner gets their FULL commission (no deduction)
-        // Startup pays: partnerCommission + traaactionFee
+        // Startup receives: Gross - Tax - Stripe fees = netAmount
+        // Startup pays: partnerCommission (on HT) + traaactionFee (on HT)
+        // Startup keeps: netAmount - partnerCommission - traaactionFee
 
-        console.log(`[Commission] 💰 Sale Gross (TTC): ${grossAmount / 100}€`)
-        console.log(`[Commission] 💰 Sale HT (before Stripe): ${htAmount / 100}€`)
-        console.log(`[Commission] 💰 Sale Net (after Stripe): ${netAmount / 100}€`)
-        console.log(`[Commission] 💰 Partner commission: ${partnerCommission / 100}€ (${missionReward})`)
-        console.log(`[Commission] 💰 Traaaction fee: ${traaactionFee / 100}€ (15% of HT = ${htAmount / 100}€)`)
-        console.log(`[Commission] 💰 Startup owes: ${(partnerCommission + traaactionFee) / 100}€`)
+        const startupShare = netAmount - partnerCommission - traaactionFee
+
+        console.log(`[Commission] 💰 Breakdown:`)
+        console.log(`  Gross (TTC): ${grossAmount / 100}€`)
+        console.log(`  Tax (TVA): -${taxAmount / 100}€`)
+        console.log(`  HT (base): ${htAmount / 100}€`)
+        console.log(`  Seller ${missionReward}: -${partnerCommission / 100}€`)
+        console.log(`  Platform 15%: -${traaactionFee / 100}€`)
+        console.log(`  Stripe fees: -${stripeFee / 100}€`)
+        console.log(`  → Startup keeps: ${startupShare / 100}€`)
 
         // Idempotent upsert by sale_id
         const result = await prisma.commission.upsert({
