@@ -527,10 +527,11 @@ export async function POST(
                     // Fetch Stripe fee from balance_transaction via payment_intent
                     let stripeFee = 0
                     try {
-                        if (invoice.payment_intent) {
-                            const paymentIntentId = typeof invoice.payment_intent === 'string'
-                                ? invoice.payment_intent
-                                : invoice.payment_intent.id
+                        const paymentIntentRef = (invoice as any).payment_intent
+                        if (paymentIntentRef) {
+                            const paymentIntentId = typeof paymentIntentRef === 'string'
+                                ? paymentIntentRef
+                                : paymentIntentRef.id
 
                             const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
                                 expand: ['latest_charge.balance_transaction']
