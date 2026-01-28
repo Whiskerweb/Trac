@@ -93,7 +93,24 @@ async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<str
             }
         }
 
-        // 2. GET SALES directly by link_id (sales table has link_id column!)
+        // 2. GET LEADS by link_id (leads table has link_id column)
+        const leadsQuery = `SELECT link_id, count() as leads FROM leads WHERE link_id IN (${linkIdList}) GROUP BY link_id`
+        const leadsResponse = await fetch(
+            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(leadsQuery)}`,
+            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+        )
+
+        if (leadsResponse.ok) {
+            const leadsText = await leadsResponse.text()
+            for (const line of leadsText.trim().split('\n').filter(l => l.trim())) {
+                const [link_id, leads] = line.split('\t')
+                if (link_id && statsMap.has(link_id)) {
+                    statsMap.get(link_id)!.leads = parseInt(leads) || 0
+                }
+            }
+        }
+
+        // 3. GET SALES directly by link_id (sales table has link_id column!)
         const salesQuery = `SELECT link_id, count() as sales, sum(amount) as revenue FROM sales WHERE link_id IN (${linkIdList}) GROUP BY link_id`
         const salesResponse = await fetch(
             `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
@@ -554,6 +571,9 @@ export async function getMyEnrollments(): Promise<{
             slug: string
             full_url: string
             clicks: number
+            leads: number
+            sales: number
+            revenue: number
         } | null
         status: string
         created_at: Date
@@ -627,6 +647,7 @@ export async function getMyEnrollments(): Promise<{
                         slug: e.ShortLink.slug,
                         full_url: `${baseUrl}/s/${e.ShortLink.slug}`,
                         clicks: stats?.clicks || 0,
+                        leads: stats?.leads || 0,
                         sales: stats?.sales || 0,
                         revenue: stats?.revenue || 0,
                     } : null,

@@ -25,6 +25,9 @@ interface Enrollment {
         slug: string
         full_url: string
         clicks: number
+        leads: number
+        sales: number
+        revenue: number
     } | null
     status: string
     created_at: Date
@@ -226,11 +229,11 @@ function MissionCard({ data }: { data: Enrollment }) {
                                     </span>
                                     <span className="flex items-center gap-1.5">
                                         <Users className="w-3.5 h-3.5 text-purple-500" />
-                                        <span className="font-medium text-gray-700">0</span> leads
+                                        <span className="font-medium text-gray-700">{data.link.leads}</span> leads
                                     </span>
                                     <span className="flex items-center gap-1.5">
                                         <ShoppingCart className="w-3.5 h-3.5 text-teal-500" />
-                                        <span className="font-medium text-gray-700">0</span> ventes
+                                        <span className="font-medium text-gray-700">{data.link.sales}</span> ventes
                                     </span>
                                 </div>
                             )}
