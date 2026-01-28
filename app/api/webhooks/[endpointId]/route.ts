@@ -524,15 +524,20 @@ export async function POST(
                     const tax = (invoice as any).tax || 0
                     const currency = invoice.currency || 'eur'
 
-                    // Fetch Stripe fee from balance_transaction
+                    // Fetch Stripe fee from balance_transaction via payment_intent
                     let stripeFee = 0
                     try {
-                        if (invoice.charge) {
-                            const chargeId = typeof invoice.charge === 'string' ? invoice.charge : invoice.charge.id
-                            const charge = await stripe.charges.retrieve(chargeId, {
-                                expand: ['balance_transaction']
+                        if (invoice.payment_intent) {
+                            const paymentIntentId = typeof invoice.payment_intent === 'string'
+                                ? invoice.payment_intent
+                                : invoice.payment_intent.id
+
+                            const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+                                expand: ['latest_charge.balance_transaction']
                             })
-                            if (charge.balance_transaction && typeof charge.balance_transaction !== 'string') {
+
+                            const charge = paymentIntent.latest_charge as Stripe.Charge
+                            if (charge?.balance_transaction && typeof charge.balance_transaction !== 'string') {
                                 stripeFee = charge.balance_transaction.fee || 0
                                 console.log(`[Webhook] 💰 Recurring Stripe fee: ${stripeFee / 100} ${currency}`)
                             }
