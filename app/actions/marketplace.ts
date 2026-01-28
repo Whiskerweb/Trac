@@ -189,7 +189,19 @@ export async function getAffiliateStatsByUserId(userId: string): Promise<Affilia
                 stats.clicks = parseInt(text.trim()) || 0
             }
 
-            // 2. GET TOTAL SALES by link_id
+            // 2. GET TOTAL LEADS by link_id (same as clicks/sales - most reliable)
+            const leadsQuery = `SELECT count() as leads FROM leads WHERE link_id IN (${linkIdList})`
+            const leadsResponse = await fetch(
+                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(leadsQuery)}`,
+                { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+            )
+
+            if (leadsResponse.ok) {
+                const text = await leadsResponse.text()
+                stats.leads = parseInt(text.trim()) || 0
+            }
+
+            // 3. GET TOTAL SALES by link_id
             const salesQuery = `SELECT count() as sales, sum(amount) as revenue FROM sales WHERE link_id IN (${linkIdList})`
             const salesResponse = await fetch(
                 `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
@@ -204,17 +216,6 @@ export async function getAffiliateStatsByUserId(userId: string): Promise<Affilia
             }
         }
 
-        // 3. GET TOTAL LEADS by seller_id (leads table uses seller_id, which is Customer.affiliate_id)
-        const leadsQuery = `SELECT count() as leads FROM leads WHERE seller_id = '${userId}'`
-        const leadsResponse = await fetch(
-            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(leadsQuery)}`,
-            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-        )
-
-        if (leadsResponse.ok) {
-            const text = await leadsResponse.text()
-            stats.leads = parseInt(text.trim()) || 0
-        }
 
         console.log(`[Marketplace] 📊 Total stats for affiliate ${userId} (${linkIds.length} links): ${stats.clicks} clicks, ${stats.leads} leads, ${stats.sales} sales, ${stats.revenue}€`)
 
