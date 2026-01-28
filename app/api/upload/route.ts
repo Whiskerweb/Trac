@@ -79,23 +79,37 @@ export async function POST(request: NextRequest) {
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
 
-        const { data, error } = await supabase.storage
-            .from('uploads')
+        const { data, error} = await supabase.storage
+            .from('upload')  // ✅ Fixed: Use singular 'upload' to match created bucket
             .upload(storagePath, buffer, {
                 contentType: file.type,
                 upsert: true
             })
 
         if (error) {
-            console.error('Supabase upload error:', error)
+            console.error('[Upload] Supabase error:', {
+                message: error.message,
+                bucket: 'upload',
+                path: storagePath,
+                user: currentUser.userId
+            })
+
+            // Return more specific error message
+            const errorMessage = error.message.includes('policies') || error.message.includes('policy')
+                ? 'Permissions insuffisantes. Configurez les politiques Supabase Storage (RLS).'
+                : error.message.includes('not found') || error.message.includes('does not exist')
+                ? 'Bucket Supabase Storage introuvable. Vérifiez que le bucket "upload" existe.'
+                : `Erreur upload: ${error.message}`
+
             return NextResponse.json({
-                error: 'Erreur lors de l\'upload du fichier'
+                error: errorMessage,
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
             }, { status: 500 })
         }
 
         // Get public URL
         const { data: urlData } = supabase.storage
-            .from('uploads')
+            .from('upload')  // ✅ Fixed: Use singular 'upload' to match created bucket
             .getPublicUrl(storagePath)
 
         const url = urlData.publicUrl
