@@ -11,7 +11,7 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from 'recharts'
-import { TrendingUp, Flag } from 'lucide-react'
+import { TrendingUp, Flag, Check } from 'lucide-react'
 
 /**
  * Analytics Chart with Funnel & Timeline Views
@@ -30,6 +30,8 @@ interface AnalyticsChartProps {
         sales: number
         revenue: number
     }>
+    activeEventTypes?: Set<string>
+    onEventTypeToggle?: (type: 'clicks' | 'leads' | 'sales') => void
 }
 
 function formatNumber(n: number): string {
@@ -105,7 +107,15 @@ function ViewToggle({ view, onChange }: { view: 'funnel' | 'timeline'; onChange:
 // MAIN COMPONENT
 // =============================================
 
-export function AnalyticsChart({ clicks, leads, sales, revenue, timeseries = [] }: AnalyticsChartProps) {
+export function AnalyticsChart({
+    clicks,
+    leads,
+    sales,
+    revenue,
+    timeseries = [],
+    activeEventTypes = new Set(['clicks', 'leads', 'sales']),
+    onEventTypeToggle
+}: AnalyticsChartProps) {
     const [view, setView] = useState<'funnel' | 'timeline'>('funnel')
     const [saleUnit, setSaleUnit] = useState<'currency' | 'count'>('currency')
 
@@ -162,10 +172,22 @@ export function AnalyticsChart({ clicks, leads, sales, revenue, timeseries = [] 
             {/* Header Stats - 3 columns */}
             <div className="grid grid-cols-3 divide-x divide-gray-200">
                 {/* Clicks */}
-                <div className="p-6">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="w-3 h-3 rounded bg-violet-700" />
-                        <span className="text-sm text-gray-500 font-medium">Clicks</span>
+                <div
+                    onClick={() => onEventTypeToggle?.('clicks')}
+                    className={`p-6 cursor-pointer transition-all ${
+                        activeEventTypes.has('clicks')
+                            ? 'ring-2 ring-violet-500 opacity-100'
+                            : 'opacity-50 grayscale hover:opacity-70'
+                    }`}
+                >
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded bg-violet-700" />
+                            <span className="text-sm text-gray-500 font-medium">Clicks</span>
+                        </div>
+                        {activeEventTypes.has('clicks') && (
+                            <Check className="w-4 h-4 text-violet-500" />
+                        )}
                     </div>
                     <p className="text-4xl font-bold text-gray-900 tracking-tight">
                         <NumberFlow value={clicks} />
@@ -173,15 +195,27 @@ export function AnalyticsChart({ clicks, leads, sales, revenue, timeseries = [] 
                 </div>
 
                 {/* Leads */}
-                <div className="p-6 relative">
+                <div
+                    onClick={() => onEventTypeToggle?.('leads')}
+                    className={`p-6 relative cursor-pointer transition-all ${
+                        activeEventTypes.has('leads')
+                            ? 'ring-2 ring-violet-500 opacity-100'
+                            : 'opacity-50 grayscale hover:opacity-70'
+                    }`}
+                >
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M9 18l6-6-6-6" />
                         </svg>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="w-3 h-3 rounded bg-violet-500" />
-                        <span className="text-sm text-gray-500 font-medium">Leads</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded bg-violet-500" />
+                            <span className="text-sm text-gray-500 font-medium">Leads</span>
+                        </div>
+                        {activeEventTypes.has('leads') && (
+                            <Check className="w-4 h-4 text-violet-500" />
+                        )}
                     </div>
                     <p className="text-4xl font-bold text-gray-900 tracking-tight">
                         <NumberFlow value={leads} />
@@ -189,27 +223,45 @@ export function AnalyticsChart({ clicks, leads, sales, revenue, timeseries = [] 
                 </div>
 
                 {/* Sales */}
-                <div className={`p-6 relative ${view === 'funnel' ? 'border-b-2 border-gray-900' : ''}`}>
+                <div
+                    onClick={() => onEventTypeToggle?.('sales')}
+                    className={`p-6 relative cursor-pointer transition-all ${view === 'funnel' ? 'border-b-2 border-gray-900' : ''} ${
+                        activeEventTypes.has('sales')
+                            ? 'ring-2 ring-violet-500 opacity-100'
+                            : 'opacity-50 grayscale hover:opacity-70'
+                    }`}
+                >
                     <div className="absolute right-4 top-4 flex items-center gap-2">
                         {/* Currency/Count Toggle */}
                         <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
                             <button
-                                onClick={() => setSaleUnit('currency')}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSaleUnit('currency')
+                                }}
                                 className={`px-2.5 py-1 text-sm font-medium transition-colors ${saleUnit === 'currency' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:bg-gray-50'}`}
                             >
                                 €
                             </button>
                             <button
-                                onClick={() => setSaleUnit('count')}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSaleUnit('count')
+                                }}
                                 className={`px-2.5 py-1 text-sm font-medium transition-colors ${saleUnit === 'count' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:bg-gray-50'}`}
                             >
                                 123
                             </button>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="w-3 h-3 rounded bg-violet-300" />
-                        <span className="text-sm text-gray-500 font-medium">Sales</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded bg-violet-300" />
+                            <span className="text-sm text-gray-500 font-medium">Sales</span>
+                        </div>
+                        {activeEventTypes.has('sales') && (
+                            <Check className="w-4 h-4 text-violet-500" />
+                        )}
                     </div>
                     <p className="text-4xl font-bold text-gray-900 tracking-tight">
                         <NumberFlow

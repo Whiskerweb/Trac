@@ -172,7 +172,7 @@ TRAC_CLIENT_TOKEN, CRON_SECRET
 │
 ├── components/                   # === COMPOSANTS REACT ===
 │   ├── landing/                  # Navbar, Hero, Features, B2BFeatures, FAQ, Footer, Logos, etc.
-│   ├── dashboard/                # Sidebar, AnalyticsChart, GlobeVisualization, DateRangePicker, etc.
+│   ├── dashboard/                # Sidebar, AnalyticsChart, GlobeVisualization, DateRangePicker, ActivityFeed, etc.
 │   ├── seller/                  # WalletButton, etc.
 │   ├── ui/                       # GlobeVisualization, EuropeMap, charts, visuals
 │   ├── CreateLinkModal.tsx       # Modal creation lien affilie (20KB)
@@ -638,7 +638,7 @@ Securise par header `CRON_SECRET`.
 |-------|---------|-------------|
 | `/api/stats/kpi` | GET | KPIs (clicks, leads, sales, revenue) |
 | `/api/stats/breakdown` | GET | Breakdown pays/device/browser |
-| `/api/stats/activity` | GET | Timeline activite |
+| `/api/stats/activity` | GET | Timeline activite avec enrichissement seller (nom, avatar) - 3 etapes: click_id → link_id → affiliate_id → seller |
 | `/api/stats/platform` | GET | Stats plateforme globales |
 | `/api/stats/check-installation` | GET | Verif installation SDK |
 
@@ -815,6 +815,68 @@ NAVIGATION SELLER:
 | `/seller/account` | Parametres compte | ✅ Fonctionnel |
 | `/seller/onboarding` | Onboarding 4 etapes | ✅ Fonctionnel |
 
+### ✅ Activity Feed avec Attribution Seller COMPLETE (100%)
+
+**Date de completion** : Janvier 2026
+
+Implementation d'un feed d'activite en temps reel affichant les clicks, leads et sales avec attribution correcte des sellers.
+
+#### Composant ActivityFeed
+**Fichier** : `components/dashboard/ActivityFeed.tsx`
+
+- **Design compact** : Avatars 32px, texte xs/10px, hauteur max 450px (~8 events visibles)
+- **Auto-refresh** : Rechargement automatique toutes les 30 secondes
+- **Enrichissement seller** : Affiche nom et avatar du seller pour chaque event
+- **Real-time** : Events tries par timestamp DESC (plus recents en premier)
+- **Types d'events** :
+  - Click (violet) : "triggered a click"
+  - Lead (blue) : "generated a lead" avec eventName si disponible
+  - Sale (green) : "made a sale" avec montant en EUR
+
+#### Integration Dashboard
+**Fichier** : `app/dashboard/page.tsx`
+
+- **Layout 50/50** : Globe geographique + Activity feed en grille
+- Globe reduit a moitie de page (au lieu de pleine largeur)
+- Activity feed sur la droite, meme hauteur que le globe
+
+#### API Activity Enrichie
+**Fichier** : `app/api/stats/activity/route.ts`
+
+Enrichissement en 3 etapes avec gestion correcte des sellers :
+
+**Etape 0** : Fetch events depuis Tinybird
+- Clicks : colonnes incluent `affiliate_id` (critique)
+- Leads : via table `leads`
+- Sales : via table `sales`
+- Gestion Tinybird NULL : traite `\N` comme null
+
+**Etape 1** : Enrichissement link_id
+- Leads/Sales : lookup click_id pour obtenir link_id
+- Map click_id → link_id via Tinybird
+
+**Etape 2** : Enrichissement affiliate_id
+- Lookup ShortLink par link_id pour obtenir affiliate_id
+- Map link_id → affiliate_id via Prisma
+
+**Etape 3** : Enrichissement seller info
+- Query Seller par user_id (affiliate_id)
+- Query SellerProfile pour avatars
+- **Fix critique** : Relation Prisma `Seller` (majuscule) au lieu de `seller`
+- Fallback : email sans domaine si pas de nom
+
+#### Bugs Fixes
+1. **Prisma relation case sensitivity** : `seller` → `Seller` dans SellerProfile query
+2. **Tinybird NULL handling** : Detection de `\N` comme valeur NULL
+3. **React keys** : Cles composites `${type}-${timestamp}-${index}` pour unicite
+4. **Avatar fallback** : Initiale du nom avec gradient violet/purple
+
+#### Resultats
+- Affichage correct des noms de sellers (ex: "Lucas roncey")
+- Avatars affiches quand disponibles
+- Events enrichis avec metadata (montant vente, nom event lead)
+- Performance optimale avec cache Redis/Tinybird
+
 ### Fichiers modifies en cours (non commites)
 - `app/actions/commissions.ts` - Refactoring stats commissions
 - `app/actions/sellers.ts` - Gestion sellers
@@ -824,6 +886,9 @@ NAVIGATION SELLER:
 - `app/dashboard/sellers/applications/page.tsx` - Applications sellers (renomme de partners)
 - `app/dashboard/payouts/page.tsx` - Page payouts startup
 - `lib/commission/engine.ts` - Moteur de commissions
+- `components/dashboard/ActivityFeed.tsx` - Nouveau composant feed activite
+- `app/dashboard/page.tsx` - Layout 50/50 globe + activity feed
+- `app/api/stats/activity/route.ts` - Enrichissement seller avec fix Prisma
 - Tous les fichiers seller mentionnes ci-dessus
 
 ### Nouveau (non track)
@@ -831,11 +896,18 @@ NAVIGATION SELLER:
 - `app/dashboard/sellers/` - Gestion sellers (remplace partners/)
 
 ### Focus actuel
-Le developpement est concentre sur le **systeme de paiement startup → seller** :
-- Comment la startup paye les commissions des sellers
-- Integration du flux de paiement batch via Stripe Checkout
-- Webhook de confirmation des paiements startup
-- Distinction startup_payment_status (UNPAID/PAID) sur chaque commission
+Le developpement est concentre sur plusieurs axes :
+
+1. **Systeme de paiement startup → seller** :
+   - Comment la startup paye les commissions des sellers
+   - Integration du flux de paiement batch via Stripe Checkout
+   - Webhook de confirmation des paiements startup
+   - Distinction startup_payment_status (UNPAID/PAID) sur chaque commission
+
+2. **Dashboard Analytics** (✅ COMPLETE) :
+   - Activity Feed en temps reel avec attribution seller
+   - Enrichissement des events (clicks, leads, sales) avec informations seller
+   - Interface compacte et performante avec auto-refresh
 
 ### Notes importantes post-migration
 - **Dashboard startup** : Le dossier `/dashboard/sellers/*` gere les sellers du point de vue startup

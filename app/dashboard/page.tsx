@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
 import { GlobeVisualization } from '@/components/dashboard/GlobeVisualization'
+import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { subDays, format } from 'date-fns'
 
 // =============================================
@@ -41,7 +42,7 @@ interface KPIResponse {
 }
 
 interface ActiveFilter {
-    type: 'country' | 'device' | 'city' | 'region' | 'continent' | 'browser' | 'os'
+    type: 'country' | 'device' | 'city' | 'region' | 'continent' | 'browser' | 'os' | 'event_type'
     value: string
     label: string
     icon?: React.ReactNode
@@ -362,6 +363,11 @@ export default function DashboardPage() {
     // Filter state
     const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
 
+    // Event type filter state (default: all selected)
+    const [activeEventTypes, setActiveEventTypes] = useState<Set<string>>(
+        new Set(['clicks', 'leads', 'sales'])
+    )
+
     // Tab state for analytics cards
     const [locationTab, setLocationTab] = useState('Countries')
     const [deviceTab, setDeviceTab] = useState('Devices')
@@ -376,14 +382,25 @@ export default function DashboardPage() {
     const buildKpiFilterParams = () => {
         const params: string[] = []
         const countryFilters = activeFilters.filter(f => f.type === 'country').map(f => f.value)
+        const cityFilters = activeFilters.filter(f => f.type === 'city').map(f => f.value)
+        const regionFilters = activeFilters.filter(f => f.type === 'region').map(f => f.value)
+        const continentFilters = activeFilters.filter(f => f.type === 'continent').map(f => f.value)
         const deviceFilters = activeFilters.filter(f => f.type === 'device').map(f => f.value)
         const browserFilters = activeFilters.filter(f => f.type === 'browser').map(f => f.value)
         const osFilters = activeFilters.filter(f => f.type === 'os').map(f => f.value)
 
         if (countryFilters.length) params.push(`country=${countryFilters.join(',')}`)
+        if (cityFilters.length) params.push(`city=${cityFilters.join(',')}`)
+        if (regionFilters.length) params.push(`region=${regionFilters.join(',')}`)
+        if (continentFilters.length) params.push(`continent=${continentFilters.join(',')}`)
         if (deviceFilters.length) params.push(`device=${deviceFilters.join(',')}`)
         if (browserFilters.length) params.push(`browser=${browserFilters.join(',')}`)
         if (osFilters.length) params.push(`os=${osFilters.join(',')}`)
+
+        // Add event type filter (only if not all types are selected)
+        if (activeEventTypes.size < 3) {
+            params.push(`event_type=${Array.from(activeEventTypes).join(',')}`)
+        }
 
         return params.length ? '&' + params.join('&') : ''
     }
@@ -410,6 +427,8 @@ export default function DashboardPage() {
         const params: string[] = []
         const countryFilters = activeFilters.filter(f => f.type === 'country').map(f => f.value)
         const cityFilters = activeFilters.filter(f => f.type === 'city').map(f => f.value)
+        const regionFilters = activeFilters.filter(f => f.type === 'region').map(f => f.value)
+        const continentFilters = activeFilters.filter(f => f.type === 'continent').map(f => f.value)
         const deviceFilters = activeFilters.filter(f => f.type === 'device').map(f => f.value)
         const browserFilters = activeFilters.filter(f => f.type === 'browser').map(f => f.value)
         const osFilters = activeFilters.filter(f => f.type === 'os').map(f => f.value)
@@ -417,9 +436,16 @@ export default function DashboardPage() {
         // Each dimension excludes its own type to show all values in that dimension
         if (countryFilters.length && excludeType !== 'country') params.push(`country=${countryFilters.join(',')}`)
         if (cityFilters.length && excludeType !== 'city') params.push(`city=${cityFilters.join(',')}`)
+        if (regionFilters.length && excludeType !== 'region') params.push(`region=${regionFilters.join(',')}`)
+        if (continentFilters.length && excludeType !== 'continent') params.push(`continent=${continentFilters.join(',')}`)
         if (deviceFilters.length && excludeType !== 'device') params.push(`device=${deviceFilters.join(',')}`)
         if (browserFilters.length && excludeType !== 'browser') params.push(`browser=${browserFilters.join(',')}`)
         if (osFilters.length && excludeType !== 'os') params.push(`os=${osFilters.join(',')}`)
+
+        // Add event type filter (breakdowns should also respect event type)
+        if (activeEventTypes.size < 3) {
+            params.push(`event_type=${Array.from(activeEventTypes).join(',')}`)
+        }
 
         return params.length ? '&' + params.join('&') : ''
     }
@@ -728,24 +754,40 @@ export default function DashboardPage() {
         })
     }
 
+    const toggleEventType = (type: 'clicks' | 'leads' | 'sales') => {
+        setActiveEventTypes(prev => {
+            // If all types are selected, clicking one filters to only that type
+            if (prev.size === 3) {
+                return new Set([type])
+            }
+            // If only this type is selected, clicking again shows all
+            if (prev.size === 1 && prev.has(type)) {
+                return new Set(['clicks', 'leads', 'sales'])
+            }
+            // Otherwise, set to only this type
+            return new Set([type])
+        })
+    }
+
     const removeFilter = (type: ActiveFilter['type'], value: string) => {
         setActiveFilters(prev => prev.filter(f => !(f.type === type && f.value === value)))
     }
 
     const clearAllFilters = useCallback(() => {
         setActiveFilters([])
+        setActiveEventTypes(new Set(['clicks', 'leads', 'sales']))
     }, [])
 
     // ESC key to clear filters
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && activeFilters.length > 0) {
+            if (e.key === 'Escape' && (activeFilters.length > 0 || activeEventTypes.size < 3)) {
                 clearAllFilters()
             }
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [activeFilters.length, clearAllFilters])
+    }, [activeFilters.length, activeEventTypes.size, clearAllFilters])
 
     const isCountrySelected = (name: string) => activeFilters.some(f => f.type === 'country' && f.value === name)
     const isDeviceSelected = (name: string) => activeFilters.some(f => f.type === 'device' && f.value === name)
@@ -795,8 +837,24 @@ export default function DashboardPage() {
             </div>
 
             {/* Active Filters Bar */}
-            {activeFilters.length > 0 && (
+            {(activeFilters.length > 0 || activeEventTypes.size < 3) && (
                 <div className="flex items-center gap-3 flex-wrap animate-in fade-in slide-in-from-top-2 duration-200">
+                    {/* Event Type Filter Badge */}
+                    {activeEventTypes.size < 3 && (
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-100 border border-violet-200 rounded-lg">
+                            <span className="text-sm text-violet-700 font-medium">
+                                Showing: {Array.from(activeEventTypes).join(', ')}
+                            </span>
+                            <button
+                                onClick={() => setActiveEventTypes(new Set(['clicks', 'leads', 'sales']))}
+                                className="text-violet-500 hover:text-violet-700 transition-colors"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Dimension Filters */}
                     {activeFilters.map((filter) => (
                         <FilterBadge
                             key={`${filter.type}-${filter.value}`}
@@ -804,6 +862,8 @@ export default function DashboardPage() {
                             onRemove={() => removeFilter(filter.type, filter.value)}
                         />
                     ))}
+
+                    {/* Clear All Button */}
                     <button
                         onClick={clearAllFilters}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
@@ -821,6 +881,8 @@ export default function DashboardPage() {
                 sales={displayKPI.sales}
                 revenue={displayKPI.revenue}
                 timeseries={displayTimeseries}
+                activeEventTypes={activeEventTypes}
+                onEventTypeToggle={toggleEventType}
             />
 
             {/* Analytics Cards Grid */}
@@ -926,8 +988,14 @@ export default function DashboardPage() {
                 </AnalyticsCard>
             </div>
 
-            {/* 3D Globe Visualization */}
-            <GlobeVisualization />
+            {/* Geographic Distribution & Live Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* 3D Globe Visualization */}
+                <GlobeVisualization />
+
+                {/* Live Activity Feed */}
+                <ActivityFeed />
+            </div>
         </div>
     )
 }

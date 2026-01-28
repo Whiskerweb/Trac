@@ -12,12 +12,145 @@ const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.euro
 const TINYBIRD_ADMIN_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
 
 /**
+ * Helper: Execute SQL query on Tinybird
+ */
+async function executeTinybirdSQL(sql: string): Promise<any> {
+    const response = await fetch(`${TINYBIRD_HOST}/v0/sql`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${TINYBIRD_ADMIN_TOKEN}`,
+            'Content-Type': 'text/plain',
+        },
+        body: sql,
+        cache: 'no-store' as RequestCache,
+    })
+
+    if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Tinybird SQL error: ${response.status} - ${errorText}`)
+    }
+
+    return response.json()
+}
+
+// Region to Cities mapping (must match frontend and breakdown API)
+const REGION_TO_CITIES: Record<string, string[]> = {
+    'Île-de-France': ['Paris', 'Versailles', 'Saint-Denis', 'Boulogne-Billancourt'],
+    'Auvergne-Rhône-Alpes': ['Lyon', 'Grenoble', 'Saint-Étienne'],
+    'Provence-Alpes-Côte d\'Azur': ['Marseille', 'Nice', 'Toulon'],
+    'Nouvelle-Aquitaine': ['Bordeaux', 'Limoges', 'Poitiers'],
+    'Occitanie': ['Toulouse', 'Montpellier', 'Nîmes'],
+    'Hauts-de-France': ['Lille', 'Amiens', 'Roubaix'],
+    'Normandie': ['Rouen', 'Le Havre', 'Caen'],
+    'Grand Est': ['Strasbourg', 'Reims', 'Metz'],
+}
+
+// Continent to Countries mapping (must match frontend and breakdown API)
+const CONTINENT_TO_COUNTRIES: Record<string, string[]> = {
+    'Europe': ['France', 'Germany', 'United Kingdom', 'Spain', 'Italy', 'Netherlands', 'Belgium', 'Switzerland', 'Poland', 'Austria', 'Portugal', 'Sweden', 'Norway', 'Denmark', 'Finland'],
+    'North America': ['United States', 'Canada', 'Mexico'],
+    'Asia': ['Japan', 'China', 'India', 'South Korea', 'Singapore', 'Thailand', 'Vietnam', 'Indonesia'],
+    'South America': ['Brazil', 'Argentina', 'Colombia', 'Chile', 'Peru'],
+    'Africa': ['South Africa', 'Nigeria', 'Egypt', 'Kenya', 'Morocco'],
+    'Oceania': ['Australia', 'New Zealand'],
+}
+
+/**
+ * Helper: Build SQL WHERE clauses for dimensional filters
+ */
+function buildClicksFilterSQL(filters: {
+    country?: string
+    city?: string
+    region?: string
+    continent?: string
+    device?: string
+    browser?: string
+    os?: string
+}): string {
+    const clauses: string[] = []
+
+    // Handle country filters (including those derived from continent filters)
+    let allCountries: string[] = []
+    if (filters.country) {
+        allCountries.push(...filters.country.split(',').map(c => c.trim()))
+    }
+    // Convert continent filters to country filters
+    if (filters.continent) {
+        filters.continent.split(',').forEach(continent => {
+            const trimmedContinent = continent.trim()
+            const countries = CONTINENT_TO_COUNTRIES[trimmedContinent] || []
+            allCountries.push(...countries)
+        })
+    }
+    if (allCountries.length > 0) {
+        const uniqueCountries = [...new Set(allCountries)]
+        const countries = uniqueCountries.map(c => `'${c}'`).join(',')
+        clauses.push(`country IN (${countries})`)
+    }
+
+    // Handle city filters (including those derived from region filters)
+    let allCities: string[] = []
+    if (filters.city) {
+        allCities.push(...filters.city.split(',').map(c => c.trim()))
+    }
+    // Convert region filters to city filters
+    if (filters.region) {
+        filters.region.split(',').forEach(region => {
+            const trimmedRegion = region.trim()
+            const cities = REGION_TO_CITIES[trimmedRegion] || []
+            allCities.push(...cities)
+        })
+    }
+    if (allCities.length > 0) {
+        const uniqueCities = [...new Set(allCities)]
+        const cities = uniqueCities.map(c => `'${c}'`).join(',')
+        clauses.push(`city IN (${cities})`)
+    }
+
+    if (filters.device) {
+        const devices = filters.device.split(',').map(d => `'${d.trim()}'`).join(',')
+        clauses.push(`device IN (${devices})`)
+    }
+
+    if (filters.browser) {
+        const browsers = filters.browser.split(',')
+        const browserConditions = browsers.map(b => {
+            const browser = b.trim()
+            // Exclusive detection to avoid double counting (Chrome user agents contain "Safari")
+            if (browser === 'Edge') return "positionCaseInsensitive(user_agent, 'Edg') > 0"
+            if (browser === 'Chrome') return "(positionCaseInsensitive(user_agent, 'Chrome') > 0 AND positionCaseInsensitive(user_agent, 'Edg') = 0)"
+            if (browser === 'Safari') return "(positionCaseInsensitive(user_agent, 'Safari') > 0 AND positionCaseInsensitive(user_agent, 'Chrome') = 0)"
+            if (browser === 'Firefox') return "positionCaseInsensitive(user_agent, 'Firefox') > 0"
+            if (browser === 'Opera') return "(positionCaseInsensitive(user_agent, 'Opera') > 0 OR positionCaseInsensitive(user_agent, 'OPR') > 0)"
+            return `positionCaseInsensitive(user_agent, '${browser}') > 0`
+        })
+        clauses.push(`(${browserConditions.join(' OR ')})`)
+    }
+
+    if (filters.os) {
+        const oses = filters.os.split(',')
+        const osConditions = oses.map(o => {
+            const os = o.trim()
+            if (os === 'Windows') return "positionCaseInsensitive(user_agent, 'Windows') > 0"
+            if (os === 'macOS') return "(positionCaseInsensitive(user_agent, 'Mac OS X') > 0 OR positionCaseInsensitive(user_agent, 'Macintosh') > 0)"
+            if (os === 'iOS') return "(positionCaseInsensitive(user_agent, 'iPhone') > 0 OR positionCaseInsensitive(user_agent, 'iPad') > 0)"
+            if (os === 'Android') return "positionCaseInsensitive(user_agent, 'Android') > 0"
+            if (os === 'Linux') return "positionCaseInsensitive(user_agent, 'Linux') > 0"
+            return `positionCaseInsensitive(user_agent, '${os}') > 0`
+        })
+        clauses.push(`(${osConditions.join(' OR ')})`)
+    }
+
+    return clauses.length > 0 ? 'AND ' + clauses.join(' AND ') : ''
+}
+
+/**
  * KPI Stats Proxy
  * GET /api/stats/kpi
- * 
+ *
  * Server-side proxy that fetches KPIs from Tinybird with enforced workspace filtering.
  * Uses authenticated user's ID as workspace_id for multi-tenant data isolation.
- * 
+ *
  * SECURITY: Each request MUST authenticate fresh - no caching allowed.
  */
 export async function GET(request: NextRequest) {
@@ -185,73 +318,283 @@ export async function GET(request: NextRequest) {
 
         // Parse filter params
         const countryFilter = searchParams.get('country')
+        const cityFilter = searchParams.get('city')
+        const regionFilter = searchParams.get('region')
+        const continentFilter = searchParams.get('continent')
         const deviceFilter = searchParams.get('device')
         const browserFilter = searchParams.get('browser')
         const osFilter = searchParams.get('os')
+        const eventTypeFilter = searchParams.get('event_type')
 
-        const baseParams = new URLSearchParams({
-            workspace_id: workspaceId,
-            date_from: dateFrom,
-            date_to: dateTo,
-        })
+        // Parse event types
+        const eventTypes = eventTypeFilter
+            ? eventTypeFilter.split(',').map(t => t.trim())
+            : ['clicks', 'leads', 'sales']
 
-        // Add filters to params if present
-        if (countryFilter) baseParams.set('country', countryFilter)
-        if (deviceFilter) baseParams.set('device', deviceFilter)
-        if (browserFilter) baseParams.set('browser', browserFilter)
-        if (osFilter) baseParams.set('os', osFilter)
+        console.log('[KPI Proxy] 🎯 Event types:', eventTypes.join(', '))
 
-        const kpisUrl = `${TINYBIRD_HOST}/v0/pipes/kpis.json?${baseParams}`
-        const trendUrl = `${TINYBIRD_HOST}/v0/pipes/trend.json?${baseParams}`
-
-        console.log('[KPI Proxy] 🎯 Fetching KPIs:', kpisUrl)
-        console.log('[KPI Proxy] 📈 Fetching Trend:', trendUrl)
+        let kpi: any = { clicks: 0, leads: 0, sales: 0, revenue: 0 }
+        let timeseries: Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }> = []
+        let kpisData: any = { statistics: { elapsed: 0, rows_read: 0, bytes_read: 0 } }
 
         // ========================================
-        // PARALLEL FETCH FROM TINYBIRD (NO CACHE)
+        // IF EVENT_TYPE FILTERING OR DIMENSIONAL FILTERS: Use direct SQL queries
         // ========================================
-        const fetchOptions = {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${TINYBIRD_ADMIN_TOKEN}`,
-                'Content-Type': 'application/json',
-            },
-            cache: 'no-store' as RequestCache,
+        const hasDimensionalFilters = !!(countryFilter || cityFilter || regionFilter || continentFilter || deviceFilter || browserFilter || osFilter)
+        const needsSQLFiltering = (eventTypeFilter && eventTypes.length < 3) || hasDimensionalFilters
+
+        if (needsSQLFiltering) {
+            console.log('[KPI Proxy] 🔍 Using direct SQL (event_type or dimensional filters active)')
+
+            const filters = {
+                country: countryFilter || undefined,
+                city: cityFilter || undefined,
+                region: regionFilter || undefined,
+                continent: continentFilter || undefined,
+                device: deviceFilter || undefined,
+                browser: browserFilter || undefined,
+                os: osFilter || undefined,
+            }
+
+            // Build CTE for filtered clicks
+            const filteredClicksWhere = `
+                workspace_id = '${workspaceId}'
+                AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
+                AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+                ${buildClicksFilterSQL(filters)}
+            `
+
+            // Query clicks (if included)
+            if (eventTypes.includes('clicks')) {
+                const clicksSQL = `
+                    SELECT count() as clicks
+                    FROM clicks
+                    WHERE ${filteredClicksWhere}
+                    FORMAT JSON
+                `
+                console.log('[KPI Proxy] 📊 Executing clicks SQL')
+                const result = await executeTinybirdSQL(clicksSQL)
+                kpi.clicks = result.data?.[0]?.clicks || 0
+            }
+
+            // Query leads (if included) - via click_id JOIN
+            if (eventTypes.includes('leads')) {
+                const leadsSQL = `
+                    WITH filtered_clicks AS (
+                        SELECT click_id
+                        FROM clicks
+                        WHERE ${filteredClicksWhere}
+                    )
+                    SELECT count() as leads
+                    FROM leads
+                    WHERE workspace_id = '${workspaceId}'
+                      AND click_id IN (SELECT click_id FROM filtered_clicks)
+                    FORMAT JSON
+                `
+                console.log('[KPI Proxy] 📊 Executing leads SQL (via click_id JOIN)')
+                const result = await executeTinybirdSQL(leadsSQL)
+                kpi.leads = result.data?.[0]?.leads || 0
+            }
+
+            // Query sales (if included) - via click_id JOIN
+            if (eventTypes.includes('sales')) {
+                const salesSQL = `
+                    WITH filtered_clicks AS (
+                        SELECT click_id
+                        FROM clicks
+                        WHERE ${filteredClicksWhere}
+                    )
+                    SELECT count() as sales, sum(net_amount) as revenue
+                    FROM sales
+                    WHERE workspace_id = '${workspaceId}'
+                      AND click_id IN (SELECT click_id FROM filtered_clicks)
+                    FORMAT JSON
+                `
+                console.log('[KPI Proxy] 📊 Executing sales SQL (via click_id JOIN)')
+                const result = await executeTinybirdSQL(salesSQL)
+                kpi.sales = result.data?.[0]?.sales || 0
+                kpi.revenue = result.data?.[0]?.revenue || 0
+            }
+
+            // Calculate conversion rates
+            kpi.conversion_rate = kpi.clicks > 0 ? ((kpi.sales / kpi.clicks) * 100) : 0
+            kpi.click_to_lead_rate = kpi.clicks > 0 ? ((kpi.leads / kpi.clicks) * 100) : 0
+            kpi.lead_to_sale_rate = kpi.leads > 0 ? ((kpi.sales / kpi.leads) * 100) : 0
+
+            // Generate timeseries with filters
+            console.log('[KPI Proxy] 📈 Generating timeseries with filters')
+
+            // Determine granularity based on date range
+            const dateFromObj = new Date(dateFrom)
+            const dateToObj = new Date(dateTo)
+            const daysDiff = Math.ceil((dateToObj.getTime() - dateFromObj.getTime()) / (1000 * 60 * 60 * 24))
+            const granularity = daysDiff <= 31 ? 'day' : 'month'
+
+            console.log(`[KPI Proxy] Date range: ${daysDiff} days, using ${granularity} granularity`)
+
+            // Query timeseries for clicks (if included)
+            const timeseriesMap = new Map<string, { clicks: number; leads: number; sales: number; revenue: number }>()
+
+            if (eventTypes.includes('clicks')) {
+                const clicksTimeseriesSQL = `
+                    SELECT
+                        ${granularity === 'day' ? 'toDate(timestamp)' : 'toStartOfMonth(timestamp)'} as date,
+                        count() as clicks
+                    FROM clicks
+                    WHERE ${filteredClicksWhere}
+                    GROUP BY date
+                    ORDER BY date ASC
+                    FORMAT JSON
+                `
+                console.log('[KPI Proxy] 📊 Executing clicks timeseries SQL')
+                const result = await executeTinybirdSQL(clicksTimeseriesSQL)
+                const data = result.data || []
+
+                data.forEach((item: any) => {
+                    const dateKey = item.date
+                    if (!timeseriesMap.has(dateKey)) {
+                        timeseriesMap.set(dateKey, { clicks: 0, leads: 0, sales: 0, revenue: 0 })
+                    }
+                    const entry = timeseriesMap.get(dateKey)!
+                    entry.clicks = item.clicks || 0
+                })
+            }
+
+            // Query timeseries for leads (if included) - via click_id JOIN
+            if (eventTypes.includes('leads')) {
+                const leadsTimeseriesSQL = `
+                    WITH filtered_clicks AS (
+                        SELECT click_id, timestamp
+                        FROM clicks
+                        WHERE ${filteredClicksWhere}
+                    )
+                    SELECT
+                        ${granularity === 'day' ? 'toDate(fc.timestamp)' : 'toStartOfMonth(fc.timestamp)'} as date,
+                        count() as leads
+                    FROM leads l
+                    JOIN filtered_clicks fc ON l.click_id = fc.click_id
+                    WHERE l.workspace_id = '${workspaceId}'
+                    GROUP BY date
+                    ORDER BY date ASC
+                    FORMAT JSON
+                `
+                console.log('[KPI Proxy] 📊 Executing leads timeseries SQL (via click_id JOIN)')
+                const result = await executeTinybirdSQL(leadsTimeseriesSQL)
+                const data = result.data || []
+
+                data.forEach((item: any) => {
+                    const dateKey = item.date
+                    if (!timeseriesMap.has(dateKey)) {
+                        timeseriesMap.set(dateKey, { clicks: 0, leads: 0, sales: 0, revenue: 0 })
+                    }
+                    const entry = timeseriesMap.get(dateKey)!
+                    entry.leads = item.leads || 0
+                })
+            }
+
+            // Query timeseries for sales (if included) - via click_id JOIN
+            if (eventTypes.includes('sales')) {
+                const salesTimeseriesSQL = `
+                    WITH filtered_clicks AS (
+                        SELECT click_id, timestamp
+                        FROM clicks
+                        WHERE ${filteredClicksWhere}
+                    )
+                    SELECT
+                        ${granularity === 'day' ? 'toDate(fc.timestamp)' : 'toStartOfMonth(fc.timestamp)'} as date,
+                        count() as sales,
+                        sum(s.net_amount) as revenue
+                    FROM sales s
+                    JOIN filtered_clicks fc ON s.click_id = fc.click_id
+                    WHERE s.workspace_id = '${workspaceId}'
+                    GROUP BY date
+                    ORDER BY date ASC
+                    FORMAT JSON
+                `
+                console.log('[KPI Proxy] 📊 Executing sales timeseries SQL (via click_id JOIN)')
+                const result = await executeTinybirdSQL(salesTimeseriesSQL)
+                const data = result.data || []
+
+                data.forEach((item: any) => {
+                    const dateKey = item.date
+                    if (!timeseriesMap.has(dateKey)) {
+                        timeseriesMap.set(dateKey, { clicks: 0, leads: 0, sales: 0, revenue: 0 })
+                    }
+                    const entry = timeseriesMap.get(dateKey)!
+                    entry.sales = item.sales || 0
+                    entry.revenue = item.revenue || 0
+                })
+            }
+
+            // Convert map to array
+            timeseries = Array.from(timeseriesMap.entries())
+                .map(([date, data]) => ({
+                    date: date,
+                    clicks: data.clicks,
+                    leads: data.leads,
+                    sales: data.sales,
+                    revenue: data.revenue
+                }))
+                .sort((a, b) => a.date.localeCompare(b.date))
+
+            console.log(`[KPI Proxy] 📈 Generated ${timeseries.length} timeseries data points`)
         }
-
-        const [kpisResponse, trendResponse] = await Promise.all([
-            fetch(kpisUrl, fetchOptions),
-            fetch(trendUrl, fetchOptions),
-        ])
-
         // ========================================
-        // HANDLE KPI RESPONSE
+        // ELSE: Use legacy Tinybird pipes (all event types)
         // ========================================
-        if (!kpisResponse.ok) {
-            const errorText = await kpisResponse.text()
-            console.error('[KPI Proxy] ❌ KPIs Tinybird error:', kpisResponse.status, errorText)
-            return NextResponse.json(
-                { error: 'Failed to fetch KPIs', details: errorText },
-                { status: kpisResponse.status }
-            )
-        }
+        else {
+            const baseParams = new URLSearchParams({
+                workspace_id: workspaceId,
+                date_from: dateFrom,
+                date_to: dateTo,
+            })
 
-        const kpisData = await kpisResponse.json()
-        const kpi = kpisData.data?.[0] || { clicks: 0, leads: 0, sales: 0, revenue: 0, conversion_rate: 0, click_to_lead_rate: 0, lead_to_sale_rate: 0 }
+            // Add filters to params if present
+            if (countryFilter) baseParams.set('country', countryFilter)
+            if (deviceFilter) baseParams.set('device', deviceFilter)
+            if (browserFilter) baseParams.set('browser', browserFilter)
+            if (osFilter) baseParams.set('os', osFilter)
 
-        // ========================================
-        // HANDLE TREND RESPONSE (Graceful fallback)
-        // ========================================
-        let timeseries: Array<{ date: string; clicks: number; sales: number; revenue: number }> = []
+            const kpisUrl = `${TINYBIRD_HOST}/v0/pipes/kpis.json?${baseParams}`
+            const trendUrl = `${TINYBIRD_HOST}/v0/pipes/trend.json?${baseParams}`
 
-        if (trendResponse.ok) {
-            const trendData = await trendResponse.json()
-            timeseries = trendData.data || []
-            console.log('[KPI Proxy] 📈 Trend data:', timeseries.length, 'days')
-        } else {
-            // Log but don't fail - timeseries is optional
-            const errorText = await trendResponse.text()
-            console.warn('[KPI Proxy] ⚠️ Trend pipe error (fallback to empty):', errorText.slice(0, 100))
+            console.log('[KPI Proxy] 🎯 Fetching KPIs (pipes):', kpisUrl)
+            console.log('[KPI Proxy] 📈 Fetching Trend (pipes):', trendUrl)
+
+            const fetchOptions = {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${TINYBIRD_ADMIN_TOKEN}`,
+                    'Content-Type': 'application/json',
+                },
+                cache: 'no-store' as RequestCache,
+            }
+
+            const [kpisResponse, trendResponse] = await Promise.all([
+                fetch(kpisUrl, fetchOptions),
+                fetch(trendUrl, fetchOptions),
+            ])
+
+            if (!kpisResponse.ok) {
+                const errorText = await kpisResponse.text()
+                console.error('[KPI Proxy] ❌ KPIs Tinybird error:', kpisResponse.status, errorText)
+                return NextResponse.json(
+                    { error: 'Failed to fetch KPIs', details: errorText },
+                    { status: kpisResponse.status }
+                )
+            }
+
+            kpisData = await kpisResponse.json()
+            kpi = kpisData.data?.[0] || { clicks: 0, leads: 0, sales: 0, revenue: 0, conversion_rate: 0, click_to_lead_rate: 0, lead_to_sale_rate: 0 }
+
+            if (trendResponse.ok) {
+                const trendData = await trendResponse.json()
+                timeseries = trendData.data || []
+                console.log('[KPI Proxy] 📈 Trend data:', timeseries.length, 'days')
+            } else {
+                const errorText = await trendResponse.text()
+                console.warn('[KPI Proxy] ⚠️ Trend pipe error (fallback to empty):', errorText.slice(0, 100))
+            }
         }
 
         // ========================================
