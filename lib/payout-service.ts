@@ -18,7 +18,7 @@ import { createPayout as stripeConnectPayout } from '@/lib/stripe-connect'
 type PayoutMethod = 'STRIPE_CONNECT' | 'PAYPAL' | 'IBAN' | 'PLATFORM'
 
 export interface PayoutRequest {
-    partnerId: string
+    sellerId: string
     amount: number // in cents
     commissionIds: string[]
 }
@@ -49,8 +49,8 @@ const MIN_PAYOUT = {
  * Dispatch payout based on partner's configured method
  */
 export async function dispatchPayout(request: PayoutRequest): Promise<PayoutResult> {
-    const partner = await prisma.partner.findUnique({
-        where: { id: request.partnerId },
+    const partner = await prisma.seller.findUnique({
+        where: { id: request.sellerId },
         select: {
             id: true,
             payout_method: true,
@@ -111,7 +111,7 @@ async function processStripeConnect(
     }
 
     const result = await stripeConnectPayout(
-        request.partnerId,
+        request.sellerId,
         request.amount,
         request.commissionIds
     )
@@ -151,7 +151,7 @@ async function processPayPal(
     })
 
     console.log('[PayoutService] 📧 PayPal payout requested:', {
-        partnerId: request.partnerId,
+        partnerId: request.sellerId,
         amount: `${request.amount / 100}€`,
         email: paypalEmail,
         note: 'Manual payout required'
@@ -192,7 +192,7 @@ async function processIBAN(
     })
 
     console.log('[PayoutService] 🏦 IBAN payout requested:', {
-        partnerId: request.partnerId,
+        partnerId: request.sellerId,
         amount: `${request.amount / 100}€`,
         iban: `${iban.slice(0, 4)}****${iban.slice(-4)}`,
         bic: bic || 'N/A',
@@ -213,10 +213,10 @@ async function processIBAN(
 async function processPlatformBalance(request: PayoutRequest): Promise<PayoutResult> {
     // Money stays on platform - update balance for gift card redemption
 
-    await prisma.partnerBalance.upsert({
-        where: { partner_id: request.partnerId },
+    await prisma.sellerBalance.upsert({
+        where: { seller_id: request.sellerId },
         create: {
-            partner_id: request.partnerId,
+            seller_id: request.sellerId,
             balance: request.amount,
         },
         update: {
@@ -234,8 +234,8 @@ async function processPlatformBalance(request: PayoutRequest): Promise<PayoutRes
     })
 
     // Update partner balance tracking
-    await prisma.partnerBalance.update({
-        where: { partner_id: request.partnerId },
+    await prisma.sellerBalance.update({
+        where: { seller_id: request.sellerId },
         data: {
             due: { decrement: request.amount },
             paid_total: { increment: request.amount },
@@ -243,7 +243,7 @@ async function processPlatformBalance(request: PayoutRequest): Promise<PayoutRes
     })
 
     console.log('[PayoutService] 💰 Platform balance updated:', {
-        partnerId: request.partnerId,
+        partnerId: request.sellerId,
         amount: `${request.amount / 100}€`,
     })
 
@@ -259,7 +259,7 @@ async function processPlatformBalance(request: PayoutRequest): Promise<PayoutRes
 // =============================================
 
 export interface GiftCardRequest {
-    partnerId: string
+    sellerId: string
     cardType: 'amazon' | 'itunes' | 'steam' | 'paypal_gift'
     amount: number // in cents
 }
@@ -286,8 +286,8 @@ export async function requestGiftCard(request: GiftCardRequest): Promise<{
     }
 
     // Check balance
-    const balance = await prisma.partnerBalance.findUnique({
-        where: { partner_id: request.partnerId }
+    const balance = await prisma.sellerBalance.findUnique({
+        where: { seller_id: request.sellerId }
     })
 
     if (!balance || balance.balance < request.amount) {
@@ -300,7 +300,7 @@ export async function requestGiftCard(request: GiftCardRequest): Promise<{
     // Create redemption request
     const redemption = await prisma.giftCardRedemption.create({
         data: {
-            partner_id: request.partnerId,
+            seller_id: request.sellerId,
             amount: request.amount,
             card_type: request.cardType,
             status: 'PENDING',
@@ -308,8 +308,8 @@ export async function requestGiftCard(request: GiftCardRequest): Promise<{
     })
 
     // Deduct from balance
-    await prisma.partnerBalance.update({
-        where: { partner_id: request.partnerId },
+    await prisma.sellerBalance.update({
+        where: { seller_id: request.sellerId },
         data: {
             balance: { decrement: request.amount },
         }
@@ -317,7 +317,7 @@ export async function requestGiftCard(request: GiftCardRequest): Promise<{
 
     console.log('[PayoutService] 🎁 Gift card requested:', {
         redemptionId: redemption.id,
-        partnerId: request.partnerId,
+        partnerId: request.sellerId,
         cardType: request.cardType,
         amount: `${request.amount / 100}€`,
     })
@@ -329,13 +329,13 @@ export async function requestGiftCard(request: GiftCardRequest): Promise<{
 }
 
 // =============================================
-// GET PARTNER WALLET INFO
+// GET SELLER WALLET INFO
 // =============================================
 
-export async function getPartnerWallet(partnerId: string) {
-    const [partner, balance, pendingRedemptions] = await Promise.all([
-        prisma.partner.findUnique({
-            where: { id: partnerId },
+export async function getSellerWallet(sellerId: string) {
+    const [seller, balance, pendingRedemptions] = await Promise.all([
+        prisma.seller.findUnique({
+            where: { id: sellerId },
             select: {
                 id: true,
                 payout_method: true,
@@ -345,26 +345,26 @@ export async function getPartnerWallet(partnerId: string) {
                 payouts_enabled_at: true,
             }
         }),
-        prisma.partnerBalance.findUnique({
-            where: { partner_id: partnerId }
+        prisma.sellerBalance.findUnique({
+            where: { seller_id: sellerId }
         }),
         prisma.giftCardRedemption.count({
             where: {
-                partner_id: partnerId,
+                seller_id: sellerId,
                 status: { in: ['PENDING', 'PROCESSING'] }
             }
         })
     ])
 
-    if (!partner) return null
+    if (!seller) return null
 
     return {
-        partnerId,
-        payoutMethod: partner.payout_method,
-        hasStripeConnect: !!partner.stripe_connect_id,
-        hasPayPal: !!partner.paypal_email,
-        hasIBAN: !!partner.iban,
-        payoutsEnabled: !!partner.payouts_enabled_at,
+        sellerId,
+        payoutMethod: seller.payout_method,
+        hasStripeConnect: !!seller.stripe_connect_id,
+        hasPayPal: !!seller.paypal_email,
+        hasIBAN: !!seller.iban,
+        payoutsEnabled: !!seller.payouts_enabled_at,
 
         // Balances in cents
         pending: balance?.pending || 0,
@@ -381,7 +381,7 @@ export async function getPartnerWallet(partnerId: string) {
         pendingRedemptions,
 
         // Can withdraw?
-        canWithdraw: (balance?.due || 0) >= MIN_PAYOUT[partner.payout_method],
-        minWithdraw: MIN_PAYOUT[partner.payout_method] / 100,
+        canWithdraw: (balance?.due || 0) >= MIN_PAYOUT[seller.payout_method],
+        minWithdraw: MIN_PAYOUT[seller.payout_method] / 100,
     }
 }

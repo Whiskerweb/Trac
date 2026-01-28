@@ -1,0 +1,27 @@
+DESCRIPTION >
+    Seller Leaderboard - Top sellers by revenue
+    Groups sales by seller_id and ranks by total revenue
+    Note: Uses affiliate_id column internally (contains seller IDs)
+
+TOKEN "dashboard_endpoint" READ
+
+NODE endpoint
+SQL >
+    %
+    SELECT
+        affiliate_id as seller_id,
+        count() as total_sales,
+        sum(amount) as total_revenue,
+        sum(net_amount) as net_revenue
+    FROM sales
+    WHERE
+        workspace_id = {{ String(workspace_id, '') }}
+        AND timestamp >= parseDateTimeBestEffort({{ String(date_from, '2020-01-01') }})
+        AND timestamp <= parseDateTimeBestEffort({{ String(date_to, '2099-12-31') }})
+        AND affiliate_id IS NOT NULL
+        AND affiliate_id != ''
+    GROUP BY affiliate_id
+    ORDER BY total_revenue DESC
+    LIMIT 10
+
+TYPE endpoint

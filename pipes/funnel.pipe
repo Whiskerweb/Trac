@@ -7,7 +7,7 @@ SQL >
         workspace_id,
         toDate(timestamp) AS date,
         count() AS total_clicks,
-        countDistinct(affiliate_id) AS unique_affiliates
+        countDistinct(affiliate_id) AS unique_sellers
     FROM clicks
     WHERE workspace_id = {{String(workspace_id, '')}}
     AND timestamp >= now() - interval {{Int32(days, 30)}} day

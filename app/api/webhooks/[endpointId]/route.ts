@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics/tinybird'
 import { waitUntil } from '@vercel/functions'
-import { createCommission, findPartnerForSale, handleClawback, getMissionReward } from '@/lib/commission/engine'
+import { createCommission, findSellerForSale, handleClawback, getMissionReward } from '@/lib/commission/engine'
 
 export const dynamic = 'force-dynamic'
 
@@ -281,42 +281,72 @@ export async function POST(
 
                     // ========================================
                     // 4.1 RESOLVE AFFILIATE FROM CLICK_ID (FAIL-SAFE)
+                    // Uses Redis first (fast, reliable), Tinybird as fallback
                     // ========================================
                     let linkId: string | null = null
-                    let affiliateId: string | null = null
+                    let sellerId: string | null = null
 
                     if (clickId) {
                         try {
-                            // Step 1: Query Tinybird to get link_id from click_id
                             console.log(`[Multi-Tenant Webhook] 🔍 Looking up click_id: ${clickId}`)
 
-                            const tinybirdQuery = `SELECT link_id FROM clicks WHERE click_id = '${clickId}' LIMIT 1`
-                            const tinybirdResponse = await fetch(
-                                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(tinybirdQuery)}`,
-                                { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-                            )
+                            // Step 1: Try Redis first (stored by middleware during click)
+                            // This is more reliable as it doesn't depend on Tinybird ingestion delay
+                            const { Redis } = await import('@upstash/redis')
+                            const redis = new Redis({
+                                url: process.env.UPSTASH_REDIS_REST_URL!,
+                                token: process.env.UPSTASH_REDIS_REST_TOKEN!
+                            })
 
-                            if (tinybirdResponse.ok) {
-                                const tinybirdText = await tinybirdResponse.text()
-                                const lines = tinybirdText.trim().split('\n')
-                                if (lines.length > 0 && lines[0].trim()) {
-                                    linkId = lines[0].trim()
-                                    console.log(`[Multi-Tenant Webhook] ✅ Found link_id from Tinybird: ${linkId}`)
+                            const redisData = await redis.get<string | { linkId: string; sellerId: string | null }>(`click:${clickId}`)
+                            if (redisData) {
+                                const clickData = typeof redisData === 'string' ? JSON.parse(redisData) : redisData
+                                if (clickData.linkId) {
+                                    linkId = clickData.linkId
+                                    sellerId = clickData.sellerId || null
+                                    console.log(`[Multi-Tenant Webhook] ✅ Found from Redis: link=${linkId}, seller=${sellerId}`)
+                                }
+                            }
 
-                                    // Step 2: Find ShortLink by ID to get affiliate
-                                    const shortLink = await prisma.shortLink.findFirst({
-                                        where: { id: linkId },
-                                        include: { MissionEnrollment: true }
-                                    })
+                            // Step 2: If Redis miss, fallback to Tinybird query
+                            if (!linkId) {
+                                console.log(`[Multi-Tenant Webhook] 📦 Redis miss, trying Tinybird...`)
+                                const tinybirdQuery = `SELECT link_id FROM clicks WHERE click_id = '${clickId}' LIMIT 1`
+                                const tinybirdResponse = await fetch(
+                                    `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(tinybirdQuery)}`,
+                                    { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+                                )
 
-                                    if (shortLink?.MissionEnrollment) {
-                                        affiliateId = shortLink.MissionEnrollment.user_id
-                                        console.log(`[Multi-Tenant Webhook] 🔗 Attribution: Link ${linkId} → Affiliate ${affiliateId}`)
-                                    } else if (shortLink?.affiliate_id) {
-                                        affiliateId = shortLink.affiliate_id
-                                        console.log(`[Multi-Tenant Webhook] 🔗 Attribution (direct): Link ${linkId} → Affiliate ${affiliateId}`)
+                                if (tinybirdResponse.ok) {
+                                    const tinybirdText = await tinybirdResponse.text()
+                                    const lines = tinybirdText.trim().split('\n')
+                                    if (lines.length > 0 && lines[0].trim()) {
+                                        linkId = lines[0].trim()
+                                        console.log(`[Multi-Tenant Webhook] ✅ Found link_id from Tinybird: ${linkId}`)
                                     }
                                 }
+                            }
+
+                            // Step 3: If we have linkId but no sellerId, lookup from ShortLink
+                            if (linkId && !sellerId) {
+                                const shortLink = await prisma.shortLink.findFirst({
+                                    where: { id: linkId },
+                                    include: { MissionEnrollment: true }
+                                })
+
+                                if (shortLink?.MissionEnrollment) {
+                                    sellerId = shortLink.MissionEnrollment.user_id
+                                    console.log(`[Multi-Tenant Webhook] 🔗 Attribution via MissionEnrollment: Link ${linkId} → Seller ${sellerId}`)
+                                } else if (shortLink?.affiliate_id) {
+                                    sellerId = shortLink.affiliate_id
+                                    console.log(`[Multi-Tenant Webhook] 🔗 Attribution via ShortLink.affiliate_id: Link ${linkId} → Seller ${sellerId}`)
+                                }
+                            }
+
+                            if (sellerId) {
+                                console.log(`[Multi-Tenant Webhook] ✅ Final attribution: seller=${sellerId}, link=${linkId}`)
+                            } else {
+                                console.log(`[Multi-Tenant Webhook] ⚠️ No seller found for click_id=${clickId}`)
                             }
                         } catch (attributionError) {
                             console.error('[Multi-Tenant Webhook] ⚠️ Affiliate attribution failed (non-blocking):', attributionError)
@@ -339,7 +369,7 @@ export async function POST(
                         source: 'stripe_webhook',
                         workspaceId: workspaceId,
                         linkId: linkId || undefined,
-                        affiliateId: affiliateId || undefined,
+                        sellerId: sellerId || undefined,
                         customerExternalId: customerExternalId,
                         customerEmail: customerExternalId,
                         lineItems: products
@@ -356,21 +386,21 @@ export async function POST(
                             source: 'stripe_webhook',
                             workspaceId: workspaceId,
                             linkId: linkId || undefined,
-                            affiliateId: affiliateId || undefined,
+                            sellerId: sellerId || undefined,
                             customerExternalId: customerExternalId,
                             lineItems: products
                         }, eventId);
                     }
 
                     // ========================================
-                    // CREATE COMMISSION (IF AFFILIATE ATTRIBUTION)
+                    // CREATE COMMISSION (IF SELLER ATTRIBUTION)
                     // ========================================
-                    if (affiliateId || linkId) {
+                    if (sellerId || linkId) {
                         try {
-                            // Find the partner for this affiliate
-                            const partnerId = await findPartnerForSale({
+                            // Find the seller for this sale
+                            const partnerId = await findSellerForSale({
                                 linkId,
-                                affiliateId,
+                                sellerId,
                                 programId: workspaceId
                             })
 
@@ -397,9 +427,9 @@ export async function POST(
                                     recurringMonth: 1,
                                     holdDays: 7
                                 })
-                                console.log(`[Webhook] 💰 Commission created for partner ${partnerId} with reward ${missionReward}`)
+                                console.log(`[Webhook] 💰 Commission created for seller ${partnerId} with reward ${missionReward}`)
                             } else {
-                                console.log(`[Webhook] ⚠️ No approved partner found for affiliate ${affiliateId}`)
+                                console.log(`[Webhook] ⚠️ No approved seller found for seller ${sellerId}`)
                             }
                         } catch (commissionError) {
                             console.error('[Webhook] ⚠️ Commission creation failed (non-blocking):', commissionError)
@@ -540,7 +570,7 @@ export async function POST(
                             })
 
                             if (customer?.click_id) {
-                                const partnerId = await findPartnerForSale({
+                                const partnerId = await findSellerForSale({
                                     linkId: customer.link_id,
                                     programId: workspaceId
                                 })

@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
                     customer_external_id: customerExternalId,
                     click_id: customer.click_id,
                     link_id: customer.link_id,
-                    affiliate_id: customer.affiliate_id,
+                    seller_id: customer.affiliate_id,
                     event_name: eventName,
                     metadata: JSON.stringify(metadata || {})
                 })

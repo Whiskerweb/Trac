@@ -75,7 +75,7 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
 
         if (user) {
             // Get partner ID
-            const partner = await prisma.partner.findFirst({
+            const partner = await prisma.seller.findFirst({
                 where: { user_id: user.id }
             })
 
@@ -101,7 +101,7 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
                 // Get program requests
                 const requests = await prisma.programRequest.findMany({
                     where: {
-                        partner_id: partner.id,
+                        seller_id: partner.id,
                         mission_id: { in: missions.map(m => m.id) }
                     }
                 })
@@ -153,7 +153,7 @@ export async function applyToMission(missionId: string, message?: string) {
         }
 
         // Get partner
-        const partner = await prisma.partner.findFirst({
+        const partner = await prisma.seller.findFirst({
             where: { user_id: user.id }
         })
 
@@ -177,13 +177,13 @@ export async function applyToMission(missionId: string, message?: string) {
         // Create or update request
         const request = await prisma.programRequest.upsert({
             where: {
-                partner_id_mission_id: {
-                    partner_id: partner.id,
+                seller_id_mission_id: {
+                    seller_id: partner.id,
                     mission_id: missionId
                 }
             },
             create: {
-                partner_id: partner.id,
+                seller_id: partner.id,
                 mission_id: missionId,
                 message: message,
                 status: 'PENDING'
@@ -333,7 +333,7 @@ export async function getProgramRequests(workspaceId: string) {
                 status: 'PENDING'
             },
             include: {
-                Partner: {
+                Seller: {
                     select: {
                         id: true,
                         email: true,
@@ -354,8 +354,8 @@ export async function getProgramRequests(workspaceId: string) {
             success: true,
             requests: requests.map(r => ({
                 id: r.id,
-                partner_email: r.Partner.email,
-                partner_name: r.Partner.name,
+                seller_email: r.Seller.email,
+                seller_name: r.Seller.name,
                 mission_title: r.Mission.title,
                 message: r.message,
                 created_at: r.created_at
@@ -380,24 +380,24 @@ export async function approveProgramRequest(requestId: string) {
                 reviewed_at: new Date()
             },
             include: {
-                Partner: true,
+                Seller: true,
                 Mission: true
             }
         })
 
-        // Auto-create enrollment for approved request (only if partner has user_id)
-        // Shadow partners (no account yet) won't have user_id
-        if (request.Partner.user_id) {
+        // Auto-create enrollment for approved request (only if seller has user_id)
+        // Shadow sellers (no account yet) won't have user_id
+        if (request.Seller.user_id) {
             await prisma.missionEnrollment.upsert({
                 where: {
                     mission_id_user_id: {
                         mission_id: request.mission_id,
-                        user_id: request.Partner.user_id
+                        user_id: request.Seller.user_id
                     }
                 },
                 create: {
                     mission_id: request.mission_id,
-                    user_id: request.Partner.user_id,
+                    user_id: request.Seller.user_id,
                     status: 'APPROVED'
                 },
                 update: {

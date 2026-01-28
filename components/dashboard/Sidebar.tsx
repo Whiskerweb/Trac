@@ -27,7 +27,7 @@ interface NavSection {
 
 const navigation: NavSection[] = [
     {
-        title: 'Partner Program',
+        title: 'Seller Program',
         items: [
             { name: 'Overview', href: '/dashboard', icon: Home },
             { name: 'Payouts', href: '/dashboard/payouts', icon: CreditCard },
@@ -35,11 +35,11 @@ const navigation: NavSection[] = [
         ]
     },
     {
-        title: 'Partners',
+        title: 'Sellers',
         items: [
-            { name: 'All Partners', href: '/dashboard/partners', icon: Users },
-            { name: 'Groups', href: '/dashboard/partners/groups', icon: Users },
-            { name: 'My Partner', href: '/dashboard/partners/applications', icon: UserPlus },
+            { name: 'All Sellers', href: '/dashboard/sellers', icon: Users },
+            { name: 'Groups', href: '/dashboard/sellers/groups', icon: Users },
+            { name: 'My Sellers', href: '/dashboard/sellers/applications', icon: UserPlus },
         ]
     },
     {
@@ -74,7 +74,7 @@ const navigation: NavSection[] = [
 export function Sidebar() {
     const pathname = usePathname()
     const [userEmail, setUserEmail] = useState<string>('')
-    const [startupName, setStartupName] = useState<string>('Partner Program')
+    const [startupName, setStartupName] = useState<string>('Seller Program')
 
     useEffect(() => {
         fetch('/api/auth/user-roles')
@@ -118,7 +118,7 @@ export function Sidebar() {
                         <ul className="space-y-0.5">
                             {section.items.map((item) => {
                                 // Routes that need exact matching (have sub-routes that should NOT trigger parent active state)
-                                const exactMatchRoutes = ['/dashboard/partners']
+                                const exactMatchRoutes = ['/dashboard/sellers']
                                 const needsExactMatch = exactMatchRoutes.includes(item.href)
 
                                 const isActive = needsExactMatch
@@ -159,14 +159,23 @@ export function Sidebar() {
 
             {/* Profile Section */}
             <div className="p-3 border-t border-gray-100">
-                <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-100 to-gray-200 border border-gray-200 flex items-center justify-center text-gray-500">
-                        <User className="w-4 h-4" />
+                <Link
+                    href="/dashboard/profile"
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors ${
+                        pathname === '/dashboard/profile' ? 'bg-purple-50' : ''
+                    }`}
+                >
+                    <div className={`w-8 h-8 rounded-full bg-gradient-to-tr from-gray-100 to-gray-200 border border-gray-200 flex items-center justify-center ${
+                        pathname === '/dashboard/profile' ? 'border-purple-300' : 'text-gray-500'
+                    }`}>
+                        <User className={`w-4 h-4 ${pathname === '/dashboard/profile' ? 'text-purple-600' : ''}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{userEmail || 'Loading...'}</p>
+                        <p className={`text-sm font-medium truncate ${
+                            pathname === '/dashboard/profile' ? 'text-purple-700' : 'text-gray-900'
+                        }`}>{userEmail || 'Loading...'}</p>
                     </div>
-                </div>
+                </Link>
             </div>
         </aside>
     )

@@ -20,12 +20,12 @@ export const MOCK_MISSION_STATS = {
     total_partners: 6,
     conversion_rate: 3.2,
     partner_leaderboard: [
-        { partner_id: 'partner-1', partner_name: 'Alice Martin', total_revenue: 340000, total_commission: 51000, leads: 45, clicks: 1240, rank: 1 },
-        { partner_id: 'partner-2', partner_name: 'Bob Dupont', total_revenue: 289000, total_commission: 43350, leads: 32, clicks: 890, rank: 2 },
-        { partner_id: 'partner-3', partner_name: 'Charlie Lévy', total_revenue: 245000, total_commission: 36750, leads: 28, clicks: 720, rank: 3 },
-        { partner_id: 'partner-4', partner_name: 'Diana Chen', total_revenue: 178000, total_commission: 26700, leads: 22, clicks: 580, rank: 4 },
-        { partner_id: 'partner-5', partner_name: 'Emma Wilson', total_revenue: 112000, total_commission: 16800, leads: 15, clicks: 420, rank: 5 },
-        { partner_id: 'partner-6', partner_name: 'François Garcia', total_revenue: 81000, total_commission: 12150, leads: 10, clicks: 340, rank: 6 },
+        { seller_id: 'partner-1', partner_name: 'Alice Martin', total_revenue: 340000, total_commission: 51000, leads: 45, clicks: 1240, rank: 1 },
+        { seller_id: 'partner-2', partner_name: 'Bob Dupont', total_revenue: 289000, total_commission: 43350, leads: 32, clicks: 890, rank: 2 },
+        { seller_id: 'partner-3', partner_name: 'Charlie Lévy', total_revenue: 245000, total_commission: 36750, leads: 28, clicks: 720, rank: 3 },
+        { seller_id: 'partner-4', partner_name: 'Diana Chen', total_revenue: 178000, total_commission: 26700, leads: 22, clicks: 580, rank: 4 },
+        { seller_id: 'partner-5', partner_name: 'Emma Wilson', total_revenue: 112000, total_commission: 16800, leads: 15, clicks: 420, rank: 5 },
+        { seller_id: 'partner-6', partner_name: 'François Garcia', total_revenue: 81000, total_commission: 12150, leads: 10, clicks: 340, rank: 6 },
     ]
 }
 

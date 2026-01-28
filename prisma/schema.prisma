@@ -25,45 +25,45 @@ model ApiKey {
 }
 
 model Mission {
-  id                   String               @id @default(uuid())
-  workspace_id         String
-  title                String
-  description          String
-  target_url           String
-  reward               String
-  status               MissionStatus        @default(DRAFT)
-  created_at           DateTime             @default(now())
-  updated_at           DateTime             @updatedAt
+  id           String            @id @default(uuid())
+  workspace_id String
+  title        String
+  description  String
+  target_url   String
+  reward       String
+  status       MissionStatus     @default(DRAFT)
+  created_at   DateTime          @default(now())
+  updated_at   DateTime          @updatedAt
   /// Net Revenue, ROI, Fixed
-  gain_type            String?
+  gain_type    String?
   /// SaaS, E-commerce, Finance, etc.
-  industry             String?
-  visibility           MissionVisibility    @default(PUBLIC)
-  
+  industry     String?
+  visibility   MissionVisibility @default(PUBLIC)
+
   // === REWARD CONFIGURATION ===
   /// Sale (for subscriptions/purchases) or Lead (for sign-ups)
-  reward_type          RewardType           @default(SALE)
+  reward_type          RewardType          @default(SALE)
   /// One-off (first purchase) or Recurring (subscription)
-  commission_structure CommissionStructure  @default(ONE_OFF)
+  commission_structure CommissionStructure @default(ONE_OFF)
   /// Flat ($) or Percentage (%)
-  reward_structure     RewardStructure      @default(FLAT)
+  reward_structure     RewardStructure     @default(FLAT)
   /// Amount in cents (if Flat) or percentage (if %)
-  reward_amount        Float                @default(0)
+  reward_amount        Float               @default(0)
   /// Duration in months for recurring commissions (3-48)
   recurring_duration   Int?
-  
+
   // === COMPANY BRANDING ===
-  company_name         String?
-  logo_url             String?
-  
+  company_name String?
+  logo_url     String?
+
   // === SUPPORT INFO ===
-  contact_email        String?
-  help_center_url      String?
-  
-  Workspace            Workspace            @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  Contents             MissionContent[]
-  MissionEnrollment    MissionEnrollment[]
-  Requests             ProgramRequest[]
+  contact_email   String?
+  help_center_url String?
+
+  Workspace         Workspace           @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  Contents          MissionContent[]
+  MissionEnrollment MissionEnrollment[]
+  Requests          ProgramRequest[]
 
   @@index([status])
   @@index([visibility])
@@ -152,21 +152,62 @@ model Workspace {
   slug            String            @unique
   owner_id        String
   created_at      DateTime          @default(now())
-  ApiKey          ApiKey[]
-  Conversations   Conversation[]
-  Customer        Customer[]
-  Discount        Discount?
-  Domain          Domain[]
-  LeadEvent       LeadEvent[]
-  Mission         Mission[]
-  Partner         Partner[]
-  ShortLink       ShortLink[]
-  WebhookEndpoint WebhookEndpoint[]
-  WorkspaceMember WorkspaceMember[]
-  StartupPayment  StartupPayment[]
+  ApiKey           ApiKey[]
+  Conversations    Conversation[]
+  Customer         Customer[]
+  Discount         Discount?
+  Domain           Domain[]
+  LeadEvent        LeadEvent[]
+  Mission          Mission[]
+  Profile          WorkspaceProfile?
+  Seller           Seller[]
+  ShortLink        ShortLink[]
+  WebhookEndpoint  WebhookEndpoint[]
+  WorkspaceMember  WorkspaceMember[]
+  StartupPayment   StartupPayment[]
 
   @@index([owner_id])
   @@index([slug])
+}
+
+/// Startup profile - public-facing company information
+model WorkspaceProfile {
+  id             String   @id @default(cuid())
+  workspace_id   String   @unique
+  /// Company description / about
+  description    String?
+  /// Logo URL (uploaded image)
+  logo_url       String?
+  /// Company website
+  website_url    String?
+  /// Industry / sector
+  industry       String?
+  /// Company size (1-10, 11-50, 51-200, 201-500, 500+)
+  company_size   String?
+  /// Year founded
+  founded_year   String?
+  /// Headquarters location
+  headquarters   String?
+
+  // === SOCIAL LINKS ===
+  twitter_url    String?
+  linkedin_url   String?
+  instagram_url  String?
+  youtube_url    String?
+  tiktok_url     String?
+  github_url     String?
+
+  // === DOCUMENTS ===
+  /// Pitch deck PDF URL
+  pitch_deck_url String?
+  /// Additional document URL
+  doc_url        String?
+
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  Workspace      Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@index([workspace_id])
 }
 
 /// Custom domain for CNAME cloaking - enables First-Party tracking
@@ -286,7 +327,7 @@ model MissionContent {
 /// Program Access Requests - For PRIVATE missions
 model ProgramRequest {
   id          String        @id @default(cuid())
-  partner_id  String
+  seller_id   String
   mission_id  String
   status      RequestStatus @default(PENDING)
   /// Partner's application message
@@ -296,51 +337,51 @@ model ProgramRequest {
   created_at  DateTime      @default(now())
   updated_at  DateTime      @updatedAt
   Mission     Mission       @relation(fields: [mission_id], references: [id], onDelete: Cascade)
-  Partner     Partner       @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+  Seller      Seller        @relation(fields: [seller_id], references: [id], onDelete: Cascade)
 
-  @@unique([partner_id, mission_id])
-  @@index([partner_id])
+  @@unique([seller_id, mission_id])
+  @@index([seller_id])
   @@index([mission_id])
   @@index([status])
 }
 
 /// Shadow Partner (Dub.co style) - linked to Program/Workspace
 /// Enables "Shadow Tenancy" where partners can exist before creating an account
-model Partner {
+model Seller {
   /// TODO: Use trac_pn_ prefix via application layer
-  id                 String           @id @default(cuid())
+  id                 String       @id @default(cuid())
   /// Optional for Global Partners
   program_id         String?
   /// Nullable for Shadow Users (no account yet)
   user_id            String?
   /// External anchor ID for idempotent creation
-  tenant_id          String           @unique
+  tenant_id          String       @unique
   email              String
   name               String?
   /// Stripe Express account ID (acct_xxx)
   stripe_connect_id  String?
-  status             PartnerStatus    @default(PENDING)
+  status             SellerStatus @default(PENDING)
   payouts_enabled_at DateTime?
   /// 0-4 onboarding progress
-  onboarding_step    Int              @default(0)
-  
+  onboarding_step    Int          @default(0)
+
   // === MULTI-PAYOUT OPTIONS ===
   /// Preferred payout method
-  payout_method      PayoutMethod     @default(PLATFORM)
+  payout_method PayoutMethod @default(PLATFORM)
   /// PayPal email for payouts
-  paypal_email       String?
+  paypal_email  String?
   /// IBAN for SEPA transfers
-  iban               String?
+  iban          String?
   /// BIC/SWIFT code
-  bic                String?
-  
-  created_at         DateTime         @default(now())
-  updated_at         DateTime         @updatedAt
-  Commissions        Commission[]
-  Conversations      Conversation[]
-  Program            Workspace?       @relation(fields: [program_id], references: [id], onDelete: Cascade)
-  Profile            PartnerProfile?
-  Requests           ProgramRequest[]
+  bic           String?
+
+  created_at          DateTime             @default(now())
+  updated_at          DateTime             @updatedAt
+  Commissions         Commission[]
+  Conversations       Conversation[]
+  Program             Workspace?           @relation(fields: [program_id], references: [id], onDelete: Cascade)
+  Profile             SellerProfile?
+  Requests            ProgramRequest[]
   GiftCardRedemptions GiftCardRedemption[]
 
   @@unique([program_id, email])
@@ -351,29 +392,77 @@ model Partner {
 }
 
 /// Partner Profile - Onboarding data and social links
-model PartnerProfile {
-  id            String   @id @default(cuid())
-  partner_id    String   @unique
+model SellerProfile {
+  id            String       @id @default(cuid())
+  seller_id     String       @unique
   bio           String?
+
+  // === SOCIAL LINKS ===
   tiktok_url    String?
   instagram_url String?
   twitter_url   String?
   youtube_url   String?
   website_url   String?
+  linkedin_url  String?
+
+  // === PROFILE INFO ===
+  /// Country of residence
+  country       String?
+  /// Individual or Company
+  profile_type  ProfileType? @default(INDIVIDUAL)
+
+  // === EXPERTISE & PREFERENCES ===
+  /// Array of industry interests (AI, SaaS, Sales, etc.)
+  industry_interests  Json?
+  /// Monthly traffic range (< 1,000 | 1,000 - 10,000 | etc.)
+  monthly_traffic     String?
+  /// Earning preferences (revShare, cpc, cpl, oneTime)
+  earning_preferences Json?
+  /// Sales channels (blogs, newsletters, socialMedia, etc.)
+  sales_channels      Json?
+  /// Main activity type (Content Creator, Sales Rep, etc.)
+  activity_type       ActivityType?
+
+  // === MEDIA & DOCUMENTS ===
+  /// Profile photo URL (uploaded image)
+  avatar_url    String?
+  /// Portfolio link
+  portfolio_url String?
+  /// CV file URL (PDF upload)
+  cv_url        String?
+
   /// "Get Discovered" progress (0-100)
   profile_score Int      @default(0)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
-  Partner       Partner  @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+  Seller        Seller   @relation(fields: [seller_id], references: [id], onDelete: Cascade)
 
-  @@index([partner_id])
+  @@index([seller_id])
+}
+
+/// Profile type for sellers
+enum ProfileType {
+  INDIVIDUAL
+  COMPANY
+}
+
+/// Activity type for sellers
+enum ActivityType {
+  CONTENT_CREATOR
+  SALES_REP
+  INFLUENCER
+  MARKETER
+  BLOGGER
+  DEVELOPER
+  CONSULTANT
+  OTHER
 }
 
 /// Commission Ledger with State Machine
 /// Tracks all commission events with full audit trail
 model Commission {
   id                String           @id @default(cuid())
-  partner_id        String
+  seller_id         String
   /// Denormalized for faster queries
   program_id        String
   /// Stripe checkout session ID (cs_xxx) or invoice ID (in_xxx)
@@ -397,39 +486,39 @@ model Commission {
   commission_type   CommissionType
   currency          String           @default("EUR")
   status            CommissionStatus @default(PENDING)
-  
+
   // === RECURRING TRACKING ===
   /// Stripe subscription ID (sub_xxx) for recurring
-  subscription_id   String?
+  subscription_id String?
   /// Invoice number for this commission (1, 2, 3...)
-  recurring_month   Int?
+  recurring_month Int?
   /// Max months configured in mission (null = Lifetime)
-  recurring_max     Int?
-  
+  recurring_max   Int?
+
   // === MATURATION ===
   /// Days before PENDING → PROCEED
-  hold_days         Int              @default(7)
+  hold_days       Int       @default(7)
   /// When transitioned to PROCEED
-  matured_at        DateTime?
+  matured_at      DateTime?
   /// When payout completed
-  paid_at           DateTime?
+  paid_at         DateTime?
   /// When refund received
-  clawback_at       DateTime?
+  clawback_at     DateTime?
   /// Reason for clawback
-  clawback_reason   String?
-  
+  clawback_reason String?
+
   // === STARTUP PAYMENT STATUS ===
   /// Has startup paid this commission to partners?
   startup_payment_status StartupPaymentStatus @default(UNPAID)
   /// Reference to batch payment
-  startup_payment_id String?
-  
-  created_at        DateTime         @default(now())
-  updated_at        DateTime         @updatedAt
-  Partner           Partner          @relation(fields: [partner_id], references: [id], onDelete: Cascade)
-  StartupPayment    StartupPayment?  @relation(fields: [startup_payment_id], references: [id])
+  startup_payment_id     String?
 
-  @@index([partner_id])
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+  Seller         Seller          @relation(fields: [seller_id], references: [id], onDelete: Cascade)
+  StartupPayment StartupPayment? @relation(fields: [startup_payment_id], references: [id])
+
+  @@index([seller_id])
   @@index([program_id])
   @@index([status])
   @@index([created_at])
@@ -439,9 +528,9 @@ model Commission {
 }
 
 /// Partner Balance for tracking payouts and negative balances (clawbacks)
-model PartnerBalance {
+model SellerBalance {
   id         String   @id @default(cuid())
-  partner_id String   @unique
+  seller_id  String   @unique
   /// Current balance in cents (can be negative)
   balance    Int      @default(0)
   /// Pending commissions (PENDING status)
@@ -452,7 +541,7 @@ model PartnerBalance {
   paid_total Int      @default(0)
   updated_at DateTime @updatedAt
 
-  @@index([partner_id])
+  @@index([seller_id])
 }
 
 /// Discount for dual-sided incentives - linked to Program (Workspace)
@@ -483,7 +572,7 @@ model Discount {
 model Conversation {
   id             String    @id @default(cuid())
   workspace_id   String
-  partner_id     String
+  seller_id      String
   /// Preview of last message
   last_message   String?
   /// For sorting
@@ -494,13 +583,13 @@ model Conversation {
   unread_partner Int       @default(0)
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
-  Partner        Partner   @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+  Seller         Seller    @relation(fields: [seller_id], references: [id], onDelete: Cascade)
   Workspace      Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
   Messages       Message[]
 
-  @@unique([workspace_id, partner_id])
+  @@unique([workspace_id, seller_id])
   @@index([workspace_id])
-  @@index([partner_id])
+  @@index([seller_id])
   @@index([last_at])
 }
 
@@ -566,7 +655,7 @@ enum RequestStatus {
   REJECTED
 }
 
-enum PartnerStatus {
+enum SellerStatus {
   /// Awaiting approval
   PENDING
   /// Can earn commissions
@@ -600,7 +689,7 @@ enum DiscountType {
 
 enum SenderType {
   STARTUP
-  PARTNER
+  SELLER
 }
 
 // === MISSION REWARD ENUMS ===
@@ -654,22 +743,22 @@ enum GiftCardStatus {
 
 /// Gift card redemption from platform balance
 model GiftCardRedemption {
-  id            String          @id @default(cuid())
-  partner_id    String
+  id           String         @id @default(cuid())
+  seller_id    String
   /// Amount in cents
-  amount        Int
+  amount       Int
   /// amazon, itunes, steam, paypal_gift
-  card_type     String
+  card_type    String
   /// Card code (encrypted in production)
-  card_code     String?
-  status        GiftCardStatus  @default(PENDING)
+  card_code    String?
+  status       GiftCardStatus @default(PENDING)
   /// Admin note
-  notes         String?
-  created_at    DateTime        @default(now())
-  fulfilled_at  DateTime?
-  Partner       Partner         @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+  notes        String?
+  created_at   DateTime       @default(now())
+  fulfilled_at DateTime?
+  Seller       Seller         @relation(fields: [seller_id], references: [id], onDelete: Cascade)
 
-  @@index([partner_id])
+  @@index([seller_id])
   @@index([status])
 }
 
@@ -708,9 +797,9 @@ model StartupPayment {
   created_at        DateTime  @default(now())
   /// When payment was confirmed
   paid_at           DateTime?
-  
-  Workspace         Workspace @relation(fields: [workspace_id], references: [id])
-  Commissions       Commission[]
+
+  Workspace   Workspace    @relation(fields: [workspace_id], references: [id])
+  Commissions Commission[]
 
   @@index([workspace_id])
   @@index([status])

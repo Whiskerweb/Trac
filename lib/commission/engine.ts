@@ -127,7 +127,7 @@ export async function createCommission(params: {
         const result = await prisma.commission.upsert({
             where: { sale_id: saleId },
             create: {
-                partner_id: partnerId,
+                seller_id: partnerId,
                 program_id: programId,
                 sale_id: saleId,
                 link_id: linkId,
@@ -156,7 +156,7 @@ export async function createCommission(params: {
         console.log(`[Commission] ✅ Created commission ${result.id} for partner ${partnerId}`)
 
         // Update partner's pending balance
-        await updatePartnerBalance(partnerId)
+        await updateSellerBalance(partnerId)
 
         return { success: true, commission: { ...result, platform_fee: traaactionFee } }
 
@@ -201,10 +201,10 @@ export async function handleClawback(params: {
 
         } else if (commission.status === 'COMPLETE') {
             // Already paid - create negative balance entry by decrementing balance
-            await prisma.partnerBalance.upsert({
-                where: { partner_id: commission.partner_id },
+            await prisma.sellerBalance.upsert({
+                where: { seller_id: commission.seller_id },
                 create: {
-                    partner_id: commission.partner_id,
+                    seller_id: commission.seller_id,
                     balance: -commission.commission_amount, // Negative balance
                     pending: 0,
                     due: 0,
@@ -224,7 +224,7 @@ export async function handleClawback(params: {
         }
 
         // Update partner balance
-        await updatePartnerBalance(commission.partner_id)
+        await updateSellerBalance(commission.seller_id)
 
         return { success: true }
 
@@ -240,12 +240,12 @@ export async function handleClawback(params: {
 /**
  * Update partner's balance aggregates
  */
-export async function updatePartnerBalance(partnerId: string): Promise<void> {
+export async function updateSellerBalance(sellerId: string): Promise<void> {
     try {
         // Aggregate commission amounts by status
         const aggregates = await prisma.commission.groupBy({
             by: ['status'],
-            where: { partner_id: partnerId },
+            where: { seller_id: sellerId },
             _sum: { commission_amount: true }
         })
 
@@ -261,10 +261,10 @@ export async function updatePartnerBalance(partnerId: string): Promise<void> {
         }
 
         // Upsert balance record
-        await prisma.partnerBalance.upsert({
-            where: { partner_id: partnerId },
+        await prisma.sellerBalance.upsert({
+            where: { seller_id: sellerId },
             create: {
-                partner_id: partnerId,
+                seller_id: sellerId,
                 balance: due, // Available for payout
                 pending,
                 due,
@@ -284,43 +284,57 @@ export async function updatePartnerBalance(partnerId: string): Promise<void> {
 }
 
 /**
- * Find partner by click attribution
- * Uses link_id → MissionEnrollment → user_id → Partner
- * OR affiliateId directly (could be Partner.id or Partner.user_id)
+ * Find seller by click attribution
+ * Uses link_id → MissionEnrollment → user_id → Seller
+ * OR sellerId directly (could be Seller.id or Seller.user_id)
+ *
+ * IMPORTANT: Sellers can be:
+ * - Global (program_id = null) - created when user joins any mission
+ * - Program-specific (program_id = workspace_id) - legacy or specific enrollment
+ *
+ * We search both program-specific AND global sellers.
  */
-export async function findPartnerForSale(params: {
+export async function findSellerForSale(params: {
     linkId?: string | null
-    affiliateId?: string | null
+    sellerId?: string | null
     programId: string
 }): Promise<string | null> {
-    const { linkId, affiliateId, programId } = params
+    const { linkId, sellerId, programId } = params
 
     try {
         // Case 1: Direct affiliate ID provided
-        if (affiliateId) {
-            // Try 1: affiliateId is Partner.id directly
-            const partnerById = await prisma.partner.findFirst({
+        if (sellerId) {
+            // Try 1: sellerId is Partner.id directly (program-specific OR global)
+            const partnerById = await prisma.seller.findFirst({
                 where: {
-                    id: affiliateId,
-                    program_id: programId,
+                    id: sellerId,
+                    OR: [
+                        { program_id: programId },
+                        { program_id: null }  // Global partners
+                    ],
                     status: 'APPROVED'
                 }
             })
             if (partnerById) {
-                console.log(`[Commission] 🔗 Found partner ${partnerById.id} by direct id`)
+                console.log(`[Commission] 🔗 Found partner ${partnerById.id} by direct id (program_id: ${partnerById.program_id || 'global'})`)
                 return partnerById.id
             }
 
-            // Try 2: affiliateId is Partner.user_id
-            const partnerByUserId = await prisma.partner.findFirst({
+            // Try 2: sellerId is Partner.user_id (program-specific OR global)
+            const partnerByUserId = await prisma.seller.findFirst({
                 where: {
-                    program_id: programId,
-                    user_id: affiliateId,
+                    user_id: sellerId,
+                    OR: [
+                        { program_id: programId },
+                        { program_id: null }  // Global partners
+                    ],
                     status: 'APPROVED'
-                }
+                },
+                // Prefer program-specific over global
+                orderBy: { program_id: 'desc' }
             })
             if (partnerByUserId) {
-                console.log(`[Commission] 🔗 Found partner ${partnerByUserId.id} by user_id ${affiliateId}`)
+                console.log(`[Commission] 🔗 Found partner ${partnerByUserId.id} by user_id ${sellerId} (program_id: ${partnerByUserId.program_id || 'global'})`)
                 return partnerByUserId.id
             }
         }
@@ -338,21 +352,44 @@ export async function findPartnerForSale(params: {
 
             if (link?.MissionEnrollment) {
                 const userId = link.MissionEnrollment.user_id
-                const partner = await prisma.partner.findFirst({
+                // Search for partner by user_id (program-specific OR global)
+                const partner = await prisma.seller.findFirst({
                     where: {
-                        program_id: programId,
                         user_id: userId,
+                        OR: [
+                            { program_id: programId },
+                            { program_id: null }  // Global partners
+                        ],
+                        status: 'APPROVED'
+                    },
+                    // Prefer program-specific over global
+                    orderBy: { program_id: 'desc' }
+                })
+                if (partner) {
+                    console.log(`[Commission] 🔗 Found partner ${partner.id} via link ${linkId} (program_id: ${partner.program_id || 'global'})`)
+                    return partner.id
+                }
+            }
+
+            // Also check link.affiliate_id directly (could be user_id stored there)
+            if (link?.affiliate_id) {
+                const partner = await prisma.seller.findFirst({
+                    where: {
+                        OR: [
+                            { id: link.affiliate_id },
+                            { user_id: link.affiliate_id }
+                        ],
                         status: 'APPROVED'
                     }
                 })
                 if (partner) {
-                    console.log(`[Commission] 🔗 Found partner ${partner.id} via link ${linkId}`)
+                    console.log(`[Commission] 🔗 Found partner ${partner.id} via link.affiliate_id ${link.affiliate_id}`)
                     return partner.id
                 }
             }
         }
 
-        console.log(`[Commission] ⚠️ No approved partner found for link=${linkId}, affiliate=${affiliateId}`)
+        console.log(`[Commission] ⚠️ No approved partner found for link=${linkId}, affiliate=${sellerId}, program=${programId}`)
         return null
 
     } catch (error) {
@@ -398,7 +435,7 @@ export async function matureCommissions(): Promise<{ matured: number; errors: nu
                     })
 
                     // Update partner balance
-                    await updatePartnerBalance(commission.partner_id)
+                    await updateSellerBalance(commission.seller_id)
 
                     matured++
                     console.log(`[Commission] ⏰ Matured: ${commission.id} (${holdDays} days hold)`)

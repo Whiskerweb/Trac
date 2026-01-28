@@ -43,7 +43,7 @@ interface SaleEvent {
     orderId: string;
     timestamp?: string;
     source?: string;
-    affiliateId?: string;
+    sellerId?: string;
     lineItems?: Array<{
         product_id: string;
         product_name: string;
@@ -65,7 +65,7 @@ interface LeadEvent {
     customer_external_id: string;
     click_id: string | null;
     link_id?: string | null;
-    affiliate_id?: string | null;
+    seller_id?: string | null;
     event_name: string;
     event_value?: number | null;
     customer_email?: string | null;
@@ -102,7 +102,7 @@ export async function recordSaleToTinybird(event: SaleEvent): Promise<void> {
         workspace_id: event.workspaceId || '',
         click_id: event.clickId || null,
         link_id: event.linkId || null,
-        affiliate_id: event.affiliateId || null,
+        affiliate_id: event.sellerId || null,  // ✅ Using affiliate_id column (contains seller IDs)
         customer_external_id: event.customerExternalId || event.clickId,
         amount: Math.round(event.amount * 100),  // Convert to cents (Int32)
         net_amount: event.netAmount ? Math.round(event.netAmount * 100) : Math.round(event.amount * 100), // ✅ NEW
@@ -139,14 +139,15 @@ export async function recordSaleToTinybird(event: SaleEvent): Promise<void> {
     }
 }
 
-interface SaleItem {
+// Note: Internal interface - maps to affiliate_id column in Tinybird
+interface SaleItemPayload {
     timestamp: string;
     event_id: string;
     order_id: string;
     workspace_id: string;
     click_id: string | null;
     link_id: string | null;
-    affiliate_id: string | null;
+    affiliate_id: string | null;  // ✅ Maps to affiliate_id column (contains seller IDs)
     product_id: string;
     product_name: string;
     sku: string | null;
@@ -155,7 +156,7 @@ interface SaleItem {
     quantity: number;
     unit_price: number;
     total: number;
-    net_total: number; // ✅ NEW
+    net_total: number;
     currency: string;
 }
 
@@ -189,14 +190,14 @@ export async function recordSaleItemsToTinybird(
     const timestamp = event.timestamp || new Date().toISOString();
 
     // Transform each line item into a Tinybird event
-    const items: SaleItem[] = event.lineItems.map((item, index) => ({
+    const items = event.lineItems.map((item, index) => ({
         timestamp,
         event_id: `${eventId}_item_${index}`,
         order_id: event.orderId,
         workspace_id: event.workspaceId || '',
         click_id: event.clickId || null,
         link_id: event.linkId || null,
-        affiliate_id: event.affiliateId || null,
+        affiliate_id: event.sellerId || null,  // ✅ Using affiliate_id column (contains seller IDs)
         product_id: item.product_id,
         product_name: item.product_name,
         sku: item.sku || null,
@@ -274,7 +275,7 @@ export async function recordLeadToTinybird(data: LeadEvent): Promise<void> {
         customer_external_id: data.customer_external_id,
         click_id: data.click_id,
         link_id: data.link_id || null,
-        affiliate_id: data.affiliate_id || null,
+        affiliate_id: data.seller_id || null,  // ✅ Using affiliate_id column (contains seller IDs)
         event_name: data.event_name,
         event_value: data.event_value || null,
         customer_email: data.customer_email || null,

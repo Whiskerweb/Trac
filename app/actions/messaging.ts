@@ -19,6 +19,8 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
         partner_name: string | null
         partner_email: string
         workspace_name: string
+        workspace_id?: string
+        workspace_logo?: string | null
         last_message: string | null
         last_at: Date
         unread_count: number
@@ -42,7 +44,7 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
             const conversations = await prisma.conversation.findMany({
                 where: { workspace_id: workspace.workspaceId },
                 include: {
-                    Partner: {
+                    Seller: {
                         select: { name: true, email: true }
                     },
                     Workspace: {
@@ -56,8 +58,8 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
                 success: true,
                 conversations: conversations.map(c => ({
                     id: c.id,
-                    partner_name: c.Partner.name,
-                    partner_email: c.Partner.email,
+                    partner_name: c.Seller.name,
+                    partner_email: c.Seller.email,
                     workspace_name: c.Workspace.name,
                     last_message: c.last_message,
                     last_at: c.last_at,
@@ -65,23 +67,26 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
                 }))
             }
         } else {
-            // Partner role
-            const partner = await prisma.partner.findFirst({
-                where: { user_id: user.id }
+            // Partner role - find ALL seller records for this user
+            const sellers = await prisma.seller.findMany({
+                where: { user_id: user.id },
+                select: { id: true }
             })
 
-            if (!partner) {
+            if (sellers.length === 0) {
                 return { success: false, error: 'Partner not found' }
             }
 
+            const sellerIds = sellers.map(s => s.id)
+
             const conversations = await prisma.conversation.findMany({
-                where: { partner_id: partner.id },
+                where: { seller_id: { in: sellerIds } },
                 include: {
-                    Partner: {
+                    Seller: {
                         select: { name: true, email: true }
                     },
                     Workspace: {
-                        select: { name: true }
+                        select: { id: true, name: true, Profile: { select: { logo_url: true } } }
                     }
                 },
                 orderBy: { last_at: 'desc' }
@@ -91,9 +96,11 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
                 success: true,
                 conversations: conversations.map(c => ({
                     id: c.id,
-                    partner_name: c.Partner.name,
-                    partner_email: c.Partner.email,
+                    partner_name: c.Seller.name,
+                    partner_email: c.Seller.email,
                     workspace_name: c.Workspace.name,
+                    workspace_id: c.Workspace.id,
+                    workspace_logo: c.Workspace.Profile?.logo_url || null,
                     last_message: c.last_message,
                     last_at: c.last_at,
                     unread_count: c.unread_partner
@@ -113,7 +120,7 @@ export async function getMessages(conversationId: string): Promise<{
     success: boolean
     messages?: Array<{
         id: string
-        sender_type: 'STARTUP' | 'PARTNER'
+        sender_type: 'STARTUP' | 'SELLER'
         content: string
         is_invitation: boolean
         created_at: Date
@@ -131,7 +138,7 @@ export async function getMessages(conversationId: string): Promise<{
             success: true,
             messages: messages.map(m => ({
                 id: m.id,
-                sender_type: m.sender_type as 'STARTUP' | 'PARTNER',
+                sender_type: m.sender_type as 'STARTUP' | 'SELLER',
                 content: m.content,
                 is_invitation: m.is_invitation,
                 created_at: m.created_at,
@@ -151,7 +158,7 @@ export async function getMessages(conversationId: string): Promise<{
 export async function sendMessage(
     conversationId: string,
     content: string,
-    senderType: 'STARTUP' | 'PARTNER'
+    senderType: 'STARTUP' | 'SELLER'
 ): Promise<{
     success: boolean
     message?: { id: string }
@@ -173,7 +180,7 @@ export async function sendMessage(
         const conversation = await prisma.conversation.findUnique({
             where: { id: conversationId },
             include: {
-                Partner: true,
+                Seller: true,
                 Workspace: true
             }
         })
@@ -209,7 +216,7 @@ export async function sendMessage(
         // await sendMessageNotificationEmail(conversation, message)
 
         revalidatePath('/dashboard/messages')
-        revalidatePath('/partner/messages')
+        revalidatePath('/seller/messages')
 
         return { success: true, message: { id: message.id } }
 
@@ -243,9 +250,9 @@ export async function initializeConversation(partnerId: string): Promise<{
         // Check if conversation already exists
         const existing = await prisma.conversation.findUnique({
             where: {
-                workspace_id_partner_id: {
+                workspace_id_seller_id: {
                     workspace_id: workspace.workspaceId,
-                    partner_id: partnerId
+                    seller_id: partnerId
                 }
             }
         })
@@ -258,7 +265,7 @@ export async function initializeConversation(partnerId: string): Promise<{
         const conversation = await prisma.conversation.create({
             data: {
                 workspace_id: workspace.workspaceId,
-                partner_id: partnerId
+                seller_id: partnerId
             }
         })
 
@@ -282,7 +289,7 @@ export async function markAsRead(
         await prisma.message.updateMany({
             where: {
                 conversation_id: conversationId,
-                sender_type: role === 'startup' ? 'PARTNER' : 'STARTUP',
+                sender_type: role === 'startup' ? 'SELLER' : 'STARTUP',
                 read_at: null
             },
             data: { read_at: new Date() }
@@ -328,9 +335,9 @@ export async function createInvitationMessage(
         // Get or create conversation
         let conversation = await prisma.conversation.findUnique({
             where: {
-                workspace_id_partner_id: {
+                workspace_id_seller_id: {
                     workspace_id: workspace.workspaceId,
-                    partner_id: partnerId
+                    seller_id: partnerId
                 }
             }
         })
@@ -339,7 +346,7 @@ export async function createInvitationMessage(
             conversation = await prisma.conversation.create({
                 data: {
                     workspace_id: workspace.workspaceId,
-                    partner_id: partnerId
+                    seller_id: partnerId
                 }
             })
         }

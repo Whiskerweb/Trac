@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { z } from 'zod'
-import { claimPartners } from '@/app/actions/partners'
+import { claimSellers } from '@/app/actions/sellers'
 import { getUserRoles } from '@/app/actions/get-user-roles'
 
 // =============================================
@@ -28,10 +28,10 @@ const signupSchema = z.object({
 
 /**
  * Determines where to redirect user after authentication based on their roles
- * 
- * - If hasWorkspace && hasPartner → /auth/choice (let user pick)
+ *
+ * - If hasWorkspace && hasSeller → /auth/choice (let user pick)
  * - If hasWorkspace only → /dashboard
- * - If hasPartner only → /partner
+ * - If hasSeller only → /seller
  * - If neither → /onboarding
  */
 async function getAuthRedirectPath(userId: string): Promise<string> {
@@ -41,7 +41,7 @@ async function getAuthRedirectPath(userId: string): Promise<string> {
         return '/onboarding'
     }
 
-    if (roles.hasWorkspace && roles.hasPartner) {
+    if (roles.hasWorkspace && roles.hasSeller) {
         // Dual identity - show choice page
         return '/auth/choice'
     }
@@ -50,8 +50,8 @@ async function getAuthRedirectPath(userId: string): Promise<string> {
         return '/dashboard'
     }
 
-    if (roles.hasPartner) {
-        return '/partner'
+    if (roles.hasSeller) {
+        return '/seller'
     }
 
     return '/onboarding'
@@ -90,12 +90,12 @@ export async function login(formData: FormData) {
     }
 
     // =============================================
-    // SHADOW PARTNER CLAIM (Traaaction Style)
+    // SHADOW SELLER CLAIM (Traaaction Style)
     // =============================================
     if (data.user) {
-        const claimed = await claimPartners(data.user.id, email)
+        const claimed = await claimSellers(data.user.id, email)
         if (claimed.success && claimed.claimed && claimed.claimed > 0) {
-            console.log(`[Auth] ✨ Claimed ${claimed.claimed} shadow partners for ${email}`)
+            console.log(`[Auth] ✨ Claimed ${claimed.claimed} shadow sellers for ${email}`)
         }
     }
 
@@ -110,9 +110,9 @@ export async function login(formData: FormData) {
     const roleIntent = String(formData.get('role') || 'startup')
     const userRoles = await getUserRoles(data.user!.id)
 
-    // If user explicitly chose "Partner" and HAS partner role -> Go to /partner
-    if (roleIntent === 'partner' && userRoles?.hasPartner) {
-        redirect('/partner')
+    // If user explicitly chose "Seller" and HAS seller role -> Go to /seller
+    if (roleIntent === 'seller' && userRoles?.hasSeller) {
+        redirect('/seller')
     }
 
     // If user explicitly chose "Startup" and HAS workspace -> Go to /dashboard
@@ -170,40 +170,53 @@ export async function signup(formData: FormData) {
 
     const role = String(formData.get('role') || 'startup')
 
-    // ... (rest of signup logic)
-
-    console.log('[Auth] ✅ Signup success for:', email)
+    console.log('[Auth] ✅ Signup success for:', email, '- Role:', role)
 
     // =============================================
-    // PARTNER AUTO-CREATION (Split Flow)
+    // SELLER AUTO-CREATION (Split Flow)
     // =============================================
-    if (data.user && role === 'partner') {
-        const { createGlobalPartner } = await import('@/app/actions/partners')
-        await createGlobalPartner({
+    if (data.user && role === 'seller') {
+        const { createGlobalSeller } = await import('@/app/actions/sellers')
+        const result = await createGlobalSeller({
             userId: data.user.id,
-            email: email,
+            email: data.user.email || email,
             name: name
         })
-        console.log('[Auth] 🤝 Auto-created Global Partner for new user')
-        redirect('/partner')
+
+        if (!result.success) {
+            console.error('[Auth] ❌ Failed to create seller:', result.error)
+            return { error: 'Erreur lors de la création du compte seller' }
+        }
+
+        console.log('[Auth] 🤝 Auto-created Global Seller for new user')
+
+        // =============================================
+        // SHADOW SELLER CLAIM (Traaaction Style)
+        // =============================================
+        const claimed = await claimSellers(data.user.id, email)
+        if (claimed.success && claimed.claimed && claimed.claimed > 0) {
+            console.log(`[Auth] ✨ Claimed ${claimed.claimed} shadow sellers for ${email}`)
+        }
+
+        revalidatePath('/', 'layout')
+        redirect('/seller/onboarding')
     }
 
     // =============================================
-    // SHADOW PARTNER CLAIM (Traaaction Style)
+    // STARTUP FLOW - SHADOW SELLER CLAIM
     // =============================================
     if (data.user) {
-        const claimed = await claimPartners(data.user.id, email)
+        const claimed = await claimSellers(data.user.id, email)
         if (claimed.success && claimed.claimed && claimed.claimed > 0) {
-            console.log(`[Auth] ✨ Claimed ${claimed.claimed} shadow partners for ${email}`)
+            console.log(`[Auth] ✨ Claimed ${claimed.claimed} shadow sellers for ${email}`)
         }
     }
 
     revalidatePath('/', 'layout')
 
     // =============================================
-    // ROLE-BASED ROUTING
+    // STARTUP ONBOARDING
     // =============================================
-    // If not explicitly partner role, redirect to onboarding for startup creation
     redirect('/onboarding')
 }
 

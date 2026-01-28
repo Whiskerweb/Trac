@@ -41,7 +41,7 @@ export async function createConnectAccount(
 ): Promise<ConnectAccountResult> {
     try {
         // Check if partner already has a Connect account
-        const partner = await prisma.partner.findUnique({
+        const partner = await prisma.seller.findUnique({
             where: { id: partnerId }
         })
 
@@ -64,12 +64,12 @@ export async function createConnectAccount(
                 transfers: { requested: true },
             },
             metadata: {
-                partner_id: partnerId,
+                seller_id: partnerId,
             },
         })
 
         // Save account ID to partner
-        await prisma.partner.update({
+        await prisma.seller.update({
             where: { id: partnerId },
             data: { stripe_connect_id: account.id }
         })
@@ -105,8 +105,8 @@ async function createOnboardingLink(accountId: string): Promise<string> {
 
     const link = await stripe.accountLinks.create({
         account: accountId,
-        refresh_url: `${appUrl}/partner/payouts?refresh=true`,
-        return_url: `${appUrl}/partner/payouts?success=true`,
+        refresh_url: `${appUrl}/seller/payouts?refresh=true`,
+        return_url: `${appUrl}/seller/payouts?success=true`,
         type: 'account_onboarding',
     })
 
@@ -160,7 +160,7 @@ export async function createPayout(
 ): Promise<PayoutResult> {
     try {
         // Get partner with Connect ID
-        const partner = await prisma.partner.findUnique({
+        const partner = await prisma.seller.findUnique({
             where: { id: partnerId }
         })
 
@@ -194,7 +194,7 @@ export async function createPayout(
             currency,
             destination: partner.stripe_connect_id,
             metadata: {
-                partner_id: partnerId,
+                seller_id: partnerId,
                 commission_ids: commissionIds.join(','),
                 commission_count: String(commissionIds.length),
             },
@@ -210,8 +210,8 @@ export async function createPayout(
         })
 
         // Update partner balance
-        await prisma.partnerBalance.update({
-            where: { partner_id: partnerId },
+        await prisma.sellerBalance.update({
+            where: { seller_id: partnerId },
             data: {
                 due: { decrement: amount },
                 paid_total: { increment: amount },
@@ -246,11 +246,11 @@ export async function createPayout(
  * Get payout summary for a partner
  */
 export async function getPartnerPayoutSummary(partnerId: string) {
-    const balance = await prisma.partnerBalance.findUnique({
-        where: { partner_id: partnerId }
+    const balance = await prisma.sellerBalance.findUnique({
+        where: { seller_id: partnerId }
     })
 
-    const partner = await prisma.partner.findUnique({
+    const partner = await prisma.seller.findUnique({
         where: { id: partnerId },
         select: {
             stripe_connect_id: true,

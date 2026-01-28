@@ -52,6 +52,7 @@ const apiRateLimiter = new Ratelimit({
 
 const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
 const TINYBIRD_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
+const TRAC_CLIENT_TOKEN = process.env.TRAC_CLIENT_TOKEN
 
 // =============================================
 // DOMAIN CONFIGURATION
@@ -67,7 +68,7 @@ const PRIMARY_DOMAINS = [
 ]
 
 // Partner subdomain for biface architecture
-const PARTNER_SUBDOMAIN = 'partners.traaaction.com'
+const PARTNER_SUBDOMAIN = 'sellers.traaaction.com'
 
 // Cache for domain lookups (Edge-compatible in-memory)
 const domainCache = new Map<string, { workspaceId: string | null; timestamp: number }>()
@@ -81,7 +82,7 @@ interface RedisLinkData {
     url: string
     linkId: string
     workspaceId: string
-    affiliateId?: string | null
+    sellerId?: string | null
 }
 
 // =============================================
@@ -313,23 +314,23 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     // HOST HEADER ROUTING (Architecture Alignment)
     // ============================================
     const isPartnersDomain = hostname === PARTNER_SUBDOMAIN ||
-        (process.env.NODE_ENV === 'development' && hostname === 'partners.localhost')
+        (process.env.NODE_ENV === 'development' && hostname === 'sellers.localhost')
 
     // 🔄 PARTNER PORTAL ROUTING
     if (isPartnersDomain) {
-        // Rewrite all requests on partners.domain.com to /partner internal path
-        // e.g. partners.traaaction.com/settings -> /partner/settings
-        // e.g. partners.traaaction.com/ -> /partner
+        // Rewrite all requests on partners.domain.com to /seller internal path
+        // e.g. sellers.traaaction.com/settings -> /seller/settings
+        // e.g. sellers.traaaction.com/ -> /seller
 
         const newUrl = request.nextUrl.clone()
-        // If root, map to /partner
+        // If root, map to /seller
         if (pathname === '/') {
-            newUrl.pathname = '/partner'
+            newUrl.pathname = '/seller'
         } else {
-            // If already has path, prepend /partner (unless it's already there, which shoudln't happen in clean routing)
-            // But we must be careful not to double-prefix if user visits /partner on the partner domain
-            if (!pathname.startsWith('/partner') && !pathname.startsWith('/api')) {
-                newUrl.pathname = `/partner${pathname}`
+            // If already has path, prepend /seller (unless it's already there, which shoudln't happen in clean routing)
+            // But we must be careful not to double-prefix if user visits /seller on the partner domain
+            if (!pathname.startsWith('/seller') && !pathname.startsWith('/api')) {
+                newUrl.pathname = `/seller${pathname}`
             }
         }
 
@@ -617,7 +618,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
                         click_id,
                         workspace_id: linkData.workspaceId,
                         link_id: linkData.linkId,
-                        affiliate_id: linkData.affiliateId || null,
+                        affiliate_id: linkData.sellerId || null,
                         url: linkData.url,
                         user_agent: ua.ua || '',
                         ip,
@@ -627,12 +628,12 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
                         device,
                     }),
                     // 2. CRITICAL: Store in Redis for Lead attribution lookup
-                    // Lead tracking looks up click:{clickId} to get affiliateId
+                    // Lead tracking looks up click:{clickId} to get sellerId
                     redis.set(
                         `click:${click_id}`,
                         JSON.stringify({
                             linkId: linkData.linkId,
-                            affiliateId: linkData.affiliateId || null,
+                            sellerId: linkData.sellerId || null,
                             workspaceId: linkData.workspaceId
                         }),
                         { ex: 90 * 24 * 60 * 60 } // 90 days (same as cookie)
@@ -640,6 +641,20 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
                         console.log(`[Edge] ✅ Stored click:${click_id} in Redis for Lead attribution`)
                     }).catch(err => {
                         console.error('[Edge] ⚠️ Failed to store click in Redis:', err)
+                    }),
+                    // 3. INCREMENT ShortLink.clicks in Prisma via internal API
+                    // Edge runtime cannot use Prisma directly, so we call a lightweight endpoint
+                    fetch(`${request.nextUrl.origin}/api/track/increment-click`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(TRAC_CLIENT_TOKEN && { 'Authorization': `Bearer ${TRAC_CLIENT_TOKEN}` }),
+                        },
+                        body: JSON.stringify({ linkId: linkData.linkId }),
+                    }).then(() => {
+                        console.log(`[Edge] ✅ Incremented ShortLink.clicks for ${linkData.linkId}`)
+                    }).catch(err => {
+                        console.error('[Edge] ⚠️ Failed to increment click count:', err)
                     })
                 ])
             )
@@ -679,22 +694,37 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
         const referrer = request.headers.get('referer') || ''
         const device = parseDevice(ua)
 
-        // Log to Tinybird in background
+        // Log to Tinybird + increment Prisma clicks in background
         event.waitUntil(
-            logClickToTinybird({
-                timestamp: new Date().toISOString(),
-                click_id,
-                workspace_id: linkData.workspace_id,
-                link_id: linkData.link_id,
-                affiliate_id: null,
-                url: request.url,
-                user_agent: ua.ua || '',
-                ip,
-                country,
-                city,
-                referrer,
-                device,
-            })
+            Promise.all([
+                logClickToTinybird({
+                    timestamp: new Date().toISOString(),
+                    click_id,
+                    workspace_id: linkData.workspace_id,
+                    link_id: linkData.link_id,
+                    affiliate_id: null,
+                    url: request.url,
+                    user_agent: ua.ua || '',
+                    ip,
+                    country,
+                    city,
+                    referrer,
+                    device,
+                }),
+                // INCREMENT ShortLink.clicks in Prisma via internal API
+                fetch(`${request.nextUrl.origin}/api/track/increment-click`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(TRAC_CLIENT_TOKEN && { 'Authorization': `Bearer ${TRAC_CLIENT_TOKEN}` }),
+                    },
+                    body: JSON.stringify({ linkId: linkData.link_id }),
+                }).then(() => {
+                    console.log(`[Edge] ✅ Incremented ShortLink.clicks for ${linkData.link_id}`)
+                }).catch(err => {
+                    console.error('[Edge] ⚠️ Failed to increment click count:', err)
+                })
+            ])
         )
 
         // Build destination URL with tracking params
@@ -741,13 +771,13 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             })
 
             if (checkRes.ok) {
-                const { hasWorkspace, hasPartner } = await checkRes.json()
+                const { hasWorkspace, hasSeller } = await checkRes.json()
 
                 if (!hasWorkspace) {
-                    // Strict Isolation: If Partner tries to access Dashboard/Onboarding, send to Partner Portal
-                    if (hasPartner) {
-                        console.log('[Middleware] 🛡️ Partner attempting to access Dashboard - Redirecting to /partner')
-                        return NextResponse.redirect(new URL('/partner', request.url))
+                    // Strict Isolation: If Seller tries to access Dashboard/Onboarding, send to Seller Portal
+                    if (hasSeller) {
+                        console.log('[Middleware] 🛡️ Seller attempting to access Dashboard - Redirecting to /seller')
+                        return NextResponse.redirect(new URL('/seller', request.url))
                     }
 
                     console.log('[Middleware] 🚀 User has no workspace, redirecting to onboarding')
@@ -766,7 +796,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
         const pathParts = pathname.split('/') // ['', 'dashboard', 'slug', ...]
 
         // Reserved slugs that are actual page routes, not workspace slugs
-        const reservedSlugs = ['new', 'links', 'settings', 'domains', 'integration', 'marketplace', 'missions', 'affiliate', 'startup', 'partners', 'commissions', 'messages', 'payouts', 'customers', 'analytics', 'fraud', 'bounties', 'campaigns', 'resources']
+        const reservedSlugs = ['new', 'links', 'settings', 'domains', 'integration', 'marketplace', 'missions', 'affiliate', 'startup', 'partners', 'sellers', 'profile', 'commissions', 'messages', 'payouts', 'customers', 'analytics', 'fraud', 'bounties', 'campaigns', 'resources']
 
         if (pathParts.length >= 3 && !reservedSlugs.includes(pathParts[2])) {
             const slug = pathParts[2]
@@ -796,14 +826,20 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     // ============================================
     // PARTNER PORTAL PROTECTION (Biface Architecture)
     // ============================================
-    if (pathname.startsWith('/partner')) {
+    if (pathname.startsWith('/seller')) {
         if (!user) {
             const loginUrl = new URL('/login', request.url)
             loginUrl.searchParams.set('redirectTo', pathname)
             return NextResponse.redirect(loginUrl)
         }
 
-        // Role Isolation: Block Startup users (have workspace but no partner) from Partner Portal
+        // Skip role check for onboarding page (let the page itself handle it)
+        if (pathname === '/seller/onboarding') {
+            // Let the page handle seller verification
+            return supabaseResponse
+        }
+
+        // Role Isolation: Block Startup users (have workspace but no seller) from Seller Portal
         try {
             const checkUrl = new URL('/api/auth/workspace-check', request.url)
             const checkRes = await fetch(checkUrl, {
@@ -813,22 +849,22 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             })
 
             if (checkRes.ok) {
-                const { hasWorkspace, hasPartner } = await checkRes.json()
+                const { hasWorkspace, hasSeller } = await checkRes.json()
 
-                // If user has a workspace but is NOT a partner, they are a Startup - block access
-                if (hasWorkspace && !hasPartner) {
-                    console.log('[Middleware] 🛡️ Startup attempting to access Partner Portal - Redirecting to /dashboard')
+                // If user has a workspace but is NOT a seller, they are a Startup - block access
+                if (hasWorkspace && !hasSeller) {
+                    console.log('[Middleware] 🛡️ Startup attempting to access Seller Portal - Redirecting to /dashboard')
                     return NextResponse.redirect(new URL('/dashboard', request.url))
                 }
 
-                // If user has no partner record at all, redirect to auth choice
-                if (!hasPartner && !hasWorkspace) {
+                // If user has no seller record at all, redirect to auth choice
+                if (!hasSeller && !hasWorkspace) {
                     console.log('[Middleware] 🚀 User has no role, redirecting to auth choice')
                     return NextResponse.redirect(new URL('/auth/choice', request.url))
                 }
             }
         } catch (err) {
-            console.error('[Middleware] ⚠️ Partner portal check failed:', err)
+            console.error('[Middleware] ⚠️ Seller portal check failed:', err)
             // Fail open - let the page handle it
         }
     }

@@ -11,15 +11,15 @@ export interface UserRoles {
     userId: string
     email: string
     hasWorkspace: boolean
-    hasPartner: boolean
+    hasSeller: boolean
     pendingClaims: number
-    primaryRole: 'startup' | 'partner' | 'none'
+    primaryRole: 'startup' | 'seller' | 'none'
     workspaces: {
         id: string
         name: string
         slug: string
     }[]
-    partners: {
+    sellers: {
         id: string
         programId: string
         programName: string
@@ -29,11 +29,11 @@ export interface UserRoles {
 
 /**
  * Detect all roles a user has in the system
- * 
+ *
  * Used to determine routing after authentication:
- * - If hasWorkspace && hasPartner → Show choice page
+ * - If hasWorkspace && hasSeller → Show choice page
  * - If hasWorkspace only → Redirect to /dashboard
- * - If hasPartner only → Redirect to /partner
+ * - If hasSeller only → Redirect to /seller
  * - If neither → Redirect to /onboarding
  */
 export async function getUserRoles(userId?: string): Promise<UserRoles | null> {
@@ -78,8 +78,8 @@ export async function getUserRoles(userId?: string): Promise<UserRoles | null> {
         }
         const workspaces = Array.from(workspaceMap.values())
 
-        // Fetch partner records (linked to this user)
-        const partners = await prisma.partner.findMany({
+        // Fetch seller records (linked to this user)
+        const sellers = await prisma.seller.findMany({
             where: { user_id: resolvedUserId },
             include: {
                 Program: {
@@ -88,10 +88,10 @@ export async function getUserRoles(userId?: string): Promise<UserRoles | null> {
             }
         })
 
-        // Count pending shadow partners (unlinked but matching email)
+        // Count pending shadow sellers (unlinked but matching email)
         let pendingClaims = 0
         if (email) {
-            pendingClaims = await prisma.partner.count({
+            pendingClaims = await prisma.seller.count({
                 where: {
                     email: email.toLowerCase(),
                     user_id: null
@@ -100,31 +100,31 @@ export async function getUserRoles(userId?: string): Promise<UserRoles | null> {
         }
 
         const hasWorkspace = workspaces.length > 0
-        const hasPartner = partners.length > 0
+        const hasSeller = sellers.length > 0
 
         // Determine primary role
-        let primaryRole: 'startup' | 'partner' | 'none' = 'none'
-        if (hasWorkspace && hasPartner) {
+        let primaryRole: 'startup' | 'seller' | 'none' = 'none'
+        if (hasWorkspace && hasSeller) {
             // Dual identity - default to startup (can be overridden by preference)
             primaryRole = 'startup'
         } else if (hasWorkspace) {
             primaryRole = 'startup'
-        } else if (hasPartner) {
-            primaryRole = 'partner'
+        } else if (hasSeller) {
+            primaryRole = 'seller'
         }
 
         return {
             userId: resolvedUserId,
             email,
             hasWorkspace,
-            hasPartner,
+            hasSeller,
             pendingClaims,
             primaryRole,
             workspaces,
-            partners: partners.map(p => ({
+            sellers: sellers.map(p => ({
                 id: p.id,
                 programId: p.Program?.id || 'global',
-                programName: p.Program?.name || 'Global Partner',
+                programName: p.Program?.name || 'Global Seller',
                 status: p.status
             }))
         }
@@ -136,10 +136,10 @@ export async function getUserRoles(userId?: string): Promise<UserRoles | null> {
 }
 
 /**
- * Check if user has any shadow partners waiting to be claimed
+ * Check if user has any shadow sellers waiting to be claimed
  */
 export async function hasPendingClaims(email: string): Promise<boolean> {
-    const count = await prisma.partner.count({
+    const count = await prisma.seller.count({
         where: {
             email: email.toLowerCase(),
             user_id: null

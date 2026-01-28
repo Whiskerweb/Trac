@@ -1,4 +1,4 @@
-DESCRIPTION "Sales events from payment processors (Stripe, etc.) for affiliate commission tracking"
+DESCRIPTION "Sales events from payment processors (Stripe, etc.) for seller commission tracking"
 
 SCHEMA >
     `timestamp` DateTime `json:$.timestamp`,

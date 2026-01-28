@@ -19,7 +19,7 @@ Since Docker is not available, use the Tinybird Dashboard:
 4. **Create New Datasource**:
    - Name: `clicks`
    - Schema: Copy from `datasources/clicks.datasource`
-   - **Sorting Key**: `workspace_id, affiliate_id, timestamp`
+   - **Sorting Key**: `workspace_id, seller_id, timestamp`
    
 5. **Important**: Update the pipes that use `clicks`:
    - kpis
@@ -38,9 +38,9 @@ tb deploy --yes
 
 | Datasource | Old Sorting Key | New Sorting Key |
 |------------|----------------|-----------------|
-| `clicks.datasource` | `(workspace_id, timestamp)` | `(workspace_id, affiliate_id, timestamp)` |
+| `clicks.datasource` | `(workspace_id, timestamp)` | `(workspace_id, seller_id, timestamp)` |
 
-**Impact**: Partner analytics queries will be faster as affiliate data is now contiguous on disk.
+**Impact**: Seller analytics queries will be faster as seller data is now contiguous on disk.
 
 ## Verification
 
@@ -53,4 +53,4 @@ curl -s "https://api.europe-west2.gcp.tinybird.co/v0/datasources/clicks" \
   -H "Authorization: Bearer $TINYBIRD_ADMIN_TOKEN" | jq '.engine.sorting_key'
 ```
 
-Expected output: `"workspace_id, affiliate_id, timestamp"`
+Expected output: `"workspace_id, seller_id, timestamp"`

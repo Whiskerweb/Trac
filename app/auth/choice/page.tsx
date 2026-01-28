@@ -32,7 +32,7 @@ export default function AuthChoicePage() {
                         return
                     }
                     if (data.hasPartner && !data.hasWorkspace) {
-                        router.replace('/partner')
+                        router.replace('/seller')
                         return
                     }
                     if (!data.hasWorkspace && !data.hasPartner) {
@@ -64,7 +64,7 @@ export default function AuthChoicePage() {
         if (role === 'startup') {
             router.push('/dashboard')
         } else {
-            router.push('/partner')
+            router.push('/seller')
         }
     }
 

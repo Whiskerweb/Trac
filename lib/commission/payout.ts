@@ -48,7 +48,7 @@ export interface PayoutResult {
  */
 export async function preparePayoutBatches(): Promise<PayoutBatch[]> {
     // Find all partners with PROCEED commissions and valid Stripe Connect
-    const partnersWithProceed = await prisma.partner.findMany({
+    const partnersWithProceed = await prisma.seller.findMany({
         where: {
             stripe_connect_id: { not: null },
             status: 'APPROVED',
@@ -67,8 +67,8 @@ export async function preparePayoutBatches(): Promise<PayoutBatch[]> {
 
     for (const partner of partnersWithProceed) {
         // Get partner's current balance (may be negative from clawbacks)
-        const balance = await prisma.partnerBalance.findUnique({
-            where: { partner_id: partner.id }
+        const balance = await prisma.sellerBalance.findUnique({
+            where: { seller_id: partner.id }
         })
 
         // Aggregate PROCEED commissions
@@ -120,7 +120,7 @@ export async function processPayoutBatch(batch: PayoutBatch): Promise<PayoutResu
             destination: stripeConnectId,
             description: `Traaaction commission payout - ${commissionIds.length} sales`,
             metadata: {
-                partner_id: partnerId,
+                seller_id: partnerId,
                 commission_count: commissionIds.length.toString(),
                 batch_date: new Date().toISOString()
             }
@@ -136,10 +136,10 @@ export async function processPayoutBatch(batch: PayoutBatch): Promise<PayoutResu
                 }
             }),
             // Update partner balance
-            prisma.partnerBalance.upsert({
-                where: { partner_id: partnerId },
+            prisma.sellerBalance.upsert({
+                where: { seller_id: partnerId },
                 create: {
-                    partner_id: partnerId,
+                    seller_id: partnerId,
                     balance: 0,
                     pending: 0,
                     due: 0,

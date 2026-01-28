@@ -122,8 +122,15 @@ async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<str
 }
 
 /**
- * Get TOTAL affiliate stats by user_id (affiliate_id)
- * This aggregates ALL clicks and sales for a partner, regardless of which link was used
+ * Get TOTAL affiliate stats by user_id
+ *
+ * Strategy: Query Tinybird by link_id (always reliable) rather than affiliate_id
+ * (which was null for clicks tracked during the Partner→Seller migration period).
+ *
+ * Steps:
+ * 1. Get all ShortLink IDs belonging to this user from Prisma
+ * 2. Query Tinybird clicks/sales by link_id IN (...)
+ * 3. Also try affiliate_id query as fallback for any clicks not tied to a link
  */
 export async function getAffiliateStatsByUserId(userId: string): Promise<AffiliateStats> {
     const stats: AffiliateStats = { clicks: 0, leads: 0, sales: 0, revenue: 0 }
@@ -139,20 +146,48 @@ export async function getAffiliateStatsByUserId(userId: string): Promise<Affilia
     }
 
     try {
-        // 1. GET TOTAL CLICKS by affiliate_id
-        const clicksQuery = `SELECT count() as clicks FROM clicks WHERE affiliate_id = '${userId}'`
-        const clicksResponse = await fetch(
-            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
-            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-        )
+        // Step 1: Get all link IDs for this user from Prisma
+        const enrollments = await prisma.missionEnrollment.findMany({
+            where: { user_id: userId },
+            include: { ShortLink: true }
+        })
 
-        if (clicksResponse.ok) {
-            const text = await clicksResponse.text()
-            const clicks = parseInt(text.trim()) || 0
-            stats.clicks = clicks
+        const linkIds = enrollments
+            .filter(e => e.ShortLink)
+            .map(e => e.ShortLink!.id)
+            .filter(id => isValidUUID(id))
+
+        if (linkIds.length > 0) {
+            const linkIdList = linkIds.map(id => `'${id}'`).join(',')
+
+            // 1. GET TOTAL CLICKS by link_id
+            const clicksQuery = `SELECT count() as clicks FROM clicks WHERE link_id IN (${linkIdList})`
+            const clicksResponse = await fetch(
+                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
+                { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+            )
+
+            if (clicksResponse.ok) {
+                const text = await clicksResponse.text()
+                stats.clicks = parseInt(text.trim()) || 0
+            }
+
+            // 2. GET TOTAL SALES by link_id
+            const salesQuery = `SELECT count() as sales, sum(amount) as revenue FROM sales WHERE link_id IN (${linkIdList})`
+            const salesResponse = await fetch(
+                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
+                { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+            )
+
+            if (salesResponse.ok) {
+                const text = await salesResponse.text()
+                const [sales, revenue] = text.trim().split('\t')
+                stats.sales = parseInt(sales) || 0
+                stats.revenue = parseInt(revenue) || 0
+            }
         }
 
-        // 2. GET TOTAL LEADS by affiliate_id
+        // 3. GET TOTAL LEADS by affiliate_id (leads table uses affiliate_id)
         const leadsQuery = `SELECT count() as leads FROM leads WHERE affiliate_id = '${userId}'`
         const leadsResponse = await fetch(
             `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(leadsQuery)}`,
@@ -161,25 +196,10 @@ export async function getAffiliateStatsByUserId(userId: string): Promise<Affilia
 
         if (leadsResponse.ok) {
             const text = await leadsResponse.text()
-            const leads = parseInt(text.trim()) || 0
-            stats.leads = leads
+            stats.leads = parseInt(text.trim()) || 0
         }
 
-        // 3. GET TOTAL SALES by affiliate_id
-        const salesQuery = `SELECT count() as sales, sum(amount) as revenue FROM sales WHERE affiliate_id = '${userId}'`
-        const salesResponse = await fetch(
-            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
-            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-        )
-
-        if (salesResponse.ok) {
-            const text = await salesResponse.text()
-            const [sales, revenue] = text.trim().split('\t')
-            stats.sales = parseInt(sales) || 0
-            stats.revenue = parseInt(revenue) || 0 // Keep in cents for proper formatting
-        }
-
-        console.log(`[Marketplace] 📊 Total stats for affiliate ${userId}: ${stats.clicks} clicks, ${stats.leads} leads, ${stats.sales} sales, ${stats.revenue}€`)
+        console.log(`[Marketplace] 📊 Total stats for affiliate ${userId} (${linkIds.length} links): ${stats.clicks} clicks, ${stats.leads} leads, ${stats.sales} sales, ${stats.revenue}€`)
 
     } catch (error) {
         console.error('[Marketplace] ⚠️ Error fetching affiliate stats:', error)
@@ -415,7 +435,7 @@ export async function joinMission(missionId: string): Promise<{
 
         // 5. AUTO-PARTNER CHECK (One-Click Join)
         // Ensure user has a Partner record before creating link
-        await prisma.partner.upsert({
+        await prisma.seller.upsert({
             where: {
                 // Ideally we'd use user_id unique constraint, but schema has unique on [program_id, email]
                 // For global partners (program_id=null), we check email + null program
@@ -433,15 +453,15 @@ export async function joinMission(missionId: string): Promise<{
         }).catch(() => { }) // Ignore standard upsert, we use custom logic below
 
         // CORRECT LOGIC: Check for ANY partner record for this user
-        const existingPartner = await prisma.partner.findFirst({
+        const existingPartner = await prisma.seller.findFirst({
             where: { user_id: user.id }
         })
 
         if (!existingPartner) {
             console.log('[Marketplace] 👤 Creating Global Partner for new affiliate:', user.email)
             // Use the action logic directly to ensure consistency
-            const { createGlobalPartner } = await import('@/app/actions/partners')
-            await createGlobalPartner({
+            const { createGlobalSeller } = await import('@/app/actions/sellers')
+            await createGlobalSeller({
                 userId: user.id,
                 email: user.email!,
                 name: user.user_metadata?.full_name
@@ -474,7 +494,7 @@ export async function joinMission(missionId: string): Promise<{
             url: shortLink.original_url,
             linkId: shortLink.id,
             workspaceId: shortLink.workspace_id,
-            affiliateId: shortLink.affiliate_id,
+            sellerId: shortLink.affiliate_id,
         }, customDomain || undefined)  // ✅ Pass custom domain!
 
         console.log('[Marketplace] 🔗 Created link:', shortLink.slug)
@@ -499,9 +519,9 @@ export async function joinMission(missionId: string): Promise<{
             : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
         const linkUrl = `${baseUrl}/s/${fullSlug}`
 
-        // 9. Force refresh of Partner pages to show new program
-        revalidatePath('/partner')
-        revalidatePath('/partner/marketplace')
+        // 9. Force refresh of Seller pages to show new program
+        revalidatePath('/seller')
+        revalidatePath('/seller/marketplace')
 
         return {
             success: true,

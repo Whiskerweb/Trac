@@ -37,7 +37,7 @@ export async function GET(
         }
 
         // Fetch partners with aggregated commission stats
-        const partners = await prisma.partner.findMany({
+        const partners = await prisma.seller.findMany({
             where: { program_id: workspaceId },
             include: {
                 Profile: {
@@ -123,7 +123,7 @@ export async function PATCH(
         }
 
         // Update partner status
-        const partner = await prisma.partner.update({
+        const partner = await prisma.seller.update({
             where: {
                 id: partnerId,
                 program_id: workspaceId // Ensure partner belongs to this workspace

@@ -41,7 +41,7 @@ export interface RedisLinkData {
     url: string
     linkId: string
     workspaceId: string
-    affiliateId?: string | null
+    sellerId?: string | null
 }
 
 // =============================================

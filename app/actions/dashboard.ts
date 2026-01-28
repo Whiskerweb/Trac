@@ -67,7 +67,7 @@ export async function getLastEvents(limit: number = 10): Promise<{
                 program_id: workspace.workspaceId
             },
             include: {
-                Partner: {
+                Seller: {
                     select: { name: true, email: true }
                 }
             },
@@ -85,7 +85,7 @@ export async function getLastEvents(limit: number = 10): Promise<{
             let partnerEmail = 'Visiteur anonyme'
 
             if (click.affiliate_id) {
-                const partner = await prisma.partner.findFirst({
+                const partner = await prisma.seller.findFirst({
                     where: { user_id: click.affiliate_id },
                     select: { name: true, email: true }
                 })
@@ -111,7 +111,7 @@ export async function getLastEvents(limit: number = 10): Promise<{
             let partnerEmail = 'Unknown Partner'
 
             // Try to find partner by user_id
-            const partner = await prisma.partner.findFirst({
+            const partner = await prisma.seller.findFirst({
                 where: { user_id: e.user_id },
                 select: { name: true, email: true }
             })
@@ -136,8 +136,8 @@ export async function getLastEvents(limit: number = 10): Promise<{
             events.push({
                 id: c.id,
                 type: c.status === 'COMPLETE' ? 'commission' : 'sale',
-                partner_name: c.Partner.name,
-                partner_email: c.Partner.email,
+                partner_name: c.Seller.name,
+                partner_email: c.Seller.email,
                 amount: c.commission_amount,
                 currency: c.currency,
                 created_at: c.created_at

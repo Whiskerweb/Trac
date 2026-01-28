@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { CommissionStatus } from '@/lib/generated/prisma/client'
-import { updatePartnerBalance } from './engine'
+import { updateSellerBalance } from './engine'
 
 // =============================================
 // COMMISSION MATURATION WORKER
@@ -35,7 +35,7 @@ export async function processMaturedCommissions(): Promise<{
                 status: 'PENDING',
                 created_at: { lt: cutoffDate }
             },
-            include: { Partner: true }
+            include: { Seller: true }
         })
 
         console.log(`[Worker] 📋 Found ${pendingCommissions.length} commissions to mature`)
@@ -53,7 +53,7 @@ export async function processMaturedCommissions(): Promise<{
                     }
                 })
 
-                partnerIds.add(commission.partner_id)
+                partnerIds.add(commission.seller_id)
                 processed++
 
                 console.log(`[Worker] ✅ Matured commission ${commission.id} → PROCEED (${commission.commission_amount / 100}€)`)
@@ -67,7 +67,7 @@ export async function processMaturedCommissions(): Promise<{
         // Update all affected partner balances
         for (const partnerId of partnerIds) {
             try {
-                await updatePartnerBalance(partnerId)
+                await updateSellerBalance(partnerId)
             } catch (err) {
                 console.error(`[Worker] ⚠️ Failed to update balance for partner ${partnerId}:`, err)
             }

@@ -3,20 +3,20 @@
 import { useState } from 'react'
 import { Rocket, Wallet, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { createGlobalPartner } from '@/app/actions/partners'
+import { createGlobalSeller } from '@/app/actions/sellers'
 import { createClient } from '@/utils/supabase/client'
 
 export default function OnboardingChoicePage() {
     const router = useRouter()
-    const [loading, setLoading] = useState<'startup' | 'partner' | null>(null)
+    const [loading, setLoading] = useState<'startup' | 'seller' | null>(null)
 
     const handleStartup = () => {
         setLoading('startup')
         router.push('/dashboard/new')
     }
 
-    const handlePartner = async () => {
-        setLoading('partner')
+    const handleSeller = async () => {
+        setLoading('seller')
         try {
             const supabase = createClient()
             const { data: { user } } = await supabase.auth.getUser()
@@ -27,16 +27,16 @@ export default function OnboardingChoicePage() {
                 return
             }
 
-            const result = await createGlobalPartner({
+            const result = await createGlobalSeller({
                 userId: user.id,
                 email: user.email,
                 name: user.user_metadata?.full_name
             })
 
             if (result.success) {
-                router.push('/partner')
+                router.push('/seller')
             } else {
-                console.error('Failed to create partner account:', result.error)
+                console.error('Failed to create seller account:', result.error)
                 // Fallback: stay on page or show error toast
                 setLoading(null)
             }
@@ -62,7 +62,7 @@ export default function OnboardingChoicePage() {
                     {/* Startup Card */}
                     <div
                         onClick={() => !loading && handleStartup()}
-                        className={`group relative bg-white border-2 border-slate-100 rounded-3xl p-8 hover:border-purple-500 hover:shadow-xl transition-all cursor-pointer ${loading === 'partner' ? 'opacity-50 pointer-events-none' : ''}`}
+                        className={`group relative bg-white border-2 border-slate-100 rounded-3xl p-8 hover:border-purple-500 hover:shadow-xl transition-all cursor-pointer ${loading === 'seller' ? 'opacity-50 pointer-events-none' : ''}`}
                     >
                         <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                             <Rocket className="w-8 h-8 text-purple-600" />
@@ -104,7 +104,7 @@ export default function OnboardingChoicePage() {
 
                     {/* Partner Card */}
                     <div
-                        onClick={() => !loading && handlePartner()}
+                        onClick={() => !loading && handleSeller()}
                         className={`group relative bg-white border-2 border-slate-100 rounded-3xl p-8 hover:border-indigo-500 hover:shadow-xl transition-all cursor-pointer ${loading === 'startup' ? 'opacity-50 pointer-events-none' : ''}`}
                     >
                         <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -131,7 +131,7 @@ export default function OnboardingChoicePage() {
                             </li>
                         </ul>
                         <div className="flex items-center text-indigo-600 font-semibold group-hover:gap-2 transition-all">
-                            {loading === 'partner' ? (
+                            {loading === 'seller' ? (
                                 <>
                                     <Loader2 className="w-5 h-5 animate-spin mr-2" />
                                     Configuration du compte...

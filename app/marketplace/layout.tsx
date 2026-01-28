@@ -10,9 +10,9 @@ export default async function MarketplaceLayout({ children }: { children: ReactN
     const roles = user ? await getUserRoles(user.id) : null
 
     // Determine back link based on role
-    // If Partner -> /partner
+    // If Seller -> /seller
     // If Startup -> /dashboard
-    const backLink = roles?.hasPartner ? '/partner' : '/dashboard'
+    const backLink = roles?.hasSeller ? '/seller' : '/dashboard'
 
     return (
         <div className="min-h-screen bg-zinc-950 text-white">

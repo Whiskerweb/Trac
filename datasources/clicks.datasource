@@ -1,4 +1,4 @@
-DESCRIPTION "Raw clicks log - Tracks all affiliate link visits for attribution"
+DESCRIPTION "Raw clicks log - Tracks all seller link visits for attribution"
 
 SCHEMA >
     `timestamp` DateTime `json:$.timestamp`,

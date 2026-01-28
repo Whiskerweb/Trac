@@ -7,7 +7,7 @@ import { ArrowRight, ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
     const [mode, setMode] = useState<'login' | 'signup'>('login')
-    const [role, setRole] = useState<'startup' | 'partner'>('startup')
+    const [role, setRole] = useState<'startup' | 'seller'>('startup')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
@@ -56,15 +56,15 @@ export default function LoginPage() {
                     </Link>
                     <h1 className="text-2xl font-semibold text-slate-900 tracking-tight mb-2">
                         {mode === 'login'
-                            ? (isStartup ? 'Log in to Traaaction' : 'Partner Login')
-                            : (isStartup ? 'Create your Traaaction account' : 'Become a Partner')
+                            ? (isStartup ? 'Log in to Traaaction' : 'Seller Login')
+                            : (isStartup ? 'Create your Traaaction account' : 'Become a Seller')
                         }
                     </h1>
                     <p className="text-gray-500 text-sm">
                         {mode === 'login'
                             ? (isStartup
                                 ? 'Welcome back. Log in to your startup dashboard.'
-                                : 'Welcome back. Log in to your partner dashboard.')
+                                : 'Welcome back. Log in to your seller dashboard.')
                             : (isStartup
                                 ? 'Start growing your business with intelligent partnerships.'
                                 : 'Join the ecosystem and start earning commissions.')
@@ -154,18 +154,18 @@ export default function LoginPage() {
                     <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/50 p-4 text-center">
                         <p className="text-sm text-gray-500 mb-1">
                             {mode === 'login'
-                                ? (isStartup ? "Looking for your Partner account?" : "Looking for your Startup account?")
-                                : (isStartup ? "Looking to create a Partner account?" : "Looking to create a Startup account?")
+                                ? (isStartup ? "Looking for your Seller account?" : "Looking for your Startup account?")
+                                : (isStartup ? "Looking to create a Seller account?" : "Looking to create a Startup account?")
                             }
                         </p>
                         <button
                             type="button"
-                            onClick={() => setRole(isStartup ? 'partner' : 'startup')}
+                            onClick={() => setRole(isStartup ? 'seller' : 'startup')}
                             className="text-sm font-semibold text-slate-900 hover:text-black hover:underline transition-colors"
                         >
                             {mode === 'login'
-                                ? (isStartup ? "Sign in to Partner Dashboard" : "Sign in to Startup Dashboard")
-                                : (isStartup ? "Sign up as a Partner" : "Sign up as a Startup")
+                                ? (isStartup ? "Sign in to Seller Dashboard" : "Sign in to Startup Dashboard")
+                                : (isStartup ? "Sign up as a Seller" : "Sign up as a Startup")
                             }
                         </button>
                     </div>

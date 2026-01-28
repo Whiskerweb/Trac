@@ -11,8 +11,8 @@ import { revalidatePath } from 'next/cache'
 
 export interface UnpaidCommission {
     id: string
-    partner_id: string
-    partner_name: string
+    seller_id: string
+    seller_name: string
     sale_id: string
     net_amount: number
     commission_amount: number
@@ -21,9 +21,9 @@ export interface UnpaidCommission {
     status: string
 }
 
-export interface PartnerSummary {
-    partner_id: string
-    partner_name: string
+export interface SellerSummary {
+    seller_id: string
+    seller_name: string
     commission_count: number
     total_commission: number
     total_platform_fee: number
@@ -32,9 +32,9 @@ export interface PartnerSummary {
 export async function getUnpaidCommissions(): Promise<{
     success: boolean
     commissions?: UnpaidCommission[]
-    partnerSummary?: PartnerSummary[]
+    sellerSummary?: SellerSummary[]
     totals?: {
-        partnerTotal: number
+        sellerTotal: number
         platformTotal: number
         grandTotal: number
         commissionCount: number
@@ -62,7 +62,7 @@ export async function getUnpaidCommissions(): Promise<{
                 status: 'PROCEED' // Only matured commissions
             },
             include: {
-                Partner: true
+                Seller: true
             },
             orderBy: { created_at: 'desc' }
         })
@@ -70,8 +70,8 @@ export async function getUnpaidCommissions(): Promise<{
         // Map to response format
         const mapped: UnpaidCommission[] = commissions.map(c => ({
             id: c.id,
-            partner_id: c.partner_id,
-            partner_name: c.Partner.name || c.Partner.email,
+            seller_id: c.seller_id,
+            seller_name: c.Seller.name || c.Seller.email,
             sale_id: c.sale_id,
             net_amount: c.net_amount,
             commission_amount: c.commission_amount,
@@ -80,18 +80,18 @@ export async function getUnpaidCommissions(): Promise<{
             status: c.status
         }))
 
-        // Group by partner
-        const partnerMap = new Map<string, PartnerSummary>()
+        // Group by seller
+        const sellerMap = new Map<string, SellerSummary>()
         for (const c of mapped) {
-            const existing = partnerMap.get(c.partner_id)
+            const existing = sellerMap.get(c.seller_id)
             if (existing) {
                 existing.commission_count++
                 existing.total_commission += c.commission_amount
                 existing.total_platform_fee += c.platform_fee
             } else {
-                partnerMap.set(c.partner_id, {
-                    partner_id: c.partner_id,
-                    partner_name: c.partner_name,
+                sellerMap.set(c.seller_id, {
+                    seller_id: c.seller_id,
+                    seller_name: c.seller_name,
                     commission_count: 1,
                     total_commission: c.commission_amount,
                     total_platform_fee: c.platform_fee
@@ -99,20 +99,20 @@ export async function getUnpaidCommissions(): Promise<{
             }
         }
 
-        const partnerSummary = Array.from(partnerMap.values())
+        const sellerSummary = Array.from(sellerMap.values())
 
         // Calculate totals
-        const partnerTotal = mapped.reduce((sum, c) => sum + c.commission_amount, 0)
+        const sellerTotal = mapped.reduce((sum, c) => sum + c.commission_amount, 0)
         const platformTotal = mapped.reduce((sum, c) => sum + c.platform_fee, 0)
 
         return {
             success: true,
             commissions: mapped,
-            partnerSummary,
+            sellerSummary,
             totals: {
-                partnerTotal,
+                sellerTotal,
                 platformTotal,
-                grandTotal: partnerTotal + platformTotal,
+                grandTotal: sellerTotal + platformTotal,
                 commissionCount: mapped.length
             }
         }
@@ -159,16 +159,16 @@ export async function createPaymentSession(commissionIds: string[]): Promise<{
         }
 
         // Calculate totals (server-side recalculation for security)
-        const partnerTotal = commissions.reduce((sum, c) => sum + c.commission_amount, 0)
+        const sellerTotal = commissions.reduce((sum, c) => sum + c.commission_amount, 0)
         const platformTotal = commissions.reduce((sum, c) => sum + c.platform_fee, 0)
-        const grandTotal = partnerTotal + platformTotal
+        const grandTotal = sellerTotal + platformTotal
 
         // Create StartupPayment record
         const payment = await prisma.startupPayment.create({
             data: {
                 workspace_id: workspace.workspaceId,
                 total_amount: grandTotal,
-                partner_total: partnerTotal,
+                partner_total: sellerTotal,
                 platform_total: platformTotal,
                 commission_count: commissions.length,
                 status: 'PENDING'
@@ -192,10 +192,10 @@ export async function createPaymentSession(commissionIds: string[]): Promise<{
                     price_data: {
                         currency: 'eur',
                         product_data: {
-                            name: `Partner Commissions (${commissions.length} ventes)`,
-                            description: 'Paiement des commissions partenaires'
+                            name: `Seller Commissions (${commissions.length} ventes)`,
+                            description: 'Paiement des commissions sellers'
                         },
-                        unit_amount: partnerTotal
+                        unit_amount: sellerTotal
                     },
                     quantity: 1
                 },
@@ -240,6 +240,22 @@ export async function createPaymentSession(commissionIds: string[]): Promise<{
 
 export async function confirmStartupPayment(paymentId: string, stripePaymentId: string): Promise<boolean> {
     try {
+        // IDEMPOTENCE: Check if already processed
+        const existing = await prisma.startupPayment.findUnique({
+            where: { id: paymentId },
+            select: { status: true }
+        })
+
+        if (existing?.status === 'PAID') {
+            console.log(`[Payouts] Payment ${paymentId} already confirmed, skipping`)
+            return true
+        }
+
+        if (!existing) {
+            console.error(`[Payouts] Payment ${paymentId} not found`)
+            return false
+        }
+
         // Update payment status
         const payment = await prisma.startupPayment.update({
             where: { id: paymentId },
@@ -323,7 +339,7 @@ export async function getPayoutHistory(page: number = 1, perPage: number = 10): 
                     status: 'PROCEED'
                 },
                 include: {
-                    Partner: true,
+                    Seller: true,
                     StartupPayment: true
                 },
                 orderBy: { created_at: 'desc' },
@@ -386,9 +402,9 @@ export async function getPayoutHistory(page: number = 1, perPage: number = 10): 
         const payouts: PayoutItem[] = commissions.map(c => ({
             id: c.id,
             period: formatPeriod(c.created_at),
-            partnerId: c.partner_id,
-            partnerName: c.Partner.name || c.Partner.email,
-            partnerAvatar: getInitials(c.Partner.name || c.Partner.email),
+            partnerId: c.seller_id,
+            partnerName: c.Seller.name || c.Seller.email,
+            partnerAvatar: getInitials(c.Seller.name || c.Seller.email),
             status: c.startup_payment_status === 'PAID' ? 'completed' as const : 'pending' as const,
             paidDate: c.StartupPayment?.paid_at ? formatPaidDate(c.StartupPayment.paid_at) : null,
             amount: c.commission_amount / 100, // Convert from cents
@@ -415,6 +431,30 @@ export async function getPayoutHistory(page: number = 1, perPage: number = 10): 
     } catch (err) {
         console.error('[Payouts] Error fetching history:', err)
         return { success: false, error: 'Failed to fetch payout history' }
+    }
+}
+
+// =============================================
+// CHECK PAYMENT STATUS (For UI polling)
+// =============================================
+
+export type PaymentStatusResult = 'PENDING' | 'PAID' | 'UNKNOWN'
+
+export async function checkPaymentStatus(paymentId: string): Promise<PaymentStatusResult> {
+    try {
+        const payment = await prisma.startupPayment.findUnique({
+            where: { id: paymentId },
+            select: { status: true }
+        })
+
+        if (!payment) {
+            return 'UNKNOWN'
+        }
+
+        return payment.status as PaymentStatusResult
+    } catch (err) {
+        console.error('[Payouts] Error checking payment status:', err)
+        return 'UNKNOWN'
     }
 }
 

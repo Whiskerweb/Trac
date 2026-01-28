@@ -26,18 +26,18 @@ export async function GET(request: Request) {
             }
 
             // 1. New User (No Workspace, No Partner) -> Onboarding Choice
-            if (!roles.hasWorkspace && !roles.hasPartner) {
+            if (!roles.hasWorkspace && !roles.hasSeller) {
                 return NextResponse.redirect(`${origin}/onboarding/choice`)
             }
 
             // 2. Dual Role User -> Auth Choice (Resume session)
-            if (roles.hasWorkspace && roles.hasPartner) {
+            if (roles.hasWorkspace && roles.hasSeller) {
                 return NextResponse.redirect(`${origin}/auth/choice`)
             }
 
-            // 3. Partner Only -> Partner Dashboard
-            if (roles.hasPartner) {
-                return NextResponse.redirect(`${origin}/partner`)
+            // 3. Seller Only -> Seller Dashboard
+            if (roles.hasSeller) {
+                return NextResponse.redirect(`${origin}/seller`)
             }
 
             // 4. Startup Only -> Dashboard

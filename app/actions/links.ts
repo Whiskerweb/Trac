@@ -72,7 +72,7 @@ export async function createShortLink(formData: FormData) {
             url: link.original_url,
             linkId: link.id,
             workspaceId: link.workspace_id,
-            affiliateId: null,
+            sellerId: null,
         })
 
         console.log('[ShortLink] ✅ Created:', link.slug, 'for workspace:', workspace.workspaceId)

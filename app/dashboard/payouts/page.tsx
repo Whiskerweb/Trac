@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useCallback } from 'react'
 import { Info, Filter, Loader2, Check, Clock, Settings } from 'lucide-react'
-import { getPayoutHistory, getUnpaidCommissions, createPaymentSession, PayoutItem } from '@/app/actions/payouts'
+import { getPayoutHistory, getUnpaidCommissions, createPaymentSession, checkPaymentStatus, PayoutItem } from '@/app/actions/payouts'
 import { useSearchParams } from 'next/navigation'
 
 // Avatar component
@@ -47,9 +47,11 @@ function PayoutsContent() {
 
     const searchParams = useSearchParams()
 
-    const loadData = useCallback(async (page: number) => {
-        setLoading(true)
-        setError(null)
+    const loadData = useCallback(async (page: number, silent: boolean = false) => {
+        if (!silent) {
+            setLoading(true)
+            setError(null)
+        }
 
         const [historyResult, unpaidResult] = await Promise.all([
             getPayoutHistory(page, 10),
@@ -60,7 +62,7 @@ function PayoutsContent() {
             setPayouts(historyResult.payouts)
             setTotals(historyResult.totals || { pendingTotal: 0, paidTotal: 0, pendingCount: 0, paidCount: 0 })
             setPagination(historyResult.pagination || { total: 0, page: 1, perPage: 10, totalPages: 1 })
-        } else {
+        } else if (!silent) {
             setError(historyResult.error || 'Failed to load payouts')
         }
 
@@ -68,17 +70,59 @@ function PayoutsContent() {
             setUnpaidCommissionIds(unpaidResult.commissions.map(c => c.id))
         }
 
-        setLoading(false)
+        if (!silent) {
+            setLoading(false)
+        }
     }, [])
 
     useEffect(() => {
         loadData(currentPage)
-        if (searchParams.get('success') === 'true') {
-            setSuccess(true)
-            // Reload data after successful payment
-            loadData(1)
+    }, [currentPage, loadData])
+
+    // Auto-refresh data every 30 seconds (silent polling)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            loadData(currentPage, true) // Silent refresh (no loading spinner)
+        }, 30000) // 30 seconds
+
+        return () => clearInterval(interval)
+    }, [currentPage, loadData])
+
+    // Poll payment status after Stripe redirect
+    useEffect(() => {
+        const paymentId = searchParams.get('payment_id')
+        const wasRedirected = searchParams.get('success') === 'true'
+
+        if (paymentId && wasRedirected) {
+            let attempts = 0
+            const maxAttempts = 15 // 30 seconds max (15 * 2s)
+            let cancelled = false
+
+            const pollStatus = async () => {
+                if (cancelled) return
+
+                attempts++
+                const status = await checkPaymentStatus(paymentId)
+
+                if (status === 'PAID') {
+                    setSuccess(true)
+                    loadData(1) // Refresh data
+                } else if (attempts < maxAttempts && !cancelled) {
+                    // Continue polling
+                    setTimeout(pollStatus, 2000)
+                }
+                // After max attempts, we stop polling silently
+                // The webhook will eventually process it
+            }
+
+            // Start polling immediately
+            pollStatus()
+
+            return () => {
+                cancelled = true
+            }
         }
-    }, [searchParams, currentPage, loadData])
+    }, [searchParams, loadData])
 
     const handlePageChange = (newPage: number) => {
         setCurrentPage(newPage)

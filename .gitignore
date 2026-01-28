@@ -42,3 +42,9 @@ next-env.d.ts
 
 /lib/generated/prisma
 .tinyb
+
+# Uploaded files
+public/avatars/*
+!public/avatars/.gitkeep
+public/cvs/*
+!public/cvs/.gitkeep

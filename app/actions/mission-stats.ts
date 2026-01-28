@@ -11,7 +11,7 @@ import { MOCK_MISSION_STATS, MOCK_PARTNER_STATS, MOCK_ACTIVITY_LOG } from '@/lib
 // =============================================
 
 export interface PartnerStats {
-    partner_id: string
+    seller_id: string
     partner_name: string
     avatar_url?: string
     total_revenue: number
@@ -116,7 +116,7 @@ export async function getMissionStatsForStartup(missionId: string): Promise<{
                 link_id: { in: linkIds }
             },
             include: {
-                Partner: true
+                Seller: true
             }
         }) : []
 
@@ -125,7 +125,7 @@ export async function getMissionStatsForStartup(missionId: string): Promise<{
         })
 
         const partnerMap = new Map<string, {
-            partner_id: string
+            seller_id: string
             partner_name: string
             total_revenue: number
             total_commission: number
@@ -140,14 +140,14 @@ export async function getMissionStatsForStartup(missionId: string): Promise<{
             totalRevenue += c.net_amount
             totalToPay += c.commission_amount + c.platform_fee
 
-            const existing = partnerMap.get(c.partner_id)
+            const existing = partnerMap.get(c.seller_id)
             if (existing) {
                 existing.total_revenue += c.net_amount
                 existing.total_commission += c.commission_amount
             } else {
-                partnerMap.set(c.partner_id, {
-                    partner_id: c.partner_id,
-                    partner_name: c.Partner.name || c.Partner.email,
+                partnerMap.set(c.seller_id, {
+                    seller_id: c.seller_id,
+                    partner_name: c.Seller.name || c.Seller.email,
                     total_revenue: c.net_amount,
                     total_commission: c.commission_amount,
                     leads: 0,
@@ -206,7 +206,7 @@ export async function getMissionStatsForPartner(missionId: string): Promise<{
             return { success: false, error: 'Not authenticated' }
         }
 
-        const partner = await prisma.partner.findFirst({
+        const partner = await prisma.seller.findFirst({
             where: { user_id: user.id }
         })
 
@@ -227,7 +227,7 @@ export async function getMissionStatsForPartner(missionId: string): Promise<{
         // Get my commissions for this mission's links
         const myCommissions = linkIds.length > 0 ? await prisma.commission.findMany({
             where: {
-                partner_id: partner.id,
+                seller_id: partner.id,
                 link_id: { in: linkIds }
             }
         }) : []
@@ -235,15 +235,31 @@ export async function getMissionStatsForPartner(missionId: string): Promise<{
         const myRevenue = myCommissions.reduce((sum, c) => sum + c.net_amount, 0)
         const myCommission = myCommissions.reduce((sum, c) => sum + c.commission_amount, 0)
 
+        // Get my enrollment with ShortLink to get clicks
+        const myEnrollment = await prisma.missionEnrollment.findFirst({
+            where: {
+                mission_id: missionId,
+                user_id: user.id
+            },
+            include: {
+                ShortLink: true
+            }
+        })
+
+        const myClicks = myEnrollment?.ShortLink?.clicks || 0
+
+        // Count my sales (leads are sales for now)
+        const myLeads = myCommissions.length
+
         // Get all commissions for ranking
         const allCommissions = linkIds.length > 0 ? await prisma.commission.findMany({
             where: { link_id: { in: linkIds } },
-            select: { partner_id: true, net_amount: true }
+            select: { seller_id: true, net_amount: true }
         }) : []
 
         const partnerTotals = new Map<string, number>()
         for (const c of allCommissions) {
-            partnerTotals.set(c.partner_id, (partnerTotals.get(c.partner_id) || 0) + c.net_amount)
+            partnerTotals.set(c.seller_id, (partnerTotals.get(c.seller_id) || 0) + c.net_amount)
         }
 
         const sorted = Array.from(partnerTotals.entries())
@@ -261,8 +277,8 @@ export async function getMissionStatsForPartner(missionId: string): Promise<{
                 mission_title: mission.title,
                 my_revenue: myRevenue,
                 my_commission: myCommission,
-                my_leads: 0,
-                my_clicks: 0,
+                my_leads: myLeads,
+                my_clicks: myClicks,
                 my_rank: myRank || enrollments,
                 total_partners: enrollments
             }
@@ -298,7 +314,7 @@ export async function getPartnerActivityLog(missionId: string): Promise<{
             return { success: false, error: 'Not authenticated' }
         }
 
-        const partner = await prisma.partner.findFirst({
+        const partner = await prisma.seller.findFirst({
             where: { user_id: user.id }
         })
 
@@ -310,7 +326,7 @@ export async function getPartnerActivityLog(missionId: string): Promise<{
 
         const commissions = linkIds.length > 0 ? await prisma.commission.findMany({
             where: {
-                partner_id: partner.id,
+                seller_id: partner.id,
                 link_id: { in: linkIds }
             },
             orderBy: { created_at: 'desc' },

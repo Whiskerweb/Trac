@@ -21,8 +21,8 @@ export async function GET() {
             select: { workspace_id: true }
         })
 
-        // Check if user is a Partner
-        const partner = await prisma.partner.findFirst({
+        // Check if user is a Seller
+        const seller = await prisma.seller.findFirst({
             where: { user_id: user.id },
             select: { id: true }
         })
@@ -30,7 +30,7 @@ export async function GET() {
         return NextResponse.json({
             hasWorkspace: !!membership,
             workspaceId: membership?.workspace_id || null,
-            hasPartner: !!partner
+            hasSeller: !!seller
         })
     } catch (err) {
         console.error('[API] ❌ Workspace check error:', err)

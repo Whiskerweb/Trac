@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
     MessageSquare,
     Send,
@@ -30,7 +31,7 @@ interface Conversation {
 
 interface Message {
     id: string
-    sender_type: 'STARTUP' | 'PARTNER'
+    sender_type: 'STARTUP' | 'SELLER'
     content: string
     is_invitation: boolean
     created_at: Date
@@ -104,6 +105,16 @@ function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean })
 }
 
 export default function MessagesPage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
+            <MessagesPageContent />
+        </Suspense>
+    )
+}
+
+function MessagesPageContent() {
+    const searchParams = useSearchParams()
+    const conversationParam = searchParams.get('conversation')
     const [conversations, setConversations] = useState<Conversation[]>([])
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
     const [messages, setMessages] = useState<Message[]>([])
@@ -111,6 +122,7 @@ export default function MessagesPage() {
     const [loading, setLoading] = useState(true)
     const [sendingMessage, setSendingMessage] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const autoSelectedRef = useRef(false)
 
     const loadConversations = async () => {
         const result = await getConversations('startup')
@@ -130,6 +142,17 @@ export default function MessagesPage() {
     useEffect(() => {
         loadConversations()
     }, [])
+
+    // Auto-select conversation from URL param
+    useEffect(() => {
+        if (conversationParam && conversations.length > 0 && !autoSelectedRef.current) {
+            const target = conversations.find(c => c.id === conversationParam)
+            if (target) {
+                autoSelectedRef.current = true
+                handleSelectConversation(target)
+            }
+        }
+    }, [conversations, conversationParam])
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

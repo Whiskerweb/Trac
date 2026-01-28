@@ -67,17 +67,17 @@ export async function POST(request: NextRequest) {
                         affiliateId = shortLink.affiliate_id
                         resolvedWorkspaceId = shortLink.workspace_id
 
-                        // Now lookup the Partner to get name/image
-                        const partnerRecord = await prisma.partner.findUnique({
+                        // Now lookup the Seller to get name/image
+                        const sellerRecord = await prisma.seller.findUnique({
                             where: { id: shortLink.affiliate_id },
                             include: { Profile: true }
                         })
 
-                        if (partnerRecord) {
+                        if (sellerRecord) {
                             partner = {
-                                id: partnerRecord.id,
-                                name: partnerRecord.name || partnerRecord.email?.split('@')[0] || 'Partner',
-                                image: partnerRecord.Profile?.website_url || undefined
+                                id: sellerRecord.id,
+                                name: sellerRecord.name || sellerRecord.email?.split('@')[0] || 'Seller',
+                                image: sellerRecord.Profile?.website_url || undefined
                             }
                         }
                     }

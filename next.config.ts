@@ -12,18 +12,18 @@ const nextConfig: NextConfig = {
       beforeFiles: [
         // =============================================
         // WHITE-LABEL PORTAL REWRITES
-        // Partner portals serve Traaaction content while preserving their URL
+        // Seller portals serve Traaaction content while preserving their URL
         // =============================================
         {
           source: '/:path*',
           has: [{ type: 'host', value: 'partners.cardz.dev' }],
-          destination: '/partner/:path*',
+          destination: '/seller/:path*',
         },
         // Add more white-label domains here:
         // {
         //   source: '/:path*',
         //   has: [{ type: 'host', value: 'affiliate.otherbrand.com' }],
-        //   destination: '/partner/:path*',
+        //   destination: '/seller/:path*',
         // },
       ],
       // afterFiles rewrites run after pages check but before fallback
