@@ -13,10 +13,10 @@ import { getCurrentUser } from '@/lib/auth'
  * Body: { commissionId: string }
  */
 export async function POST(request: NextRequest) {
-    // ⚠️ SÉCURITÉ: Seulement en développement
-    if (process.env.NODE_ENV === 'production') {
+    // ⚠️ SÉCURITÉ: Seulement si ENABLE_DEV_TOOLS=true
+    if (process.env.ENABLE_DEV_TOOLS !== 'true') {
         return NextResponse.json(
-            { error: 'Endpoint disponible uniquement en développement' },
+            { error: 'Endpoint disponible uniquement en mode développement' },
             { status: 403 }
         )
     }
@@ -108,10 +108,10 @@ export async function POST(request: NextRequest) {
  * Liste toutes les commissions PENDING pour faciliter les tests
  */
 export async function GET(request: NextRequest) {
-    // ⚠️ SÉCURITÉ: Seulement en développement
-    if (process.env.NODE_ENV === 'production') {
+    // ⚠️ SÉCURITÉ: Seulement si ENABLE_DEV_TOOLS=true
+    if (process.env.ENABLE_DEV_TOOLS !== 'true') {
         return NextResponse.json(
-            { error: 'Endpoint disponible uniquement en développement' },
+            { error: 'Endpoint disponible uniquement en mode développement' },
             { status: 403 }
         )
     }

@@ -76,8 +76,8 @@ export function Sidebar() {
     const [userEmail, setUserEmail] = useState<string>('')
     const [startupName, setStartupName] = useState<string>('Seller Program')
 
-    // Add dev tools section in development only
-    const isDev = process.env.NODE_ENV !== 'production'
+    // Add dev tools section if enabled (via env var)
+    const isDev = process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLS === 'true'
     const navigationWithDevTools: NavSection[] = isDev
         ? [
             ...navigation,

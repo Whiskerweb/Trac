@@ -18,8 +18,8 @@ export default function AdminDebugPage() {
     const [processing, setProcessing] = useState<string | null>(null)
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-    // Vérifier qu'on est en dev
-    const isDev = process.env.NODE_ENV !== 'production'
+    // Vérifier qu'on est en dev (utilise NEXT_PUBLIC_ car côté client)
+    const isDev = process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLS === 'true'
 
     useEffect(() => {
         loadPendingCommissions()
