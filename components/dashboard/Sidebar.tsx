@@ -3,7 +3,7 @@
 import {
     Home, MessageSquare, CreditCard, Users, UserCheck, UserPlus,
     BarChart3, Contact, Coins, Shield, Gift, Mail, FileText,
-    Puzzle, ChevronDown, User, ExternalLink, Target
+    Puzzle, ChevronDown, User, ExternalLink, Target, Zap
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -76,6 +76,20 @@ export function Sidebar() {
     const [userEmail, setUserEmail] = useState<string>('')
     const [startupName, setStartupName] = useState<string>('Seller Program')
 
+    // Add dev tools section in development only
+    const isDev = process.env.NODE_ENV !== 'production'
+    const navigationWithDevTools = isDev
+        ? [
+            ...navigation,
+            {
+                title: 'Dev Tools',
+                items: [
+                    { name: 'Force Mature', href: '/dashboard/admin/debug', icon: Zap }
+                ]
+            }
+        ]
+        : navigation
+
     useEffect(() => {
         fetch('/api/auth/user-roles')
             .then(res => res.json())
@@ -107,7 +121,7 @@ export function Sidebar() {
 
             {/* Navigation */}
             <nav className="flex-1 px-3 py-4 overflow-y-auto">
-                {navigation.map((section, idx) => (
+                {navigationWithDevTools.map((section, idx) => (
                     <div key={section.title} className={idx > 0 ? 'mt-6' : ''}>
                         {/* Section Title */}
                         <p className="px-3 mb-2 text-xs font-medium text-gray-400 uppercase tracking-wide">
