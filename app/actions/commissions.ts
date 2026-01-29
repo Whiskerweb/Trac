@@ -155,6 +155,7 @@ export interface CommissionItem {
     missionName: string
     saleId: string
     grossAmount: number
+    taxAmount: number
     netAmount: number
     commissionAmount: number
     platformFee: number
@@ -268,6 +269,7 @@ export async function getWorkspaceCommissions(
                 missionName,
                 saleId: c.sale_id,
                 grossAmount: c.gross_amount,
+                taxAmount: c.tax_amount,
                 netAmount: c.net_amount,
                 commissionAmount: c.commission_amount,
                 platformFee: c.platform_fee,

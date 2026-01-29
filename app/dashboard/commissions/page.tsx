@@ -250,7 +250,8 @@ export default function CommissionsPage() {
                                     {commission.missionName}
                                 </div>
                                 <div className="text-sm text-gray-900">
-                                    {formatCurrency(commission.grossAmount)}
+                                    {formatCurrency(commission.grossAmount - commission.taxAmount)}
+                                    <span className="block text-xs text-gray-400">HT</span>
                                 </div>
                                 <div>
                                     <span className="text-sm font-medium text-green-600">
