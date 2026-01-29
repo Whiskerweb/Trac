@@ -1265,3 +1265,26 @@ export async function getProfileCompletionStatus(): Promise<{
         return { success: false, error: 'Erreur lors de la vérification du profil' }
     }
 }
+
+// =============================================
+// UPDATE PAYOUT METHOD
+// =============================================
+
+export async function updatePayoutMethod(
+    sellerId: string,
+    method: 'STRIPE_CONNECT' | 'PAYPAL' | 'IBAN' | 'PLATFORM'
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        await prisma.seller.update({
+            where: { id: sellerId },
+            data: { payout_method: method }
+        })
+
+        console.log(`[Sellers] Updated payout method for seller ${sellerId}: ${method}`)
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error updating payout method:', error)
+        return { success: false, error: 'Erreur lors de la mise à jour' }
+    }
+}

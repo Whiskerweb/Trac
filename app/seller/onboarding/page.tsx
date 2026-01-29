@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Share2, CreditCard, CheckCircle, Loader2, ExternalLink } from 'lucide-react'
+import { User, Share2, CreditCard, CheckCircle, Loader2, ExternalLink, Wallet, Zap, Gift } from 'lucide-react'
 import {
     saveOnboardingStep1,
     saveOnboardingStep2,
@@ -32,6 +32,7 @@ export default function SellerOnboardingPage() {
 
     // Step 3 state
     const [stripeUrl, setStripeUrl] = useState<string | null>(null)
+    const [payoutChoice, setPayoutChoice] = useState<'stripe' | 'wallet' | null>(null)
 
     useEffect(() => {
         async function loadStatus() {
@@ -106,16 +107,27 @@ export default function SellerOnboardingPage() {
     }
 
     const handleStep3Submit = async () => {
-        if (!sellerId) return
+        if (!sellerId || !payoutChoice) return
 
         setSubmitting(true)
-        const result = await createStripeConnectAccount(sellerId)
 
-        if (result.success && result.url) {
-            setStripeUrl(result.url)
-            // Redirect to Stripe
-            window.location.href = result.url
+        if (payoutChoice === 'stripe') {
+            // Create Stripe Connect account and redirect
+            const result = await createStripeConnectAccount(sellerId)
+
+            if (result.success && result.url) {
+                setStripeUrl(result.url)
+                // Redirect to Stripe
+                window.location.href = result.url
+            }
+        } else {
+            // Skip Stripe, set payout method to PLATFORM
+            const { updatePayoutMethod } = await import('@/app/actions/sellers')
+            await updatePayoutMethod(sellerId, 'PLATFORM')
+            // Move to step 4
+            setCurrentStep(4)
         }
+
         setSubmitting(false)
     }
 
@@ -302,44 +314,108 @@ export default function SellerOnboardingPage() {
                                     <CreditCard className="w-6 h-6 text-purple-600" />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-bold text-slate-900">Paiements</h2>
-                                    <p className="text-slate-600">Configurez vos versements</p>
+                                    <h2 className="text-2xl font-bold text-slate-900">Mode de paiement</h2>
+                                    <p className="text-slate-600">Choisissez comment recevoir vos gains</p>
                                 </div>
                             </div>
 
-                            <div className="bg-slate-50 rounded-xl p-6 mb-6">
-                                <h3 className="font-semibold text-slate-900 mb-3">Stripe Connect Express</h3>
-                                <p className="text-slate-600 text-sm mb-4">
-                                    Nous utilisons Stripe pour gérer les paiements en toute sécurité. Vous serez redirigé vers Stripe pour :
-                                </p>
-                                <ul className="space-y-2 text-sm text-slate-700">
-                                    <li className="flex items-start gap-2">
-                                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                        <span>Vérifier votre identité (KYC)</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                        <span>Ajouter vos coordonnées bancaires</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                        <span>Accepter les conditions de paiement</span>
-                                    </li>
-                                </ul>
+                            <div className="space-y-4 mb-6">
+                                {/* Option 1: Stripe Connect */}
+                                <button
+                                    onClick={() => setPayoutChoice('stripe')}
+                                    className={`w-full p-6 rounded-xl border-2 transition-all text-left ${
+                                        payoutChoice === 'stripe'
+                                            ? 'border-purple-500 bg-purple-50'
+                                            : 'border-slate-200 hover:border-purple-300'
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                                            payoutChoice === 'stripe' ? 'bg-purple-600' : 'bg-slate-100'
+                                        }`}>
+                                            <Zap className={`w-6 h-6 ${payoutChoice === 'stripe' ? 'text-white' : 'text-slate-600'}`} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <h3 className="font-semibold text-slate-900">Transferts automatiques</h3>
+                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                                    Recommandé
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-slate-600 mb-3">
+                                                Recevez vos gains directement sur votre compte bancaire automatiquement quand les startups paient.
+                                            </p>
+                                            <ul className="space-y-1.5 text-sm text-slate-700">
+                                                <li className="flex items-start gap-2">
+                                                    <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                                    <span>Paiements automatiques sous 2-3 jours</span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                                    <span>Vérification d'identité sécurisée (KYC)</span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                                    <span>Aucun effort, tout est automatisé</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                {/* Option 2: Platform Wallet */}
+                                <button
+                                    onClick={() => setPayoutChoice('wallet')}
+                                    className={`w-full p-6 rounded-xl border-2 transition-all text-left ${
+                                        payoutChoice === 'wallet'
+                                            ? 'border-purple-500 bg-purple-50'
+                                            : 'border-slate-200 hover:border-purple-300'
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                                            payoutChoice === 'wallet' ? 'bg-purple-600' : 'bg-slate-100'
+                                        }`}>
+                                            <Wallet className={`w-6 h-6 ${payoutChoice === 'wallet' ? 'text-white' : 'text-slate-600'}`} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-slate-900 mb-2">Wallet Traaaction</h3>
+                                            <p className="text-sm text-slate-600 mb-3">
+                                                Accumulez vos gains sur votre wallet. Vous pourrez connecter Stripe plus tard ou échanger contre des cartes cadeaux.
+                                            </p>
+                                            <ul className="space-y-1.5 text-sm text-slate-700">
+                                                <li className="flex items-start gap-2">
+                                                    <Gift className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                                    <span>Échangez contre cartes cadeaux (Amazon, iTunes, etc.)</span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <Gift className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                                    <span>Connectez Stripe plus tard pour retirer en cash</span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <Gift className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                                    <span>Pas de vérification d'identité requise</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </button>
                             </div>
 
                             <button
                                 onClick={handleStep3Submit}
-                                disabled={submitting}
-                                className="w-full py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                                disabled={submitting || !payoutChoice}
+                                className="w-full py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {submitting ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
+                                ) : payoutChoice === 'stripe' ? (
                                     <>
                                         Continuer avec Stripe
                                         <ExternalLink className="w-4 h-4" />
                                     </>
+                                ) : (
+                                    'Continuer'
                                 )}
                             </button>
                         </div>

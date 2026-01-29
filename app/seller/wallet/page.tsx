@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import {
     Wallet, TrendingUp, Clock, CheckCircle2,
     ArrowDownToLine, DollarSign, Loader2,
-    AlertCircle, ExternalLink, X
+    AlertCircle, ExternalLink, X, Gift, Zap, CreditCard
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -211,32 +211,55 @@ export default function SellerWalletPage() {
 
                 {/* Main Balance Card */}
                 <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white mb-8">
-                    <div className="flex items-center justify-between">
+                    {wallet.method === 'STRIPE_CONNECT' ? (
+                        // STRIPE CONNECT MODE: Automatic payouts
                         <div>
-                            <p className="text-purple-200 text-sm mb-1">Solde disponible</p>
-                            <p className="text-4xl font-bold">{formatCurrency(wallet.due || 0)}</p>
-                            <p className="text-purple-200 text-sm mt-2">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Zap className="w-5 h-5 text-yellow-300" />
+                                <span className="text-purple-100 text-sm font-medium">Paiements automatiques activés</span>
+                            </div>
+                            <p className="text-purple-200 text-sm mb-1">Prochain versement</p>
+                            <p className="text-4xl font-bold mb-2">{formatCurrency(wallet.due || 0)}</p>
+                            <p className="text-purple-200 text-sm">
                                 +{formatCurrency(wallet.pending || 0)} en maturation (30j)
                             </p>
+                            <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                                <p className="text-sm text-purple-100 mb-2">
+                                    💳 Vos gains sont automatiquement transférés sur votre compte bancaire quand les startups paient.
+                                </p>
+                                <p className="text-xs text-purple-200">
+                                    Délai de réception : 2-3 jours après paiement startup
+                                </p>
+                            </div>
                         </div>
-                        <button
-                            onClick={handleWithdraw}
-                            disabled={!wallet.canWithdraw || withdrawing}
-                            className="px-6 py-3 bg-white text-purple-700 font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-50 transition-colors flex items-center gap-2"
-                        >
-                            {withdrawing ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Traitement...
-                                </>
-                            ) : (
-                                <>
-                                    <ArrowDownToLine className="w-5 h-5" />
-                                    Demander un versement
-                                </>
-                            )}
-                        </button>
-                    </div>
+                    ) : (
+                        // PLATFORM WALLET MODE: Manual withdraw or gift cards
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-purple-200 text-sm mb-1">Solde wallet Traaaction</p>
+                                <p className="text-4xl font-bold">{formatCurrency(wallet.balance || 0)}</p>
+                                <p className="text-purple-200 text-sm mt-2">
+                                    +{formatCurrency(wallet.pending || 0)} en maturation (30j)
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                                <Link
+                                    href="/seller/gift-cards"
+                                    className="px-6 py-3 bg-white text-purple-700 font-semibold rounded-xl hover:bg-purple-50 transition-colors flex items-center gap-2 whitespace-nowrap"
+                                >
+                                    <Gift className="w-5 h-5" />
+                                    Cartes cadeaux
+                                </Link>
+                                <Link
+                                    href="/seller/account?tab=payout"
+                                    className="px-6 py-3 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-xl hover:bg-white/30 transition-colors flex items-center gap-2 whitespace-nowrap text-sm"
+                                >
+                                    <CreditCard className="w-4 h-4" />
+                                    Connecter Stripe
+                                </Link>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Stats Grid */}
@@ -249,7 +272,7 @@ export default function SellerWalletPage() {
                             <span className="text-slate-600 text-sm">Total gagné</span>
                         </div>
                         <div className="text-2xl font-bold text-slate-900">
-                            {formatCurrency(wallet.pending + wallet.due + wallet.paid_total)}
+                            {formatCurrency(wallet.pending + (wallet.balance || 0) + (wallet.due || 0) + wallet.paid_total)}
                         </div>
                         <div className="text-sm text-slate-500 mt-1">{wallet.commissions.length} commissions</div>
                     </div>
@@ -259,22 +282,35 @@ export default function SellerWalletPage() {
                             <div className="p-2 rounded-lg bg-amber-100 text-amber-700">
                                 <Clock className="w-5 h-5" />
                             </div>
-                            <span className="text-slate-600 text-sm">En attente</span>
+                            <span className="text-slate-600 text-sm">En maturation</span>
                         </div>
                         <div className="text-2xl font-bold text-slate-900">{formatCurrency(wallet.pending || 0)}</div>
-                        <div className="text-sm text-slate-500 mt-1">Maturation 30 jours</div>
+                        <div className="text-sm text-slate-500 mt-1">Disponible dans 30 jours</div>
                     </div>
 
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="p-2 rounded-lg bg-green-100 text-green-700">
-                                <CheckCircle2 className="w-5 h-5" />
+                    {wallet.method === 'STRIPE_CONNECT' ? (
+                        <div className="bg-white border border-slate-200 rounded-2xl p-6">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 rounded-lg bg-blue-100 text-blue-700">
+                                    <Zap className="w-5 h-5" />
+                                </div>
+                                <span className="text-slate-600 text-sm">Prochain versement</span>
                             </div>
-                            <span className="text-slate-600 text-sm">Disponible</span>
+                            <div className="text-2xl font-bold text-slate-900">{formatCurrency(wallet.due || 0)}</div>
+                            <div className="text-sm text-slate-500 mt-1">Transfert auto 2-3j</div>
                         </div>
-                        <div className="text-2xl font-bold text-slate-900">{formatCurrency(wallet.due || 0)}</div>
-                        <div className="text-sm text-slate-500 mt-1">Prêt pour le retrait</div>
-                    </div>
+                    ) : (
+                        <div className="bg-white border border-slate-200 rounded-2xl p-6">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 rounded-lg bg-green-100 text-green-700">
+                                    <Wallet className="w-5 h-5" />
+                                </div>
+                                <span className="text-slate-600 text-sm">Wallet actuel</span>
+                            </div>
+                            <div className="text-2xl font-bold text-slate-900">{formatCurrency(wallet.balance || 0)}</div>
+                            <div className="text-sm text-slate-500 mt-1">Disponible maintenant</div>
+                        </div>
+                    )}
 
                     <div className="bg-white border border-slate-200 rounded-2xl p-6">
                         <div className="flex items-center gap-3 mb-3">
@@ -284,7 +320,7 @@ export default function SellerWalletPage() {
                             <span className="text-slate-600 text-sm">Versé</span>
                         </div>
                         <div className="text-2xl font-bold text-slate-900">{formatCurrency(wallet.paid_total || 0)}</div>
-                        <div className="text-sm text-slate-500 mt-1">Total des versements</div>
+                        <div className="text-sm text-slate-500 mt-1">Total historique</div>
                     </div>
                 </div>
 
@@ -331,26 +367,49 @@ export default function SellerWalletPage() {
                 {/* Info Section */}
                 <div className="mt-8 bg-blue-50 border border-blue-200 rounded-2xl p-6">
                     <h3 className="font-semibold text-blue-900 mb-3">💡 Comment ça fonctionne</h3>
-                    <div className="grid md:grid-cols-3 gap-4">
-                        <div>
-                            <p className="font-medium text-blue-900 text-sm mb-1">1. Période de sécurité</p>
-                            <p className="text-blue-700 text-sm">
-                                Les commissions restent en PENDING pendant 30 jours pour éviter les fraudes
-                            </p>
+                    {wallet.method === 'STRIPE_CONNECT' ? (
+                        <div className="grid md:grid-cols-3 gap-4">
+                            <div>
+                                <p className="font-medium text-blue-900 text-sm mb-1">1. Maturation (30j)</p>
+                                <p className="text-blue-700 text-sm">
+                                    Les commissions restent en attente 30 jours pour éviter les fraudes/refunds
+                                </p>
+                            </div>
+                            <div>
+                                <p className="font-medium text-blue-900 text-sm mb-1">2. Startup paie</p>
+                                <p className="text-blue-700 text-sm">
+                                    Après 30j, la startup paie votre commission + 15% frais plateforme
+                                </p>
+                            </div>
+                            <div>
+                                <p className="font-medium text-blue-900 text-sm mb-1">3. Transfert auto</p>
+                                <p className="text-blue-700 text-sm">
+                                    Votre argent est automatiquement transféré sur votre compte bancaire (2-3j)
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="font-medium text-blue-900 text-sm mb-1">2. Disponibilité</p>
-                            <p className="text-blue-700 text-sm">
-                                Après 30 jours, elles passent en PROCEED et vous pouvez demander un versement
-                            </p>
+                    ) : (
+                        <div className="grid md:grid-cols-3 gap-4">
+                            <div>
+                                <p className="font-medium text-blue-900 text-sm mb-1">1. Maturation (30j)</p>
+                                <p className="text-blue-700 text-sm">
+                                    Les commissions restent en attente 30 jours pour éviter les fraudes/refunds
+                                </p>
+                            </div>
+                            <div>
+                                <p className="font-medium text-blue-900 text-sm mb-1">2. Wallet Traaaction</p>
+                                <p className="text-blue-700 text-sm">
+                                    Après paiement startup, votre argent arrive sur votre wallet Traaaction
+                                </p>
+                            </div>
+                            <div>
+                                <p className="font-medium text-blue-900 text-sm mb-1">3. Utilisation</p>
+                                <p className="text-blue-700 text-sm">
+                                    Échangez contre cartes cadeaux ou connectez Stripe pour retirer en cash
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="font-medium text-blue-900 text-sm mb-1">3. Versement</p>
-                            <p className="text-blue-700 text-sm">
-                                Le montant est transféré sur votre compte Stripe sous 2-3 jours
-                            </p>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
