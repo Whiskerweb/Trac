@@ -266,7 +266,92 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
             }
         })
 
-        // Mark all linked commissions as PAID and COMPLETE
+        // Get all commissions linked to this payment
+        const commissions = await prisma.commission.findMany({
+            where: { startup_payment_id: paymentId },
+            include: {
+                Seller: {
+                    select: {
+                        id: true,
+                        stripe_connect_id: true,
+                        payout_method: true,
+                        payouts_enabled_at: true
+                    }
+                }
+            }
+        })
+
+        console.log(`[Payouts] Processing ${commissions.length} commissions for automatic payout`)
+
+        // Group commissions by seller
+        const commissionsBySeller = commissions.reduce((acc, comm) => {
+            const sellerId = comm.seller_id
+            if (!acc[sellerId]) {
+                acc[sellerId] = {
+                    seller: comm.Seller,
+                    commissions: []
+                }
+            }
+            acc[sellerId].commissions.push(comm)
+            return acc
+        }, {} as Record<string, { seller: any, commissions: typeof commissions }>)
+
+        // Process each seller
+        for (const [sellerId, data] of Object.entries(commissionsBySeller)) {
+            const { seller, commissions: sellerCommissions } = data
+            const totalAmount = sellerCommissions.reduce((sum, c) => sum + c.commission_amount, 0)
+
+            console.log(`[Payouts] Processing seller ${sellerId}: ${totalAmount / 100}€ (${sellerCommissions.length} commissions)`)
+
+            // OPTION 1: Seller has Stripe Connect → Direct transfer
+            if (seller.stripe_connect_id && seller.payouts_enabled_at) {
+                try {
+                    const { dispatchPayout } = await import('@/lib/payout-service')
+
+                    const result = await dispatchPayout({
+                        sellerId,
+                        amount: totalAmount,
+                        commissionIds: sellerCommissions.map(c => c.id)
+                    })
+
+                    if (result.success) {
+                        console.log(`[Payouts] ✅ Stripe transfer ${result.transferId} sent to seller ${sellerId}`)
+                    } else {
+                        console.error(`[Payouts] ❌ Failed to transfer to seller ${sellerId}: ${result.error}`)
+                        // Don't fail the whole payment, just log
+                    }
+                } catch (err) {
+                    console.error(`[Payouts] Error dispatching payout to seller ${sellerId}:`, err)
+                }
+            }
+            // OPTION 2: No Stripe Connect → Add to platform wallet
+            else {
+                try {
+                    console.log(`[Payouts] 💰 Seller ${sellerId} has no Stripe Connect, adding ${totalAmount / 100}€ to wallet`)
+
+                    // Add to seller's platform balance
+                    await prisma.sellerBalance.upsert({
+                        where: { seller_id: sellerId },
+                        create: {
+                            seller_id: sellerId,
+                            balance: totalAmount,
+                            pending: 0,
+                            due: 0,
+                            paid_total: 0
+                        },
+                        update: {
+                            balance: { increment: totalAmount }
+                        }
+                    })
+
+                    console.log(`[Payouts] ✅ Added ${totalAmount / 100}€ to seller ${sellerId} platform wallet`)
+                } catch (err) {
+                    console.error(`[Payouts] Error adding to wallet for seller ${sellerId}:`, err)
+                }
+            }
+        }
+
+        // Mark all commissions as PAID and COMPLETE
         await prisma.commission.updateMany({
             where: { startup_payment_id: paymentId },
             data: {
@@ -276,10 +361,11 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
             }
         })
 
-        console.log(`[Payouts] ✅ Payment ${paymentId} confirmed: ${payment.commission_count} commissions → COMPLETE`)
+        console.log(`[Payouts] ✅ Payment ${paymentId} confirmed: ${payment.commission_count} commissions → COMPLETE (automatic payout dispatched)`)
 
         revalidatePath('/dashboard/payouts')
         revalidatePath('/dashboard/commissions')
+        revalidatePath('/seller/wallet')
         return true
     } catch (err) {
         console.error('[Payouts] Error confirming payment:', err)
