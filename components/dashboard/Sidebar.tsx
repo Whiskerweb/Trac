@@ -78,13 +78,13 @@ export function Sidebar() {
 
     // Add dev tools section in development only
     const isDev = process.env.NODE_ENV !== 'production'
-    const navigationWithDevTools = isDev
+    const navigationWithDevTools: NavSection[] = isDev
         ? [
             ...navigation,
             {
                 title: 'Dev Tools',
                 items: [
-                    { name: 'Force Mature', href: '/dashboard/admin/debug', icon: Zap }
+                    { name: 'Force Mature', href: '/dashboard/admin/debug', icon: Zap } as NavItem
                 ]
             }
         ]
