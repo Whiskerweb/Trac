@@ -61,8 +61,7 @@ export async function GET(request: NextRequest) {
         const seller = await prisma.seller.findUnique({
             where: { id: sellerId },
             include: {
-                Balance: true,
-                Commission: {
+                Commissions: {
                     orderBy: { created_at: 'desc' },
                     take: 10,
                     select: {
@@ -81,6 +80,11 @@ export async function GET(request: NextRequest) {
         if (!seller) {
             return NextResponse.json({ error: 'Seller not found' }, { status: 404 })
         }
+
+        // Get seller balance separately (not a direct relation)
+        const sellerBalance = await prisma.sellerBalance.findUnique({
+            where: { seller_id: sellerId }
+        })
 
         // Check Stripe Connect status if configured
         let stripeAccountStatus = null
@@ -123,7 +127,7 @@ export async function GET(request: NextRequest) {
             issues.push('Platform has 0 EUR available balance - Stripe will reject transfers!')
         }
 
-        const totalDueCommissions = seller.Commission
+        const totalDueCommissions = seller.Commissions
             .filter(c => c.status === 'PROCEED' || (c.status === 'COMPLETE' && !c.paid_at))
             .reduce((sum, c) => sum + c.commission_amount, 0)
 
@@ -142,18 +146,18 @@ export async function GET(request: NextRequest) {
                 payouts_enabled_at: seller.payouts_enabled_at,
                 status: seller.status
             },
-            balance: seller.Balance ? {
-                pending: `${seller.Balance.pending / 100}€`,
-                due: `${seller.Balance.due / 100}€`,
-                balance: `${seller.Balance.balance / 100}€`,
-                paid_total: `${seller.Balance.paid_total / 100}€`
+            balance: sellerBalance ? {
+                pending: `${sellerBalance.pending / 100}€`,
+                due: `${sellerBalance.due / 100}€`,
+                balance: `${sellerBalance.balance / 100}€`,
+                paid_total: `${sellerBalance.paid_total / 100}€`
             } : null,
             stripeAccount: stripeAccountStatus,
             platformBalance: {
                 available: `${availableBalance / 100}€`,
                 pending: `${balance.pending.find(b => b.currency === 'eur')?.amount || 0 / 100}€`
             },
-            recentCommissions: seller.Commission.map(c => ({
+            recentCommissions: seller.Commissions.map(c => ({
                 id: c.id,
                 amount: `${c.commission_amount / 100}€`,
                 status: c.status,
