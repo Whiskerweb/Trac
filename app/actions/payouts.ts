@@ -266,15 +266,20 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
             }
         })
 
-        // Mark all linked commissions as PAID
+        // Mark all linked commissions as PAID and COMPLETE
         await prisma.commission.updateMany({
             where: { startup_payment_id: paymentId },
-            data: { startup_payment_status: 'PAID' }
+            data: {
+                startup_payment_status: 'PAID',
+                status: 'COMPLETE',
+                paid_at: new Date()
+            }
         })
 
-        console.log(`[Payouts] ✅ Payment ${paymentId} confirmed: ${payment.commission_count} commissions`)
+        console.log(`[Payouts] ✅ Payment ${paymentId} confirmed: ${payment.commission_count} commissions → COMPLETE`)
 
         revalidatePath('/dashboard/payouts')
+        revalidatePath('/dashboard/commissions')
         return true
     } catch (err) {
         console.error('[Payouts] Error confirming payment:', err)
