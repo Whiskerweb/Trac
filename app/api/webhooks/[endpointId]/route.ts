@@ -180,8 +180,15 @@ export async function POST(
                     // Revenu_net = Montant_brut - (Frais_Stripe + Taxes)
                     // ========================================
                     const grossAmount = session.amount_total || 0
-                    const tax = session.total_details?.amount_tax || 0
+                    let tax = session.total_details?.amount_tax || 0
                     const currency = session.currency || 'eur'
+
+                    // ✅ CRITICAL FIX: If Stripe doesn't return tax, calculate French VAT (20%)
+                    // French VAT calculation: VAT = TTC * (20/120) = TTC * 0.1667
+                    if (tax === 0 && currency === 'eur') {
+                        tax = Math.round(grossAmount * 0.1667)  // 20% VAT from TTC
+                        console.log(`[Webhook] 🧮 Calculated French VAT: ${tax / 100}€ (20% of ${grossAmount / 100}€ TTC)`)
+                    }
 
                     // Fetch exact Stripe fees from balance_transaction
                     let stripeFee = 0
@@ -521,8 +528,14 @@ export async function POST(
 
                     // 2. Revenue Calculation (same as checkout.session)
                     const grossAmount = invoice.amount_paid || 0
-                    const tax = (invoice as any).tax || 0
+                    let tax = (invoice as any).tax || 0
                     const currency = invoice.currency || 'eur'
+
+                    // ✅ CRITICAL FIX: If Stripe doesn't return tax, calculate French VAT (20%)
+                    if (tax === 0 && currency === 'eur') {
+                        tax = Math.round(grossAmount * 0.1667)  // 20% VAT from TTC
+                        console.log(`[Webhook] 🧮 Calculated French VAT (recurring): ${tax / 100}€`)
+                    }
 
                     // Fetch Stripe fee from balance_transaction via payment_intent
                     let stripeFee = 0
