@@ -107,28 +107,53 @@ export default function SellerOnboardingPage() {
     }
 
     const handleStep3Submit = async () => {
-        if (!sellerId || !payoutChoice) return
-
-        setSubmitting(true)
-
-        if (payoutChoice === 'stripe') {
-            // Create Stripe Connect account and redirect
-            const result = await createStripeConnectAccount(sellerId)
-
-            if (result.success && result.url) {
-                setStripeUrl(result.url)
-                // Redirect to Stripe
-                window.location.href = result.url
-            }
-        } else {
-            // Skip Stripe, set payout method to PLATFORM
-            const { updatePayoutMethod } = await import('@/app/actions/sellers')
-            await updatePayoutMethod(sellerId, 'PLATFORM')
-            // Move to step 4
-            setCurrentStep(4)
+        if (!sellerId || !payoutChoice) {
+            console.log('[Onboarding] Cannot submit step 3:', { sellerId, payoutChoice })
+            return
         }
 
-        setSubmitting(false)
+        console.log('[Onboarding] Submitting step 3:', { sellerId, payoutChoice })
+        setSubmitting(true)
+
+        try {
+            if (payoutChoice === 'stripe') {
+                console.log('[Onboarding] Creating Stripe Connect account...')
+                // Create Stripe Connect account and redirect
+                const result = await createStripeConnectAccount(sellerId)
+
+                console.log('[Onboarding] Stripe Connect result:', result)
+
+                if (result.success && result.url) {
+                    setStripeUrl(result.url)
+                    console.log('[Onboarding] Redirecting to Stripe:', result.url)
+                    // Redirect to Stripe
+                    window.location.href = result.url
+                } else {
+                    console.error('[Onboarding] Stripe Connect failed:', result)
+                    alert('Erreur lors de la création du compte Stripe. Veuillez réessayer.')
+                }
+            } else {
+                console.log('[Onboarding] Setting payout method to PLATFORM...')
+                // Skip Stripe, set payout method to PLATFORM
+                const { updatePayoutMethod } = await import('@/app/actions/sellers')
+                const result = await updatePayoutMethod(sellerId, 'PLATFORM')
+
+                console.log('[Onboarding] Update payout method result:', result)
+
+                if (result.success) {
+                    // Move to step 4
+                    setCurrentStep(4)
+                } else {
+                    console.error('[Onboarding] Update payout method failed:', result)
+                    alert('Erreur lors de la configuration. Veuillez réessayer.')
+                }
+            }
+        } catch (error) {
+            console.error('[Onboarding] Error in step 3:', error)
+            alert('Erreur inattendue. Veuillez réessayer.')
+        } finally {
+            setSubmitting(false)
+        }
     }
 
     const handleStep4Complete = async () => {
