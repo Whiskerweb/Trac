@@ -97,6 +97,49 @@ export async function POST(
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object as Stripe.Checkout.Session
 
+        // ========================================
+        // CHECK IF THIS IS A STARTUP PAYMENT
+        // ========================================
+        if (session.metadata?.type === 'startup_payout') {
+            console.log(`[Webhook] 💳 Startup payment detected for workspace ${endpoint.workspace_id}`)
+
+            waitUntil(
+                (async () => {
+                    try {
+                        const { confirmStartupPayment } = await import('@/app/actions/payouts')
+
+                        const paymentId = session.metadata!.startup_payment_id
+                        const stripePaymentId = session.payment_intent as string
+
+                        if (!paymentId) {
+                            console.error('[Webhook] Missing startup_payment_id in metadata')
+                            return
+                        }
+
+                        console.log(`[Webhook] Processing startup payout:`, {
+                            paymentId,
+                            workspaceId: endpoint.workspace_id,
+                            stripePaymentId,
+                            amount: session.amount_total
+                        })
+
+                        const success = await confirmStartupPayment(paymentId, stripePaymentId)
+
+                        if (success) {
+                            console.log(`[Webhook] ✅ Startup payment ${paymentId} confirmed`)
+                        } else {
+                            console.error(`[Webhook] ❌ Failed to confirm startup payment ${paymentId}`)
+                        }
+                    } catch (err) {
+                        console.error('[Webhook] Error processing startup payment:', err)
+                    }
+                })()
+            )
+
+            // Return early - don't process as a customer sale
+            return NextResponse.json({ received: true }, { status: 200 })
+        }
+
         // Use waitUntil for "Fire-and-Forget" reliability
         // This ensures the response to Stripe is fast (ms) while processing continues
         waitUntil(
