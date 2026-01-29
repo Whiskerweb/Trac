@@ -156,27 +156,46 @@ export default function PayoutsPage() {
 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">
-                        Payouts
-                    </h1>
-                    <button
-                        onClick={handleWithdraw}
-                        disabled={!wallet.canWithdraw || withdrawing}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors flex items-center gap-2"
-                    >
-                        {withdrawing ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Traitement...
-                            </>
-                        ) : (
-                            <>
-                                <ArrowDownToLine className="w-4 h-4" />
-                                Demander un versement
-                            </>
+                    <div>
+                        <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">
+                            Payouts
+                        </h1>
+                        {wallet.method === 'STRIPE_CONNECT' && (
+                            <p className="text-sm text-gray-600 mt-1">
+                                💳 Transferts automatiques activés
+                            </p>
                         )}
-                    </button>
+                    </div>
+                    {wallet.method !== 'STRIPE_CONNECT' && (
+                        <button
+                            onClick={handleWithdraw}
+                            disabled={!wallet.canWithdraw || withdrawing}
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors flex items-center gap-2"
+                        >
+                            {withdrawing ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Traitement...
+                                </>
+                            ) : (
+                                <>
+                                    <ArrowDownToLine className="w-4 h-4" />
+                                    Demander un versement
+                                </>
+                            )}
+                        </button>
+                    )}
                 </div>
+
+                {/* Info Banner for Stripe Connect */}
+                {wallet.method === 'STRIPE_CONNECT' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+                        <h3 className="font-semibold text-blue-900 mb-2">ℹ️ Paiements automatiques</h3>
+                        <p className="text-sm text-blue-700">
+                            Vos gains sont automatiquement transférés sur votre compte bancaire quand les startups effectuent le paiement. Vous recevrez l'argent 2-3 jours après leur paiement.
+                        </p>
+                    </div>
+                )}
 
                 {/* Status Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

@@ -173,12 +173,19 @@ export async function createPayout(
 
         // Check if payouts are enabled
         const { enabled } = await checkPayoutsEnabled(partner.stripe_connect_id)
-        if (!enabled) {
+
+        // In test mode (acct_ starts with acct_test_), skip the verification check
+        const isTestMode = partner.stripe_connect_id.startsWith('acct_test_') ||
+                          process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_')
+
+        if (!enabled && !isTestMode) {
             return {
                 success: false,
                 error: 'Partner payouts not enabled yet'
             }
         }
+
+        console.log(`[StripeConnect] ${isTestMode ? '(TEST MODE)' : ''} Proceeding with transfer to ${partner.stripe_connect_id}`)
 
         // Minimum payout threshold (10€ = 1000 cents)
         if (amount < 1000) {

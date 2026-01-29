@@ -304,7 +304,7 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
             console.log(`[Payouts] Processing seller ${sellerId}: ${totalAmount / 100}€ (${sellerCommissions.length} commissions)`)
 
             // OPTION 1: Seller has Stripe Connect → Direct transfer
-            if (seller.stripe_connect_id && seller.payouts_enabled_at) {
+            if (seller.stripe_connect_id && seller.payout_method === 'STRIPE_CONNECT') {
                 try {
                     const { dispatchPayout } = await import('@/lib/payout-service')
 
