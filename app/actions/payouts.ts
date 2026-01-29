@@ -296,10 +296,15 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
             return acc
         }, {} as Record<string, { seller: any, commissions: typeof commissions }>)
 
+        // Track successful and failed commission IDs
+        const successfulCommissionIds: string[] = []
+        const failedCommissionIds: string[] = []
+
         // Process each seller
         for (const [sellerId, data] of Object.entries(commissionsBySeller)) {
             const { seller, commissions: sellerCommissions } = data
             const totalAmount = sellerCommissions.reduce((sum, c) => sum + c.commission_amount, 0)
+            const commissionIds = sellerCommissions.map(c => c.id)
 
             console.log(`[Payouts] Processing seller ${sellerId}: ${totalAmount / 100}€ (${sellerCommissions.length} commissions)`)
 
@@ -311,17 +316,19 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
                     const result = await dispatchPayout({
                         sellerId,
                         amount: totalAmount,
-                        commissionIds: sellerCommissions.map(c => c.id)
+                        commissionIds
                     })
 
                     if (result.success) {
                         console.log(`[Payouts] ✅ Stripe transfer ${result.transferId} sent to seller ${sellerId}`)
+                        successfulCommissionIds.push(...commissionIds)
                     } else {
                         console.error(`[Payouts] ❌ Failed to transfer to seller ${sellerId}: ${result.error}`)
-                        // Don't fail the whole payment, just log
+                        failedCommissionIds.push(...commissionIds)
                     }
                 } catch (err) {
                     console.error(`[Payouts] Error dispatching payout to seller ${sellerId}:`, err)
+                    failedCommissionIds.push(...commissionIds)
                 }
             }
             // OPTION 2: No Stripe Connect → Add to platform wallet
@@ -345,23 +352,41 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
                     })
 
                     console.log(`[Payouts] ✅ Added ${totalAmount / 100}€ to seller ${sellerId} platform wallet`)
+                    successfulCommissionIds.push(...commissionIds)
                 } catch (err) {
                     console.error(`[Payouts] Error adding to wallet for seller ${sellerId}:`, err)
+                    failedCommissionIds.push(...commissionIds)
                 }
             }
         }
 
-        // Mark all commissions as PAID and COMPLETE
-        await prisma.commission.updateMany({
-            where: { startup_payment_id: paymentId },
-            data: {
-                startup_payment_status: 'PAID',
-                status: 'COMPLETE',
-                paid_at: new Date()
-            }
-        })
+        // Mark SUCCESSFUL commissions as PAID and COMPLETE
+        if (successfulCommissionIds.length > 0) {
+            await prisma.commission.updateMany({
+                where: { id: { in: successfulCommissionIds } },
+                data: {
+                    startup_payment_status: 'PAID',
+                    status: 'COMPLETE',
+                    paid_at: new Date()
+                }
+            })
+            console.log(`[Payouts] ✅ ${successfulCommissionIds.length} commissions marked as COMPLETE`)
+        }
 
-        console.log(`[Payouts] ✅ Payment ${paymentId} confirmed: ${payment.commission_count} commissions → COMPLETE (automatic payout dispatched)`)
+        // Mark FAILED commissions - startup paid but transfer failed
+        // Keep status as PROCEED so we can retry, but mark startup_payment_status as PAID
+        if (failedCommissionIds.length > 0) {
+            await prisma.commission.updateMany({
+                where: { id: { in: failedCommissionIds } },
+                data: {
+                    startup_payment_status: 'PAID'
+                    // status stays PROCEED, no paid_at - transfer failed!
+                }
+            })
+            console.error(`[Payouts] ⚠️ ${failedCommissionIds.length} commissions: startup paid but transfer FAILED - need retry!`)
+        }
+
+        console.log(`[Payouts] ✅ Payment ${paymentId} confirmed: ${successfulCommissionIds.length} succeeded, ${failedCommissionIds.length} failed`)
 
         revalidatePath('/dashboard/payouts')
         revalidatePath('/dashboard/commissions')
