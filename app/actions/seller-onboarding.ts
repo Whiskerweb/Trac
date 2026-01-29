@@ -168,11 +168,12 @@ export async function createStripeConnectAccount(sellerId: string) {
 
         console.log('[Stripe Connect] Account created:', account.id)
 
-        // Save account ID to seller
+        // Save account ID to seller AND set payout_method to STRIPE_CONNECT
         await prisma.seller.update({
             where: { id: sellerId },
             data: {
                 stripe_connect_id: account.id,
+                payout_method: 'STRIPE_CONNECT',  // ← CRITICAL: Set payout method!
                 onboarding_step: 3
             }
         })

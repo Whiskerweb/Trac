@@ -68,10 +68,13 @@ export async function createConnectAccount(
             },
         })
 
-        // Save account ID to partner
+        // Save account ID to partner AND set payout_method to STRIPE_CONNECT
         await prisma.seller.update({
             where: { id: partnerId },
-            data: { stripe_connect_id: account.id }
+            data: {
+                stripe_connect_id: account.id,
+                payout_method: 'STRIPE_CONNECT'  // CRITICAL: Set payout method!
+            }
         })
 
         // Create onboarding link
