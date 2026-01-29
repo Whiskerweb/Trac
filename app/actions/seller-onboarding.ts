@@ -119,17 +119,27 @@ export async function saveOnboardingStep2(data: OnboardingStep2Data) {
  */
 export async function createStripeConnectAccount(sellerId: string) {
     try {
+        console.log('[Stripe Connect] Starting account creation for seller:', sellerId)
+
         const seller = await prisma.seller.findUnique({
             where: { id: sellerId },
             include: { Program: true }
         })
 
         if (!seller) {
+            console.error('[Stripe Connect] Seller not found:', sellerId)
             return { success: false, error: 'Seller not found' }
         }
 
+        console.log('[Stripe Connect] Seller found:', {
+            id: seller.id,
+            email: seller.email,
+            hasStripeConnect: !!seller.stripe_connect_id
+        })
+
         // Check if already has Connect account
         if (seller.stripe_connect_id) {
+            console.log('[Stripe Connect] Generating new onboarding link for existing account:', seller.stripe_connect_id)
             // Generate new onboarding link
             const accountLink = await stripe.accountLinks.create({
                 account: seller.stripe_connect_id,
@@ -137,22 +147,26 @@ export async function createStripeConnectAccount(sellerId: string) {
                 return_url: `${process.env.NEXT_PUBLIC_APP_URL}/seller/onboarding?step=4`,
                 type: 'account_onboarding'
             })
+            console.log('[Stripe Connect] Onboarding link created:', accountLink.url)
             return { success: true, url: accountLink.url }
         }
 
         // Create new Express account
+        console.log('[Stripe Connect] Creating new Express account...')
         const account = await stripe.accounts.create({
             type: 'express',
             email: seller.email,
             metadata: {
                 seller_id: seller.id,
-                program_id: seller.program_id
+                program_id: seller.program_id || 'global'
             },
             capabilities: {
                 card_payments: { requested: true },
                 transfers: { requested: true }
             }
         })
+
+        console.log('[Stripe Connect] Account created:', account.id)
 
         // Save account ID to seller
         await prisma.seller.update({
@@ -163,6 +177,8 @@ export async function createStripeConnectAccount(sellerId: string) {
             }
         })
 
+        console.log('[Stripe Connect] Seller updated with stripe_connect_id')
+
         // Create onboarding link
         const accountLink = await stripe.accountLinks.create({
             account: account.id,
@@ -171,10 +187,15 @@ export async function createStripeConnectAccount(sellerId: string) {
             type: 'account_onboarding'
         })
 
+        console.log('[Stripe Connect] Onboarding link created:', accountLink.url)
+
         return { success: true, url: accountLink.url, accountId: account.id }
     } catch (error) {
-        console.error('[Onboarding] Stripe Connect failed:', error)
-        return { success: false, error: 'Failed to create payment account' }
+        console.error('[Stripe Connect] FULL ERROR:', error)
+        // @ts-ignore - Stripe errors have a message property
+        const errorMessage = error?.message || 'Failed to create payment account'
+        console.error('[Stripe Connect] Error message:', errorMessage)
+        return { success: false, error: errorMessage }
     }
 }
 
