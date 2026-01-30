@@ -207,10 +207,14 @@ export async function POST(
                         })`)
 
                     // ========================================
-                    // CUSTOMER LOOKUP FALLBACK (Dub-style)
+                    // CUSTOMER LOOKUP FALLBACK (Lifetime Attribution)
                     // If no clickId from cookie/URL, lookup from Customer table
                     // Enables lifetime attribution even with expired cookies
+                    // This is the KEY for cross-device/browser tracking!
                     // ========================================
+                    let customerLookupLinkId: string | null = null
+                    let customerLookupAffiliateId: string | null = null
+
                     if (!clickId) {
                         try {
                             const customer = await prisma.customer.findFirst({
@@ -220,11 +224,29 @@ export async function POST(
                                         { external_id: customerExternalId },
                                         { email: session.customer_details?.email || undefined }
                                     ]
+                                },
+                                select: {
+                                    click_id: true,
+                                    link_id: true,
+                                    affiliate_id: true
                                 }
                             })
-                            if (customer?.click_id) {
-                                clickId = customer.click_id
-                                console.log(`[Webhook] 🔍 Customer lookup found click_id: ${clickId}`)
+                            if (customer) {
+                                if (customer.click_id) {
+                                    clickId = customer.click_id
+                                }
+                                // ✅ CRITICAL: Also retrieve link_id and affiliate_id for LIFETIME ATTRIBUTION
+                                // This allows sales to be attributed even if:
+                                // - Redis TTL expired (90 days)
+                                // - Customer uses different device/browser
+                                // - Cookie was cleared
+                                if (customer.link_id) {
+                                    customerLookupLinkId = customer.link_id
+                                }
+                                if (customer.affiliate_id) {
+                                    customerLookupAffiliateId = customer.affiliate_id
+                                }
+                                console.log(`[Webhook] 🔍 Customer lookup found: click_id=${clickId}, link_id=${customerLookupLinkId}, affiliate_id=${customerLookupAffiliateId}`)
                             }
                         } catch (e) {
                             console.log('[Webhook] Customer lookup failed:', e)
@@ -350,11 +372,17 @@ export async function POST(
                     // ========================================
                     // 4.1 RESOLVE AFFILIATE FROM CLICK_ID (FAIL-SAFE)
                     // Uses Redis first (fast, reliable), Tinybird as fallback
+                    // ALSO uses Customer lookup values for lifetime attribution
                     // ========================================
-                    let linkId: string | null = null
-                    let sellerId: string | null = null
+                    let linkId: string | null = customerLookupLinkId  // Start with customer lookup values
+                    let sellerId: string | null = customerLookupAffiliateId
 
-                    if (clickId) {
+                    // ✅ LIFETIME ATTRIBUTION: If we already have sellerId from Customer lookup, USE IT!
+                    // This preserves first-click attribution even if a newer click exists
+                    if (sellerId) {
+                        console.log(`[Multi-Tenant Webhook] ✅ LIFETIME ATTRIBUTION: Using Customer stored seller=${sellerId}, link=${linkId}`)
+                    } else if (clickId) {
+                        // Only do Redis/Tinybird lookup if we DON'T have attribution from Customer
                         try {
                             console.log(`[Multi-Tenant Webhook] 🔍 Looking up click_id: ${clickId}`)
 
