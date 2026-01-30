@@ -80,9 +80,22 @@ export async function POST(
             endpoint.secret  // ← Secret from DB per-workspace
         )
     } catch (err) {
-        console.error('[Multi-Tenant Webhook] ❌ Signature verification failed:', err)
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+        console.error('[Multi-Tenant Webhook] ❌ Signature verification failed:', {
+            error: errorMessage,
+            endpointId,
+            workspaceId: endpoint.workspace_id,
+            secretPrefix: endpoint.secret ? endpoint.secret.substring(0, 10) + '...' : 'NO_SECRET',
+            signaturePrefix: signature.substring(0, 20) + '...',
+            hint: errorMessage.includes('signature')
+                ? 'Le secret webhook dans la DB ne correspond pas à celui de Stripe. Mettez à jour WebhookEndpoint.secret avec le signing secret de Stripe Dashboard.'
+                : 'Vérifiez la configuration du webhook.'
+        })
         return NextResponse.json(
-            { error: 'Invalid signature' },
+            {
+                error: 'Invalid signature',
+                hint: 'Le secret webhook ne correspond pas. Vérifiez WebhookEndpoint.secret dans la DB.'
+            },
             { status: 400 }
         )
     }

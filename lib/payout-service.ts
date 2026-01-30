@@ -10,6 +10,7 @@
 
 import { prisma } from '@/lib/db'
 import { createPayout as stripeConnectPayout } from '@/lib/stripe-connect'
+import { updateSellerBalance } from '@/lib/commission/engine'
 
 // =============================================
 // TYPES
@@ -213,17 +214,6 @@ async function processIBAN(
 async function processPlatformBalance(request: PayoutRequest): Promise<PayoutResult> {
     // Money stays on platform - update balance for gift card redemption
 
-    await prisma.sellerBalance.upsert({
-        where: { seller_id: request.sellerId },
-        create: {
-            seller_id: request.sellerId,
-            balance: request.amount,
-        },
-        update: {
-            balance: { increment: request.amount },
-        }
-    })
-
     // Mark commissions as complete (money is in platform balance)
     await prisma.commission.updateMany({
         where: { id: { in: request.commissionIds } },
@@ -233,12 +223,15 @@ async function processPlatformBalance(request: PayoutRequest): Promise<PayoutRes
         }
     })
 
-    // Update partner balance tracking
+    // Recalculate balance from commissions (this sets pending/due/paid_total correctly)
+    await updateSellerBalance(request.sellerId)
+
+    // Add platform wallet credit (separate from the due/paid_total tracking)
+    // This is money the seller can use for gift cards
     await prisma.sellerBalance.update({
         where: { seller_id: request.sellerId },
         data: {
-            due: { decrement: request.amount },
-            paid_total: { increment: request.amount },
+            balance: { increment: request.amount },
         }
     })
 

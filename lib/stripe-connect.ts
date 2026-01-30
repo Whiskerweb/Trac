@@ -6,6 +6,7 @@
 
 import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
+import { updateSellerBalance } from '@/lib/commission/engine'
 
 // Initialize Stripe (uses default API version from installed package)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -198,6 +199,26 @@ export async function createPayout(
             }
         }
 
+        // Check platform balance before attempting transfer
+        const balance = await stripe.balance.retrieve()
+        const availableEur = balance.available.find(b => b.currency === 'eur')?.amount || 0
+        const pendingEur = balance.pending.find(b => b.currency === 'eur')?.amount || 0
+
+        console.log(`[StripeConnect] Platform balance: ${availableEur / 100}€ available, ${pendingEur / 100}€ pending`)
+
+        if (availableEur < amount) {
+            console.warn(`[StripeConnect] ⚠️ Insufficient balance for transfer: ${availableEur / 100}€ available, need ${amount / 100}€`)
+
+            // In test mode, try anyway (Stripe test mode sometimes allows this)
+            if (!isTestMode) {
+                return {
+                    success: false,
+                    error: `Insufficient platform balance: ${availableEur / 100}€ available, need ${amount / 100}€. Funds may still be pending (${pendingEur / 100}€).`
+                }
+            }
+            console.log(`[StripeConnect] (TEST MODE) Attempting transfer anyway despite low balance...`)
+        }
+
         // Create transfer to Connect account
         const transfer = await stripe.transfers.create({
             amount,
@@ -219,14 +240,8 @@ export async function createPayout(
             }
         })
 
-        // Update partner balance
-        await prisma.sellerBalance.update({
-            where: { seller_id: partnerId },
-            data: {
-                due: { decrement: amount },
-                paid_total: { increment: amount },
-            }
-        })
+        // Recalculate partner balance from commissions (not manual increment/decrement)
+        await updateSellerBalance(partnerId)
 
         console.log('[StripeConnect] ✅ Payout created:', {
             transferId: transfer.id,

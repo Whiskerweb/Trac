@@ -223,14 +223,63 @@ export default function SellerWalletPage() {
                             <p className="text-purple-200 text-sm">
                                 +{formatCurrency(wallet.pending || 0)} en maturation (30j)
                             </p>
-                            <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                                <p className="text-sm text-purple-100 mb-2">
-                                    💳 Vos gains sont automatiquement transférés sur votre compte bancaire quand les startups paient.
-                                </p>
-                                <p className="text-xs text-purple-200">
-                                    Délai de réception : 2-3 jours après paiement startup
-                                </p>
-                            </div>
+
+                            {/* 10€ Minimum Threshold Message */}
+                            {wallet.due > 0 && wallet.due < 1000 && (
+                                <div className="mt-6 bg-amber-400/20 backdrop-blur-sm rounded-xl p-4 border border-amber-400/30">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <AlertCircle className="w-5 h-5 text-amber-300" />
+                                        <div>
+                                            <p className="font-medium text-white">
+                                                Retirable à partir de 10€
+                                            </p>
+                                            <p className="text-sm text-purple-100">
+                                                Vous avez {formatCurrency(wallet.due)} - Il vous manque {formatCurrency(1000 - wallet.due)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {/* Progress bar */}
+                                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-amber-400 to-yellow-300 transition-all duration-500"
+                                            style={{ width: `${Math.min((wallet.due / 1000) * 100, 100)}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-purple-200 mt-2 text-right">
+                                        {((wallet.due / 1000) * 100).toFixed(0)}% du minimum
+                                    </p>
+                                </div>
+                            )}
+
+                            {wallet.due === 0 && wallet.pending > 0 && (
+                                <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                                    <p className="text-sm text-purple-100 mb-2">
+                                        ⏳ Vos commissions sont en maturation. Elles seront disponibles après 30 jours.
+                                    </p>
+                                </div>
+                            )}
+
+                            {wallet.due >= 1000 && (
+                                <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                                    <p className="text-sm text-purple-100 mb-2">
+                                        💳 Vos gains sont automatiquement transférés sur votre compte bancaire quand les startups paient.
+                                    </p>
+                                    <p className="text-xs text-purple-200">
+                                        Délai de réception : 2-3 jours après paiement startup
+                                    </p>
+                                </div>
+                            )}
+
+                            {wallet.due === 0 && wallet.pending === 0 && (
+                                <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                                    <p className="text-sm text-purple-100 mb-2">
+                                        💳 Vos gains sont automatiquement transférés sur votre compte bancaire quand les startups paient.
+                                    </p>
+                                    <p className="text-xs text-purple-200">
+                                        Délai de réception : 2-3 jours après paiement startup
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         // PLATFORM WALLET MODE: Manual withdraw or gift cards
@@ -289,15 +338,33 @@ export default function SellerWalletPage() {
                     </div>
 
                     {wallet.method === 'STRIPE_CONNECT' ? (
-                        <div className="bg-white border border-slate-200 rounded-2xl p-6">
+                        <div className={`bg-white border rounded-2xl p-6 ${
+                            wallet.due > 0 && wallet.due < 1000
+                                ? 'border-amber-300 bg-amber-50/50'
+                                : 'border-slate-200'
+                        }`}>
                             <div className="flex items-center gap-3 mb-3">
-                                <div className="p-2 rounded-lg bg-blue-100 text-blue-700">
-                                    <Zap className="w-5 h-5" />
+                                <div className={`p-2 rounded-lg ${
+                                    wallet.due > 0 && wallet.due < 1000
+                                        ? 'bg-amber-100 text-amber-700'
+                                        : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                    {wallet.due > 0 && wallet.due < 1000 ? (
+                                        <AlertCircle className="w-5 h-5" />
+                                    ) : (
+                                        <Zap className="w-5 h-5" />
+                                    )}
                                 </div>
                                 <span className="text-slate-600 text-sm">Prochain versement</span>
                             </div>
                             <div className="text-2xl font-bold text-slate-900">{formatCurrency(wallet.due || 0)}</div>
-                            <div className="text-sm text-slate-500 mt-1">Transfert auto 2-3j</div>
+                            {wallet.due > 0 && wallet.due < 1000 ? (
+                                <div className="text-sm text-amber-600 mt-1">
+                                    Min. 10€ • -{formatCurrency(1000 - wallet.due)}
+                                </div>
+                            ) : (
+                                <div className="text-sm text-slate-500 mt-1">Transfert auto 2-3j</div>
+                            )}
                         </div>
                     ) : (
                         <div className="bg-white border border-slate-200 rounded-2xl p-6">

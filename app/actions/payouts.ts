@@ -4,10 +4,14 @@ import { prisma } from '@/lib/db'
 import { createClient } from '@/utils/supabase/server'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 import { revalidatePath } from 'next/cache'
+import { updateSellerBalance } from '@/lib/commission/engine'
 
 // =============================================
 // GET UNPAID COMMISSIONS FOR STARTUP
 // =============================================
+
+// Minimum payout threshold in cents (10€)
+const MIN_PAYOUT_THRESHOLD = 1000
 
 export interface UnpaidCommission {
     id: string
@@ -29,29 +33,66 @@ export interface SellerSummary {
     total_platform_fee: number
 }
 
-export async function getUnpaidCommissions(): Promise<{
+// New enhanced interface for the aggregated view
+export interface SellerPayoutSummary {
+    sellerId: string
+    sellerName: string
+    sellerEmail: string
+    sellerAvatar?: string
+    totalCommission: number      // Total commission in cents
+    totalPlatformFee: number     // 15% platform fee in cents
+    commissionCount: number
+    commissions: {               // Details for modal
+        id: string
+        saleId: string
+        amount: number           // in cents
+        platformFee: number      // in cents
+        date: string             // ISO string
+    }[]
+    meetsMinimum: boolean        // >= 1000 cents (10€)
+}
+
+export interface PayoutsDataResponse {
     success: boolean
-    commissions?: UnpaidCommission[]
-    sellerSummary?: SellerSummary[]
-    totals?: {
-        sellerTotal: number
-        platformTotal: number
-        grandTotal: number
-        commissionCount: number
+    // Aggregated by seller
+    eligibleSellers: SellerPayoutSummary[]    // Sellers with total >= 10€
+    ineligibleSellers: SellerPayoutSummary[]  // Sellers with total < 10€
+    // Totals (only for eligible sellers)
+    totals: {
+        sellerTotal: number      // Total seller commissions (eligible only)
+        platformTotal: number    // Total platform fees (eligible only)
+        grandTotal: number       // sellerTotal + platformTotal
+        eligibleCount: number    // Number of eligible sellers
+        ineligibleCount: number  // Number of sellers below threshold
+        totalCommissions: number // Total number of commissions (eligible)
     }
     error?: string
-}> {
+}
+
+export async function getUnpaidCommissions(): Promise<PayoutsDataResponse> {
     try {
         const supabase = await createClient()
         const { data: { user }, error } = await supabase.auth.getUser()
 
         if (error || !user) {
-            return { success: false, error: 'Not authenticated' }
+            return {
+                success: false,
+                eligibleSellers: [],
+                ineligibleSellers: [],
+                totals: { sellerTotal: 0, platformTotal: 0, grandTotal: 0, eligibleCount: 0, ineligibleCount: 0, totalCommissions: 0 },
+                error: 'Not authenticated'
+            }
         }
 
         const workspace = await getActiveWorkspaceForUser()
         if (!workspace) {
-            return { success: false, error: 'No active workspace' }
+            return {
+                success: false,
+                eligibleSellers: [],
+                ineligibleSellers: [],
+                totals: { sellerTotal: 0, platformTotal: 0, grandTotal: 0, eligibleCount: 0, ineligibleCount: 0, totalCommissions: 0 },
+                error: 'No active workspace'
+            }
         }
 
         // Get all UNPAID commissions for this workspace (matured = PROCEED status)
@@ -62,63 +103,99 @@ export async function getUnpaidCommissions(): Promise<{
                 status: 'PROCEED' // Only matured commissions
             },
             include: {
-                Seller: true
+                Seller: {
+                    include: {
+                        Profile: {
+                            select: {
+                                avatar_url: true
+                            }
+                        }
+                    }
+                }
             },
             orderBy: { created_at: 'desc' }
         })
 
-        // Map to response format
-        const mapped: UnpaidCommission[] = commissions.map(c => ({
-            id: c.id,
-            seller_id: c.seller_id,
-            seller_name: c.Seller.name || c.Seller.email,
-            sale_id: c.sale_id,
-            net_amount: c.net_amount,
-            commission_amount: c.commission_amount,
-            platform_fee: c.platform_fee,
-            created_at: c.created_at,
-            status: c.status
-        }))
+        // Group by seller with full details
+        const sellerMap = new Map<string, SellerPayoutSummary>()
 
-        // Group by seller
-        const sellerMap = new Map<string, SellerSummary>()
-        for (const c of mapped) {
-            const existing = sellerMap.get(c.seller_id)
+        for (const c of commissions) {
+            const sellerId = c.seller_id
+            const existing = sellerMap.get(sellerId)
+
+            const commissionDetail = {
+                id: c.id,
+                saleId: c.sale_id,
+                amount: c.commission_amount,
+                platformFee: c.platform_fee,
+                date: c.created_at.toISOString()
+            }
+
             if (existing) {
-                existing.commission_count++
-                existing.total_commission += c.commission_amount
-                existing.total_platform_fee += c.platform_fee
+                existing.commissionCount++
+                existing.totalCommission += c.commission_amount
+                existing.totalPlatformFee += c.platform_fee
+                existing.commissions.push(commissionDetail)
             } else {
-                sellerMap.set(c.seller_id, {
-                    seller_id: c.seller_id,
-                    seller_name: c.seller_name,
-                    commission_count: 1,
-                    total_commission: c.commission_amount,
-                    total_platform_fee: c.platform_fee
+                sellerMap.set(sellerId, {
+                    sellerId,
+                    sellerName: c.Seller.name || c.Seller.email.split('@')[0],
+                    sellerEmail: c.Seller.email,
+                    sellerAvatar: c.Seller.Profile?.avatar_url || undefined,
+                    totalCommission: c.commission_amount,
+                    totalPlatformFee: c.platform_fee,
+                    commissionCount: 1,
+                    commissions: [commissionDetail],
+                    meetsMinimum: false // Will be set below
                 })
             }
         }
 
-        const sellerSummary = Array.from(sellerMap.values())
+        // Split into eligible (>= 10€) and ineligible (< 10€)
+        const eligibleSellers: SellerPayoutSummary[] = []
+        const ineligibleSellers: SellerPayoutSummary[] = []
 
-        // Calculate totals
-        const sellerTotal = mapped.reduce((sum, c) => sum + c.commission_amount, 0)
-        const platformTotal = mapped.reduce((sum, c) => sum + c.platform_fee, 0)
+        for (const seller of sellerMap.values()) {
+            seller.meetsMinimum = seller.totalCommission >= MIN_PAYOUT_THRESHOLD
+
+            if (seller.meetsMinimum) {
+                eligibleSellers.push(seller)
+            } else {
+                ineligibleSellers.push(seller)
+            }
+        }
+
+        // Sort by total commission descending
+        eligibleSellers.sort((a, b) => b.totalCommission - a.totalCommission)
+        ineligibleSellers.sort((a, b) => b.totalCommission - a.totalCommission)
+
+        // Calculate totals for ELIGIBLE sellers only
+        const sellerTotal = eligibleSellers.reduce((sum, s) => sum + s.totalCommission, 0)
+        const platformTotal = eligibleSellers.reduce((sum, s) => sum + s.totalPlatformFee, 0)
+        const totalCommissions = eligibleSellers.reduce((sum, s) => sum + s.commissionCount, 0)
 
         return {
             success: true,
-            commissions: mapped,
-            sellerSummary,
+            eligibleSellers,
+            ineligibleSellers,
             totals: {
                 sellerTotal,
                 platformTotal,
                 grandTotal: sellerTotal + platformTotal,
-                commissionCount: mapped.length
+                eligibleCount: eligibleSellers.length,
+                ineligibleCount: ineligibleSellers.length,
+                totalCommissions
             }
         }
     } catch (err) {
         console.error('[Payouts] Error fetching unpaid commissions:', err)
-        return { success: false, error: 'Failed to fetch commissions' }
+        return {
+            success: false,
+            eligibleSellers: [],
+            ineligibleSellers: [],
+            totals: { sellerTotal: 0, platformTotal: 0, grandTotal: 0, eligibleCount: 0, ineligibleCount: 0, totalCommissions: 0 },
+            error: 'Failed to fetch commissions'
+        }
     }
 }
 
@@ -385,6 +462,14 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
             })
             console.error(`[Payouts] ⚠️ ${failedCommissionIds.length} commissions: startup paid but transfer FAILED - need retry!`)
         }
+
+        // Recalculate balances for ALL affected sellers
+        // This ensures pending/due/paid_total are accurate
+        const allSellerIds = Object.keys(commissionsBySeller)
+        for (const sellerId of allSellerIds) {
+            await updateSellerBalance(sellerId)
+        }
+        console.log(`[Payouts] ✅ Recalculated balances for ${allSellerIds.length} sellers`)
 
         console.log(`[Payouts] ✅ Payment ${paymentId} confirmed: ${successfulCommissionIds.length} succeeded, ${failedCommissionIds.length} failed`)
 
