@@ -153,6 +153,7 @@ export interface CommissionItem {
     partnerEmail: string
     missionId: string | null
     missionName: string
+    rewardType: 'SALE' | 'LEAD' | null  // Type of commission (from Mission.reward_type)
     saleId: string
     grossAmount: number
     taxAmount: number
@@ -236,6 +237,41 @@ export async function getWorkspaceCommissions(
             prisma.commission.count({ where: whereClause })
         ])
 
+        // Get unique link_ids to fetch mission info
+        const linkIds = [...new Set(
+            commissions
+                .map(c => c.link_id)
+                .filter((id): id is string => id !== null)
+        )]
+
+        // Lookup missions via ShortLink → MissionEnrollment → Mission
+        const shortLinks = linkIds.length > 0
+            ? await prisma.shortLink.findMany({
+                where: { id: { in: linkIds } },
+                include: {
+                    MissionEnrollment: {
+                        include: {
+                            Mission: {
+                                select: {
+                                    id: true,
+                                    title: true,
+                                    reward_type: true
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+            : []
+
+        // Create a map for quick lookup: link_id → mission info
+        const missionMap = new Map(
+            shortLinks.map(sl => [
+                sl.id,
+                sl.MissionEnrollment?.Mission || null
+            ])
+        )
+
         // Get stats (all commissions, no pagination)
         const allCommissions = await prisma.commission.findMany({
             where: { program_id: workspace.workspaceId },
@@ -256,9 +292,11 @@ export async function getWorkspaceCommissions(
 
         // Map to response format
         const mappedCommissions: CommissionItem[] = commissions.map(c => {
-            // Default to Direct Sale (TODO: lookup mission via link_id if needed)
-            let missionName = 'Direct Sale'
-            let missionId: string | null = null
+            // Get mission info from missionMap (via link_id)
+            const mission = c.link_id ? missionMap.get(c.link_id) : null
+            const missionName = mission?.title || 'Direct Sale'
+            const missionId = mission?.id || null
+            const rewardType = (mission?.reward_type as 'SALE' | 'LEAD') || null
 
             return {
                 id: c.id,
@@ -267,6 +305,7 @@ export async function getWorkspaceCommissions(
                 partnerEmail: c.Seller?.email || 'Unknown',
                 missionId,
                 missionName,
+                rewardType,
                 saleId: c.sale_id,
                 grossAmount: c.gross_amount,
                 taxAmount: c.tax_amount,

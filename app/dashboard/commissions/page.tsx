@@ -46,6 +46,23 @@ function StatusBadge({ status }: { status: CommissionItem['status'] }) {
     )
 }
 
+function TypeBadge({ type }: { type: 'SALE' | 'LEAD' | null }) {
+    if (!type) return null
+    const styles = {
+        SALE: 'bg-emerald-50 text-emerald-700',
+        LEAD: 'bg-purple-50 text-purple-700',
+    }
+    const labels = {
+        SALE: 'Vente',
+        LEAD: 'Lead',
+    }
+    return (
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[type]}`}>
+            {labels[type]}
+        </span>
+    )
+}
+
 // =============================================
 // MAIN PAGE
 // =============================================
@@ -216,7 +233,7 @@ export default function CommissionsPage() {
                 <div className="grid grid-cols-7 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="col-span-2">Seller</div>
                     <div>Mission</div>
-                    <div>Vente</div>
+                    <div>Montant HT</div>
                     <div>Commission</div>
                     <div>Status</div>
                     <div className="text-right">Date</div>
@@ -246,12 +263,21 @@ export default function CommissionsPage() {
                                         <p className="text-xs text-gray-500">{commission.partnerEmail}</p>
                                     </div>
                                 </div>
-                                <div className="text-sm text-gray-600 truncate">
-                                    {commission.missionName}
+                                <div className="text-sm text-gray-600">
+                                    <div className="flex items-center gap-2">
+                                        <span className="truncate">{commission.missionName}</span>
+                                        <TypeBadge type={commission.rewardType} />
+                                    </div>
                                 </div>
                                 <div className="text-sm text-gray-900">
-                                    {formatCurrency(commission.grossAmount - commission.taxAmount)}
-                                    <span className="block text-xs text-gray-400">HT</span>
+                                    {commission.rewardType === 'LEAD' ? (
+                                        <span className="text-gray-400">—</span>
+                                    ) : (
+                                        <>
+                                            {formatCurrency(commission.grossAmount - commission.taxAmount)}
+                                            <span className="block text-xs text-gray-400">HT</span>
+                                        </>
+                                    )}
                                 </div>
                                 <div>
                                     <span className="text-sm font-medium text-green-600">
