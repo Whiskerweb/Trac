@@ -117,9 +117,11 @@ function logClick(payload: {
 export default async function TracRedirect({
     params,
 }: {
-    params: Promise<{ slug: string }>
+    params: Promise<{ slug: string[] }>
 }) {
-    const { slug } = await params
+    const { slug: slugParts } = await params
+    // Join slug parts to support paths like /s/mission-name/affiliate-code
+    const slug = slugParts.join('/')
     const headersList = await headers()
 
     // ----------------------------------------
