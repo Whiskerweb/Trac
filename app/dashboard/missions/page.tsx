@@ -1,61 +1,138 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
-    Plus, X, Loader2, Target, Percent, Link2,
-    Users, Calendar, MoreHorizontal, Archive, Trash2,
-    ExternalLink, CheckCircle2, FileText, AlertCircle
+    Plus, Loader2, Target, Users, MousePointer2, TrendingUp,
+    MoreHorizontal, Archive, Trash2, ExternalLink, Globe, Lock,
+    Sparkles, ChevronRight, Clock, Check, X, AlertCircle,
+    Copy, Activity, Eye, Zap, ArrowUpRight, Circle
 } from 'lucide-react'
 import Link from 'next/link'
 import { DNSGatekeeper } from '@/components/dashboard/DNSGatekeeper'
 import {
-    createMission,
-    getWorkspaceMissions,
+    getMissionsWithFullStats,
+    getRecentMissionActivity,
     updateMissionStatus,
     deleteMission,
-    addMissionContent // New import
+    type MissionWithStats,
+    type ActivityItem
 } from '@/app/actions/missions'
+import {
+    getMyProgramRequests,
+    approveProgramRequest,
+    rejectProgramRequest
+} from '@/app/actions/marketplace-actions'
 
-interface Mission {
+// =============================================
+// CONSTANTS
+// =============================================
+
+const MAX_MISSIONS = 4
+
+// =============================================
+// TYPES
+// =============================================
+
+interface ProgramRequest {
     id: string
-    title: string
-    description: string
-    target_url: string
-    reward: string
-    status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
+    seller_email: string
+    seller_name: string | null
+    mission_title: string
+    message: string | null
     created_at: Date
-    _count: { enrollments: number }
-    visibility?: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
 }
 
 // =============================================
-// MISSION LIST ITEM COMPONENT
+// FORMAT HELPERS
 // =============================================
 
-function MissionListItem({
+function formatNumber(num: number): string {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}k`
+    return num.toLocaleString('fr-FR')
+}
+
+function formatCurrency(cents: number): string {
+    const euros = cents / 100
+    if (euros >= 1000) return `${(euros / 1000).toFixed(1)}k€`
+    return `${euros.toFixed(0)}€`
+}
+
+function formatTimeAgo(date: Date): string {
+    const now = new Date()
+    const diff = now.getTime() - new Date(date).getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+
+    if (minutes < 1) return 'à l\'instant'
+    if (minutes < 60) return `il y a ${minutes}m`
+    if (hours < 24) return `il y a ${hours}h`
+    if (days < 7) return `il y a ${days}j`
+    return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+}
+
+// =============================================
+// VISIBILITY INDICATOR
+// =============================================
+
+function VisibilityDot({ visibility }: { visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY' }) {
+    const config = {
+        PUBLIC: { color: 'bg-emerald-500', label: 'Public' },
+        PRIVATE: { color: 'bg-amber-500', label: 'Privé' },
+        INVITE_ONLY: { color: 'bg-violet-500', label: 'Sur invitation' },
+    }
+    const { color, label } = config[visibility] || config.PUBLIC
+
+    return (
+        <div className="flex items-center gap-1.5" title={label}>
+            <div className={`w-2 h-2 rounded-full ${color}`} />
+            <span className="text-[11px] text-neutral-500 font-medium uppercase tracking-wide">
+                {label}
+            </span>
+        </div>
+    )
+}
+
+// =============================================
+// STAT BLOCK (MINIMAL)
+// =============================================
+
+function StatBlock({
+    value,
+    label,
+    trend
+}: {
+    value: string | number
+    label: string
+    trend?: 'up' | 'down' | 'neutral'
+}) {
+    return (
+        <div className="text-center">
+            <p className="text-2xl font-light text-neutral-900 tracking-tight tabular-nums">
+                {value}
+            </p>
+            <p className="text-[10px] text-neutral-400 uppercase tracking-widest mt-0.5">
+                {label}
+            </p>
+        </div>
+    )
+}
+
+// =============================================
+// MISSION ROW (LIST STYLE)
+// =============================================
+
+function MissionRow({
     mission,
     onRefresh
 }: {
-    mission: Mission
+    mission: MissionWithStats
     onRefresh: () => void
 }) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [loading, setLoading] = useState(false)
-
-    // Status Indicator Dot
-    const StatusDot = ({ status }: { status: string }) => {
-        const colors = {
-            ACTIVE: 'bg-green-500',
-            DRAFT: 'bg-gray-300',
-            ARCHIVED: 'bg-amber-500',
-        }
-        return (
-            <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${colors[status as keyof typeof colors] || 'bg-gray-300'}`} />
-                <span className="text-sm text-gray-600 capitalize font-medium">{status.toLowerCase()}</span>
-            </div>
-        )
-    }
+    const [copied, setCopied] = useState(false)
 
     async function handleArchive() {
         setLoading(true)
@@ -66,620 +143,597 @@ function MissionListItem({
     }
 
     async function handleDelete() {
-        if (!confirm('Are you sure you want to delete this mission?')) return
+        if (!confirm('Supprimer cette mission définitivement ?')) return
         setLoading(true)
         await deleteMission(mission.id)
         onRefresh()
     }
 
+    function handleCopyInviteLink() {
+        if (mission.invite_code) {
+            const url = `${window.location.origin}/invite/${mission.invite_code}`
+            navigator.clipboard.writeText(url)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+        }
+    }
+
+    const isActive = mission.status === 'ACTIVE'
+    const hasStats = mission.stats.clicks > 0 || mission.stats.sales > 0
+
     return (
-        <div className="group bg-white hover:bg-gray-50/50 border-b border-gray-100 last:border-0 transition-colors p-4 flex items-center justify-between">
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-                {/* Icon */}
-                <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center flex-shrink-0">
-                    <Target className="w-5 h-5 text-gray-500" />
-                </div>
-
-                {/* Info */}
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-3">
-                        <Link href={`/dashboard/missions/${mission.id}`} className="block">
-                            <h3 className="text-sm font-semibold text-gray-900 truncate hover:underline underline-offset-2">
+        <div className={`
+            group relative bg-white border transition-all duration-200
+            ${isActive
+                ? 'border-neutral-200 hover:border-neutral-300 hover:shadow-sm'
+                : 'border-neutral-100 opacity-60 hover:opacity-80'
+            }
+            rounded-xl overflow-hidden
+        `}>
+            {/* Main Content */}
+            <div className="p-5">
+                {/* Header Row */}
+                <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-1.5">
+                            <Link
+                                href={`/dashboard/missions/${mission.id}`}
+                                className="text-lg font-medium text-neutral-900 hover:text-neutral-600 transition-colors truncate"
+                            >
                                 {mission.title}
-                            </h3>
-                        </Link>
-                        <StatusDot status={mission.status} />
-                        {/* Visibility Badge */}
-                        <div className={`px-2 py-0.5 rounded text-[10px] font-medium border ${mission.visibility === 'PUBLIC' ? 'bg-green-50 text-green-700 border-green-200' :
-                            mission.visibility === 'PRIVATE' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                'bg-purple-50 text-purple-700 border-purple-200'
-                            }`}>
-                            {mission.visibility || 'PUBLIC'}
+                            </Link>
+                            {isActive && (
+                                <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-semibold uppercase tracking-wider rounded-full">
+                                    <Circle className="w-1.5 h-1.5 fill-current" />
+                                    Live
+                                </span>
+                            )}
                         </div>
+                        <VisibilityDot visibility={mission.visibility} />
                     </div>
-                    <div className="flex items-center gap-4 mt-1">
-                        <a
-                            href={mission.target_url || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 truncate max-w-[200px]"
+
+                    {/* Quick Actions */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {mission.visibility === 'INVITE_ONLY' && mission.invite_code && (
+                            <button
+                                onClick={handleCopyInviteLink}
+                                className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-colors"
+                                title="Copier le lien d'invitation"
+                            >
+                                {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                            </button>
+                        )}
+                        <Link
+                            href={`/dashboard/missions/${mission.id}`}
+                            className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-colors"
+                            title="Voir les détails"
                         >
-                            <ExternalLink className="w-3 h-3" />
-                            {(() => {
-                                try {
-                                    return new URL(mission.target_url).hostname
-                                } catch {
-                                    return mission.target_url || 'No URL'
-                                }
-                            })()}
-                        </a>
-                        <span className="text-gray-300 text-xs">|</span>
-                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                            <Users className="w-3 h-3" />
-                            <span>{mission._count.enrollments} affiliates</span>
-                        </div>
-                        <span className="text-gray-300 text-xs">|</span>
-                        <div className="flex items-center gap-1 text-xs font-medium text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded">
-                            {mission.reward}
+                            <Eye className="w-4 h-4" />
+                        </Link>
+                        <div className="relative">
+                            <button
+                                onClick={() => setMenuOpen(!menuOpen)}
+                                className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-colors"
+                            >
+                                <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                            {menuOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                                    <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-20">
+                                        <button
+                                            onClick={handleArchive}
+                                            disabled={loading}
+                                            className="w-full px-3 py-2 text-left text-sm text-neutral-600 hover:bg-neutral-50 flex items-center gap-2"
+                                        >
+                                            <Archive className="w-4 h-4" />
+                                            Archiver
+                                        </button>
+                                        <button
+                                            onClick={handleDelete}
+                                            disabled={loading}
+                                            className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            Supprimer
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Actions */}
-            <div className="relative ml-4">
-                <button
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="p-2 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                    <MoreHorizontal className="w-4 h-4" />
-                </button>
+                {/* Stats Grid */}
+                <div className="grid grid-cols-4 gap-6">
+                    <StatBlock
+                        value={mission.stats.activeSellers}
+                        label="Sellers"
+                    />
+                    <StatBlock
+                        value={formatNumber(mission.stats.clicks)}
+                        label="Clicks"
+                    />
+                    <StatBlock
+                        value={mission.stats.sales}
+                        label="Ventes"
+                    />
+                    <StatBlock
+                        value={formatCurrency(mission.stats.revenue)}
+                        label="CA"
+                    />
+                </div>
 
-                {menuOpen && (
-                    <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-20 animate-in fade-in zoom-in-95 duration-200">
-                        <button
-                            onClick={handleArchive}
-                            disabled={loading}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                            <Archive className="w-4 h-4" />
-                            Archive
-                        </button>
-                        <div className="h-px bg-gray-100 my-1" />
-                        <button
-                            onClick={handleDelete}
-                            disabled={loading}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                        </button>
+                {/* Commission Badge */}
+                <div className="mt-4 pt-4 border-t border-neutral-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-neutral-900">
+                            {mission.reward}
+                        </span>
+                        <span className="text-xs text-neutral-400">par conversion</span>
                     </div>
-                )}
-
-                {/* Backdrop to close menu */}
-                {menuOpen && (
-                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                )}
+                    <Link
+                        href={`/dashboard/missions/${mission.id}`}
+                        className="text-xs font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-1 transition-colors"
+                    >
+                        Gérer
+                        <ArrowUpRight className="w-3 h-3" />
+                    </Link>
+                </div>
             </div>
         </div>
     )
 }
 
 // =============================================
-// CREATE MISSION MODAL
+// ACTIVITY FEED ITEM
 // =============================================
 
-// =============================================
-// CREATE MISSION WIZARD
-// =============================================
-
-type WizardStep = 'DETAILS' | 'VISIBILITY' | 'RESOURCES'
-
-function CreateMissionModal({
-    isOpen,
-    onClose,
-    onSuccess
-}: {
-    isOpen: boolean
-    onClose: () => void
-    onSuccess: () => void
-}) {
-    const [step, setStep] = useState<WizardStep>('DETAILS')
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-    const [createdMissionId, setCreatedMissionId] = useState<string | null>(null)
-
-    // Form Data
-    const [formData, setFormData] = useState({
-        title: '',
-        description: '',
-        target_url: '',
-        reward: '',
-        industry: '',
-        gain_type: '',
-        visibility: 'PUBLIC' as 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
-    })
-
-    // Resource State
-    const [resources, setResources] = useState<Array<{
-        type: 'YOUTUBE' | 'PDF' | 'LINK' | 'TEXT',
-        title: string,
-        url: string
-    }>>([])
-    const [newResource, setNewResource] = useState({ type: 'YOUTUBE', title: '', url: '' })
-
-    // Reset on close
-    useEffect(() => {
-        if (!isOpen) {
-            setStep('DETAILS')
-            setFormData({
-                title: '',
-                description: '',
-                target_url: '',
-                reward: '',
-                industry: '',
-                gain_type: '',
-                visibility: 'PUBLIC'
-            })
-            setCreatedMissionId(null)
-            setResources([])
-            setError(null)
+function ActivityFeedItem({ activity }: { activity: ActivityItem }) {
+    const typeConfig = {
+        enrollment: {
+            icon: Users,
+            color: 'text-blue-500',
+            bg: 'bg-blue-50'
+        },
+        request: {
+            icon: Clock,
+            color: 'text-amber-500',
+            bg: 'bg-amber-50'
+        },
+        sale: {
+            icon: Zap,
+            color: 'text-emerald-500',
+            bg: 'bg-emerald-50'
+        },
+        click: {
+            icon: MousePointer2,
+            color: 'text-violet-500',
+            bg: 'bg-violet-50'
         }
-    }, [isOpen])
-
-    if (!isOpen) return null
-
-    // HANDLERS
-
-    async function handleCreateMission() {
-        setLoading(true)
-        setError(null)
-
-        const result = await createMission({
-            ...formData,
-            industry: formData.industry || undefined,
-            gain_type: formData.gain_type || undefined
-        })
-
-        if (result.success && result.mission) {
-            setCreatedMissionId(result.mission.id)
-            setStep('RESOURCES')
-            onSuccess() // Refresh list in background
-        } else {
-            setError(result.error || 'Failed to create mission')
-        }
-
-        setLoading(false)
     }
 
-    async function handleAddResource() {
-        if (!createdMissionId) return
-        if (!newResource.title || !newResource.url) return
+    const config = typeConfig[activity.type] || typeConfig.enrollment
+    const Icon = config.icon
 
-        setLoading(true)
-        const result = await addMissionContent({
-            missionId: createdMissionId,
-            type: newResource.type as any,
-            title: newResource.title,
-            url: newResource.url,
-            order: resources.length
-        })
-
-        if (result.success) {
-            setResources([...resources, { ...newResource } as any])
-            setNewResource({ ...newResource, title: '', url: '' }) // Keep type
-        } else {
-            setError(result.error || 'Failed to add resource')
-        }
-        setLoading(false)
-    }
-
-    // STEPS RENDERERS
-
-    const renderDetailsStep = () => (
-        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mission Title</label>
-                <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g. Brand Ambassador Q3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black outline-none text-sm"
-                    autoFocus
-                />
+    return (
+        <div className="flex items-start gap-3 py-3 border-b border-neutral-100 last:border-0">
+            <div className={`w-7 h-7 rounded-full ${config.bg} flex items-center justify-center shrink-0`}>
+                <Icon className={`w-3.5 h-3.5 ${config.color}`} />
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Target URL</label>
-                    <div className="relative">
-                        <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="url"
-                            value={formData.target_url}
-                            onChange={(e) => setFormData({ ...formData, target_url: e.target.value })}
-                            placeholder="https://site.com"
-                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black outline-none text-sm"
-                        />
-                    </div>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Reward</label>
-                    <div className="relative">
-                        <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            value={formData.reward}
-                            onChange={(e) => setFormData({ ...formData, reward: e.target.value })}
-                            placeholder="e.g. 20%"
-                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black outline-none text-sm"
-                        />
-                    </div>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm text-neutral-900 leading-snug">
+                    {activity.description}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[11px] text-neutral-400">
+                        {activity.missionTitle}
+                    </span>
+                    <span className="text-neutral-300">·</span>
+                    <span className="text-[11px] text-neutral-400">
+                        {formatTimeAgo(activity.timestamp)}
+                    </span>
                 </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Industry</label>
-                    <select
-                        value={formData.industry}
-                        onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black outline-none text-sm bg-white"
-                    >
-                        <option value="">Select Industry...</option>
-                        <option value="SaaS">SaaS</option>
-                        <option value="E-commerce">E-commerce</option>
-                        <option value="Finance">Finance</option>
-                        <option value="Health">Health</option>
-                        <option value="Education">Education</option>
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Gain Type</label>
-                    <select
-                        value={formData.gain_type}
-                        onChange={(e) => setFormData({ ...formData, gain_type: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black outline-none text-sm bg-white"
-                    >
-                        <option value="">Select Type...</option>
-                        <option value="Net Revenue">Net Revenue</option>
-                        <option value="ROI">ROI</option>
-                        <option value="Fixed">Fixed</option>
-                    </select>
-                </div>
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-                <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Describe the mission requirements..."
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black outline-none text-sm resize-none"
-                />
-            </div>
-        </div>
-    )
-
-    const renderVisibilityStep = () => (
-        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-            <p className="text-sm text-gray-600 mb-4">
-                Control who can see and join your affiliate program.
-            </p>
-
-            <div className="space-y-3">
-                <label className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-all ${formData.visibility === 'PUBLIC' ? 'border-black bg-gray-50 ring-1 ring-black' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <input
-                        type="radio"
-                        name="visibility"
-                        value="PUBLIC"
-                        checked={formData.visibility === 'PUBLIC'}
-                        onChange={() => setFormData({ ...formData, visibility: 'PUBLIC' })}
-                        className="mt-1"
-                    />
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            {/* Note: Icons need to be imported or replaced if missing */}
-                            <span className="font-semibold text-gray-900">Public Marketplace</span>
-                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">Recommended</span>
-                        </div>
-                        <p className="text-sm text-gray-500">Visible to all partners in the marketplace. Anyone can join immediately.</p>
-                    </div>
-                </label>
-
-                <label className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-all ${formData.visibility === 'PRIVATE' ? 'border-black bg-gray-50 ring-1 ring-black' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <input
-                        type="radio"
-                        name="visibility"
-                        value="PRIVATE"
-                        checked={formData.visibility === 'PRIVATE'}
-                        onChange={() => setFormData({ ...formData, visibility: 'PRIVATE' })}
-                        className="mt-1"
-                    />
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-gray-900">Private (Application)</span>
-                        </div>
-                        <p className="text-sm text-gray-500">Listed in marketplace, but partners must apply. You approve/reject requests.</p>
-                    </div>
-                </label>
-
-                <label className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-all ${formData.visibility === 'INVITE_ONLY' ? 'border-black bg-gray-50 ring-1 ring-black' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <input
-                        type="radio"
-                        name="visibility"
-                        value="INVITE_ONLY"
-                        checked={formData.visibility === 'INVITE_ONLY'}
-                        onChange={() => setFormData({ ...formData, visibility: 'INVITE_ONLY' })}
-                        className="mt-1"
-                    />
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-gray-900">Invite Only</span>
-                        </div>
-                        <p className="text-sm text-gray-500">Hidden from marketplace. Only partners you effectively invite can join.</p>
-                    </div>
-                </label>
-            </div>
-        </div>
-    )
-
-    const renderResourcesStep = () => (
-        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2 text-sm text-green-800">
-                <CheckCircle2 className="w-4 h-4" />
-                Mission created successfully! You can now add resources.
-            </div>
-
-            <div className="space-y-4">
-                <h4 className="text-sm font-medium text-gray-900">Add Resource</h4>
-                <div className="flex gap-2">
-                    <select
-                        value={newResource.type}
-                        onChange={(e) => setNewResource({ ...newResource, type: e.target.value as any })}
-                        className="w-[120px] px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                    >
-                        <option value="YOUTUBE">YouTube</option>
-                        <option value="PDF">PDF URL</option>
-                        <option value="LINK">Link</option>
-                    </select>
-                    <input
-                        type="text"
-                        value={newResource.title}
-                        onChange={(e) => setNewResource({ ...newResource, title: e.target.value })}
-                        placeholder="Resource Title"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-black outline-none"
-                    />
-                </div>
-                <div className="flex gap-2">
-                    <input
-                        type="url"
-                        value={newResource.url}
-                        onChange={(e) => setNewResource({ ...newResource, url: e.target.value })}
-                        placeholder="URL (e.g. YouTube link or PDF address)"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-black outline-none"
-                    />
-                    <button
-                        onClick={handleAddResource}
-                        disabled={loading || !newResource.title || !newResource.url}
-                        className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
-                    >
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add'}
-                    </button>
-                </div>
-            </div>
-
-            {/* List */}
-            {resources.length > 0 && (
-                <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-gray-900">Added Resources</h4>
-                    {resources.map((r, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">
-                            <div className="flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-gray-500" />
-                                <span className="font-medium text-gray-900">{r.title}</span>
-                                <span className="text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">{r.type}</span>
-                            </div>
-                            <a href={r.url} target="_blank" className="text-gray-400 hover:text-gray-600">
-                                <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                        </div>
-                    ))}
-                </div>
+            {activity.metadata?.amount && (
+                <span className="text-sm font-medium text-emerald-600 tabular-nums">
+                    +{formatCurrency(activity.metadata.amount)}
+                </span>
             )}
         </div>
     )
+}
 
+// =============================================
+// PENDING REQUEST CARD
+// =============================================
+
+function PendingRequestCard({
+    request,
+    onApprove,
+    onReject,
+    loading
+}: {
+    request: ProgramRequest
+    onApprove: () => void
+    onReject: () => void
+    loading: boolean
+}) {
     return (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg border border-gray-200 overflow-hidden flex flex-col max-h-[90vh]">
-                {/* Header */}
-                <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
-                    <div>
-                        <h2 className="text-lg font-bold text-gray-900">
-                            {step === 'RESOURCES' ? 'Add Resources' : 'Create Mission'}
-                        </h2>
-                        <div className="flex items-center gap-2 mt-1">
-                            <div className={`h-1.5 w-12 rounded-full transition-colors ${step === 'DETAILS' ? 'bg-black' : 'bg-black'}`} />
-                            <div className={`h-1.5 w-12 rounded-full transition-colors ${step === 'VISIBILITY' ? 'bg-black' : (step === 'RESOURCES' ? 'bg-black' : 'bg-gray-200')}`} />
-                            <div className={`h-1.5 w-12 rounded-full transition-colors ${step === 'RESOURCES' ? 'bg-black' : 'bg-gray-200'}`} />
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Body */}
-                <div className="p-6 overflow-y-auto flex-1">
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg text-red-600 text-sm flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4" />
-                            {error}
-                        </div>
-                    )}
-
-                    {step === 'DETAILS' && renderDetailsStep()}
-                    {step === 'VISIBILITY' && renderVisibilityStep()}
-                    {step === 'RESOURCES' && renderResourcesStep()}
-                </div>
-
-                {/* Footer */}
-                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
-                    {step === 'DETAILS' ? (
-                        <>
-                            <button onClick={onClose} className="text-sm font-medium text-gray-600 hover:text-gray-900">Cancel</button>
-                            <button
-                                onClick={() => setStep('VISIBILITY')}
-                                disabled={!formData.title || !formData.target_url || !formData.reward}
-                                className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
-                            >
-                                Next Step
-                            </button>
-                        </>
-                    ) : step === 'VISIBILITY' ? (
-                        <>
-                            <button onClick={() => setStep('DETAILS')} className="text-sm font-medium text-gray-600 hover:text-gray-900">Back</button>
-                            <button
-                                onClick={handleCreateMission}
-                                disabled={loading}
-                                className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2"
-                            >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Mission'}
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            {/* RESOURCES Step */}
-                            <span className="text-xs text-gray-500">Resources are optional</span>
-                            <button
-                                onClick={onClose}
-                                className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800"
-                            >
-                                Finish
-                            </button>
-                        </>
-                    )}
-                </div>
+        <div className="flex items-center gap-3 py-3 border-b border-neutral-100 last:border-0">
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <Clock className="w-4 h-4 text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-neutral-900 truncate">
+                    {request.seller_name || request.seller_email}
+                </p>
+                <p className="text-[11px] text-neutral-400 truncate">
+                    souhaite rejoindre {request.mission_title}
+                </p>
+            </div>
+            <div className="flex items-center gap-1">
+                <button
+                    onClick={onReject}
+                    disabled={loading}
+                    className="p-1.5 hover:bg-red-50 rounded-lg text-neutral-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                </button>
+                <button
+                    onClick={onApprove}
+                    disabled={loading}
+                    className="p-1.5 hover:bg-emerald-50 rounded-lg text-neutral-400 hover:text-emerald-600 transition-colors disabled:opacity-50"
+                >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                </button>
             </div>
         </div>
     )
 }
 
 // =============================================
-// MAIN PAGE COMPONENT
+// ACTIVITY SIDEBAR
 // =============================================
 
-// =============================================
-// MISSIONS CONTENT (Renamed from default export)
-// =============================================
-
-function MissionsContent() {
-    const [missions, setMissions] = useState<Mission[]>([])
-    const [loading, setLoading] = useState(true)
-
-    async function loadMissions() {
-        const result = await getWorkspaceMissions()
-        if (result.success && result.missions) {
-            setMissions(result.missions as Mission[])
-        }
-        setLoading(false)
-    }
-
-    useEffect(() => {
-        loadMissions()
-    }, [])
-
-    // Compute stats
-    const stats = {
-        total: missions.length,
-        active: missions.filter(m => m.status === 'ACTIVE').length,
-        draft: missions.filter(m => m.status === 'DRAFT').length,
-        totalParticipants: missions.reduce((sum, m) => sum + (m._count?.enrollments || 0), 0)
-    }
+function ActivitySidebar({
+    activities,
+    requests,
+    onApproveRequest,
+    onRejectRequest,
+    loadingRequest
+}: {
+    activities: ActivityItem[]
+    requests: ProgramRequest[]
+    onApproveRequest: (id: string) => void
+    onRejectRequest: (id: string) => void
+    loadingRequest: string | null
+}) {
+    const hasRequests = requests.length > 0
+    const hasActivity = activities.length > 0
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-semibold text-gray-900">Missions</h1>
-                </div>
-                <Link
-                    href="/dashboard/missions/create"
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded-lg font-medium text-sm transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
-                    Créer une mission
-                </Link>
-            </div>
-
-            {/* Stats Bar */}
-            <div className="flex gap-6 p-5 bg-white border border-gray-200 rounded-xl">
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">Total</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
-                </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">Actives</p>
-                    <p className="text-2xl font-semibold text-green-600">{stats.active}</p>
-                </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">Brouillons</p>
-                    <p className="text-2xl font-semibold text-gray-400">{stats.draft}</p>
-                </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">Participants</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.totalParticipants}</p>
-                </div>
-            </div>
-
-            {/* Content */}
-            {loading ? (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                </div>
-            ) : missions.length === 0 ? (
-                <div className="bg-white border border-gray-200 rounded-xl p-16 text-center">
-                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                        <Target className="w-6 h-6 text-gray-400" />
+            {/* Pending Requests */}
+            {hasRequests && (
+                <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                            <h3 className="text-sm font-semibold text-neutral-900">
+                                En attente
+                            </h3>
+                        </div>
+                        <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                            {requests.length}
+                        </span>
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        Aucune mission
-                    </h3>
-                    <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-                        Créez votre première mission pour recruter des affiliés.
-                    </p>
-                    <Link
-                        href="/dashboard/missions/create"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded-lg font-medium text-sm transition-colors"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Créer une mission
-                    </Link>
-                </div>
-            ) : (
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="divide-y divide-gray-50">
-                        {missions.map((mission) => (
-                            <MissionListItem
-                                key={mission.id}
-                                mission={mission}
-                                onRefresh={loadMissions}
+                    <div className="px-4 max-h-[200px] overflow-y-auto">
+                        {requests.map((request) => (
+                            <PendingRequestCard
+                                key={request.id}
+                                request={request}
+                                onApprove={() => onApproveRequest(request.id)}
+                                onReject={() => onRejectRequest(request.id)}
+                                loading={loadingRequest === request.id}
                             />
                         ))}
                     </div>
                 </div>
             )}
+
+            {/* Activity Feed */}
+            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-neutral-400" />
+                    <h3 className="text-sm font-semibold text-neutral-900">
+                        Activité récente
+                    </h3>
+                </div>
+                {hasActivity ? (
+                    <div className="px-4 max-h-[400px] overflow-y-auto">
+                        {activities.map((activity) => (
+                            <ActivityFeedItem key={activity.id} activity={activity} />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="px-4 py-8 text-center">
+                        <Activity className="w-8 h-8 text-neutral-200 mx-auto mb-2" />
+                        <p className="text-sm text-neutral-400">
+                            Aucune activité récente
+                        </p>
+                    </div>
+                )}
+            </div>
         </div>
     )
 }
+
+// =============================================
+// EMPTY STATE
+// =============================================
+
+function EmptyState() {
+    return (
+        <div className="bg-white border border-neutral-200 border-dashed rounded-xl p-16 text-center">
+            <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Target className="w-8 h-8 text-neutral-300" />
+            </div>
+            <h3 className="text-xl font-medium text-neutral-900 mb-2">
+                Créez votre première mission
+            </h3>
+            <p className="text-neutral-500 mb-8 max-w-md mx-auto leading-relaxed">
+                Une mission est un programme d'affiliation. Définissez les commissions
+                et recrutez des sellers pour promouvoir votre produit.
+            </p>
+            <Link
+                href="/dashboard/missions/create"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-medium hover:bg-neutral-800 transition-colors"
+            >
+                <Plus className="w-4 h-4" />
+                Nouvelle mission
+            </Link>
+        </div>
+    )
+}
+
+// =============================================
+// MISSION SLOTS INDICATOR
+// =============================================
+
+function MissionSlots({ used, total }: { used: number; total: number }) {
+    const remaining = total - used
+
+    return (
+        <div className="flex items-center gap-3">
+            <div className="flex gap-1">
+                {[...Array(total)].map((_, i) => (
+                    <div
+                        key={i}
+                        className={`
+                            w-8 h-1.5 rounded-full transition-colors
+                            ${i < used ? 'bg-neutral-900' : 'bg-neutral-200'}
+                        `}
+                    />
+                ))}
+            </div>
+            <span className="text-sm text-neutral-500">
+                {remaining > 0 ? `${remaining} disponible${remaining > 1 ? 's' : ''}` : 'Limite atteinte'}
+            </span>
+        </div>
+    )
+}
+
+// =============================================
+// GLOBAL STATS BAR
+// =============================================
+
+function GlobalStatsBar({ stats }: {
+    stats: {
+        totalMissions: number
+        activeMissions: number
+        totalSellers: number
+        totalClicks: number
+        totalRevenue: number
+    }
+}) {
+    return (
+        <div className="grid grid-cols-4 gap-6 p-6 bg-white border border-neutral-200 rounded-xl">
+            <div>
+                <p className="text-3xl font-light text-neutral-900 tracking-tight tabular-nums">
+                    {stats.activeMissions}
+                </p>
+                <p className="text-xs text-neutral-400 uppercase tracking-widest mt-1">
+                    Missions actives
+                </p>
+            </div>
+            <div>
+                <p className="text-3xl font-light text-neutral-900 tracking-tight tabular-nums">
+                    {stats.totalSellers}
+                </p>
+                <p className="text-xs text-neutral-400 uppercase tracking-widest mt-1">
+                    Sellers totaux
+                </p>
+            </div>
+            <div>
+                <p className="text-3xl font-light text-neutral-900 tracking-tight tabular-nums">
+                    {formatNumber(stats.totalClicks)}
+                </p>
+                <p className="text-xs text-neutral-400 uppercase tracking-widest mt-1">
+                    Clicks totaux
+                </p>
+            </div>
+            <div>
+                <p className="text-3xl font-light text-emerald-600 tracking-tight tabular-nums">
+                    {formatCurrency(stats.totalRevenue)}
+                </p>
+                <p className="text-xs text-neutral-400 uppercase tracking-widest mt-1">
+                    Chiffre d'affaires
+                </p>
+            </div>
+        </div>
+    )
+}
+
+// =============================================
+// MAIN CONTENT
+// =============================================
+
+function MissionsContent() {
+    const [missions, setMissions] = useState<MissionWithStats[]>([])
+    const [activities, setActivities] = useState<ActivityItem[]>([])
+    const [requests, setRequests] = useState<ProgramRequest[]>([])
+    const [globalStats, setGlobalStats] = useState({
+        totalMissions: 0,
+        activeMissions: 0,
+        totalSellers: 0,
+        totalClicks: 0,
+        totalRevenue: 0,
+        totalCommissions: 0
+    })
+    const [loading, setLoading] = useState(true)
+    const [loadingRequest, setLoadingRequest] = useState<string | null>(null)
+
+    const loadData = useCallback(async () => {
+        setLoading(true)
+        const [missionsResult, activityResult, requestsResult] = await Promise.all([
+            getMissionsWithFullStats(),
+            getRecentMissionActivity(15),
+            getMyProgramRequests()
+        ])
+
+        if (missionsResult.success && missionsResult.missions) {
+            setMissions(missionsResult.missions)
+        }
+        if (missionsResult.globalStats) {
+            setGlobalStats(missionsResult.globalStats)
+        }
+        if (activityResult.success && activityResult.activities) {
+            setActivities(activityResult.activities)
+        }
+        if (requestsResult.success && 'requests' in requestsResult && requestsResult.requests) {
+            setRequests(requestsResult.requests as ProgramRequest[])
+        }
+
+        setLoading(false)
+    }, [])
+
+    useEffect(() => {
+        loadData()
+    }, [loadData])
+
+    async function handleApproveRequest(requestId: string) {
+        setLoadingRequest(requestId)
+        await approveProgramRequest(requestId)
+        loadData()
+        setLoadingRequest(null)
+    }
+
+    async function handleRejectRequest(requestId: string) {
+        setLoadingRequest(requestId)
+        await rejectProgramRequest(requestId)
+        loadData()
+        setLoadingRequest(null)
+    }
+
+    // Filter active/non-archived missions for slot count
+    const activeMissions = missions.filter(m => m.status !== 'ARCHIVED')
+    const canCreateMore = activeMissions.length < MAX_MISSIONS
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-32">
+                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+            </div>
+        )
+    }
+
+    return (
+        <div className="space-y-8">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-3xl font-light text-neutral-900 tracking-tight">
+                        Missions
+                    </h1>
+                    <p className="text-neutral-500 mt-2">
+                        Gérez vos programmes d'affiliation
+                    </p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <MissionSlots used={activeMissions.length} total={MAX_MISSIONS} />
+                    {canCreateMore ? (
+                        <Link
+                            href="/dashboard/missions/create"
+                            className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-medium text-sm hover:bg-neutral-800 transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Nouvelle mission
+                        </Link>
+                    ) : (
+                        <div className="flex items-center gap-2 px-5 py-2.5 bg-neutral-100 text-neutral-400 rounded-xl font-medium text-sm cursor-not-allowed">
+                            <AlertCircle className="w-4 h-4" />
+                            Limite atteinte
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Global Stats */}
+            {missions.length > 0 && (
+                <GlobalStatsBar stats={globalStats} />
+            )}
+
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Missions List (2/3) */}
+                <div className="lg:col-span-2 space-y-4">
+                    {missions.length === 0 ? (
+                        <EmptyState />
+                    ) : (
+                        <>
+                            {missions.map((mission) => (
+                                <MissionRow
+                                    key={mission.id}
+                                    mission={mission}
+                                    onRefresh={loadData}
+                                />
+                            ))}
+
+                            {/* Add Mission Placeholder */}
+                            {canCreateMore && (
+                                <Link
+                                    href="/dashboard/missions/create"
+                                    className="flex items-center justify-center gap-3 p-8 border-2 border-dashed border-neutral-200 rounded-xl text-neutral-400 hover:text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50/50 transition-all group"
+                                >
+                                    <div className="w-10 h-10 rounded-full bg-neutral-100 group-hover:bg-neutral-200 flex items-center justify-center transition-colors">
+                                        <Plus className="w-5 h-5" />
+                                    </div>
+                                    <span className="font-medium">Ajouter une mission</span>
+                                </Link>
+                            )}
+                        </>
+                    )}
+                </div>
+
+                {/* Activity Sidebar (1/3) */}
+                <div className="lg:col-span-1">
+                    <ActivitySidebar
+                        activities={activities}
+                        requests={requests}
+                        onApproveRequest={handleApproveRequest}
+                        onRejectRequest={handleRejectRequest}
+                        loadingRequest={loadingRequest}
+                    />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// =============================================
+// MAIN PAGE
+// =============================================
 
 export default function MissionsPage() {
     return (

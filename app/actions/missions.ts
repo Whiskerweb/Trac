@@ -859,3 +859,355 @@ export async function deleteMissionContent(contentId: string): Promise<{
         return { success: false, error: 'Failed to delete content' }
     }
 }
+
+// =============================================
+// GET MISSIONS WITH FULL STATS
+// For startup dashboard - includes clicks, revenue, commissions
+// =============================================
+
+export interface MissionWithStats {
+    id: string
+    title: string
+    description: string
+    target_url: string
+    reward: string
+    status: MissionStatus
+    visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
+    invite_code: string | null
+    created_at: Date
+    // Stats
+    stats: {
+        sellers: number           // Total enrolled sellers
+        activeSellers: number     // Sellers with APPROVED status
+        clicks: number            // Total clicks from all short links
+        sales: number             // Number of commissions (conversions)
+        revenue: number           // Total gross revenue in cents
+        commissions: number       // Total commissions to pay in cents
+    }
+    // Recent enrollments (last 5)
+    recentEnrollments: Array<{
+        id: string
+        user_id: string
+        status: string
+        created_at: Date
+        seller_name: string | null
+        seller_email: string | null
+    }>
+}
+
+export interface MissionsWithStatsResponse {
+    success: boolean
+    missions?: MissionWithStats[]
+    globalStats?: {
+        totalMissions: number
+        activeMissions: number
+        totalSellers: number
+        totalClicks: number
+        totalRevenue: number
+        totalCommissions: number
+    }
+    error?: string
+}
+
+/**
+ * Get all missions for workspace with full stats
+ * Includes clicks, revenue, commissions per mission
+ */
+export async function getMissionsWithFullStats(): Promise<MissionsWithStatsResponse> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
+    try {
+        // Get all missions with enrollments and their short links
+        const missions = await prisma.mission.findMany({
+            where: { workspace_id: workspace.workspaceId },
+            include: {
+                MissionEnrollment: {
+                    include: {
+                        ShortLink: {
+                            select: {
+                                id: true,
+                                clicks: true
+                            }
+                        }
+                    },
+                    orderBy: { created_at: 'desc' }
+                }
+            },
+            orderBy: { created_at: 'desc' }
+        })
+
+        // Get all commissions for this workspace to calculate per-mission stats
+        const allCommissions = await prisma.commission.findMany({
+            where: { program_id: workspace.workspaceId },
+            select: {
+                id: true,
+                link_id: true,
+                gross_amount: true,
+                commission_amount: true
+            }
+        })
+
+        // Build a map of link_id -> commission totals
+        const commissionsByLink = new Map<string, { count: number; grossTotal: number; commissionTotal: number }>()
+        for (const comm of allCommissions) {
+            if (comm.link_id) {
+                const existing = commissionsByLink.get(comm.link_id) || { count: 0, grossTotal: 0, commissionTotal: 0 }
+                existing.count += 1
+                existing.grossTotal += comm.gross_amount
+                existing.commissionTotal += comm.commission_amount
+                commissionsByLink.set(comm.link_id, existing)
+            }
+        }
+
+        // Get seller info for recent enrollments
+        const allUserIds = missions.flatMap(m => m.MissionEnrollment.map(e => e.user_id))
+        const uniqueUserIds = [...new Set(allUserIds)]
+
+        const sellers = uniqueUserIds.length > 0
+            ? await prisma.seller.findMany({
+                where: { user_id: { in: uniqueUserIds } },
+                select: { user_id: true, name: true, email: true }
+            })
+            : []
+
+        const sellerMap = new Map(sellers.map(s => [s.user_id, { name: s.name, email: s.email }]))
+
+        // Map missions with stats
+        const missionsWithStats: MissionWithStats[] = missions.map(mission => {
+            // Calculate stats from enrollments
+            const enrollments = mission.MissionEnrollment
+            const totalSellers = enrollments.length
+            const activeSellers = enrollments.filter(e => e.status === 'APPROVED').length
+
+            // Sum clicks from all short links
+            const totalClicks = enrollments.reduce((sum, e) => sum + (e.ShortLink?.clicks || 0), 0)
+
+            // Get commission stats for this mission's links
+            let salesCount = 0
+            let revenueTotal = 0
+            let commissionTotal = 0
+
+            for (const enrollment of enrollments) {
+                if (enrollment.link_id) {
+                    const linkStats = commissionsByLink.get(enrollment.link_id)
+                    if (linkStats) {
+                        salesCount += linkStats.count
+                        revenueTotal += linkStats.grossTotal
+                        commissionTotal += linkStats.commissionTotal
+                    }
+                }
+            }
+
+            // Get recent enrollments with seller info
+            const recentEnrollments = enrollments.slice(0, 5).map(e => {
+                const sellerInfo = sellerMap.get(e.user_id)
+                return {
+                    id: e.id,
+                    user_id: e.user_id,
+                    status: e.status,
+                    created_at: e.created_at,
+                    seller_name: sellerInfo?.name || null,
+                    seller_email: sellerInfo?.email || null
+                }
+            })
+
+            return {
+                id: mission.id,
+                title: mission.title,
+                description: mission.description,
+                target_url: mission.target_url,
+                reward: mission.reward,
+                status: mission.status,
+                visibility: mission.visibility as 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY',
+                invite_code: mission.invite_code,
+                created_at: mission.created_at,
+                stats: {
+                    sellers: totalSellers,
+                    activeSellers,
+                    clicks: totalClicks,
+                    sales: salesCount,
+                    revenue: revenueTotal,
+                    commissions: commissionTotal
+                },
+                recentEnrollments
+            }
+        })
+
+        // Calculate global stats
+        const globalStats = {
+            totalMissions: missions.length,
+            activeMissions: missions.filter(m => m.status === 'ACTIVE').length,
+            totalSellers: missionsWithStats.reduce((sum, m) => sum + m.stats.sellers, 0),
+            totalClicks: missionsWithStats.reduce((sum, m) => sum + m.stats.clicks, 0),
+            totalRevenue: missionsWithStats.reduce((sum, m) => sum + m.stats.revenue, 0),
+            totalCommissions: missionsWithStats.reduce((sum, m) => sum + m.stats.commissions, 0)
+        }
+
+        return {
+            success: true,
+            missions: missionsWithStats,
+            globalStats
+        }
+
+    } catch (error) {
+        console.error('[Mission] ❌ Error fetching missions with stats:', error)
+        return { success: false, error: 'Failed to fetch missions' }
+    }
+}
+
+// =============================================
+// GET RECENT MISSION ACTIVITY
+// Returns recent events across all missions for the activity feed
+// =============================================
+
+export interface ActivityItem {
+    id: string
+    type: 'enrollment' | 'request' | 'sale' | 'click'
+    timestamp: Date
+    missionId: string
+    missionTitle: string
+    description: string
+    metadata?: {
+        sellerName?: string
+        sellerEmail?: string
+        amount?: number
+        status?: string
+    }
+}
+
+export async function getRecentMissionActivity(limit: number = 20): Promise<{
+    success: boolean
+    activities?: ActivityItem[]
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
+    try {
+        // Get recent enrollments with seller info
+        const recentEnrollments = await prisma.missionEnrollment.findMany({
+            where: {
+                Mission: { workspace_id: workspace.workspaceId }
+            },
+            include: {
+                Mission: { select: { id: true, title: true } }
+            },
+            orderBy: { created_at: 'desc' },
+            take: limit
+        })
+
+        // Get seller info
+        const userIds = recentEnrollments.map(e => e.user_id)
+        const sellers = userIds.length > 0
+            ? await prisma.seller.findMany({
+                where: { user_id: { in: userIds } },
+                select: { user_id: true, name: true, email: true }
+            })
+            : []
+        const sellerMap = new Map(sellers.map(s => [s.user_id, s]))
+
+        // Get recent commissions (sales)
+        const recentCommissions = await prisma.commission.findMany({
+            where: { program_id: workspace.workspaceId },
+            include: {
+                Seller: { select: { name: true, email: true } }
+            },
+            orderBy: { created_at: 'desc' },
+            take: limit
+        })
+
+        // Get link -> mission mapping for commissions
+        const linkIds = recentCommissions.map(c => c.link_id).filter((id): id is string => id !== null)
+        const linkMissionMap = new Map<string, { id: string; title: string }>()
+
+        if (linkIds.length > 0) {
+            const links = await prisma.shortLink.findMany({
+                where: { id: { in: linkIds } },
+                include: {
+                    MissionEnrollment: {
+                        include: {
+                            Mission: { select: { id: true, title: true } }
+                        }
+                    }
+                }
+            })
+            for (const link of links) {
+                if (link.MissionEnrollment?.Mission) {
+                    linkMissionMap.set(link.id, link.MissionEnrollment.Mission)
+                }
+            }
+        }
+
+        // Build activities list
+        const activities: ActivityItem[] = []
+
+        // Add enrollments
+        for (const enrollment of recentEnrollments) {
+            const seller = sellerMap.get(enrollment.user_id)
+            activities.push({
+                id: `enrollment-${enrollment.id}`,
+                type: 'enrollment',
+                timestamp: enrollment.created_at,
+                missionId: enrollment.Mission.id,
+                missionTitle: enrollment.Mission.title,
+                description: enrollment.status === 'APPROVED'
+                    ? `${seller?.name || seller?.email || 'Un seller'} a rejoint`
+                    : `${seller?.name || seller?.email || 'Un seller'} attend approbation`,
+                metadata: {
+                    sellerName: seller?.name || undefined,
+                    sellerEmail: seller?.email,
+                    status: enrollment.status
+                }
+            })
+        }
+
+        // Add sales/commissions
+        for (const commission of recentCommissions) {
+            const mission = commission.link_id ? linkMissionMap.get(commission.link_id) : null
+            activities.push({
+                id: `sale-${commission.id}`,
+                type: 'sale',
+                timestamp: commission.created_at,
+                missionId: mission?.id || 'unknown',
+                missionTitle: mission?.title || 'Vente directe',
+                description: `Vente de ${(commission.gross_amount / 100).toFixed(2)}€`,
+                metadata: {
+                    sellerName: commission.Seller?.name || undefined,
+                    sellerEmail: commission.Seller?.email,
+                    amount: commission.gross_amount
+                }
+            })
+        }
+
+        // Sort by timestamp descending
+        activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+
+        return {
+            success: true,
+            activities: activities.slice(0, limit)
+        }
+
+    } catch (error) {
+        console.error('[Mission] ❌ Error fetching activity:', error)
+        return { success: false, error: 'Failed to fetch activity' }
+    }
+}
