@@ -1,9 +1,9 @@
 'use client'
 
 import {
-    Home, MessageSquare, CreditCard, Users, UserCheck, UserPlus,
-    BarChart3, Contact, Coins, Shield, Gift, Mail, FileText,
-    Puzzle, ChevronDown, User, ExternalLink, Target, Zap
+    Home, MessageSquare, CreditCard, Users, UserPlus,
+    Contact, Coins, Shield,
+    Puzzle, User, ExternalLink, Target, Zap
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -49,14 +49,6 @@ const navigation: NavSection[] = [
             { name: 'Customers', href: '/dashboard/customers', icon: Contact },
             { name: 'Commissions', href: '/dashboard/commissions', icon: Coins },
             { name: 'Fraud Detection', href: '/dashboard/fraud', icon: Shield },
-        ]
-    },
-    {
-        title: 'Engagement',
-        items: [
-            { name: 'Bounties', href: '/dashboard/bounties', icon: Gift },
-            { name: 'Email Campaigns', href: '/dashboard/campaigns', icon: Mail },
-            { name: 'Resources', href: '/dashboard/resources', icon: FileText },
         ]
     },
     {
