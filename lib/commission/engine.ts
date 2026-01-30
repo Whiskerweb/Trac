@@ -549,3 +549,79 @@ export async function getMissionReward(params: {
         return '10%'
     }
 }
+
+// =============================================
+// GET MISSION FOR SALE COMMISSION
+// =============================================
+
+/**
+ * Get mission details for SALE commission - returns null if mission is LEAD type
+ * This ensures we only create commissions on sales for SALE-type missions
+ *
+ * @returns Mission details with reward string, or null if:
+ *   - Mission not found
+ *   - Mission is LEAD type (seller only gets paid for leads, not sales)
+ */
+export async function getMissionForSaleCommission(params: {
+    linkId?: string | null
+    programId: string
+}): Promise<{ reward: string; missionId: string; missionName: string } | null> {
+    const { linkId, programId } = params
+
+    try {
+        let mission = null
+
+        if (linkId) {
+            // Get mission from link → enrollment chain
+            const link = await prisma.shortLink.findUnique({
+                where: { id: linkId },
+                include: {
+                    MissionEnrollment: {
+                        include: { Mission: true }
+                    }
+                }
+            })
+
+            mission = link?.MissionEnrollment?.Mission
+        }
+
+        // Fallback: Get first active SALE mission for the program
+        if (!mission) {
+            mission = await prisma.mission.findFirst({
+                where: {
+                    workspace_id: programId,
+                    status: 'ACTIVE',
+                    reward_type: 'SALE'  // Only SALE missions
+                }
+            })
+        }
+
+        if (!mission) {
+            console.log(`[Commission] ⚠️ No SALE mission found for link=${linkId}, program=${programId}`)
+            return null
+        }
+
+        // ✅ CRITICAL: Check mission type - ONLY SALE missions create commission on sales
+        if (mission.reward_type === 'LEAD') {
+            console.log(`[Commission] ℹ️ Mission ${mission.id} is LEAD type - no commission on sale`)
+            return null
+        }
+
+        // Format reward: "10€" or "15%"
+        const reward = mission.reward_structure === 'PERCENTAGE'
+            ? `${mission.reward_amount}%`
+            : `${mission.reward_amount}€`
+
+        console.log(`[Commission] ✅ SALE mission found: ${mission.id} (${mission.title}), reward=${reward}`)
+
+        return {
+            reward,
+            missionId: mission.id,
+            missionName: mission.title
+        }
+
+    } catch (error) {
+        console.error('[Commission] ❌ Error getting mission for sale commission:', error)
+        return null
+    }
+}
