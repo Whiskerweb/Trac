@@ -713,110 +713,66 @@ export default function MissionDetailPage({
                             </div>
                         ) : (
                             <>
-                                {/* Table Header with Sortable Columns */}
-                                <div className="grid grid-cols-[1fr,100px,80px,80px,100px] gap-3 px-5 py-3 bg-gray-50/80 border-b border-gray-100 text-xs font-medium text-gray-500">
-                                    <div>Seller</div>
-                                    <button
-                                        onClick={() => toggleSort('revenue')}
-                                        className="flex items-center justify-end gap-1 hover:text-gray-900 transition-colors"
-                                    >
-                                        Revenue
-                                        {sortField === 'revenue' ? (
-                                            sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
-                                        ) : (
-                                            <ArrowUpDown className="w-3 h-3 opacity-40" />
-                                        )}
+                                {/* Table Header */}
+                                <div className="flex items-center px-5 py-2.5 bg-gray-50/80 border-b border-gray-100 text-xs font-medium text-gray-500">
+                                    <div className="flex-1 min-w-0">Seller</div>
+                                    <button onClick={() => toggleSort('revenue')} className="w-20 flex items-center justify-end gap-1 hover:text-gray-900">
+                                        Rev.
+                                        {sortField === 'revenue' ? (sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                                     </button>
-                                    <button
-                                        onClick={() => toggleSort('sales')}
-                                        className="flex items-center justify-end gap-1 hover:text-gray-900 transition-colors"
-                                    >
-                                        Ventes
-                                        {sortField === 'sales' ? (
-                                            sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
-                                        ) : (
-                                            <ArrowUpDown className="w-3 h-3 opacity-40" />
-                                        )}
+                                    <button onClick={() => toggleSort('sales')} className="w-16 flex items-center justify-end gap-1 hover:text-gray-900">
+                                        Sales
+                                        {sortField === 'sales' ? (sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                                     </button>
-                                    <button
-                                        onClick={() => toggleSort('clicks')}
-                                        className="flex items-center justify-end gap-1 hover:text-gray-900 transition-colors"
-                                    >
+                                    <button onClick={() => toggleSort('clicks')} className="w-16 flex items-center justify-end gap-1 hover:text-gray-900">
                                         Clicks
-                                        {sortField === 'clicks' ? (
-                                            sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
-                                        ) : (
-                                            <ArrowUpDown className="w-3 h-3 opacity-40" />
-                                        )}
+                                        {sortField === 'clicks' ? (sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                                     </button>
-                                    <div className="text-right">Status</div>
+                                    <div className="w-24 text-right">Status</div>
                                 </div>
 
                                 {/* Table Rows */}
                                 <div className="divide-y divide-gray-50">
                                     {sortedEnrollments.map((enrollment, index) => (
-                                        <div
-                                            key={enrollment.id}
-                                            className="grid grid-cols-[1fr,100px,80px,80px,100px] gap-3 items-center px-5 py-3 hover:bg-gray-50/50 transition-colors"
-                                        >
-                                            {/* Seller Profile */}
-                                            <div className="flex items-center gap-3 min-w-0">
+                                        <div key={enrollment.id} className="flex items-center px-5 py-2.5 hover:bg-gray-50/50 transition-colors">
+                                            {/* Seller */}
+                                            <div className="flex-1 min-w-0 flex items-center gap-2.5">
                                                 <div className="relative shrink-0">
                                                     {enrollment.seller?.avatar ? (
-                                                        <img
-                                                            src={enrollment.seller.avatar}
-                                                            alt=""
-                                                            className="w-8 h-8 rounded-full object-cover"
-                                                        />
+                                                        <img src={enrollment.seller.avatar} alt="" className="w-7 h-7 rounded-full object-cover" />
                                                     ) : (
-                                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-sm font-medium">
+                                                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-xs font-medium">
                                                             {(enrollment.seller?.name || enrollment.seller?.email || '?').charAt(0).toUpperCase()}
                                                         </div>
                                                     )}
-                                                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-white flex items-center justify-center text-[10px] font-semibold text-gray-500 border border-gray-200">
+                                                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-white flex items-center justify-center text-[9px] font-semibold text-gray-500 border border-gray-200">
                                                         {index + 1}
                                                     </div>
                                                 </div>
-                                                <p className="text-sm truncate min-w-0">
-                                                    <span className="font-medium text-gray-900">
-                                                        {enrollment.seller?.name || enrollment.seller?.email?.split('@')[0] || 'Unknown'}
-                                                    </span>
-                                                    <span className="text-gray-400 ml-2">
-                                                        {enrollment.seller?.email || `ID: ${enrollment.user_id.slice(0, 8)}...`}
-                                                    </span>
-                                                </p>
+                                                <span className="text-sm truncate">
+                                                    <span className="font-medium text-gray-900">{enrollment.seller?.name || enrollment.seller?.email?.split('@')[0] || 'Unknown'}</span>
+                                                    <span className="text-gray-400 ml-1.5 text-xs">{enrollment.seller?.email}</span>
+                                                </span>
                                             </div>
-
                                             {/* Revenue */}
-                                            <div className="text-right">
+                                            <div className="w-20 text-right">
                                                 <span className={`text-sm font-medium ${enrollment.stats.revenue > 0 ? 'text-green-600' : 'text-gray-400'}`}>
                                                     €{(enrollment.stats.revenue / 100).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                 </span>
                                             </div>
-
                                             {/* Sales */}
-                                            <div className="text-right">
-                                                <span className={`text-sm ${enrollment.stats.sales > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
-                                                    {enrollment.stats.sales}
-                                                </span>
+                                            <div className="w-16 text-right">
+                                                <span className={`text-sm ${enrollment.stats.sales > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{enrollment.stats.sales}</span>
                                             </div>
-
                                             {/* Clicks */}
-                                            <div className="text-right">
-                                                <span className={`text-sm ${enrollment.stats.clicks > 0 ? 'text-gray-600' : 'text-gray-400'}`}>
-                                                    {formatNumber(enrollment.stats.clicks)}
-                                                </span>
+                                            <div className="w-16 text-right">
+                                                <span className={`text-sm ${enrollment.stats.clicks > 0 ? 'text-gray-600' : 'text-gray-400'}`}>{formatNumber(enrollment.stats.clicks)}</span>
                                             </div>
-
-                                            {/* Status & Actions */}
-                                            <div className="flex items-center justify-end gap-2">
+                                            {/* Status */}
+                                            <div className="w-24 flex items-center justify-end gap-1.5">
                                                 <ParticipantStatusBadge status={enrollment.status} />
                                                 {enrollment.link && (
-                                                    <button
-                                                        onClick={() => handleCopyLink(enrollment.link!.full_url)}
-                                                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                                                        title="Copier le lien"
-                                                    >
+                                                    <button onClick={() => handleCopyLink(enrollment.link!.full_url)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="Copier le lien">
                                                         {copied ? (
                                                             <Check className="w-3.5 h-3.5 text-green-500" />
                                                         ) : (
