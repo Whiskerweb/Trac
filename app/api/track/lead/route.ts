@@ -95,10 +95,11 @@ export async function POST(request: NextRequest) {
             // PRIORITY 1: Try Redis (fast)
             try {
                 const { redis } = await import('@/lib/redis')
-                const clickData = await redis.get<{ linkId: string; affiliateId?: string }>(`click:${resolvedClickId}`)
+                // Note: Middleware stores as "sellerId", not "affiliateId"
+                const clickData = await redis.get<{ linkId: string; sellerId?: string }>(`click:${resolvedClickId}`)
                 if (clickData) {
                     linkId = clickData.linkId
-                    affiliateId = clickData.affiliateId || null
+                    affiliateId = clickData.sellerId || null  // sellerId in Redis = affiliate_id in DB
                     console.log(`[track/lead] ✅ Redis hit: linkId=${linkId}, affiliateId=${affiliateId}`)
                 }
             } catch (e) {
