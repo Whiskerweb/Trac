@@ -766,10 +766,10 @@ export default function MissionDetailPage({
                                                         <img
                                                             src={enrollment.seller.avatar}
                                                             alt=""
-                                                            className="w-9 h-9 rounded-full object-cover"
+                                                            className="w-8 h-8 rounded-full object-cover"
                                                         />
                                                     ) : (
-                                                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-sm font-medium">
+                                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-sm font-medium">
                                                             {(enrollment.seller?.name || enrollment.seller?.email || '?').charAt(0).toUpperCase()}
                                                         </div>
                                                     )}
@@ -777,14 +777,14 @@ export default function MissionDetailPage({
                                                         {index + 1}
                                                     </div>
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                                <p className="text-sm truncate min-w-0">
+                                                    <span className="font-medium text-gray-900">
                                                         {enrollment.seller?.name || enrollment.seller?.email?.split('@')[0] || 'Unknown'}
-                                                    </p>
-                                                    <p className="text-[11px] text-gray-400 truncate">
+                                                    </span>
+                                                    <span className="text-gray-400 ml-2">
                                                         {enrollment.seller?.email || `ID: ${enrollment.user_id.slice(0, 8)}...`}
-                                                    </p>
-                                                </div>
+                                                    </span>
+                                                </p>
                                             </div>
 
                                             {/* Revenue */}
