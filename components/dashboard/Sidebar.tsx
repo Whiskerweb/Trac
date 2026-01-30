@@ -2,7 +2,7 @@
 
 import {
     Home, MessageSquare, CreditCard, Users, UserPlus,
-    Contact, Coins, Shield,
+    Contact, Coins, Shield, Globe,
     Puzzle, User, ExternalLink, Target, Zap
 } from 'lucide-react'
 import Link from 'next/link'
@@ -55,6 +55,7 @@ const navigation: NavSection[] = [
         title: 'Configuration',
         items: [
             { name: 'Intégration', href: '/dashboard/integration', icon: Puzzle, external: true },
+            { name: 'Domains', href: '/dashboard/domains', icon: Globe },
         ]
     },
 ]
