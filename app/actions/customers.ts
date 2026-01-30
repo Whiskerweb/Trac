@@ -201,7 +201,7 @@ async function getCustomerActivityFromTinybird(
         link_id: string
     }>
     sales: Array<{
-        order_id: string
+        invoice_id: string
         timestamp: string
         amount: number
         net_amount: number
@@ -247,7 +247,7 @@ async function getCustomerActivityFromTinybird(
 
         // Fetch sales for this customer
         const salesSQL = `
-            SELECT order_id, timestamp, amount, net_amount, currency
+            SELECT invoice_id, timestamp, amount, net_amount, currency
             FROM sales
             WHERE workspace_id = '${workspaceId}'
               AND (customer_external_id = '${customerExternalId}' ${clickId ? `OR click_id = '${clickId}'` : ''})
@@ -457,7 +457,7 @@ export async function getCustomerWithActivity(customerId: string): Promise<{
         // Add sales
         for (const sale of sales) {
             activity.push({
-                id: `sale-${sale.order_id}`,
+                id: `sale-${sale.invoice_id}`,
                 type: 'sale',
                 description: 'Purchase completed',
                 timestamp: new Date(sale.timestamp),
@@ -508,13 +508,13 @@ export async function getCustomerWithActivity(customerId: string): Promise<{
             activity,
             // Sales
             sales: sales.map(s => ({
-                id: `sale-${s.order_id}`,
-                orderId: s.order_id,
-                amount: s.amount * 100,  // Convert to cents
-                netAmount: (s.net_amount || s.amount) * 100,
+                id: `sale-${s.invoice_id}`,
+                orderId: s.invoice_id,
+                amount: s.amount,  // Already in cents from Tinybird
+                netAmount: s.net_amount || s.amount,
                 timestamp: new Date(s.timestamp)
             })),
-            lifetimeValue: lifetimeValue * 100,  // Convert to cents
+            lifetimeValue: lifetimeValue,  // Already in cents from Tinybird
             // Referrer link
             referrerLinkSlug
         }
