@@ -224,7 +224,7 @@ export default function CustomerProfilePage() {
                                                 <span className="text-sm font-medium text-gray-900">{item.description}</span>
                                                 {item.amount && (
                                                     <span className="text-sm font-semibold text-green-600">
-                                                        {formatCurrency(item.amount * 100)}
+                                                        {formatCurrency(item.amount)}
                                                     </span>
                                                 )}
                                             </div>

@@ -463,7 +463,7 @@ export async function getCustomerWithActivity(customerId: string): Promise<{
                 timestamp: new Date(sale.timestamp),
                 amount: sale.amount,
                 metadata: {
-                    amount: `${sale.amount}€`,
+                    amount: `${(sale.amount / 100).toFixed(2)}€`,
                     currency: sale.currency
                 }
             })
