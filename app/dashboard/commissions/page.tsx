@@ -46,19 +46,21 @@ function StatusBadge({ status }: { status: CommissionItem['status'] }) {
     )
 }
 
-function TypeBadge({ type }: { type: 'SALE' | 'LEAD' | null }) {
+function TypeBadge({ type }: { type: 'SALE' | 'LEAD' | 'RECURRING' | null }) {
     if (!type) return null
-    const styles = {
+    const styles: Record<string, string> = {
         SALE: 'bg-emerald-50 text-emerald-700',
         LEAD: 'bg-purple-50 text-purple-700',
+        RECURRING: 'bg-blue-50 text-blue-700',
     }
-    const labels = {
+    const labels: Record<string, string> = {
         SALE: 'Vente',
         LEAD: 'Lead',
+        RECURRING: 'Récurrent',
     }
     return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[type]}`}>
-            {labels[type]}
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[type] || 'bg-gray-50 text-gray-700'}`}>
+            {labels[type] || type}
         </span>
     )
 }

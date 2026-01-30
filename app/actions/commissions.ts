@@ -153,7 +153,7 @@ export interface CommissionItem {
     partnerEmail: string
     missionId: string | null
     missionName: string
-    rewardType: 'SALE' | 'LEAD' | null  // Type of commission (from Mission.reward_type)
+    rewardType: 'SALE' | 'LEAD' | 'RECURRING' | null  // Type of commission (from Commission.commission_source)
     saleId: string
     grossAmount: number
     taxAmount: number
@@ -296,7 +296,10 @@ export async function getWorkspaceCommissions(
             const mission = c.link_id ? missionMap.get(c.link_id) : null
             const missionName = mission?.title || 'Direct Sale'
             const missionId = mission?.id || null
-            const rewardType = (mission?.reward_type as 'SALE' | 'LEAD') || null
+            // Use commission_source (actual source of this commission) instead of mission.reward_type
+            // This correctly shows LEAD for lead commissions and SALE for sale commissions
+            // even on missions that have both types enabled
+            const rewardType = (c.commission_source as 'SALE' | 'LEAD' | 'RECURRING') || null
 
             return {
                 id: c.id,
