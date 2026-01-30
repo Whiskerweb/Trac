@@ -25,6 +25,8 @@ interface AffiliateStats {
     revenue: number
 }
 
+type MissionVisibility = 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
+
 interface MissionWithEnrollment {
     id: string
     title: string
@@ -33,7 +35,8 @@ interface MissionWithEnrollment {
     reward: string
     workspace_id: string
     created_at: Date
-    custom_domain: string | null  // ✅ CNAME domain for preview URLs
+    visibility: MissionVisibility  // ✅ Visibility type for UI handling
+    custom_domain: string | null   // ✅ CNAME domain for preview URLs
     enrollment: {
         id: string
         status: string
@@ -273,11 +276,58 @@ function isValidUUID(id: string): boolean {
 }
 
 // =============================================
+// COUNTRY FILTERING HELPERS
+// =============================================
+
+type CountryFilterType = 'ALL' | 'INCLUDE' | 'EXCLUDE'
+
+/**
+ * Check if a seller is eligible for a mission based on country filtering
+ *
+ * @param missionFilterType - The mission's country filter type (ALL, INCLUDE, EXCLUDE)
+ * @param missionCountries - Array of ISO 3166-1 alpha-2 country codes
+ * @param sellerCountry - The seller's country code (e.g., 'FR', 'DE')
+ * @returns true if seller is eligible, false otherwise
+ */
+function isSellerEligibleForMission(
+    missionFilterType: CountryFilterType,
+    missionCountries: string[],
+    sellerCountry: string | null
+): boolean {
+    // If no filter, all sellers are eligible
+    if (missionFilterType === 'ALL') {
+        return true
+    }
+
+    // If seller has no country set, we can't filter - default to allowing access
+    // This ensures sellers who haven't set their country can still see missions
+    if (!sellerCountry) {
+        return true
+    }
+
+    const normalizedSellerCountry = sellerCountry.toUpperCase()
+    const normalizedMissionCountries = missionCountries.map(c => c.toUpperCase())
+
+    if (missionFilterType === 'INCLUDE') {
+        // Only sellers from these countries can see the mission
+        return normalizedMissionCountries.includes(normalizedSellerCountry)
+    }
+
+    if (missionFilterType === 'EXCLUDE') {
+        // All sellers except those from these countries can see the mission
+        return !normalizedMissionCountries.includes(normalizedSellerCountry)
+    }
+
+    return true
+}
+
+// =============================================
 // SERVER ACTIONS
 // =============================================
 
 /**
  * Get all ACTIVE missions with user's enrollment status and REAL stats from Tinybird
+ * Filters missions based on country eligibility
  */
 export async function getAllMissions(): Promise<{
     success: boolean
@@ -298,9 +348,26 @@ export async function getAllMissions(): Promise<{
     }
 
     try {
-        // Get all active missions with workspace domains
-        const missions = await prisma.mission.findMany({
-            where: { status: 'ACTIVE' },
+        // Get seller's country for filtering (from SellerProfile via Profile relation)
+        const seller = await prisma.seller.findFirst({
+            where: { user_id: user.id },
+            include: {
+                Profile: {
+                    select: { country: true }
+                }
+            }
+        })
+        const sellerCountry = seller?.Profile?.country || null
+
+        // Get all active PUBLIC and PRIVATE missions
+        // INVITE_ONLY missions are NOT shown in marketplace (they require invitation link)
+        const allMissions = await prisma.mission.findMany({
+            where: {
+                status: 'ACTIVE',
+                visibility: {
+                    in: ['PUBLIC', 'PRIVATE']
+                }
+            },
             orderBy: { created_at: 'desc' },
             include: {
                 Workspace: {
@@ -313,6 +380,15 @@ export async function getAllMissions(): Promise<{
                 }
             }
         })
+
+        // Filter missions based on country eligibility
+        const missions = allMissions.filter(mission => {
+            const filterType = (mission.country_filter_type || 'ALL') as CountryFilterType
+            const filterCountries = mission.country_filter_list || []
+            return isSellerEligibleForMission(filterType, filterCountries, sellerCountry)
+        })
+
+        console.log(`[Marketplace] 🌍 Filtered ${allMissions.length} missions to ${missions.length} for seller country: ${sellerCountry || 'not set'}`)
 
         // Get user's enrollments WITH link data
         const enrollments = await prisma.missionEnrollment.findMany({
@@ -366,6 +442,7 @@ export async function getAllMissions(): Promise<{
                 reward: mission.reward,
                 workspace_id: mission.workspace_id,
                 created_at: mission.created_at,
+                visibility: mission.visibility as MissionVisibility,  // ✅ Visibility for UI
                 custom_domain: customDomain,  // ✅ Pass to UI
                 enrollment: enrollment ? {
                     id: enrollment.id,
@@ -389,16 +466,24 @@ export async function getAllMissions(): Promise<{
 }
 
 /**
- * Join a mission - Creates enrollment + Short Link with CNAME-AWARE ATTRIBUTION
- * 
+ * Join a mission - Handles visibility-based access:
+ * - PUBLIC: Direct enrollment with Short Link
+ * - PRIVATE: Creates a ProgramRequest (needs approval)
+ * - INVITE_ONLY: Rejected (must use /invite/[code] route)
+ *
  * Link Structure: https://[CUSTOM_DOMAIN]/s/[MISSION_SLUG]/[AFFILIATE_CODE]
  */
 export async function joinMission(missionId: string): Promise<{
     success: boolean
+    type?: 'enrolled' | 'requested'  // ✅ Distinguish between direct join and request
     enrollment?: {
         id: string
         link_url: string
         has_custom_domain: boolean
+    }
+    request?: {
+        id: string
+        status: string
     }
     error?: string
 }> {
@@ -424,6 +509,31 @@ export async function joinMission(missionId: string): Promise<{
             return { success: false, error: 'Mission not found or inactive' }
         }
 
+        // 1b. Check visibility - INVITE_ONLY requires invite link
+        if (mission.visibility === 'INVITE_ONLY') {
+            console.log(`[Marketplace] ⛔ Mission ${missionId} is INVITE_ONLY - cannot join directly`)
+            return { success: false, error: 'This mission requires an invitation link' }
+        }
+
+        // 1c. Check country eligibility (from SellerProfile via Profile relation)
+        const sellerWithProfile = await prisma.seller.findFirst({
+            where: { user_id: user.id },
+            include: {
+                Profile: {
+                    select: { country: true }
+                }
+            }
+        })
+        const sellerCountry = sellerWithProfile?.Profile?.country || null
+
+        const filterType = (mission.country_filter_type || 'ALL') as CountryFilterType
+        const filterCountries = mission.country_filter_list || []
+
+        if (!isSellerEligibleForMission(filterType, filterCountries, sellerCountry)) {
+            console.log(`[Marketplace] ⛔ Seller from ${sellerCountry} not eligible for mission ${missionId} (filter: ${filterType})`)
+            return { success: false, error: 'This mission is not available in your country' }
+        }
+
         // 2. Check if already enrolled
         const existingEnrollment = await prisma.missionEnrollment.findFirst({
             where: { mission_id: missionId, user_id: user.id }
@@ -432,6 +542,71 @@ export async function joinMission(missionId: string): Promise<{
         if (existingEnrollment) {
             return { success: false, error: 'Already enrolled in this mission' }
         }
+
+        // ==============================================
+        // PRIVATE MISSIONS: Create request instead of enrollment
+        // ==============================================
+        if (mission.visibility === 'PRIVATE') {
+            // Get or create seller (need seller ID for request, not full profile)
+            let sellerId = sellerWithProfile?.id
+            if (!sellerId) {
+                console.log('[Marketplace] 👤 Creating Global Seller for private request:', user.email)
+                const { createGlobalSeller } = await import('@/app/actions/sellers')
+                await createGlobalSeller({
+                    userId: user.id,
+                    email: user.email!,
+                    name: user.user_metadata?.full_name
+                })
+                const newSeller = await prisma.seller.findFirst({
+                    where: { user_id: user.id }
+                })
+                sellerId = newSeller?.id
+            }
+
+            if (!sellerId) {
+                return { success: false, error: 'Failed to create seller profile' }
+            }
+
+            // Check for existing request
+            const existingRequest = await prisma.programRequest.findFirst({
+                where: { seller_id: sellerId, mission_id: missionId }
+            })
+
+            if (existingRequest) {
+                if (existingRequest.status === 'PENDING') {
+                    return { success: false, error: 'Request already pending' }
+                } else if (existingRequest.status === 'REJECTED') {
+                    return { success: false, error: 'Your previous request was rejected' }
+                }
+            }
+
+            // Create new request
+            const request = await prisma.programRequest.create({
+                data: {
+                    seller_id: sellerId,
+                    mission_id: missionId,
+                    status: 'PENDING'
+                }
+            })
+
+            console.log(`[Marketplace] 📝 Created request for PRIVATE mission: seller=${sellerId}, mission=${missionId}`)
+
+            revalidatePath('/seller')
+            revalidatePath('/seller/marketplace')
+
+            return {
+                success: true,
+                type: 'requested',
+                request: {
+                    id: request.id,
+                    status: request.status
+                }
+            }
+        }
+
+        // ==============================================
+        // PUBLIC MISSIONS: Direct enrollment
+        // ==============================================
 
         // 3. 🌐 CNAME LOGIC: Fetch verified domain for workspace
         const verifiedDomain = await prisma.domain.findFirst({
@@ -543,6 +718,7 @@ export async function joinMission(missionId: string): Promise<{
 
         return {
             success: true,
+            type: 'enrolled',  // ✅ PUBLIC = direct enrollment
             enrollment: {
                 id: enrollment.id,
                 link_url: linkUrl,
@@ -661,5 +837,239 @@ export async function getMyEnrollments(): Promise<{
     } catch (error) {
         console.error('[Marketplace] ❌ Error fetching enrollments:', error)
         return { success: false, error: 'Failed to fetch enrollments' }
+    }
+}
+
+// =============================================
+// INVITE-ONLY MISSION ACCESS
+// =============================================
+
+/**
+ * Join an INVITE_ONLY mission using an invite code
+ * This bypasses normal visibility checks since the user has the invite link
+ */
+export async function joinMissionByInviteCode(inviteCode: string): Promise<{
+    success: boolean
+    enrollment?: {
+        id: string
+        link_url: string
+        has_custom_domain: boolean
+    }
+    mission?: {
+        id: string
+        title: string
+    }
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    // Security: Validate invite code format (alphanumeric, reasonable length)
+    if (!inviteCode || inviteCode.length < 6 || inviteCode.length > 32 || !/^[a-zA-Z0-9]+$/.test(inviteCode)) {
+        return { success: false, error: 'Invalid invitation code' }
+    }
+
+    try {
+        // 1. Find mission by invite code
+        const mission = await prisma.mission.findFirst({
+            where: {
+                invite_code: inviteCode,
+                status: 'ACTIVE'
+            }
+        })
+
+        if (!mission) {
+            console.log(`[Marketplace] ⛔ Invalid invite code: ${inviteCode}`)
+            return { success: false, error: 'Invalid or expired invitation code' }
+        }
+
+        // 2. Check country eligibility (even for invited users)
+        const sellerWithProfile = await prisma.seller.findFirst({
+            where: { user_id: user.id },
+            include: {
+                Profile: {
+                    select: { country: true }
+                }
+            }
+        })
+        const sellerCountry = sellerWithProfile?.Profile?.country || null
+
+        const filterType = (mission.country_filter_type || 'ALL') as CountryFilterType
+        const filterCountries = mission.country_filter_list || []
+
+        if (!isSellerEligibleForMission(filterType, filterCountries, sellerCountry)) {
+            console.log(`[Marketplace] ⛔ Seller from ${sellerCountry} not eligible for invited mission ${mission.id}`)
+            return { success: false, error: 'This mission is not available in your country' }
+        }
+
+        // 3. Check if already enrolled
+        const existingEnrollment = await prisma.missionEnrollment.findFirst({
+            where: { mission_id: mission.id, user_id: user.id }
+        })
+
+        if (existingEnrollment) {
+            return { success: false, error: 'Already enrolled in this mission' }
+        }
+
+        // 4. Get custom domain
+        const verifiedDomain = await prisma.domain.findFirst({
+            where: {
+                workspace_id: mission.workspace_id,
+                verified: true
+            }
+        })
+        const customDomain = verifiedDomain?.name || null
+
+        // 5. Generate semantic slug
+        const missionSlug = mission.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '')
+            .slice(0, 20)
+        const affiliateCode = user.id.slice(0, 8)
+        const fullSlug = `${missionSlug}/${affiliateCode}`
+
+        // 6. Ensure seller exists
+        if (!sellerWithProfile) {
+            console.log('[Marketplace] 👤 Creating Global Seller for invited user:', user.email)
+            const { createGlobalSeller } = await import('@/app/actions/sellers')
+            await createGlobalSeller({
+                userId: user.id,
+                email: user.email!,
+                name: user.user_metadata?.full_name
+            })
+        }
+
+        // 7. Create ShortLink
+        const shortLink = await prisma.shortLink.create({
+            data: {
+                slug: fullSlug,
+                original_url: mission.target_url,
+                workspace_id: mission.workspace_id,
+                affiliate_id: user.id,
+                clicks: 0,
+            }
+        })
+
+        // 8. Add to Redis
+        const { setLinkInRedis } = await import('@/lib/redis')
+        await setLinkInRedis(shortLink.slug, {
+            url: shortLink.original_url,
+            linkId: shortLink.id,
+            workspaceId: shortLink.workspace_id,
+            sellerId: shortLink.affiliate_id,
+        }, customDomain || undefined)
+
+        // 9. Create enrollment
+        const enrollment = await prisma.missionEnrollment.create({
+            data: {
+                mission_id: mission.id,
+                user_id: user.id,
+                status: 'APPROVED',
+                link_id: shortLink.id,
+            }
+        })
+
+        console.log(`[Marketplace] ✅ Enrolled via invite code: seller=${user.id}, mission=${mission.id}`)
+
+        // 10. Build full URL
+        const baseUrl = customDomain
+            ? `https://${customDomain}`
+            : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+        const linkUrl = `${baseUrl}/s/${fullSlug}`
+
+        // 11. Revalidate
+        revalidatePath('/seller')
+        revalidatePath('/seller/marketplace')
+
+        return {
+            success: true,
+            enrollment: {
+                id: enrollment.id,
+                link_url: linkUrl,
+                has_custom_domain: !!customDomain,
+            },
+            mission: {
+                id: mission.id,
+                title: mission.title
+            }
+        }
+
+    } catch (error) {
+        console.error('[Marketplace] ❌ Error joining via invite code:', error)
+        return { success: false, error: 'Failed to join mission' }
+    }
+}
+
+/**
+ * Get mission details by invite code (for preview before joining)
+ */
+export async function getMissionByInviteCode(inviteCode: string): Promise<{
+    success: boolean
+    mission?: {
+        id: string
+        title: string
+        description: string
+        reward: string
+        visibility: MissionVisibility
+        workspace_name: string
+    }
+    isEnrolled?: boolean
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // Validate invite code format
+    if (!inviteCode || inviteCode.length < 6 || inviteCode.length > 32 || !/^[a-zA-Z0-9]+$/.test(inviteCode)) {
+        return { success: false, error: 'Invalid invitation code' }
+    }
+
+    try {
+        const mission = await prisma.mission.findFirst({
+            where: {
+                invite_code: inviteCode,
+                status: 'ACTIVE'
+            },
+            include: {
+                Workspace: {
+                    select: { name: true }
+                }
+            }
+        })
+
+        if (!mission) {
+            return { success: false, error: 'Invalid or expired invitation code' }
+        }
+
+        // Check if user is already enrolled
+        let isEnrolled = false
+        if (user) {
+            const existingEnrollment = await prisma.missionEnrollment.findFirst({
+                where: { mission_id: mission.id, user_id: user.id }
+            })
+            isEnrolled = !!existingEnrollment
+        }
+
+        return {
+            success: true,
+            mission: {
+                id: mission.id,
+                title: mission.title,
+                description: mission.description,
+                reward: mission.reward,
+                visibility: mission.visibility as MissionVisibility,
+                workspace_name: mission.Workspace.name
+            },
+            isEnrolled
+        }
+
+    } catch (error) {
+        console.error('[Marketplace] ❌ Error fetching mission by invite code:', error)
+        return { success: false, error: 'Failed to fetch mission' }
     }
 }

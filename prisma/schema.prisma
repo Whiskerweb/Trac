@@ -30,6 +30,7 @@ model Mission {
   title        String
   description  String
   target_url   String
+  /// Legacy display string (e.g., "5€/lead + 10%/sale")
   reward       String
   status       MissionStatus     @default(DRAFT)
   created_at   DateTime          @default(now())
@@ -40,7 +41,7 @@ model Mission {
   industry     String?
   visibility   MissionVisibility @default(PUBLIC)
 
-  // === REWARD CONFIGURATION ===
+  // === LEGACY REWARD CONFIGURATION (kept for migration) ===
   /// Sale (for subscriptions/purchases) or Lead (for sign-ups)
   reward_type          RewardType          @default(SALE)
   /// One-off (first purchase) or Recurring (subscription)
@@ -52,6 +53,34 @@ model Mission {
   /// Duration in months for recurring commissions (3-48)
   recurring_duration   Int?
 
+  // === NEW: MULTI-COMMISSION CONFIGURATION ===
+  /// Enable lead commission (pay per sign-up)
+  lead_enabled         Boolean             @default(false)
+  /// Lead reward amount in EUR (fixed only)
+  lead_reward_amount   Float?
+
+  /// Enable sale commission (pay per purchase)
+  sale_enabled         Boolean             @default(true)
+  /// Sale reward amount (EUR if FLAT, % if PERCENTAGE)
+  sale_reward_amount   Float?
+  /// Sale reward structure (FLAT or PERCENTAGE)
+  sale_reward_structure RewardStructure?
+
+  /// Enable recurring commission (pay per subscription renewal)
+  recurring_enabled         Boolean          @default(false)
+  /// Recurring reward amount per renewal
+  recurring_reward_amount   Float?
+  /// Recurring reward structure (FLAT or PERCENTAGE)
+  recurring_reward_structure RewardStructure?
+  /// Recurring duration in months (null = Lifetime)
+  recurring_duration_months Int?
+
+  // === NEW: COUNTRY FILTERING ===
+  /// Country filter type: ALL, INCLUDE (only listed), EXCLUDE (all except listed)
+  country_filter_type  CountryFilterType   @default(ALL)
+  /// List of ISO 3166-1 alpha-2 country codes (e.g., ["FR", "DE", "ES"])
+  country_filter_list  String[]            @default([])
+
   // === COMPANY BRANDING ===
   company_name String?
   logo_url     String?
@@ -59,6 +88,10 @@ model Mission {
   // === SUPPORT INFO ===
   contact_email   String?
   help_center_url String?
+
+  // === INVITE-ONLY ACCESS ===
+  /// Unique code for INVITE_ONLY missions (allows joining via /invite/[code])
+  invite_code String? @unique
 
   Workspace         Workspace           @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
   Contents          MissionContent[]
@@ -486,6 +519,8 @@ model Commission {
   commission_type   CommissionType
   currency          String           @default("EUR")
   status            CommissionStatus @default(PENDING)
+  /// Source of this commission (LEAD, SALE, or RECURRING)
+  commission_source CommissionSource @default(SALE)
 
   // === RECURRING TRACKING ===
   /// Stripe subscription ID (sub_xxx) for recurring
@@ -713,6 +748,26 @@ enum RewardStructure {
   FLAT
   /// Percentage of sale (e.g., 20%)
   PERCENTAGE
+}
+
+// === MULTI-COMMISSION ENUMS ===
+
+enum CountryFilterType {
+  /// All countries allowed
+  ALL
+  /// Only listed countries allowed
+  INCLUDE
+  /// All countries except listed
+  EXCLUDE
+}
+
+enum CommissionSource {
+  /// Commission from lead/sign-up event
+  LEAD
+  /// Commission from one-time sale
+  SALE
+  /// Commission from subscription renewal
+  RECURRING
 }
 
 // === PAYOUT METHOD ENUMS ===

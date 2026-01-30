@@ -1,7 +1,7 @@
 // Commission Engine - Utility Functions for API Routes
 
 import { prisma } from '@/lib/db'
-import { CommissionType, CommissionStatus } from '@/lib/generated/prisma/client'
+import { CommissionType, CommissionStatus, CommissionSource } from '@/lib/generated/prisma/client'
 
 // =============================================
 // COMMISSION ENGINE (Traaaction Style)
@@ -90,6 +90,8 @@ export async function createCommission(params: {
     recurringMonth?: number
     recurringMax?: number
     holdDays?: number
+    // Commission source (LEAD, SALE, or RECURRING)
+    commissionSource?: CommissionSource
 }): Promise<{ success: boolean; commission?: { id: string; commission_amount: number; platform_fee: number }; error?: string }> {
     const {
         partnerId,
@@ -106,7 +108,8 @@ export async function createCommission(params: {
         subscriptionId = null,
         recurringMonth = null,
         recurringMax = null,
-        holdDays = 7
+        holdDays = 7,
+        commissionSource = 'SALE'
     } = params
 
     try {
@@ -177,6 +180,8 @@ export async function createCommission(params: {
                 currency: currency.toUpperCase(),
                 status: 'PENDING',
                 startup_payment_status: 'UNPAID',
+                // Commission source (LEAD, SALE, RECURRING)
+                commission_source: commissionSource,
                 // Recurring tracking
                 subscription_id: subscriptionId,
                 recurring_month: recurringMonth,
@@ -634,6 +639,162 @@ export async function getMissionForSaleCommission(params: {
 
     } catch (error) {
         console.error('[Commission] ❌ Error getting mission for sale commission:', error)
+        return null
+    }
+}
+
+// =============================================
+// GET MISSION COMMISSION CONFIG (NEW MULTI-COMMISSION SUPPORT)
+// =============================================
+
+/**
+ * Multi-commission configuration for a mission
+ * Supports Lead + Sale + Recurring simultaneously
+ */
+export interface MissionCommissionConfig {
+    missionId: string
+    missionName: string
+    workspaceId: string
+
+    // Lead configuration
+    leadEnabled: boolean
+    leadReward: string | null  // e.g., "5€" (always FLAT for leads)
+
+    // Sale configuration
+    saleEnabled: boolean
+    saleReward: string | null  // e.g., "10%" or "15€"
+
+    // Recurring configuration
+    recurringEnabled: boolean
+    recurringReward: string | null  // e.g., "10%" or "5€"
+    recurringDuration: number | null  // months, null = Lifetime
+}
+
+/**
+ * Get mission commission configuration for multi-commission support
+ * Returns config for all commission types (Lead, Sale, Recurring)
+ *
+ * @returns MissionCommissionConfig or null if no active mission found
+ */
+export async function getMissionCommissionConfig(params: {
+    linkId?: string | null
+    programId: string
+}): Promise<MissionCommissionConfig | null> {
+    const { linkId, programId } = params
+
+    try {
+        let mission = null
+
+        if (linkId) {
+            // Get mission from link → enrollment chain
+            const link = await prisma.shortLink.findUnique({
+                where: { id: linkId },
+                include: {
+                    MissionEnrollment: {
+                        include: { Mission: true }
+                    }
+                }
+            })
+
+            mission = link?.MissionEnrollment?.Mission
+        }
+
+        // Fallback: Get first active mission for the program
+        if (!mission) {
+            mission = await prisma.mission.findFirst({
+                where: {
+                    workspace_id: programId,
+                    status: 'ACTIVE'
+                }
+            })
+        }
+
+        if (!mission) {
+            console.log(`[Commission] ⚠️ No active mission found for link=${linkId}, program=${programId}`)
+            return null
+        }
+
+        // =============================================
+        // BACKWARD COMPATIBILITY + NEW FIELDS
+        // =============================================
+        // Check new fields first, fallback to legacy fields
+        // New fields: lead_enabled, sale_enabled, recurring_enabled
+        // Legacy fields: reward_type, commission_structure
+        // =============================================
+
+        // Determine lead configuration
+        let leadEnabled = mission.lead_enabled ?? false
+        let leadReward: string | null = null
+
+        // Fallback: If using legacy reward_type
+        if (!mission.lead_enabled && !mission.sale_enabled && !mission.recurring_enabled) {
+            // Legacy mode: use reward_type to determine
+            leadEnabled = mission.reward_type === 'LEAD'
+        }
+
+        if (leadEnabled && mission.lead_reward_amount) {
+            leadReward = `${mission.lead_reward_amount}€`
+        } else if (leadEnabled && mission.reward_type === 'LEAD') {
+            // Legacy fallback
+            leadReward = `${mission.reward_amount}€`
+        }
+
+        // Determine sale configuration
+        let saleEnabled = mission.sale_enabled ?? false
+
+        // Fallback: If using legacy reward_type
+        if (!mission.lead_enabled && !mission.sale_enabled && !mission.recurring_enabled) {
+            saleEnabled = mission.reward_type === 'SALE' && mission.commission_structure === 'ONE_OFF'
+        }
+
+        let saleReward: string | null = null
+        if (saleEnabled) {
+            const structure = mission.sale_reward_structure ?? mission.reward_structure
+            const amount = mission.sale_reward_amount ?? mission.reward_amount
+            saleReward = structure === 'PERCENTAGE' ? `${amount}%` : `${amount}€`
+        }
+
+        // Determine recurring configuration
+        let recurringEnabled = mission.recurring_enabled ?? false
+
+        // Fallback: If using legacy commission_structure
+        if (!mission.lead_enabled && !mission.sale_enabled && !mission.recurring_enabled) {
+            recurringEnabled = mission.reward_type === 'SALE' && mission.commission_structure === 'RECURRING'
+        }
+
+        let recurringReward: string | null = null
+        let recurringDuration: number | null = null
+
+        if (recurringEnabled) {
+            const structure = mission.recurring_reward_structure ?? mission.reward_structure
+            const amount = mission.recurring_reward_amount ?? mission.reward_amount
+            recurringReward = structure === 'PERCENTAGE' ? `${amount}%` : `${amount}€`
+            // Use new field if available, fallback to legacy
+            recurringDuration = mission.recurring_duration_months ?? mission.recurring_duration ?? null
+            // 0 means Lifetime
+            if (recurringDuration === 0) recurringDuration = null
+        }
+
+        console.log(`[Commission] 📋 Mission config for ${mission.id} (${mission.title}):`)
+        console.log(`  Lead: ${leadEnabled ? `✅ ${leadReward}` : '❌'}`)
+        console.log(`  Sale: ${saleEnabled ? `✅ ${saleReward}` : '❌'}`)
+        console.log(`  Recurring: ${recurringEnabled ? `✅ ${recurringReward} (${recurringDuration ?? 'Lifetime'})` : '❌'}`)
+
+        return {
+            missionId: mission.id,
+            missionName: mission.title,
+            workspaceId: mission.workspace_id,
+            leadEnabled,
+            leadReward,
+            saleEnabled,
+            saleReward,
+            recurringEnabled,
+            recurringReward,
+            recurringDuration
+        }
+
+    } catch (error) {
+        console.error('[Commission] ❌ Error getting mission commission config:', error)
         return null
     }
 }

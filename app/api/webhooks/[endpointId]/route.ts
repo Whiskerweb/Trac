@@ -4,7 +4,8 @@ import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics/tinybird'
 import { waitUntil } from '@vercel/functions'
-import { createCommission, findSellerForSale, handleClawback } from '@/lib/commission/engine'
+import { createCommission, findSellerForSale, handleClawback, getMissionCommissionConfig } from '@/lib/commission/engine'
+import { CommissionSource } from '@/lib/generated/prisma/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -515,42 +516,43 @@ export async function POST(
                     }
 
                     // ========================================
-                    // CREATE COMMISSION (IF SELLER ATTRIBUTION + SALE MISSION)
+                    // CREATE COMMISSION (IF SELLER ATTRIBUTION + SALE ENABLED)
                     // ========================================
                     if (sellerId || linkId) {
                         try {
-                            // ✅ STEP 1: Check if mission is SALE type (not LEAD)
-                            // LEAD missions only pay for leads, not for sales
-                            const { getMissionForSaleCommission } = await import('@/lib/commission/engine')
-                            const saleMission = await getMissionForSaleCommission({
+                            // ✅ STEP 1: Get mission commission config (V2 multi-commission support)
+                            // Use getMissionCommissionConfig to check if sale_enabled
+                            const missionConfig = await getMissionCommissionConfig({
                                 linkId,
                                 programId: workspaceId
                             })
 
-                            if (!saleMission) {
-                                console.log(`[Webhook] ℹ️ No SALE commission - mission is LEAD type or not found`)
+                            if (!missionConfig) {
+                                console.log(`[Webhook] ℹ️ No mission config found`)
+                            } else if (!missionConfig.saleEnabled) {
+                                console.log(`[Webhook] ℹ️ No SALE commission - mission "${missionConfig.missionName}" has sale_enabled=false`)
                             } else {
                                 // ✅ STEP 2: Check attribution limit based on mission configuration
-                                // - ONE_OFF missions: 45 days fixed limit
-                                // - RECURRING missions with recurringDuration = null: Lifetime (no limit)
-                                // - RECURRING missions with recurringDuration = X: X months * 30 days
+                                // - Standard missions: 45 days fixed limit
+                                // - Recurring missions with duration = null: Lifetime (no limit)
+                                // - Recurring missions with duration = X: X months * 30 days
                                 let attributionValid = true
 
                                 // Calculate attribution limit based on mission config
-                                let attributionLimitDays = 45  // Default for ONE_OFF
+                                let attributionLimitDays = 45  // Default
 
-                                if (saleMission.commissionStructure === 'RECURRING') {
-                                    if (saleMission.recurringDuration === null) {
+                                if (missionConfig.recurringEnabled && missionConfig.recurringDuration !== null) {
+                                    if (missionConfig.recurringDuration === null) {
                                         // Lifetime = no limit
                                         attributionLimitDays = Infinity
-                                        console.log(`[Webhook] 📅 RECURRING mission with Lifetime duration - no attribution limit`)
+                                        console.log(`[Webhook] 📅 Mission with Lifetime duration - no attribution limit`)
                                     } else {
                                         // Convert months to days (approx 30 days per month)
-                                        attributionLimitDays = saleMission.recurringDuration * 30
-                                        console.log(`[Webhook] 📅 RECURRING mission with ${saleMission.recurringDuration} months = ${attributionLimitDays} days limit`)
+                                        attributionLimitDays = missionConfig.recurringDuration * 30
+                                        console.log(`[Webhook] 📅 Mission with ${missionConfig.recurringDuration} months = ${attributionLimitDays} days limit`)
                                     }
                                 } else {
-                                    console.log(`[Webhook] 📅 ONE_OFF mission - 45 days fixed limit`)
+                                    console.log(`[Webhook] 📅 Standard sale - 45 days fixed limit`)
                                 }
 
                                 // Lookup customer to check attribution date
@@ -597,14 +599,15 @@ export async function POST(
                                             netAmount,
                                             stripeFee,
                                             taxAmount: tax,
-                                            missionReward: saleMission.reward,
+                                            missionReward: missionConfig.saleReward || '0',
                                             currency,
                                             // Subscription tracking if applicable
                                             subscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
                                             recurringMonth: 1,
-                                            holdDays: 7
+                                            holdDays: 7,
+                                            commissionSource: CommissionSource.SALE  // ✅ NEW: Track commission source
                                         })
-                                        console.log(`[Webhook] 💰 Commission created for seller ${partnerId} on SALE mission "${saleMission.missionName}" with reward ${saleMission.reward}`)
+                                        console.log(`[Webhook] 💰 Commission created for seller ${partnerId} on mission "${missionConfig.missionName}" with SALE reward ${missionConfig.saleReward}`)
                                     } else {
                                         console.log(`[Webhook] ⚠️ No approved seller found for seller ${sellerId}`)
                                     }
@@ -766,7 +769,7 @@ export async function POST(
                     }
 
                     // ========================================
-                    // CREATE RECURRING COMMISSION (IF SALE MISSION + WITHIN 45 DAYS)
+                    // CREATE RECURRING COMMISSION (IF RECURRING ENABLED + WITHIN DURATION)
                     // ========================================
                     if (clickId && clickId !== 'recurring') {
                         try {
@@ -782,37 +785,33 @@ export async function POST(
                             })
 
                             if (customer?.click_id) {
-                                // ✅ STEP 1: Check if mission is SALE type (not LEAD)
-                                const { getMissionForSaleCommission } = await import('@/lib/commission/engine')
-                                const saleMission = await getMissionForSaleCommission({
+                                // ✅ STEP 1: Get mission commission config (V2 multi-commission support)
+                                const missionConfig = await getMissionCommissionConfig({
                                     linkId: customer.link_id,
                                     programId: workspaceId
                                 })
 
-                                if (!saleMission) {
-                                    console.log(`[Webhook] ℹ️ No recurring commission - mission is LEAD type or not found`)
+                                if (!missionConfig) {
+                                    console.log(`[Webhook] ℹ️ No mission config found for recurring`)
+                                } else if (!missionConfig.recurringEnabled) {
+                                    console.log(`[Webhook] ℹ️ No recurring commission - mission "${missionConfig.missionName}" has recurring_enabled=false`)
                                 } else {
                                     // ✅ STEP 2: Check attribution limit based on mission configuration
-                                    // - ONE_OFF missions: 45 days fixed limit
-                                    // - RECURRING missions with recurringDuration = null: Lifetime (no limit)
-                                    // - RECURRING missions with recurringDuration = X: X months * 30 days
+                                    // - recurringDuration = null: Lifetime (no limit)
+                                    // - recurringDuration = X: X months * 30 days
                                     let attributionValid = true
 
                                     // Calculate attribution limit based on mission config
-                                    let attributionLimitDays = 45  // Default for ONE_OFF
+                                    let attributionLimitDays = 45  // Default
 
-                                    if (saleMission.commissionStructure === 'RECURRING') {
-                                        if (saleMission.recurringDuration === null) {
-                                            // Lifetime = no limit
-                                            attributionLimitDays = Infinity
-                                            console.log(`[Webhook] 📅 RECURRING mission (invoice) with Lifetime duration - no attribution limit`)
-                                        } else {
-                                            // Convert months to days (approx 30 days per month)
-                                            attributionLimitDays = saleMission.recurringDuration * 30
-                                            console.log(`[Webhook] 📅 RECURRING mission (invoice) with ${saleMission.recurringDuration} months = ${attributionLimitDays} days limit`)
-                                        }
+                                    if (missionConfig.recurringDuration === null) {
+                                        // Lifetime = no limit
+                                        attributionLimitDays = Infinity
+                                        console.log(`[Webhook] 📅 Recurring mission (invoice) with Lifetime duration - no attribution limit`)
                                     } else {
-                                        console.log(`[Webhook] 📅 ONE_OFF mission (invoice) - 45 days fixed limit`)
+                                        // Convert months to days (approx 30 days per month)
+                                        attributionLimitDays = missionConfig.recurringDuration * 30
+                                        console.log(`[Webhook] 📅 Recurring mission (invoice) with ${missionConfig.recurringDuration} months = ${attributionLimitDays} days limit`)
                                     }
 
                                     if (customer.created_at && customer.affiliate_id) {
@@ -849,13 +848,14 @@ export async function POST(
                                                 netAmount,
                                                 stripeFee,  // ✅ FIXED: Now fetched from balance_transaction
                                                 taxAmount: tax,
-                                                missionReward: saleMission.reward,
+                                                missionReward: missionConfig.recurringReward || '0',
                                                 currency,
                                                 subscriptionId: typeof (invoice as any).subscription === 'string' ? (invoice as any).subscription : null,
                                                 recurringMonth,
-                                                holdDays: 7
+                                                holdDays: 7,
+                                                commissionSource: CommissionSource.RECURRING  // ✅ NEW: Track commission source
                                             })
-                                            console.log(`[Webhook] 💰 Recurring commission created for partner ${partnerId} on SALE mission "${saleMission.missionName}" (month ${recurringMonth})`)
+                                            console.log(`[Webhook] 💰 Recurring commission created for partner ${partnerId} on mission "${missionConfig.missionName}" (month ${recurringMonth}) with RECURRING reward ${missionConfig.recurringReward}`)
                                         }
                                     }
                                 }

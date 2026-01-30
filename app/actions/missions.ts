@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
+import { nanoid } from 'nanoid'
 
 // Mission status type (mirrors Prisma enum)
 type MissionStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
@@ -11,7 +12,7 @@ type CommissionStructure = 'ONE_OFF' | 'RECURRING'
 type RewardStructure = 'FLAT' | 'PERCENTAGE'
 
 // =============================================
-// WIZARD DATA TYPE
+// WIZARD DATA TYPE (Legacy V1)
 // =============================================
 
 interface WizardData {
@@ -31,6 +32,52 @@ interface WizardData {
     // Step 3: Help & Support
     contactEmail: string
     helpCenterUrl: string
+}
+
+// =============================================
+// WIZARD DATA TYPE V2 (Multi-Commission)
+// =============================================
+
+type CountryFilterType = 'ALL' | 'INCLUDE' | 'EXCLUDE'
+type MissionVisibility = 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
+
+interface WizardDataV2 {
+    // Step 1: Basic Info
+    title: string
+    description: string
+    photoUrl: string | null
+    targetUrl: string
+    visibility: MissionVisibility  // ✅ NEW: Access type (PUBLIC, PRIVATE, INVITE_ONLY)
+
+    // Step 2: Multi-Commission Configuration
+    lead: {
+        enabled: boolean
+        amount: number  // Fixed amount in EUR (e.g., 5 = 5€)
+    }
+    sale: {
+        enabled: boolean
+        structure: RewardStructure  // FLAT or PERCENTAGE
+        amount: number  // EUR or %
+    }
+    recurring: {
+        enabled: boolean
+        structure: RewardStructure  // FLAT or PERCENTAGE
+        amount: number  // EUR or %
+        duration: number | null  // Months, null = Lifetime
+    }
+
+    // Step 3: Resources & Filters
+    contactEmail: string | null
+    helpCenterUrl: string | null
+    documents: Array<{
+        title: string
+        url: string
+        type: string  // PDF, LINK, etc.
+    }>
+    countryFilter: {
+        type: CountryFilterType
+        countries: string[]  // ISO 3166-1 alpha-2 codes
+    }
 }
 
 // =============================================
@@ -119,6 +166,188 @@ export async function createMissionFromWizard(data: WizardData): Promise<{
     } catch (error) {
         console.error('[Mission] ❌ Error creating from wizard:', error)
         return { success: false, error: 'Failed to create mission' }
+    }
+}
+
+// =============================================
+// CREATE MISSION FROM WIZARD V2 (Multi-Commission)
+// =============================================
+
+/**
+ * Create a mission from the new wizard flow with multi-commission support
+ * Supports Lead + Sale + Recurring commissions simultaneously
+ */
+export async function createMissionFromWizardV2(data: WizardDataV2): Promise<{
+    success: boolean
+    mission?: { id: string }
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
+    // === VALIDATION ===
+
+    // At least one commission type must be enabled
+    if (!data.lead.enabled && !data.sale.enabled && !data.recurring.enabled) {
+        return { success: false, error: 'At least one commission type must be enabled' }
+    }
+
+    // Validate title
+    if (!data.title?.trim()) {
+        return { success: false, error: 'Mission title is required' }
+    }
+
+    // Validate target URL
+    if (!data.targetUrl?.trim()) {
+        return { success: false, error: 'Target URL is required' }
+    }
+
+    // Validate lead amount if enabled
+    if (data.lead.enabled && data.lead.amount <= 0) {
+        return { success: false, error: 'Lead reward amount must be greater than 0' }
+    }
+
+    // Validate sale amount if enabled
+    if (data.sale.enabled && data.sale.amount <= 0) {
+        return { success: false, error: 'Sale reward amount must be greater than 0' }
+    }
+
+    // Validate recurring amount if enabled
+    if (data.recurring.enabled && data.recurring.amount <= 0) {
+        return { success: false, error: 'Recurring reward amount must be greater than 0' }
+    }
+
+    // Validate country filter
+    if (
+        (data.countryFilter.type === 'INCLUDE' || data.countryFilter.type === 'EXCLUDE') &&
+        data.countryFilter.countries.length === 0
+    ) {
+        return { success: false, error: 'Country filter requires at least one country' }
+    }
+
+    try {
+        // Build display reward string (for legacy compatibility)
+        // Priority: Sale > Lead > Recurring
+        let rewardDisplay = ''
+        if (data.sale.enabled) {
+            rewardDisplay = data.sale.structure === 'FLAT'
+                ? `${data.sale.amount}€`
+                : `${data.sale.amount}%`
+        } else if (data.lead.enabled) {
+            rewardDisplay = `${data.lead.amount}€`
+        } else if (data.recurring.enabled) {
+            rewardDisplay = data.recurring.structure === 'FLAT'
+                ? `${data.recurring.amount}€`
+                : `${data.recurring.amount}%`
+        }
+
+        // Determine legacy reward_type for backward compatibility
+        // Priority: SALE > LEAD (recurring uses SALE)
+        const legacyRewardType: RewardType = data.sale.enabled || data.recurring.enabled ? 'SALE' : 'LEAD'
+
+        // Determine legacy commission_structure
+        const legacyCommissionStructure: CommissionStructure = data.recurring.enabled ? 'RECURRING' : 'ONE_OFF'
+
+        // Generate invite code for INVITE_ONLY missions
+        const inviteCode = data.visibility === 'INVITE_ONLY' ? nanoid(12) : null
+
+        // Create mission with new multi-commission fields
+        const mission = await prisma.mission.create({
+            data: {
+                workspace_id: workspace.workspaceId,
+                title: data.title.trim(),
+                description: data.description?.trim() || '',
+                target_url: data.targetUrl.trim(),
+                reward: rewardDisplay,
+                status: 'ACTIVE',
+                visibility: data.visibility,  // ✅ Use selected visibility
+                invite_code: inviteCode,       // ✅ Set invite code for INVITE_ONLY
+
+                // === LEGACY FIELDS (for backward compatibility) ===
+                reward_type: legacyRewardType,
+                commission_structure: legacyCommissionStructure,
+                reward_structure: data.sale.enabled
+                    ? data.sale.structure
+                    : (data.recurring.enabled ? data.recurring.structure : 'FLAT'),
+                reward_amount: data.sale.enabled
+                    ? data.sale.amount
+                    : (data.lead.enabled ? data.lead.amount : data.recurring.amount),
+                recurring_duration: data.recurring.enabled
+                    ? (data.recurring.duration === 0 ? null : data.recurring.duration)
+                    : null,
+
+                // === NEW MULTI-COMMISSION FIELDS ===
+                // Lead Commission
+                lead_enabled: data.lead.enabled,
+                lead_reward_amount: data.lead.enabled ? data.lead.amount : null,
+
+                // Sale Commission
+                sale_enabled: data.sale.enabled,
+                sale_reward_amount: data.sale.enabled ? data.sale.amount : null,
+                sale_reward_structure: data.sale.enabled ? data.sale.structure : null,
+
+                // Recurring Commission
+                recurring_enabled: data.recurring.enabled,
+                recurring_reward_amount: data.recurring.enabled ? data.recurring.amount : null,
+                recurring_reward_structure: data.recurring.enabled ? data.recurring.structure : null,
+                recurring_duration_months: data.recurring.enabled
+                    ? (data.recurring.duration === 0 ? null : data.recurring.duration)
+                    : null,
+
+                // === COUNTRY FILTERING ===
+                country_filter_type: data.countryFilter.type,
+                country_filter_list: data.countryFilter.countries,
+
+                // === BRANDING ===
+                company_name: data.title.trim(),
+                logo_url: data.photoUrl || null,
+
+                // === SUPPORT ===
+                contact_email: data.contactEmail || null,
+                help_center_url: data.helpCenterUrl || null,
+            }
+        })
+
+        // Add documents as MissionContent (PDFs)
+        if (data.documents.length > 0) {
+            await prisma.missionContent.createMany({
+                data: data.documents.map((doc, index) => ({
+                    mission_id: mission.id,
+                    type: doc.type === 'PDF' ? 'PDF' : 'LINK',
+                    url: doc.url,
+                    title: doc.title,
+                    order: index + 1
+                }))
+            })
+        }
+
+        console.log('[Mission] ✅ Created from wizard V2:', mission.id, mission.title, {
+            lead: data.lead.enabled,
+            sale: data.sale.enabled,
+            recurring: data.recurring.enabled,
+            countryFilter: data.countryFilter.type,
+            documents: data.documents.length
+        })
+
+        return {
+            success: true,
+            mission: { id: mission.id }
+        }
+
+    } catch (error) {
+        console.error('[Mission] ❌ Error creating from wizard V2:', error)
+        // Return actual error message for debugging
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        return { success: false, error: `Failed to create mission: ${errorMessage}` }
     }
 }
 
@@ -371,6 +600,9 @@ export async function getMissionDetails(missionId: string): Promise<{
         target_url: string
         reward: string
         status: MissionStatus
+        visibility: MissionVisibility  // ✅ NEW
+        invite_code: string | null     // ✅ NEW: For INVITE_ONLY missions
+        invite_url: string | null      // ✅ NEW: Full invite URL
         created_at: Date
         enrollments: {
             id: string
@@ -434,6 +666,12 @@ export async function getMissionDetails(missionId: string): Promise<{
             ? `https://${customDomain}`
             : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
 
+        // Build invite URL for INVITE_ONLY missions
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        const inviteUrl = mission.invite_code
+            ? `${appUrl}/invite/${mission.invite_code}`
+            : null
+
         return {
             success: true,
             mission: {
@@ -443,6 +681,9 @@ export async function getMissionDetails(missionId: string): Promise<{
                 target_url: mission.target_url,
                 reward: mission.reward,
                 status: mission.status,
+                visibility: mission.visibility as MissionVisibility,  // ✅ NEW
+                invite_code: mission.invite_code,                      // ✅ NEW
+                invite_url: inviteUrl,                                 // ✅ NEW
                 created_at: mission.created_at,
                 enrollments: mission.MissionEnrollment.map(e => ({
                     id: e.id,

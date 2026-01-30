@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
     ChevronLeft, Target, Users, MousePointer2, DollarSign,
     Copy, Check, Loader2, ExternalLink, Calendar, TrendingUp, Info,
-    MoreHorizontal, Edit, Archive, Trash2
+    MoreHorizontal, Edit, Archive, Trash2, Globe, Lock, Sparkles, Link as LinkIcon
 } from 'lucide-react'
 import Link from 'next/link'
 import { getMissionDetails } from '@/app/actions/missions'
@@ -17,7 +17,9 @@ interface MissionDetails {
     target_url: string
     reward: string
     status: string
-    visibility?: string
+    visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
+    invite_code: string | null
+    invite_url: string | null
     created_at: Date
     enrollments: {
         id: string
@@ -59,6 +61,35 @@ function ParticipantStatusBadge({ status }: { status: string }) {
     return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
             {status}
+        </span>
+    )
+}
+
+function VisibilityBadge({ visibility }: { visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY' }) {
+    const config = {
+        PUBLIC: {
+            icon: Globe,
+            label: 'Public',
+            styles: 'bg-emerald-50 text-emerald-700',
+        },
+        PRIVATE: {
+            icon: Lock,
+            label: 'Private',
+            styles: 'bg-amber-50 text-amber-700',
+        },
+        INVITE_ONLY: {
+            icon: Sparkles,
+            label: 'Invite Only',
+            styles: 'bg-violet-50 text-violet-700',
+        },
+    }
+
+    const { icon: Icon, label, styles } = config[visibility]
+
+    return (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${styles}`}>
+            <Icon className="w-3 h-3" />
+            {label}
         </span>
     )
 }
@@ -170,6 +201,7 @@ export default function MissionDetailPage({
                         <div className="flex items-center gap-2">
                             <h1 className="text-xl font-semibold text-gray-900">{mission.title}</h1>
                             <StatusBadge status={mission.status} />
+                            <VisibilityBadge visibility={mission.visibility} />
                         </div>
                         <p className="text-gray-500 text-sm mt-1">
                             {mission.description || 'Aucune description'}
@@ -185,6 +217,46 @@ export default function MissionDetailPage({
                     </button>
                 </div>
             </div>
+
+            {/* Invite Link Card - Only for INVITE_ONLY missions */}
+            {mission.visibility === 'INVITE_ONLY' && mission.invite_url && (
+                <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100 rounded-xl p-5">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
+                                <LinkIcon className="w-5 h-5 text-violet-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-900">Invite Link</h3>
+                                <p className="text-sm text-gray-500">
+                                    Share this link to invite sellers to your mission
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <code className="px-3 py-2 bg-white border border-violet-200 rounded-lg text-sm text-gray-700 font-mono">
+                                {mission.invite_url}
+                            </code>
+                            <button
+                                onClick={() => handleCopyLink(mission.invite_url!)}
+                                className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium"
+                            >
+                                {copied ? (
+                                    <>
+                                        <Check className="w-4 h-4" />
+                                        Copied!
+                                    </>
+                                ) : (
+                                    <>
+                                        <Copy className="w-4 h-4" />
+                                        Copy Link
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Stats Bar */}
             <div className="flex gap-6 p-5 bg-white border border-gray-200 rounded-xl">

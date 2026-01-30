@@ -293,13 +293,14 @@ export async function POST(request: NextRequest) {
         }
 
         // =============================================
-        // CREATE COMMISSION FOR LEAD MISSIONS
+        // CREATE COMMISSION FOR LEAD-ENABLED MISSIONS
         // =============================================
-        // If this lead is attributed to a link that belongs to a LEAD mission,
+        // If this lead is attributed to a link that belongs to a mission with lead_enabled=true,
         // we create a commission for the seller
         if (leadEvent && customer.link_id && customer.affiliate_id) {
             try {
                 // 1. Get mission via link → enrollment chain
+                // Include both legacy and new multi-commission fields
                 const shortLink = await prisma.shortLink.findUnique({
                     where: { id: customer.link_id },
                     include: {
@@ -309,10 +310,14 @@ export async function POST(request: NextRequest) {
                                     select: {
                                         id: true,
                                         workspace_id: true,
+                                        status: true,
+                                        // Legacy fields
                                         reward_type: true,
                                         reward_amount: true,
                                         reward_structure: true,
-                                        status: true
+                                        // New V2 multi-commission fields
+                                        lead_enabled: true,
+                                        lead_reward_amount: true
                                     }
                                 }
                             }
@@ -322,19 +327,25 @@ export async function POST(request: NextRequest) {
 
                 const mission = shortLink?.MissionEnrollment?.Mission
 
-                // 2. Only create commission if LEAD mission and ACTIVE
-                if (mission?.reward_type === 'LEAD' && mission.status === 'ACTIVE') {
+                // 2. Check if LEAD commission is enabled
+                // V2: Check lead_enabled flag
+                // Legacy fallback: Check reward_type === 'LEAD'
+                const isLeadEnabled = mission?.lead_enabled || mission?.reward_type === 'LEAD'
+                const leadRewardAmount = mission?.lead_reward_amount || mission?.reward_amount
+
+                if (mission && isLeadEnabled && mission.status === 'ACTIVE') {
                     // 3. Get seller from affiliate_id (user_id)
                     const seller = await prisma.seller.findFirst({
                         where: { user_id: customer.affiliate_id }
                     })
 
-                    if (seller) {
-                        // 4. Build reward string (e.g., "5€")
-                        const rewardString = `${mission.reward_amount}€`
+                    if (seller && leadRewardAmount) {
+                        // 4. Build reward string (e.g., "5€") - LEAD is always FLAT
+                        const rewardString = `${leadRewardAmount}€`
 
-                        // 5. Create commission
+                        // 5. Create commission with LEAD source
                         const { createCommission } = await import('@/lib/commission/engine')
+                        const { CommissionSource } = await import('@/lib/generated/prisma/client')
 
                         const commissionResult = await createCommission({
                             partnerId: seller.id,
@@ -348,19 +359,22 @@ export async function POST(request: NextRequest) {
                             taxAmount: 0,
                             missionReward: rewardString,
                             currency: 'EUR',
-                            holdDays: 3             // LEAD: 3 days only (no refund risk)
+                            holdDays: 3,            // LEAD: 3 days only (no refund risk)
+                            commissionSource: CommissionSource.LEAD  // ✅ NEW: Track commission source
                         })
 
                         if (commissionResult.success) {
-                            console.log(`[track/lead] 💰 Commission created for LEAD mission: ${mission.id}, seller: ${seller.id}, amount: ${commissionResult.commission?.commission_amount}`)
+                            console.log(`[track/lead] 💰 LEAD commission created: mission=${mission.id}, seller=${seller.id}, amount=${commissionResult.commission?.commission_amount}, lead_enabled=${mission.lead_enabled}`)
                         } else {
                             console.error(`[track/lead] ⚠️ Failed to create commission: ${commissionResult.error}`)
                         }
-                    } else {
+                    } else if (!seller) {
                         console.log(`[track/lead] ℹ️ No seller found for affiliate_id: ${customer.affiliate_id}`)
+                    } else {
+                        console.log(`[track/lead] ℹ️ No lead reward amount configured for mission: ${mission.id}`)
                     }
                 } else if (mission) {
-                    console.log(`[track/lead] ℹ️ Mission ${mission.id} is not a LEAD type (${mission.reward_type}) or not ACTIVE (${mission.status})`)
+                    console.log(`[track/lead] ℹ️ Mission ${mission.id} has lead_enabled=${mission.lead_enabled}, reward_type=${mission.reward_type}, status=${mission.status}`)
                 }
             } catch (commissionError) {
                 // Log but don't fail the request - lead is already tracked
