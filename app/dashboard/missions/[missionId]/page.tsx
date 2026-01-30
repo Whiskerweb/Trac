@@ -344,13 +344,12 @@ export default function MissionDetailPage({
         )
     }
 
-    // Calculate totals
-    const totalClicks = mission.enrollments.reduce((sum, e) => sum + (e.link?.clicks || 0), 0)
+    // Calculate totals from enrollment stats
+    const totalClicks = mission.enrollments.reduce((sum, e) => sum + (e.stats?.clicks || e.link?.clicks || 0), 0)
     const totalParticipants = mission.enrollments.length
     const activeParticipants = mission.enrollments.filter(e => e.status === 'APPROVED').length
-    // Mock data for now
-    const totalSales = 0
-    const totalRevenue = 0
+    const totalSales = mission.enrollments.reduce((sum, e) => sum + (e.stats?.sales || 0), 0)
+    const totalRevenue = mission.enrollments.reduce((sum, e) => sum + (e.stats?.revenue || 0), 0)
 
     return (
         <div className="space-y-6">
@@ -454,7 +453,7 @@ export default function MissionDetailPage({
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
                     <p className="text-sm text-gray-500">Revenu</p>
-                    <p className="text-2xl font-semibold text-green-600">€{totalRevenue}</p>
+                    <p className="text-2xl font-semibold text-green-600">€{(totalRevenue / 100).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                 </div>
             </div>
 
