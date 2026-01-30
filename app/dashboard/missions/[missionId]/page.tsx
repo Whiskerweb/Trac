@@ -5,10 +5,17 @@ import { useRouter } from 'next/navigation'
 import {
     ChevronLeft, Target, Users, MousePointer2, DollarSign,
     Copy, Check, Loader2, ExternalLink, Calendar, TrendingUp, Info,
-    MoreHorizontal, Edit, Archive, Trash2, Globe, Lock, Sparkles, Link as LinkIcon
+    MoreHorizontal, Edit, Archive, Trash2, Globe, Lock, Sparkles, Link as LinkIcon,
+    Clock, CheckCircle, XCircle, MessageSquare, User, BarChart3
 } from 'lucide-react'
 import Link from 'next/link'
 import { getMissionDetails } from '@/app/actions/missions'
+import {
+    getMissionPendingRequests,
+    approveProgramRequest,
+    rejectProgramRequest,
+    type EnrichedProgramRequest
+} from '@/app/actions/marketplace-actions'
 
 interface MissionDetails {
     id: string
@@ -127,12 +134,21 @@ export default function MissionDetailPage({
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [copied, setCopied] = useState(false)
+    const [pendingRequests, setPendingRequests] = useState<EnrichedProgramRequest[]>([])
+    const [processingRequest, setProcessingRequest] = useState<string | null>(null)
 
     useEffect(() => {
         async function loadMission() {
             const result = await getMissionDetails(missionId)
             if (result.success && result.mission) {
                 setMission(result.mission)
+                // Load pending requests for PRIVATE missions
+                if (result.mission.visibility === 'PRIVATE') {
+                    const requestsResult = await getMissionPendingRequests(missionId)
+                    if (requestsResult.success && requestsResult.requests) {
+                        setPendingRequests(requestsResult.requests)
+                    }
+                }
             } else {
                 setError(result.error || 'Erreur de chargement')
             }
@@ -140,6 +156,29 @@ export default function MissionDetailPage({
         }
         loadMission()
     }, [missionId])
+
+    const handleApprove = async (requestId: string) => {
+        setProcessingRequest(requestId)
+        const result = await approveProgramRequest(requestId)
+        if (result.success) {
+            setPendingRequests(prev => prev.filter(r => r.id !== requestId))
+            // Refresh mission to update enrollments
+            const missionResult = await getMissionDetails(missionId)
+            if (missionResult.success && missionResult.mission) {
+                setMission(missionResult.mission)
+            }
+        }
+        setProcessingRequest(null)
+    }
+
+    const handleReject = async (requestId: string) => {
+        setProcessingRequest(requestId)
+        const result = await rejectProgramRequest(requestId)
+        if (result.success) {
+            setPendingRequests(prev => prev.filter(r => r.id !== requestId))
+        }
+        setProcessingRequest(null)
+    }
 
     const handleCopyLink = (url: string) => {
         navigator.clipboard.writeText(url)
@@ -285,6 +324,144 @@ export default function MissionDetailPage({
                     <p className="text-2xl font-semibold text-green-600">€{totalRevenue}</p>
                 </div>
             </div>
+
+            {/* Pending Requests Section - Only for PRIVATE missions */}
+            {mission.visibility === 'PRIVATE' && pendingRequests.length > 0 && (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl overflow-hidden">
+                    <div className="px-5 py-4 border-b border-amber-200 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                            <Clock className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-semibold text-gray-900">
+                                Demandes en attente ({pendingRequests.length})
+                            </h2>
+                            <p className="text-xs text-gray-500">
+                                Des sellers souhaitent rejoindre votre mission
+                            </p>
+                        </div>
+                    </div>
+                    <div className="divide-y divide-amber-100">
+                        {pendingRequests.map((request) => (
+                            <div key={request.id} className="p-5 hover:bg-amber-50/50 transition-colors">
+                                <div className="flex items-start gap-4">
+                                    {/* Avatar */}
+                                    <div className="shrink-0">
+                                        {request.seller_avatar ? (
+                                            <img
+                                                src={request.seller_avatar}
+                                                alt={request.seller_name || 'Seller'}
+                                                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                                            />
+                                        ) : (
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg shadow-sm">
+                                                {(request.seller_name || request.seller_email).charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="font-semibold text-gray-900">
+                                                {request.seller_name || request.seller_email}
+                                            </h3>
+                                            <span className="text-xs text-gray-400">
+                                                {formatDate(request.created_at)}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-500 mb-3">
+                                            {request.seller_email}
+                                        </p>
+
+                                        {/* Stats */}
+                                        <div className="flex items-center gap-4 mb-3">
+                                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg border border-gray-100">
+                                                <DollarSign className="w-3.5 h-3.5 text-green-500" />
+                                                <span className="text-xs font-medium text-gray-700">
+                                                    €{(request.stats.total_revenue / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                                                </span>
+                                                <span className="text-xs text-gray-400">CA</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg border border-gray-100">
+                                                <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
+                                                <span className="text-xs font-medium text-gray-700">
+                                                    {request.stats.total_sales}
+                                                </span>
+                                                <span className="text-xs text-gray-400">ventes</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg border border-gray-100">
+                                                <MousePointer2 className="w-3.5 h-3.5 text-purple-500" />
+                                                <span className="text-xs font-medium text-gray-700">
+                                                    {formatNumber(request.stats.total_clicks)}
+                                                </span>
+                                                <span className="text-xs text-gray-400">clicks</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Message */}
+                                        {request.message && (
+                                            <div className="bg-white border border-gray-100 rounded-lg p-3 mb-3">
+                                                <p className="text-xs text-gray-400 mb-1">Message :</p>
+                                                <p className="text-sm text-gray-700 italic">
+                                                    &ldquo;{request.message}&rdquo;
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Bio */}
+                                        {request.seller_bio && (
+                                            <p className="text-sm text-gray-500 line-clamp-2 mb-3">
+                                                {request.seller_bio}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="shrink-0 flex flex-col gap-2">
+                                        <button
+                                            onClick={() => handleApprove(request.id)}
+                                            disabled={processingRequest === request.id}
+                                            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {processingRequest === request.id ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <CheckCircle className="w-4 h-4" />
+                                            )}
+                                            Accepter
+                                        </button>
+                                        <button
+                                            onClick={() => handleReject(request.id)}
+                                            disabled={processingRequest === request.id}
+                                            className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <XCircle className="w-4 h-4" />
+                                            Refuser
+                                        </button>
+                                        <div className="flex gap-2 mt-1">
+                                            <Link
+                                                href={`/dashboard/sellers/${request.seller_id}`}
+                                                className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                            >
+                                                <User className="w-3 h-3" />
+                                                Profil
+                                            </Link>
+                                            <Link
+                                                href={`/dashboard/messages?seller=${request.seller_id}`}
+                                                className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                            >
+                                                <MessageSquare className="w-3 h-3" />
+                                                Contact
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Main Content */}
             <div className="flex gap-6">

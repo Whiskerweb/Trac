@@ -354,8 +354,10 @@ export async function getProgramRequests(workspaceId: string) {
             success: true,
             requests: requests.map(r => ({
                 id: r.id,
+                seller_id: r.Seller.id,
                 seller_email: r.Seller.email,
                 seller_name: r.Seller.name,
+                mission_id: r.Mission.id,
                 mission_title: r.Mission.title,
                 message: r.message,
                 created_at: r.created_at
@@ -370,8 +372,16 @@ export async function getProgramRequests(workspaceId: string) {
 
 /**
  * Approve a program request
+ * Creates enrollment + ShortLink + Redis entry for the seller
  */
-export async function approveProgramRequest(requestId: string) {
+export async function approveProgramRequest(requestId: string): Promise<{
+    success: boolean
+    enrollment?: {
+        id: string
+        link_url: string
+    }
+    error?: string
+}> {
     try {
         const request = await prisma.programRequest.update({
             where: { id: requestId },
@@ -381,32 +391,92 @@ export async function approveProgramRequest(requestId: string) {
             },
             include: {
                 Seller: true,
-                Mission: true
+                Mission: {
+                    include: {
+                        Workspace: {
+                            include: {
+                                Domain: {
+                                    where: { verified: true },
+                                    take: 1
+                                }
+                            }
+                        }
+                    }
+                }
             }
         })
 
-        // Auto-create enrollment for approved request (only if seller has user_id)
-        // Shadow sellers (no account yet) won't have user_id
-        if (request.Seller.user_id) {
-            await prisma.missionEnrollment.upsert({
-                where: {
-                    mission_id_user_id: {
-                        mission_id: request.mission_id,
-                        user_id: request.Seller.user_id
-                    }
-                },
-                create: {
-                    mission_id: request.mission_id,
-                    user_id: request.Seller.user_id,
-                    status: 'APPROVED'
-                },
-                update: {
-                    status: 'APPROVED'
-                }
-            })
+        // Must have user_id to create enrollment with tracking link
+        if (!request.Seller.user_id) {
+            console.log('[Marketplace] ⚠️ Seller has no user_id, cannot create tracking link')
+            return { success: true } // Approved but no link (shadow seller)
         }
 
-        return { success: true }
+        // 1. Get custom domain if available
+        const customDomain = request.Mission.Workspace.Domain?.[0]?.name || null
+        const baseUrl = customDomain
+            ? `https://${customDomain}`
+            : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+
+        // 2. Generate semantic slug: mission-slug/affiliate-code
+        const missionSlug = request.Mission.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '')
+            .slice(0, 20)
+        const affiliateCode = request.Seller.user_id.slice(0, 8)
+        const fullSlug = `${missionSlug}/${affiliateCode}`
+
+        // 3. Create ShortLink
+        const shortLink = await prisma.shortLink.create({
+            data: {
+                slug: fullSlug,
+                original_url: request.Mission.target_url,
+                workspace_id: request.Mission.workspace_id,
+                affiliate_id: request.Seller.user_id,
+                clicks: 0,
+            }
+        })
+
+        // 4. Add to Redis for fast lookups
+        const { setLinkInRedis } = await import('@/lib/redis')
+        await setLinkInRedis(shortLink.slug, {
+            url: shortLink.original_url,
+            linkId: shortLink.id,
+            workspaceId: shortLink.workspace_id,
+            sellerId: shortLink.affiliate_id,
+        }, customDomain || undefined)
+
+        // 5. Create or update enrollment with link
+        const enrollment = await prisma.missionEnrollment.upsert({
+            where: {
+                mission_id_user_id: {
+                    mission_id: request.mission_id,
+                    user_id: request.Seller.user_id
+                }
+            },
+            create: {
+                mission_id: request.mission_id,
+                user_id: request.Seller.user_id,
+                status: 'APPROVED',
+                link_id: shortLink.id
+            },
+            update: {
+                status: 'APPROVED',
+                link_id: shortLink.id
+            }
+        })
+
+        const linkUrl = `${baseUrl}/s/${fullSlug}`
+        console.log(`[Marketplace] ✅ Approved request: seller=${request.Seller.id}, mission=${request.mission_id}, link=${linkUrl}`)
+
+        return {
+            success: true,
+            enrollment: {
+                id: enrollment.id,
+                link_url: linkUrl
+            }
+        }
 
     } catch (error) {
         console.error('[Marketplace] ❌ Failed to approve request:', error)
@@ -431,6 +501,164 @@ export async function rejectProgramRequest(requestId: string) {
 
     } catch (error) {
         console.error('[Marketplace] ❌ Failed to reject request:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+/**
+ * Get enriched pending requests for a specific mission
+ * Includes seller profile and stats (revenue, sales count)
+ */
+export interface EnrichedProgramRequest {
+    id: string
+    seller_id: string
+    seller_email: string
+    seller_name: string | null
+    seller_avatar: string | null
+    seller_bio: string | null
+    message: string | null
+    created_at: Date
+    stats: {
+        total_revenue: number
+        total_sales: number
+        total_clicks: number
+    }
+}
+
+export async function getMissionPendingRequests(missionId: string): Promise<{
+    success: boolean
+    requests?: EnrichedProgramRequest[]
+    error?: string
+}> {
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+        if (!workspace) {
+            return { success: false, error: 'No active workspace' }
+        }
+
+        // Get pending requests for this specific mission
+        const requests = await prisma.programRequest.findMany({
+            where: {
+                mission_id: missionId,
+                status: 'PENDING',
+                Mission: {
+                    workspace_id: workspace.workspaceId
+                }
+            },
+            include: {
+                Seller: {
+                    select: {
+                        id: true,
+                        email: true,
+                        name: true,
+                        Profile: {
+                            select: {
+                                avatar_url: true,
+                                bio: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { created_at: 'desc' }
+        })
+
+        // Get seller IDs to fetch their stats
+        const sellerIds = requests.map(r => r.Seller.id)
+
+        // Get commissions for these sellers across all programs (to show their overall performance)
+        const commissions = sellerIds.length > 0 ? await prisma.commission.findMany({
+            where: {
+                seller_id: { in: sellerIds },
+                status: { in: ['PROCEED', 'COMPLETE'] }
+            },
+            select: {
+                seller_id: true,
+                net_amount: true
+            }
+        }) : []
+
+        // Get clicks from their ShortLinks
+        const shortLinks = sellerIds.length > 0 ? await prisma.shortLink.findMany({
+            where: {
+                affiliate_id: { in: sellerIds.map(id => {
+                    // Get user_id from seller - need to query
+                    return id
+                }) }
+            },
+            select: {
+                affiliate_id: true,
+                clicks: true
+            }
+        }) : []
+
+        // Also need to get user_ids from sellers to match with shortlinks
+        const sellers = sellerIds.length > 0 ? await prisma.seller.findMany({
+            where: { id: { in: sellerIds } },
+            select: { id: true, user_id: true }
+        }) : []
+
+        const sellerUserMap = new Map(sellers.map(s => [s.id, s.user_id]))
+
+        // Get clicks for each seller's user_id
+        const userIds = sellers.filter(s => s.user_id).map(s => s.user_id!)
+        const allShortLinks = userIds.length > 0 ? await prisma.shortLink.findMany({
+            where: {
+                affiliate_id: { in: userIds }
+            },
+            select: {
+                affiliate_id: true,
+                clicks: true
+            }
+        }) : []
+
+        // Build stats map per seller
+        const statsMap = new Map<string, { revenue: number; sales: number; clicks: number }>()
+
+        for (const c of commissions) {
+            const existing = statsMap.get(c.seller_id) || { revenue: 0, sales: 0, clicks: 0 }
+            existing.revenue += c.net_amount
+            existing.sales += 1
+            statsMap.set(c.seller_id, existing)
+        }
+
+        // Add clicks per seller
+        for (const sl of allShortLinks) {
+            // Find which seller this belongs to
+            for (const [sellerId, userId] of sellerUserMap.entries()) {
+                if (userId === sl.affiliate_id) {
+                    const existing = statsMap.get(sellerId) || { revenue: 0, sales: 0, clicks: 0 }
+                    existing.clicks += sl.clicks
+                    statsMap.set(sellerId, existing)
+                    break
+                }
+            }
+        }
+
+        // Map to response format
+        const enrichedRequests: EnrichedProgramRequest[] = requests.map(r => ({
+            id: r.id,
+            seller_id: r.Seller.id,
+            seller_email: r.Seller.email,
+            seller_name: r.Seller.name,
+            seller_avatar: r.Seller.Profile?.avatar_url || null,
+            seller_bio: r.Seller.Profile?.bio || null,
+            message: r.message,
+            created_at: r.created_at,
+            stats: {
+                total_revenue: statsMap.get(r.Seller.id)?.revenue || 0,
+                total_sales: statsMap.get(r.Seller.id)?.sales || 0,
+                total_clicks: statsMap.get(r.Seller.id)?.clicks || 0
+            }
+        }))
+
+        return {
+            success: true,
+            requests: enrichedRequests
+        }
+
+    } catch (error) {
+        console.error('[Marketplace] ❌ Failed to get mission pending requests:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
 }

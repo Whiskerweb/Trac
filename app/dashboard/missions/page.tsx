@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-    Plus, Loader2, Target, Users, MousePointer2, TrendingUp,
-    MoreHorizontal, Archive, Trash2, ExternalLink, Globe, Lock,
-    Sparkles, ChevronRight, Clock, Check, X, AlertCircle,
-    Copy, Activity, Eye, Zap, ArrowUpRight, Circle
+    Plus, Loader2, Target, Users, MousePointer2,
+    MoreHorizontal, Archive, Trash2, Globe, Lock,
+    Sparkles, Clock, AlertCircle,
+    Copy, Activity, Eye, Zap, ArrowUpRight, Circle, Check, ChevronRight
 } from 'lucide-react'
 import Link from 'next/link'
 import { DNSGatekeeper } from '@/components/dashboard/DNSGatekeeper'
@@ -17,11 +17,7 @@ import {
     type MissionWithStats,
     type ActivityItem
 } from '@/app/actions/missions'
-import {
-    getMyProgramRequests,
-    approveProgramRequest,
-    rejectProgramRequest
-} from '@/app/actions/marketplace-actions'
+import { getMyProgramRequests } from '@/app/actions/marketplace-actions'
 
 // =============================================
 // CONSTANTS
@@ -35,8 +31,10 @@ const MAX_MISSIONS = 4
 
 interface ProgramRequest {
     id: string
+    seller_id: string
     seller_email: string
     seller_name: string | null
+    mission_id: string
     mission_title: string
     message: string | null
     created_at: Date
@@ -100,12 +98,10 @@ function VisibilityDot({ visibility }: { visibility: 'PUBLIC' | 'PRIVATE' | 'INV
 
 function StatBlock({
     value,
-    label,
-    trend
+    label
 }: {
     value: string | number
     label: string
-    trend?: 'up' | 'down' | 'neutral'
 }) {
     return (
         <div className="text-center">
@@ -125,9 +121,11 @@ function StatBlock({
 
 function MissionRow({
     mission,
+    pendingRequests,
     onRefresh
 }: {
     mission: MissionWithStats
+    pendingRequests: number
     onRefresh: () => void
 }) {
     const [menuOpen, setMenuOpen] = useState(false)
@@ -159,7 +157,6 @@ function MissionRow({
     }
 
     const isActive = mission.status === 'ACTIVE'
-    const hasStats = mission.stats.clicks > 0 || mission.stats.sales > 0
 
     return (
         <div className={`
@@ -170,6 +167,19 @@ function MissionRow({
             }
             rounded-xl overflow-hidden
         `}>
+            {/* Pending Requests Badge */}
+            {pendingRequests > 0 && (
+                <div className="absolute -top-2 -right-2 z-10">
+                    <Link
+                        href={`/dashboard/missions/${mission.id}`}
+                        className="flex items-center gap-1 px-2 py-1 bg-amber-500 text-white text-xs font-semibold rounded-full shadow-lg hover:bg-amber-600 transition-colors"
+                    >
+                        <Clock className="w-3 h-3" />
+                        {pendingRequests}
+                    </Link>
+                </div>
+            )}
+
             {/* Main Content */}
             <div className="p-5">
                 {/* Header Row */}
@@ -345,22 +355,15 @@ function ActivityFeedItem({ activity }: { activity: ActivityItem }) {
 }
 
 // =============================================
-// PENDING REQUEST CARD
+// PENDING REQUEST NOTIFICATION (links to mission)
 // =============================================
 
-function PendingRequestCard({
-    request,
-    onApprove,
-    onReject,
-    loading
-}: {
-    request: ProgramRequest
-    onApprove: () => void
-    onReject: () => void
-    loading: boolean
-}) {
+function PendingRequestNotification({ request }: { request: ProgramRequest }) {
     return (
-        <div className="flex items-center gap-3 py-3 border-b border-neutral-100 last:border-0">
+        <Link
+            href={`/dashboard/missions/${request.mission_id}`}
+            className="flex items-center gap-3 py-3 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 -mx-4 px-4 transition-colors"
+        >
             <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
                 <Clock className="w-4 h-4 text-amber-600" />
             </div>
@@ -369,26 +372,11 @@ function PendingRequestCard({
                     {request.seller_name || request.seller_email}
                 </p>
                 <p className="text-[11px] text-neutral-400 truncate">
-                    souhaite rejoindre {request.mission_title}
+                    veut rejoindre {request.mission_title}
                 </p>
             </div>
-            <div className="flex items-center gap-1">
-                <button
-                    onClick={onReject}
-                    disabled={loading}
-                    className="p-1.5 hover:bg-red-50 rounded-lg text-neutral-400 hover:text-red-600 transition-colors disabled:opacity-50"
-                >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                </button>
-                <button
-                    onClick={onApprove}
-                    disabled={loading}
-                    className="p-1.5 hover:bg-emerald-50 rounded-lg text-neutral-400 hover:text-emerald-600 transition-colors disabled:opacity-50"
-                >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                </button>
-            </div>
-        </div>
+            <ChevronRight className="w-4 h-4 text-neutral-300" />
+        </Link>
     )
 }
 
@@ -398,30 +386,24 @@ function PendingRequestCard({
 
 function ActivitySidebar({
     activities,
-    requests,
-    onApproveRequest,
-    onRejectRequest,
-    loadingRequest
+    requests
 }: {
     activities: ActivityItem[]
     requests: ProgramRequest[]
-    onApproveRequest: (id: string) => void
-    onRejectRequest: (id: string) => void
-    loadingRequest: string | null
 }) {
     const hasRequests = requests.length > 0
     const hasActivity = activities.length > 0
 
     return (
         <div className="space-y-6">
-            {/* Pending Requests */}
+            {/* Pending Requests - Notifications that link to mission */}
             {hasRequests && (
                 <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
                     <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                             <h3 className="text-sm font-semibold text-neutral-900">
-                                En attente
+                                Demandes en attente
                             </h3>
                         </div>
                         <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
@@ -430,13 +412,7 @@ function ActivitySidebar({
                     </div>
                     <div className="px-4 max-h-[200px] overflow-y-auto">
                         {requests.map((request) => (
-                            <PendingRequestCard
-                                key={request.id}
-                                request={request}
-                                onApprove={() => onApproveRequest(request.id)}
-                                onReject={() => onRejectRequest(request.id)}
-                                loading={loadingRequest === request.id}
-                            />
+                            <PendingRequestNotification key={request.id} request={request} />
                         ))}
                     </div>
                 </div>
@@ -592,7 +568,6 @@ function MissionsContent() {
         totalCommissions: 0
     })
     const [loading, setLoading] = useState(true)
-    const [loadingRequest, setLoadingRequest] = useState<string | null>(null)
 
     const loadData = useCallback(async () => {
         setLoading(true)
@@ -622,23 +597,15 @@ function MissionsContent() {
         loadData()
     }, [loadData])
 
-    async function handleApproveRequest(requestId: string) {
-        setLoadingRequest(requestId)
-        await approveProgramRequest(requestId)
-        loadData()
-        setLoadingRequest(null)
-    }
-
-    async function handleRejectRequest(requestId: string) {
-        setLoadingRequest(requestId)
-        await rejectProgramRequest(requestId)
-        loadData()
-        setLoadingRequest(null)
-    }
-
     // Filter active/non-archived missions for slot count
     const activeMissions = missions.filter(m => m.status !== 'ARCHIVED')
     const canCreateMore = activeMissions.length < MAX_MISSIONS
+
+    // Group requests by mission for badge count
+    const requestsByMission = requests.reduce((acc, req) => {
+        acc[req.mission_id] = (acc[req.mission_id] || 0) + 1
+        return acc
+    }, {} as Record<string, number>)
 
     if (loading) {
         return (
@@ -696,6 +663,7 @@ function MissionsContent() {
                                 <MissionRow
                                     key={mission.id}
                                     mission={mission}
+                                    pendingRequests={requestsByMission[mission.id] || 0}
                                     onRefresh={loadData}
                                 />
                             ))}
@@ -721,9 +689,6 @@ function MissionsContent() {
                     <ActivitySidebar
                         activities={activities}
                         requests={requests}
-                        onApproveRequest={handleApproveRequest}
-                        onRejectRequest={handleRejectRequest}
-                        loadingRequest={loadingRequest}
                     />
                 </div>
             </div>
