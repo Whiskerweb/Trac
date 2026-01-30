@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect, use, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
     ChevronLeft, Target, Users, MousePointer2, DollarSign,
     Copy, Check, Loader2, ExternalLink, Calendar, TrendingUp, Info,
     MoreHorizontal, Edit, Archive, Trash2, Globe, Lock, Sparkles, Link as LinkIcon,
-    Clock, CheckCircle, XCircle, MessageSquare, User, BarChart3
+    Clock, CheckCircle, XCircle, MessageSquare, User, BarChart3,
+    ChevronRight, ChevronDown, Search
 } from 'lucide-react'
 import Link from 'next/link'
 import { getMissionDetails } from '@/app/actions/missions'
@@ -16,6 +17,11 @@ import {
     rejectProgramRequest,
     type EnrichedProgramRequest
 } from '@/app/actions/marketplace-actions'
+
+// =============================================
+// PAGINATION CONFIG
+// =============================================
+const REQUESTS_PER_PAGE = 10
 
 interface MissionDetails {
     id: string
@@ -136,6 +142,10 @@ export default function MissionDetailPage({
     const [copied, setCopied] = useState(false)
     const [pendingRequests, setPendingRequests] = useState<EnrichedProgramRequest[]>([])
     const [processingRequest, setProcessingRequest] = useState<string | null>(null)
+    const [requestsPage, setRequestsPage] = useState(1)
+    const [requestsSearch, setRequestsSearch] = useState('')
+    const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
+    const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set())
 
     useEffect(() => {
         async function loadMission() {
@@ -176,9 +186,74 @@ export default function MissionDetailPage({
         const result = await rejectProgramRequest(requestId)
         if (result.success) {
             setPendingRequests(prev => prev.filter(r => r.id !== requestId))
+            setSelectedRequests(prev => {
+                const next = new Set(prev)
+                next.delete(requestId)
+                return next
+            })
         }
         setProcessingRequest(null)
     }
+
+    // Bulk approve
+    const handleBulkApprove = async () => {
+        for (const requestId of selectedRequests) {
+            await handleApprove(requestId)
+        }
+        setSelectedRequests(new Set())
+    }
+
+    // Bulk reject
+    const handleBulkReject = async () => {
+        for (const requestId of selectedRequests) {
+            await handleReject(requestId)
+        }
+        setSelectedRequests(new Set())
+    }
+
+    // Toggle selection
+    const toggleSelection = (requestId: string) => {
+        setSelectedRequests(prev => {
+            const next = new Set(prev)
+            if (next.has(requestId)) {
+                next.delete(requestId)
+            } else {
+                next.add(requestId)
+            }
+            return next
+        })
+    }
+
+    // Select all on current page
+    const selectAllOnPage = () => {
+        const pageRequests = paginatedRequests.map(r => r.id)
+        setSelectedRequests(prev => {
+            const allSelected = pageRequests.every(id => prev.has(id))
+            if (allSelected) {
+                const next = new Set(prev)
+                pageRequests.forEach(id => next.delete(id))
+                return next
+            } else {
+                return new Set([...prev, ...pageRequests])
+            }
+        })
+    }
+
+    // Filtered and paginated requests
+    const filteredRequests = useMemo(() => {
+        if (!requestsSearch.trim()) return pendingRequests
+        const search = requestsSearch.toLowerCase()
+        return pendingRequests.filter(r =>
+            r.seller_name?.toLowerCase().includes(search) ||
+            r.seller_email.toLowerCase().includes(search)
+        )
+    }, [pendingRequests, requestsSearch])
+
+    const totalPages = Math.ceil(filteredRequests.length / REQUESTS_PER_PAGE)
+    const paginatedRequests = useMemo(() => {
+        const start = (requestsPage - 1) * REQUESTS_PER_PAGE
+        return filteredRequests.slice(start, start + REQUESTS_PER_PAGE)
+    }, [filteredRequests, requestsPage])
 
     const handleCopyLink = (url: string) => {
         navigator.clipboard.writeText(url)
@@ -325,141 +400,237 @@ export default function MissionDetailPage({
                 </div>
             </div>
 
-            {/* Pending Requests Section - Only for PRIVATE missions */}
+            {/* Pending Requests Section - Compact Table Design */}
             {mission.visibility === 'PRIVATE' && pendingRequests.length > 0 && (
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl overflow-hidden">
-                    <div className="px-5 py-4 border-b border-amber-200 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-                            <Clock className="w-4 h-4 text-amber-600" />
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    {/* Header with search and bulk actions */}
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-amber-500" />
+                                <span className="text-sm font-medium text-gray-900">
+                                    {pendingRequests.length} demande{pendingRequests.length > 1 ? 's' : ''}
+                                </span>
+                            </div>
+                            {/* Search */}
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Rechercher..."
+                                    value={requestsSearch}
+                                    onChange={(e) => {
+                                        setRequestsSearch(e.target.value)
+                                        setRequestsPage(1)
+                                    }}
+                                    className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg w-48 focus:outline-none focus:border-gray-300"
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-sm font-semibold text-gray-900">
-                                Demandes en attente ({pendingRequests.length})
-                            </h2>
-                            <p className="text-xs text-gray-500">
-                                Des sellers souhaitent rejoindre votre mission
-                            </p>
-                        </div>
+                        {/* Bulk actions */}
+                        {selectedRequests.size > 0 && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">{selectedRequests.size} sélectionné{selectedRequests.size > 1 ? 's' : ''}</span>
+                                <button
+                                    onClick={handleBulkApprove}
+                                    disabled={processingRequest !== null}
+                                    className="px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors disabled:opacity-50"
+                                >
+                                    Tout accepter
+                                </button>
+                                <button
+                                    onClick={handleBulkReject}
+                                    disabled={processingRequest !== null}
+                                    className="px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors disabled:opacity-50"
+                                >
+                                    Tout refuser
+                                </button>
+                            </div>
+                        )}
                     </div>
-                    <div className="divide-y divide-amber-100">
-                        {pendingRequests.map((request) => (
-                            <div key={request.id} className="p-5 hover:bg-amber-50/50 transition-colors">
-                                <div className="flex items-start gap-4">
-                                    {/* Avatar */}
-                                    <div className="shrink-0">
+
+                    {/* Table Header */}
+                    <div className="grid grid-cols-[32px_1fr_100px_80px_80px_140px] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                        <div className="flex items-center justify-center">
+                            <input
+                                type="checkbox"
+                                checked={paginatedRequests.length > 0 && paginatedRequests.every(r => selectedRequests.has(r.id))}
+                                onChange={selectAllOnPage}
+                                className="w-3.5 h-3.5 rounded border-gray-300 text-gray-900 focus:ring-gray-500"
+                            />
+                        </div>
+                        <div>Seller</div>
+                        <div className="text-right">CA généré</div>
+                        <div className="text-right">Ventes</div>
+                        <div className="text-right">Clicks</div>
+                        <div className="text-center">Actions</div>
+                    </div>
+
+                    {/* Rows */}
+                    <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto">
+                        {paginatedRequests.map((request) => (
+                            <div key={request.id}>
+                                {/* Main Row */}
+                                <div className="grid grid-cols-[32px_1fr_100px_80px_80px_140px] gap-2 px-4 py-2.5 items-center hover:bg-gray-50 transition-colors">
+                                    {/* Checkbox */}
+                                    <div className="flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedRequests.has(request.id)}
+                                            onChange={() => toggleSelection(request.id)}
+                                            className="w-3.5 h-3.5 rounded border-gray-300 text-gray-900 focus:ring-gray-500"
+                                        />
+                                    </div>
+
+                                    {/* Seller Info */}
+                                    <div className="flex items-center gap-2.5 min-w-0">
                                         {request.seller_avatar ? (
                                             <img
                                                 src={request.seller_avatar}
-                                                alt={request.seller_name || 'Seller'}
-                                                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                                                alt=""
+                                                className="w-7 h-7 rounded-full object-cover shrink-0"
                                             />
                                         ) : (
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg shadow-sm">
+                                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-xs font-medium shrink-0">
                                                 {(request.seller_name || request.seller_email).charAt(0).toUpperCase()}
                                             </div>
                                         )}
+                                        <div className="min-w-0">
+                                            <button
+                                                onClick={() => setExpandedRequest(expandedRequest === request.id ? null : request.id)}
+                                                className="flex items-center gap-1 text-sm font-medium text-gray-900 hover:text-gray-700 truncate"
+                                            >
+                                                {request.seller_name || request.seller_email.split('@')[0]}
+                                                {(request.message || request.seller_bio) && (
+                                                    <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform ${expandedRequest === request.id ? 'rotate-180' : ''}`} />
+                                                )}
+                                            </button>
+                                            <p className="text-[11px] text-gray-400 truncate">{request.seller_email}</p>
+                                        </div>
                                     </div>
 
-                                    {/* Info */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h3 className="font-semibold text-gray-900">
-                                                {request.seller_name || request.seller_email}
-                                            </h3>
-                                            <span className="text-xs text-gray-400">
-                                                {formatDate(request.created_at)}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-gray-500 mb-3">
-                                            {request.seller_email}
-                                        </p>
-
-                                        {/* Stats */}
-                                        <div className="flex items-center gap-4 mb-3">
-                                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg border border-gray-100">
-                                                <DollarSign className="w-3.5 h-3.5 text-green-500" />
-                                                <span className="text-xs font-medium text-gray-700">
-                                                    €{(request.stats.total_revenue / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                                                </span>
-                                                <span className="text-xs text-gray-400">CA</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg border border-gray-100">
-                                                <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
-                                                <span className="text-xs font-medium text-gray-700">
-                                                    {request.stats.total_sales}
-                                                </span>
-                                                <span className="text-xs text-gray-400">ventes</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg border border-gray-100">
-                                                <MousePointer2 className="w-3.5 h-3.5 text-purple-500" />
-                                                <span className="text-xs font-medium text-gray-700">
-                                                    {formatNumber(request.stats.total_clicks)}
-                                                </span>
-                                                <span className="text-xs text-gray-400">clicks</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Message */}
-                                        {request.message && (
-                                            <div className="bg-white border border-gray-100 rounded-lg p-3 mb-3">
-                                                <p className="text-xs text-gray-400 mb-1">Message :</p>
-                                                <p className="text-sm text-gray-700 italic">
-                                                    &ldquo;{request.message}&rdquo;
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {/* Bio */}
-                                        {request.seller_bio && (
-                                            <p className="text-sm text-gray-500 line-clamp-2 mb-3">
-                                                {request.seller_bio}
-                                            </p>
-                                        )}
+                                    {/* Stats */}
+                                    <div className="text-right">
+                                        <span className="text-sm font-medium text-gray-900">
+                                            €{(request.stats.total_revenue / 100).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                        </span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-sm text-gray-600">{request.stats.total_sales}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-sm text-gray-600">{formatNumber(request.stats.total_clicks)}</span>
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="shrink-0 flex flex-col gap-2">
+                                    <div className="flex items-center justify-center gap-1">
                                         <button
                                             onClick={() => handleApprove(request.id)}
                                             disabled={processingRequest === request.id}
-                                            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                                            title="Accepter"
                                         >
                                             {processingRequest === request.id ? (
                                                 <Loader2 className="w-4 h-4 animate-spin" />
                                             ) : (
                                                 <CheckCircle className="w-4 h-4" />
                                             )}
-                                            Accepter
                                         </button>
                                         <button
                                             onClick={() => handleReject(request.id)}
                                             disabled={processingRequest === request.id}
-                                            className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                                            title="Refuser"
                                         >
                                             <XCircle className="w-4 h-4" />
-                                            Refuser
                                         </button>
-                                        <div className="flex gap-2 mt-1">
-                                            <Link
-                                                href={`/dashboard/sellers/${request.seller_id}`}
-                                                className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                                            >
-                                                <User className="w-3 h-3" />
-                                                Profil
-                                            </Link>
-                                            <Link
-                                                href={`/dashboard/messages?seller=${request.seller_id}`}
-                                                className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                                            >
-                                                <MessageSquare className="w-3 h-3" />
-                                                Contact
-                                            </Link>
-                                        </div>
+                                        <Link
+                                            href={`/dashboard/sellers/${request.seller_id}`}
+                                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                            title="Voir profil"
+                                        >
+                                            <User className="w-4 h-4" />
+                                        </Link>
+                                        <Link
+                                            href={`/dashboard/messages?seller=${request.seller_id}`}
+                                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                            title="Contacter"
+                                        >
+                                            <MessageSquare className="w-4 h-4" />
+                                        </Link>
                                     </div>
                                 </div>
+
+                                {/* Expanded Details */}
+                                {expandedRequest === request.id && (request.message || request.seller_bio) && (
+                                    <div className="px-4 pb-3 pl-14 space-y-2 bg-gray-50/50">
+                                        {request.message && (
+                                            <div className="text-xs">
+                                                <span className="text-gray-400">Message : </span>
+                                                <span className="text-gray-600 italic">&ldquo;{request.message}&rdquo;</span>
+                                            </div>
+                                        )}
+                                        {request.seller_bio && (
+                                            <div className="text-xs">
+                                                <span className="text-gray-400">Bio : </span>
+                                                <span className="text-gray-600">{request.seller_bio}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="px-4 py-2.5 border-t border-gray-100 flex items-center justify-between">
+                            <span className="text-xs text-gray-500">
+                                {((requestsPage - 1) * REQUESTS_PER_PAGE) + 1}-{Math.min(requestsPage * REQUESTS_PER_PAGE, filteredRequests.length)} sur {filteredRequests.length}
+                            </span>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setRequestsPage(p => Math.max(1, p - 1))}
+                                    disabled={requestsPage === 1}
+                                    className="p-1 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                </button>
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    let pageNum: number
+                                    if (totalPages <= 5) {
+                                        pageNum = i + 1
+                                    } else if (requestsPage <= 3) {
+                                        pageNum = i + 1
+                                    } else if (requestsPage >= totalPages - 2) {
+                                        pageNum = totalPages - 4 + i
+                                    } else {
+                                        pageNum = requestsPage - 2 + i
+                                    }
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => setRequestsPage(pageNum)}
+                                            className={`w-7 h-7 text-xs rounded ${
+                                                requestsPage === pageNum
+                                                    ? 'bg-gray-900 text-white'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                            }`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    )
+                                })}
+                                <button
+                                    onClick={() => setRequestsPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={requestsPage === totalPages}
+                                    className="p-1 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
