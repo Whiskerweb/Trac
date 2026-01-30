@@ -2,127 +2,90 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Search, Users, Info } from 'lucide-react'
+import { Loader2, Search, Users, Info, UserPlus, Calendar } from 'lucide-react'
+import { getWorkspaceCustomers, CustomerWithDetails } from '@/app/actions/customers'
 
-interface Customer {
-    id: string
-    name: string
-    email: string
-    avatar: string
-    status: 'active' | 'churned'
-    totalPurchases: number
-    lifetimeValue: number
-    firstSeen: Date
-    lastPurchase: Date
-    referrer: string | null
-}
+function Avatar({ name, avatar, size = 'md' }: { name: string | null; avatar: string | null; size?: 'sm' | 'md' }) {
+    const initials = name
+        ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+        : '?'
 
-// Mock data - Leads/Customers tracked via SDK
-const MOCK_CUSTOMERS: Customer[] = [
-    {
-        id: 'c1',
-        name: 'Marvin Ta',
-        email: 'marvin@email.com',
-        avatar: 'MT',
-        status: 'active',
-        totalPurchases: 8,
-        lifetimeValue: 16000,
-        firstSeen: new Date('2024-10-02'),
-        lastPurchase: new Date('2025-04-02'),
-        referrer: 'Sophie Anderson'
-    },
-    {
-        id: 'c2',
-        name: 'Sarah Chen',
-        email: 'sarah@company.com',
-        avatar: 'SC',
-        status: 'active',
-        totalPurchases: 5,
-        lifetimeValue: 10000,
-        firstSeen: new Date('2024-11-15'),
-        lastPurchase: new Date('2025-03-15'),
-        referrer: 'Luca Romano'
-    },
-    {
-        id: 'c3',
-        name: 'James Wilson',
-        email: 'james@startup.io',
-        avatar: 'JW',
-        status: 'active',
-        totalPurchases: 3,
-        lifetimeValue: 6000,
-        firstSeen: new Date('2024-12-01'),
-        lastPurchase: new Date('2025-02-28'),
-        referrer: null
-    },
-    {
-        id: 'c4',
-        name: 'Emma Rodriguez',
-        email: 'emma@design.co',
-        avatar: 'ER',
-        status: 'churned',
-        totalPurchases: 2,
-        lifetimeValue: 4000,
-        firstSeen: new Date('2024-09-20'),
-        lastPurchase: new Date('2024-12-15'),
-        referrer: null
-    },
-    {
-        id: 'c5',
-        name: 'Alex Kim',
-        email: 'alex@tech.dev',
-        avatar: 'AK',
-        status: 'active',
-        totalPurchases: 10,
-        lifetimeValue: 20000,
-        firstSeen: new Date('2024-08-10'),
-        lastPurchase: new Date('2025-04-01'),
-        referrer: 'Mia Thompson'
-    },
-]
+    const sizeClasses = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-9 h-9 text-xs'
 
-function Avatar({ initials }: { initials: string }) {
+    if (avatar) {
+        return (
+            <img
+                src={avatar}
+                alt={name || 'Customer'}
+                className={`${sizeClasses} rounded-full object-cover`}
+            />
+        )
+    }
+
     return (
-        <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
+        <div className={`${sizeClasses} rounded-full bg-gray-100 flex items-center justify-center font-medium text-gray-600`}>
             {initials}
         </div>
     )
 }
 
-function formatCurrency(cents: number): string {
-    return `$${(cents / 100).toLocaleString()}`
+function formatDate(date: Date): string {
+    return new Date(date).toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    })
+}
+
+function formatRelativeDate(date: Date): string {
+    const now = new Date()
+    const diff = now.getTime() - new Date(date).getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+    if (days === 0) return "Aujourd'hui"
+    if (days === 1) return 'Hier'
+    if (days < 7) return `Il y a ${days} jours`
+    if (days < 30) return `Il y a ${Math.floor(days / 7)} semaines`
+    return formatDate(date)
 }
 
 export default function CustomersPage() {
     const router = useRouter()
     const [loading, setLoading] = useState(true)
-    const [customers, setCustomers] = useState<Customer[]>([])
+    const [customers, setCustomers] = useState<CustomerWithDetails[]>([])
+    const [stats, setStats] = useState({ total: 0, withReferrer: 0, totalLeads: 0 })
     const [searchQuery, setSearchQuery] = useState('')
-    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'churned'>('all')
+    const [filterReferrer, setFilterReferrer] = useState<'all' | 'with' | 'without'>('all')
 
     useEffect(() => {
-        setTimeout(() => {
-            setCustomers(MOCK_CUSTOMERS)
+        async function loadCustomers() {
+            const result = await getWorkspaceCustomers()
+            if (result.success) {
+                setCustomers(result.customers)
+                setStats(result.stats)
+            }
             setLoading(false)
-        }, 300)
+        }
+        loadCustomers()
     }, [])
 
     const filteredCustomers = useMemo(() => {
         return customers.filter(c => {
+            // Search filter
             const matchesSearch = searchQuery === '' ||
-                c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                c.email.toLowerCase().includes(searchQuery.toLowerCase())
-            const matchesStatus = statusFilter === 'all' || c.status === statusFilter
-            return matchesSearch && matchesStatus
-        })
-    }, [customers, searchQuery, statusFilter])
+                (c.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (c.email?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                c.externalId.toLowerCase().includes(searchQuery.toLowerCase())
 
-    const stats = useMemo(() => ({
-        total: customers.length,
-        active: customers.filter(c => c.status === 'active').length,
-        totalPurchases: customers.reduce((sum, c) => sum + c.totalPurchases, 0),
-        totalRevenue: customers.reduce((sum, c) => sum + c.lifetimeValue, 0)
-    }), [customers])
+            // Referrer filter
+            const matchesReferrer =
+                filterReferrer === 'all' ||
+                (filterReferrer === 'with' && c.affiliateId) ||
+                (filterReferrer === 'without' && !c.affiliateId)
+
+            return matchesSearch && matchesReferrer
+        })
+    }, [customers, searchQuery, filterReferrer])
 
     if (loading) {
         return (
@@ -138,7 +101,12 @@ export default function CustomersPage() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <h1 className="text-xl font-semibold text-gray-900">Customers</h1>
-                    <Info className="w-4 h-4 text-gray-400" />
+                    <div className="group relative">
+                        <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                        <div className="absolute left-0 top-6 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-2 w-64 z-10">
+                            Les customers sont les leads trackés via vos liens. Chaque inscription via un lien affilié crée un customer.
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -150,18 +118,20 @@ export default function CustomersPage() {
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Active</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.active}</p>
+                    <p className="text-sm text-gray-500">Avec referrer</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.withReferrer}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Total purchases</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.totalPurchases}</p>
+                    <p className="text-sm text-gray-500">Total leads</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.totalLeads}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Revenue</p>
-                    <p className="text-2xl font-semibold text-gray-900">{formatCurrency(stats.totalRevenue)}</p>
+                    <p className="text-sm text-gray-500">Taux attribution</p>
+                    <p className="text-2xl font-semibold text-gray-900">
+                        {stats.total > 0 ? Math.round((stats.withReferrer / stats.total) * 100) : 0}%
+                    </p>
                 </div>
             </div>
 
@@ -171,23 +141,24 @@ export default function CustomersPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Search customers..."
+                        placeholder="Rechercher par nom, email..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                     />
                 </div>
                 <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                    {(['all', 'active', 'churned'] as const).map((status) => (
+                    {(['all', 'with', 'without'] as const).map((filter) => (
                         <button
-                            key={status}
-                            onClick={() => setStatusFilter(status)}
-                            className={`px-3 py-2 text-sm font-medium capitalize transition-colors ${statusFilter === status
+                            key={filter}
+                            onClick={() => setFilterReferrer(filter)}
+                            className={`px-3 py-2 text-sm font-medium transition-colors ${
+                                filterReferrer === filter
                                     ? 'bg-gray-900 text-white'
                                     : 'bg-white text-gray-600 hover:bg-gray-50'
-                                }`}
+                            }`}
                         >
-                            {status}
+                            {filter === 'all' ? 'Tous' : filter === 'with' ? 'Avec referrer' : 'Sans referrer'}
                         </button>
                     ))}
                 </div>
@@ -195,17 +166,25 @@ export default function CustomersPage() {
 
             {/* Table */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                <div className="grid grid-cols-4 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="col-span-2">Customer</div>
-                    <div>Purchases</div>
-                    <div className="text-right">LTV</div>
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="col-span-4">Customer</div>
+                    <div className="col-span-3">Referrer</div>
+                    <div className="col-span-2">Leads</div>
+                    <div className="col-span-3 text-right">Inscrit le</div>
                 </div>
 
                 {filteredCustomers.length === 0 ? (
                     <div className="px-6 py-12 text-center">
                         <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-900 font-medium">No customers yet</p>
-                        <p className="text-gray-500 text-sm mt-1">Customers will appear when leads are tracked via your links</p>
+                        <p className="text-gray-900 font-medium">
+                            {customers.length === 0 ? 'Aucun customer' : 'Aucun résultat'}
+                        </p>
+                        <p className="text-gray-500 text-sm mt-1">
+                            {customers.length === 0
+                                ? 'Les customers apparaîtront quand des leads seront trackés via vos liens'
+                                : 'Essayez de modifier vos critères de recherche'
+                            }
+                        </p>
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-50">
@@ -213,34 +192,74 @@ export default function CustomersPage() {
                             <div
                                 key={customer.id}
                                 onClick={() => router.push(`/dashboard/customers/${customer.id}`)}
-                                className="grid grid-cols-4 gap-4 px-6 py-4 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
+                                className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
                             >
-                                <div className="col-span-2 flex items-center gap-3">
-                                    <Avatar initials={customer.avatar} />
-                                    <div>
+                                {/* Customer info */}
+                                <div className="col-span-4 flex items-center gap-3">
+                                    <Avatar name={customer.name} avatar={customer.avatar} />
+                                    <div className="min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <p className="text-sm font-medium text-gray-900">{customer.name}</p>
-                                            <span className={`w-1.5 h-1.5 rounded-full ${customer.status === 'active' ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                            <p className="text-sm font-medium text-gray-900 truncate">
+                                                {customer.name || customer.email || customer.externalId}
+                                            </p>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-xs text-gray-500">{customer.email}</p>
-                                            {customer.referrer && (
-                                                <span className="text-xs text-gray-400">• via {customer.referrer}</span>
-                                            )}
-                                        </div>
+                                        {customer.email && customer.name && (
+                                            <p className="text-xs text-gray-500 truncate">{customer.email}</p>
+                                        )}
+                                        {!customer.name && !customer.email && (
+                                            <p className="text-xs text-gray-400">ID: {customer.externalId}</p>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="text-sm text-gray-600">
-                                    {customer.totalPurchases}
+
+                                {/* Referrer */}
+                                <div className="col-span-3">
+                                    {customer.referrerName ? (
+                                        <div className="flex items-center gap-2">
+                                            <Avatar name={customer.referrerName} avatar={customer.referrerAvatar} size="sm" />
+                                            <span className="text-sm text-gray-700 truncate">{customer.referrerName}</span>
+                                        </div>
+                                    ) : (
+                                        <span className="text-sm text-gray-400">—</span>
+                                    )}
                                 </div>
-                                <div className="text-right text-sm font-medium text-green-600">
-                                    {formatCurrency(customer.lifetimeValue)}
+
+                                {/* Lead count */}
+                                <div className="col-span-2">
+                                    {customer.leadCount > 0 ? (
+                                        <div className="flex items-center gap-1.5">
+                                            <UserPlus className="w-4 h-4 text-blue-500" />
+                                            <span className="text-sm font-medium text-gray-900">{customer.leadCount}</span>
+                                            {customer.leadEvents[0] && (
+                                                <span className="text-xs text-gray-500 truncate">
+                                                    ({customer.leadEvents[0].eventName})
+                                                </span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <span className="text-sm text-gray-400">—</span>
+                                    )}
+                                </div>
+
+                                {/* Created at */}
+                                <div className="col-span-3 text-right">
+                                    <div className="flex items-center justify-end gap-1.5 text-sm text-gray-500">
+                                        <Calendar className="w-3.5 h-3.5" />
+                                        <span>{formatRelativeDate(customer.createdAt)}</span>
+                                    </div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
+
+            {/* Footer info */}
+            {filteredCustomers.length > 0 && (
+                <p className="text-xs text-gray-500 text-center">
+                    {filteredCustomers.length} customer{filteredCustomers.length > 1 ? 's' : ''} affiché{filteredCustomers.length > 1 ? 's' : ''}
+                </p>
+            )}
         </div>
     )
 }

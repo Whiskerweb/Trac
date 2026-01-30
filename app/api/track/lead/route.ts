@@ -291,6 +291,82 @@ export async function POST(request: NextRequest) {
             })
         }
 
+        // =============================================
+        // CREATE COMMISSION FOR LEAD MISSIONS
+        // =============================================
+        // If this lead is attributed to a link that belongs to a LEAD mission,
+        // we create a commission for the seller
+        if (leadEvent && customer.link_id && customer.affiliate_id) {
+            try {
+                // 1. Get mission via link → enrollment chain
+                const shortLink = await prisma.shortLink.findUnique({
+                    where: { id: customer.link_id },
+                    include: {
+                        MissionEnrollment: {
+                            include: {
+                                Mission: {
+                                    select: {
+                                        id: true,
+                                        workspace_id: true,
+                                        reward_type: true,
+                                        reward_amount: true,
+                                        reward_structure: true,
+                                        status: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                })
+
+                const mission = shortLink?.MissionEnrollment?.Mission
+
+                // 2. Only create commission if LEAD mission and ACTIVE
+                if (mission?.reward_type === 'LEAD' && mission.status === 'ACTIVE') {
+                    // 3. Get seller from affiliate_id (user_id)
+                    const seller = await prisma.seller.findFirst({
+                        where: { user_id: customer.affiliate_id }
+                    })
+
+                    if (seller) {
+                        // 4. Build reward string (e.g., "5€")
+                        const rewardString = `${mission.reward_amount}€`
+
+                        // 5. Create commission
+                        const { createCommission } = await import('@/lib/commission/engine')
+
+                        const commissionResult = await createCommission({
+                            partnerId: seller.id,
+                            programId: mission.workspace_id,
+                            saleId: leadEvent.id,  // Use LeadEvent ID for deduplication
+                            linkId: customer.link_id,
+                            grossAmount: 0,         // LEAD = no revenue
+                            htAmount: 0,            // LEAD = no HT (triggers LEAD logic in engine)
+                            netAmount: 0,
+                            stripeFee: 0,
+                            taxAmount: 0,
+                            missionReward: rewardString,
+                            currency: 'EUR',
+                            holdDays: 30            // Same as sales
+                        })
+
+                        if (commissionResult.success) {
+                            console.log(`[track/lead] 💰 Commission created for LEAD mission: ${mission.id}, seller: ${seller.id}, amount: ${commissionResult.commission?.commission_amount}`)
+                        } else {
+                            console.error(`[track/lead] ⚠️ Failed to create commission: ${commissionResult.error}`)
+                        }
+                    } else {
+                        console.log(`[track/lead] ℹ️ No seller found for affiliate_id: ${customer.affiliate_id}`)
+                    }
+                } else if (mission) {
+                    console.log(`[track/lead] ℹ️ Mission ${mission.id} is not a LEAD type (${mission.reward_type}) or not ACTIVE (${mission.status})`)
+                }
+            } catch (commissionError) {
+                // Log but don't fail the request - lead is already tracked
+                console.error('[track/lead] ⚠️ Error creating commission:', commissionError)
+            }
+        }
+
         return NextResponse.json({
             success: true,
             customer: {

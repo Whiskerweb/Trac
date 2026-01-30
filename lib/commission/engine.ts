@@ -110,27 +110,51 @@ export async function createCommission(params: {
     } = params
 
     try {
-        // ✅ FIXED: Calculate BOTH commissions on HT (before Stripe fees)
-        // Seller commission = reward% of HT
-        // Platform fee = 15% of HT
-        // Stripe fees are paid by the startup from their remaining share
-        const { amount: partnerCommission, type } = calculateCommission({ netAmount: htAmount, missionReward })
-        const traaactionFee = Math.floor(htAmount * PLATFORM_FEE_RATE)
+        // Calculate commission based on reward string
+        const { amount: rawCommission, type } = calculateCommission({ netAmount: htAmount, missionReward })
 
-        // Startup receives: Gross - Tax - Stripe fees = netAmount
-        // Startup pays: partnerCommission (on HT) + traaactionFee (on HT)
-        // Startup keeps: netAmount - partnerCommission - traaactionFee
+        // =============================================
+        // LEAD vs SALE: Different platform fee logic
+        // =============================================
+        // LEAD: htAmount=0, commission is fixed (e.g., 5€)
+        //       → Platform fee = 15% of commission
+        //       → Seller receives = commission - platform fee
+        // SALE: htAmount>0, commission is % of HT
+        //       → Platform fee = 15% of HT
+        //       → Seller receives = full commission
+        // =============================================
 
-        const startupShare = netAmount - partnerCommission - traaactionFee
+        const isLeadCommission = htAmount === 0 && rawCommission > 0
 
-        console.log(`[Commission] 💰 Breakdown:`)
-        console.log(`  Gross (TTC): ${grossAmount / 100}€`)
-        console.log(`  Tax (TVA): -${taxAmount / 100}€`)
-        console.log(`  HT (base): ${htAmount / 100}€`)
-        console.log(`  Seller ${missionReward}: -${partnerCommission / 100}€`)
-        console.log(`  Platform 15%: -${traaactionFee / 100}€`)
-        console.log(`  Stripe fees: -${stripeFee / 100}€`)
-        console.log(`  → Startup keeps: ${startupShare / 100}€`)
+        let traaactionFee: number
+        let sellerReceives: number
+
+        if (isLeadCommission) {
+            // LEAD: Platform takes 15% of the commission amount
+            traaactionFee = Math.floor(rawCommission * PLATFORM_FEE_RATE)
+            sellerReceives = rawCommission - traaactionFee
+
+            console.log(`[Commission] 💰 LEAD Breakdown:`)
+            console.log(`  Lead reward: ${rawCommission / 100}€`)
+            console.log(`  Platform 15%: -${traaactionFee / 100}€`)
+            console.log(`  → Seller receives: ${sellerReceives / 100}€`)
+            console.log(`  → Startup pays: ${rawCommission / 100}€ (commission to seller + platform fee)`)
+        } else {
+            // SALE: Platform takes 15% of HT (revenue)
+            traaactionFee = Math.floor(htAmount * PLATFORM_FEE_RATE)
+            sellerReceives = rawCommission  // Seller gets full commission
+
+            const startupShare = netAmount - rawCommission - traaactionFee
+
+            console.log(`[Commission] 💰 SALE Breakdown:`)
+            console.log(`  Gross (TTC): ${grossAmount / 100}€`)
+            console.log(`  Tax (TVA): -${taxAmount / 100}€`)
+            console.log(`  HT (base): ${htAmount / 100}€`)
+            console.log(`  Seller ${missionReward}: -${rawCommission / 100}€`)
+            console.log(`  Platform 15%: -${traaactionFee / 100}€`)
+            console.log(`  Stripe fees: -${stripeFee / 100}€`)
+            console.log(`  → Startup keeps: ${startupShare / 100}€`)
+        }
 
         // Idempotent upsert by sale_id
         const result = await prisma.commission.upsert({
@@ -144,9 +168,9 @@ export async function createCommission(params: {
                 net_amount: netAmount,
                 stripe_fee: stripeFee,
                 tax_amount: taxAmount,
-                // Partner gets FULL commission
-                commission_amount: partnerCommission,
-                // Traaaction fee = 15% of HT (separate from commission)
+                // Seller receives: full commission for SALE, commission - 15% for LEAD
+                commission_amount: sellerReceives,
+                // Platform fee: 15% of HT for SALE, 15% of commission for LEAD
                 platform_fee: traaactionFee,
                 commission_rate: missionReward,
                 commission_type: type,
