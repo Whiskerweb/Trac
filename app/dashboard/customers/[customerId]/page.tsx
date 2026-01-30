@@ -255,7 +255,7 @@ export default function CustomerProfilePage() {
                             <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-gray-400" />
                                 <span className="text-sm text-gray-600">
-                                    {[customer.city, customer.region, customer.country].filter(Boolean).join(', ')}
+                                    {[customer.city, customer.country].filter(Boolean).join(', ')}
                                 </span>
                             </div>
                         )}

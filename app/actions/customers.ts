@@ -164,7 +164,6 @@ export interface CustomerDetailWithActivity extends CustomerWithDetails {
     browser: string | null
     os: string | null
     city: string | null
-    region: string | null
     // Activity timeline
     activity: CustomerActivity[]
     // Sales
@@ -193,11 +192,9 @@ async function getCustomerActivityFromTinybird(
         timestamp: string
         country: string
         city: string
-        region: string
         device: string
-        browser: string
-        os: string
-        referer: string
+        user_agent: string
+        referrer: string
         link_id: string
     }>
     sales: Array<{
@@ -221,7 +218,7 @@ async function getCustomerActivityFromTinybird(
         let clicks: Array<any> = []
         if (clickId) {
             const clicksSQL = `
-                SELECT click_id, timestamp, country, city, region, device, browser, os, referer, link_id
+                SELECT click_id, timestamp, country, city, device, user_agent, referrer, link_id
                 FROM clicks
                 WHERE workspace_id = '${workspaceId}'
                   AND click_id = '${clickId}'
@@ -420,16 +417,43 @@ export async function getCustomerWithActivity(customerId: string): Promise<{
         // Extract device info from first click
         const firstClick = clicks[0]
         const device = firstClick?.device || null
-        const browser = firstClick?.browser || null
-        const os = firstClick?.os || null
         const city = firstClick?.city || null
-        const region = firstClick?.region || null
+        const userAgent = firstClick?.user_agent || ''
+
+        // Parse browser and OS from user agent
+        let browser: string | null = null
+        let os: string | null = null
+        if (userAgent) {
+            // Simple browser detection
+            if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) browser = 'Chrome'
+            else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) browser = 'Safari'
+            else if (userAgent.includes('Firefox')) browser = 'Firefox'
+            else if (userAgent.includes('Edg')) browser = 'Edge'
+            else browser = 'Other'
+
+            // Simple OS detection
+            if (userAgent.includes('Windows')) os = 'Windows'
+            else if (userAgent.includes('Mac OS')) os = 'macOS'
+            else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) os = 'iOS'
+            else if (userAgent.includes('Android')) os = 'Android'
+            else if (userAgent.includes('Linux')) os = 'Linux'
+            else os = 'Other'
+        }
 
         // Build activity timeline
         const activity: CustomerActivity[] = []
 
         // Add clicks
         for (const click of clicks) {
+            // Parse browser from user_agent for this click
+            let clickBrowser = 'Unknown'
+            if (click.user_agent) {
+                if (click.user_agent.includes('Chrome') && !click.user_agent.includes('Edg')) clickBrowser = 'Chrome'
+                else if (click.user_agent.includes('Safari') && !click.user_agent.includes('Chrome')) clickBrowser = 'Safari'
+                else if (click.user_agent.includes('Firefox')) clickBrowser = 'Firefox'
+                else if (click.user_agent.includes('Edg')) clickBrowser = 'Edge'
+            }
+
             activity.push({
                 id: `click-${click.click_id}`,
                 type: 'click',
@@ -437,9 +461,9 @@ export async function getCustomerWithActivity(customerId: string): Promise<{
                 timestamp: new Date(click.timestamp),
                 metadata: {
                     device: click.device,
-                    browser: click.browser,
+                    browser: clickBrowser,
                     country: click.country,
-                    referer: click.referer || 'direct'
+                    referer: click.referrer || 'direct'
                 }
             })
         }
@@ -503,7 +527,6 @@ export async function getCustomerWithActivity(customerId: string): Promise<{
             browser,
             os,
             city,
-            region,
             // Activity
             activity,
             // Sales
