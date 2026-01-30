@@ -348,7 +348,7 @@ export async function POST(request: NextRequest) {
                             taxAmount: 0,
                             missionReward: rewardString,
                             currency: 'EUR',
-                            holdDays: 30            // Same as sales
+                            holdDays: 3             // LEAD: 3 days only (no refund risk)
                         })
 
                         if (commissionResult.success) {
