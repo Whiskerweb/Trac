@@ -530,10 +530,28 @@ export async function POST(
                             if (!saleMission) {
                                 console.log(`[Webhook] ℹ️ No SALE commission - mission is LEAD type or not found`)
                             } else {
-                                // ✅ STEP 2: Check 45-day attribution limit
-                                // Sales are only attributed if customer was created within 45 days
+                                // ✅ STEP 2: Check attribution limit based on mission configuration
+                                // - ONE_OFF missions: 45 days fixed limit
+                                // - RECURRING missions with recurringDuration = null: Lifetime (no limit)
+                                // - RECURRING missions with recurringDuration = X: X months * 30 days
                                 let attributionValid = true
-                                const ATTRIBUTION_LIMIT_DAYS = 45
+
+                                // Calculate attribution limit based on mission config
+                                let attributionLimitDays = 45  // Default for ONE_OFF
+
+                                if (saleMission.commissionStructure === 'RECURRING') {
+                                    if (saleMission.recurringDuration === null) {
+                                        // Lifetime = no limit
+                                        attributionLimitDays = Infinity
+                                        console.log(`[Webhook] 📅 RECURRING mission with Lifetime duration - no attribution limit`)
+                                    } else {
+                                        // Convert months to days (approx 30 days per month)
+                                        attributionLimitDays = saleMission.recurringDuration * 30
+                                        console.log(`[Webhook] 📅 RECURRING mission with ${saleMission.recurringDuration} months = ${attributionLimitDays} days limit`)
+                                    }
+                                } else {
+                                    console.log(`[Webhook] 📅 ONE_OFF mission - 45 days fixed limit`)
+                                }
 
                                 // Lookup customer to check attribution date
                                 const customer = await prisma.customer.findFirst({
@@ -552,11 +570,11 @@ export async function POST(
                                         (Date.now() - customer.created_at.getTime()) / (1000 * 60 * 60 * 24)
                                     )
 
-                                    if (daysSinceAttribution > ATTRIBUTION_LIMIT_DAYS) {
+                                    if (daysSinceAttribution > attributionLimitDays) {
                                         attributionValid = false
-                                        console.log(`[Webhook] ⏰ Attribution expired: ${daysSinceAttribution} days > ${ATTRIBUTION_LIMIT_DAYS} days limit`)
+                                        console.log(`[Webhook] ⏰ Attribution expired: ${daysSinceAttribution} days > ${attributionLimitDays} days limit`)
                                     } else {
-                                        console.log(`[Webhook] ✅ Attribution valid: ${daysSinceAttribution} days < ${ATTRIBUTION_LIMIT_DAYS} days limit`)
+                                        console.log(`[Webhook] ✅ Attribution valid: ${daysSinceAttribution} days < ${attributionLimitDays} days limit`)
                                     }
                                 }
 
@@ -774,20 +792,39 @@ export async function POST(
                                 if (!saleMission) {
                                     console.log(`[Webhook] ℹ️ No recurring commission - mission is LEAD type or not found`)
                                 } else {
-                                    // ✅ STEP 2: Check 45-day attribution limit
-                                    const ATTRIBUTION_LIMIT_DAYS = 45
+                                    // ✅ STEP 2: Check attribution limit based on mission configuration
+                                    // - ONE_OFF missions: 45 days fixed limit
+                                    // - RECURRING missions with recurringDuration = null: Lifetime (no limit)
+                                    // - RECURRING missions with recurringDuration = X: X months * 30 days
                                     let attributionValid = true
+
+                                    // Calculate attribution limit based on mission config
+                                    let attributionLimitDays = 45  // Default for ONE_OFF
+
+                                    if (saleMission.commissionStructure === 'RECURRING') {
+                                        if (saleMission.recurringDuration === null) {
+                                            // Lifetime = no limit
+                                            attributionLimitDays = Infinity
+                                            console.log(`[Webhook] 📅 RECURRING mission (invoice) with Lifetime duration - no attribution limit`)
+                                        } else {
+                                            // Convert months to days (approx 30 days per month)
+                                            attributionLimitDays = saleMission.recurringDuration * 30
+                                            console.log(`[Webhook] 📅 RECURRING mission (invoice) with ${saleMission.recurringDuration} months = ${attributionLimitDays} days limit`)
+                                        }
+                                    } else {
+                                        console.log(`[Webhook] 📅 ONE_OFF mission (invoice) - 45 days fixed limit`)
+                                    }
 
                                     if (customer.created_at && customer.affiliate_id) {
                                         const daysSinceAttribution = Math.floor(
                                             (Date.now() - customer.created_at.getTime()) / (1000 * 60 * 60 * 24)
                                         )
 
-                                        if (daysSinceAttribution > ATTRIBUTION_LIMIT_DAYS) {
+                                        if (daysSinceAttribution > attributionLimitDays) {
                                             attributionValid = false
-                                            console.log(`[Webhook] ⏰ Recurring attribution expired: ${daysSinceAttribution} days > ${ATTRIBUTION_LIMIT_DAYS} days limit`)
+                                            console.log(`[Webhook] ⏰ Recurring attribution expired: ${daysSinceAttribution} days > ${attributionLimitDays} days limit`)
                                         } else {
-                                            console.log(`[Webhook] ✅ Recurring attribution valid: ${daysSinceAttribution} days < ${ATTRIBUTION_LIMIT_DAYS} days limit`)
+                                            console.log(`[Webhook] ✅ Recurring attribution valid: ${daysSinceAttribution} days < ${attributionLimitDays} days limit`)
                                         }
                                     }
 

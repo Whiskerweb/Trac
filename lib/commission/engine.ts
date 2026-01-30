@@ -558,14 +558,20 @@ export async function getMissionReward(params: {
  * Get mission details for SALE commission - returns null if mission is LEAD type
  * This ensures we only create commissions on sales for SALE-type missions
  *
- * @returns Mission details with reward string, or null if:
+ * @returns Mission details with reward string and recurring config, or null if:
  *   - Mission not found
  *   - Mission is LEAD type (seller only gets paid for leads, not sales)
  */
 export async function getMissionForSaleCommission(params: {
     linkId?: string | null
     programId: string
-}): Promise<{ reward: string; missionId: string; missionName: string } | null> {
+}): Promise<{
+    reward: string
+    missionId: string
+    missionName: string
+    recurringDuration: number | null  // Duration in months, null = Lifetime
+    commissionStructure: 'ONE_OFF' | 'RECURRING'
+} | null> {
     const { linkId, programId } = params
 
     try {
@@ -612,12 +618,18 @@ export async function getMissionForSaleCommission(params: {
             ? `${mission.reward_amount}%`
             : `${mission.reward_amount}€`
 
-        console.log(`[Commission] ✅ SALE mission found: ${mission.id} (${mission.title}), reward=${reward}`)
+        // Get recurring configuration
+        // recurring_duration: number of months (3, 6, 12, 24, 36, 48) or null/0 = Lifetime
+        const recurringDuration = mission.recurring_duration === 0 ? null : mission.recurring_duration
+
+        console.log(`[Commission] ✅ SALE mission found: ${mission.id} (${mission.title}), reward=${reward}, structure=${mission.commission_structure}, recurringDuration=${recurringDuration ?? 'Lifetime'}`)
 
         return {
             reward,
             missionId: mission.id,
-            missionName: mission.title
+            missionName: mission.title,
+            recurringDuration,
+            commissionStructure: mission.commission_structure
         }
 
     } catch (error) {
