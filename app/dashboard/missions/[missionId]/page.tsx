@@ -7,7 +7,7 @@ import {
     Copy, Check, Loader2, ExternalLink, Calendar, TrendingUp, Info,
     MoreHorizontal, Edit, Archive, Trash2, Globe, Lock, Sparkles, Link as LinkIcon,
     Clock, CheckCircle, XCircle, MessageSquare, User, BarChart3,
-    ChevronRight, ChevronDown, Search
+    ChevronRight, ChevronDown, Search, ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react'
 import Link from 'next/link'
 import { getMissionDetails } from '@/app/actions/missions'
@@ -39,14 +39,27 @@ interface MissionDetails {
         user_id: string
         status: string
         created_at: Date
+        seller: {
+            name: string | null
+            email: string
+            avatar: string | null
+        } | null
         link: {
             id: string
             slug: string
             clicks: number
             full_url: string
         } | null
+        stats: {
+            revenue: number
+            sales: number
+            clicks: number
+        }
     }[]
 }
+
+type SortField = 'revenue' | 'sales' | 'clicks' | 'date'
+type SortOrder = 'asc' | 'desc'
 
 // =============================================
 // STATUS BADGE
@@ -146,6 +159,8 @@ export default function MissionDetailPage({
     const [requestsSearch, setRequestsSearch] = useState('')
     const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
     const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set())
+    const [sortField, setSortField] = useState<SortField>('revenue')
+    const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
     useEffect(() => {
         async function loadMission() {
@@ -254,6 +269,49 @@ export default function MissionDetailPage({
         const start = (requestsPage - 1) * REQUESTS_PER_PAGE
         return filteredRequests.slice(start, start + REQUESTS_PER_PAGE)
     }, [filteredRequests, requestsPage])
+
+    // Sorted enrollments for participants list
+    const sortedEnrollments = useMemo(() => {
+        if (!mission) return []
+        const enrollments = [...mission.enrollments]
+
+        enrollments.sort((a, b) => {
+            let aVal: number, bVal: number
+            switch (sortField) {
+                case 'revenue':
+                    aVal = a.stats.revenue
+                    bVal = b.stats.revenue
+                    break
+                case 'sales':
+                    aVal = a.stats.sales
+                    bVal = b.stats.sales
+                    break
+                case 'clicks':
+                    aVal = a.stats.clicks
+                    bVal = b.stats.clicks
+                    break
+                case 'date':
+                    aVal = new Date(a.created_at).getTime()
+                    bVal = new Date(b.created_at).getTime()
+                    break
+                default:
+                    aVal = 0
+                    bVal = 0
+            }
+            return sortOrder === 'desc' ? bVal - aVal : aVal - bVal
+        })
+
+        return enrollments
+    }, [mission, sortField, sortOrder])
+
+    const toggleSort = (field: SortField) => {
+        if (sortField === field) {
+            setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')
+        } else {
+            setSortField(field)
+            setSortOrder('desc')
+        }
+    }
 
     const handleCopyLink = (url: string) => {
         navigator.clipboard.writeText(url)
@@ -650,56 +708,127 @@ export default function MissionDetailPage({
                                 <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                                 <p className="text-gray-900 font-medium">Aucun participant</p>
                                 <p className="text-gray-500 text-sm mt-1">
-                                    Partagez votre mission pour attirer des partners
+                                    Partagez votre mission pour attirer des sellers
                                 </p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-gray-50">
-                                {mission.enrollments.map((enrollment, index) => (
-                                    <div
-                                        key={enrollment.id}
-                                        className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+                            <>
+                                {/* Table Header with Sortable Columns */}
+                                <div className="grid grid-cols-[1fr,100px,80px,80px,100px] gap-3 px-5 py-3 bg-gray-50/80 border-b border-gray-100 text-xs font-medium text-gray-500">
+                                    <div>Seller</div>
+                                    <button
+                                        onClick={() => toggleSort('revenue')}
+                                        className="flex items-center justify-end gap-1 hover:text-gray-900 transition-colors"
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
-                                                #{index + 1}
+                                        Revenue
+                                        {sortField === 'revenue' ? (
+                                            sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
+                                        ) : (
+                                            <ArrowUpDown className="w-3 h-3 opacity-40" />
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => toggleSort('sales')}
+                                        className="flex items-center justify-end gap-1 hover:text-gray-900 transition-colors"
+                                    >
+                                        Ventes
+                                        {sortField === 'sales' ? (
+                                            sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
+                                        ) : (
+                                            <ArrowUpDown className="w-3 h-3 opacity-40" />
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => toggleSort('clicks')}
+                                        className="flex items-center justify-end gap-1 hover:text-gray-900 transition-colors"
+                                    >
+                                        Clicks
+                                        {sortField === 'clicks' ? (
+                                            sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
+                                        ) : (
+                                            <ArrowUpDown className="w-3 h-3 opacity-40" />
+                                        )}
+                                    </button>
+                                    <div className="text-right">Status</div>
+                                </div>
+
+                                {/* Table Rows */}
+                                <div className="divide-y divide-gray-50">
+                                    {sortedEnrollments.map((enrollment, index) => (
+                                        <div
+                                            key={enrollment.id}
+                                            className="grid grid-cols-[1fr,100px,80px,80px,100px] gap-3 items-center px-5 py-3 hover:bg-gray-50/50 transition-colors"
+                                        >
+                                            {/* Seller Profile */}
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="relative shrink-0">
+                                                    {enrollment.seller?.avatar ? (
+                                                        <img
+                                                            src={enrollment.seller.avatar}
+                                                            alt=""
+                                                            className="w-9 h-9 rounded-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-sm font-medium">
+                                                            {(enrollment.seller?.name || enrollment.seller?.email || '?').charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-white flex items-center justify-center text-[10px] font-semibold text-gray-500 border border-gray-200">
+                                                        {index + 1}
+                                                    </div>
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                                        {enrollment.seller?.name || enrollment.seller?.email?.split('@')[0] || 'Unknown'}
+                                                    </p>
+                                                    <p className="text-[11px] text-gray-400 truncate">
+                                                        {enrollment.seller?.email || `ID: ${enrollment.user_id.slice(0, 8)}...`}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-900">
-                                                    Partner {enrollment.user_id.slice(0, 8)}...
-                                                </p>
-                                                <p className="text-xs text-gray-500">
-                                                    Inscrit le {formatDate(enrollment.created_at)}
-                                                </p>
+
+                                            {/* Revenue */}
+                                            <div className="text-right">
+                                                <span className={`text-sm font-medium ${enrollment.stats.revenue > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                                    €{(enrollment.stats.revenue / 100).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                </span>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            {enrollment.link && (
-                                                <div className="flex items-center gap-2">
-                                                    <code className="text-xs text-gray-500 font-mono">
-                                                        /s/{enrollment.link.slug}
-                                                    </code>
+
+                                            {/* Sales */}
+                                            <div className="text-right">
+                                                <span className={`text-sm ${enrollment.stats.sales > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                                                    {enrollment.stats.sales}
+                                                </span>
+                                            </div>
+
+                                            {/* Clicks */}
+                                            <div className="text-right">
+                                                <span className={`text-sm ${enrollment.stats.clicks > 0 ? 'text-gray-600' : 'text-gray-400'}`}>
+                                                    {formatNumber(enrollment.stats.clicks)}
+                                                </span>
+                                            </div>
+
+                                            {/* Status & Actions */}
+                                            <div className="flex items-center justify-end gap-2">
+                                                <ParticipantStatusBadge status={enrollment.status} />
+                                                {enrollment.link && (
                                                     <button
                                                         onClick={() => handleCopyLink(enrollment.link!.full_url)}
-                                                        className="p-1 hover:bg-gray-100 rounded"
+                                                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                                        title="Copier le lien"
                                                     >
                                                         {copied ? (
-                                                            <Check className="w-3 h-3 text-green-500" />
+                                                            <Check className="w-3.5 h-3.5 text-green-500" />
                                                         ) : (
-                                                            <Copy className="w-3 h-3 text-gray-400" />
+                                                            <Copy className="w-3.5 h-3.5" />
                                                         )}
                                                     </button>
-                                                </div>
-                                            )}
-                                            <div className="flex items-center gap-1 text-sm text-gray-600">
-                                                <MousePointer2 className="w-4 h-4 text-gray-400" />
-                                                {enrollment.link?.clicks || 0}
+                                                )}
                                             </div>
-                                            <ParticipantStatusBadge status={enrollment.status} />
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>

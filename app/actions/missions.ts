@@ -591,6 +591,29 @@ export async function deleteMission(missionId: string): Promise<{
 /**
  * Get mission details with all enrollments (for mission owner)
  */
+export interface EnrollmentWithStats {
+    id: string
+    user_id: string
+    status: string
+    created_at: Date
+    seller: {
+        name: string | null
+        email: string
+        avatar: string | null
+    } | null
+    link: {
+        id: string
+        slug: string
+        clicks: number
+        full_url: string
+    } | null
+    stats: {
+        revenue: number      // in cents
+        sales: number
+        clicks: number
+    }
+}
+
 export async function getMissionDetails(missionId: string): Promise<{
     success: boolean
     mission?: {
@@ -600,22 +623,11 @@ export async function getMissionDetails(missionId: string): Promise<{
         target_url: string
         reward: string
         status: MissionStatus
-        visibility: MissionVisibility  // ✅ NEW
-        invite_code: string | null     // ✅ NEW: For INVITE_ONLY missions
-        invite_url: string | null      // ✅ NEW: Full invite URL
+        visibility: MissionVisibility
+        invite_code: string | null
+        invite_url: string | null
         created_at: Date
-        enrollments: {
-            id: string
-            user_id: string
-            status: string
-            created_at: Date
-            link: {
-                id: string
-                slug: string
-                clicks: number
-                full_url: string
-            } | null
-        }[]
+        enrollments: EnrollmentWithStats[]
     }
     error?: string
 }> {
@@ -672,6 +684,78 @@ export async function getMissionDetails(missionId: string): Promise<{
             ? `${appUrl}/invite/${mission.invite_code}`
             : null
 
+        // Get seller info for all enrolled users
+        const userIds = mission.MissionEnrollment.map(e => e.user_id)
+        const sellers = userIds.length > 0
+            ? await prisma.seller.findMany({
+                where: { user_id: { in: userIds } },
+                select: {
+                    user_id: true,
+                    name: true,
+                    email: true,
+                    Profile: {
+                        select: { avatar_url: true }
+                    }
+                }
+            })
+            : []
+        const sellerMap = new Map(sellers.map(s => [s.user_id, s]))
+
+        // Get commission stats for each link
+        const linkIds = mission.MissionEnrollment
+            .map(e => e.link_id)
+            .filter((id): id is string => id !== null)
+
+        const commissions = linkIds.length > 0
+            ? await prisma.commission.findMany({
+                where: { link_id: { in: linkIds } },
+                select: {
+                    link_id: true,
+                    gross_amount: true
+                }
+            })
+            : []
+
+        // Build stats map per link
+        const linkStatsMap = new Map<string, { revenue: number; sales: number }>()
+        for (const c of commissions) {
+            if (c.link_id) {
+                const existing = linkStatsMap.get(c.link_id) || { revenue: 0, sales: 0 }
+                existing.revenue += c.gross_amount
+                existing.sales += 1
+                linkStatsMap.set(c.link_id, existing)
+            }
+        }
+
+        // Map enrollments with seller info and stats
+        const enrollmentsWithStats: EnrollmentWithStats[] = mission.MissionEnrollment.map(e => {
+            const seller = sellerMap.get(e.user_id)
+            const linkStats = e.link_id ? linkStatsMap.get(e.link_id) : null
+
+            return {
+                id: e.id,
+                user_id: e.user_id,
+                status: e.status,
+                created_at: e.created_at,
+                seller: seller ? {
+                    name: seller.name,
+                    email: seller.email,
+                    avatar: seller.Profile?.avatar_url || null
+                } : null,
+                link: e.ShortLink ? {
+                    id: e.ShortLink.id,
+                    slug: e.ShortLink.slug,
+                    clicks: e.ShortLink.clicks,
+                    full_url: `${baseUrl}/s/${e.ShortLink.slug}`
+                } : null,
+                stats: {
+                    revenue: linkStats?.revenue || 0,
+                    sales: linkStats?.sales || 0,
+                    clicks: e.ShortLink?.clicks || 0
+                }
+            }
+        })
+
         return {
             success: true,
             mission: {
@@ -681,22 +765,11 @@ export async function getMissionDetails(missionId: string): Promise<{
                 target_url: mission.target_url,
                 reward: mission.reward,
                 status: mission.status,
-                visibility: mission.visibility as MissionVisibility,  // ✅ NEW
-                invite_code: mission.invite_code,                      // ✅ NEW
-                invite_url: inviteUrl,                                 // ✅ NEW
+                visibility: mission.visibility as MissionVisibility,
+                invite_code: mission.invite_code,
+                invite_url: inviteUrl,
                 created_at: mission.created_at,
-                enrollments: mission.MissionEnrollment.map(e => ({
-                    id: e.id,
-                    user_id: e.user_id,
-                    status: e.status,
-                    created_at: e.created_at,
-                    link: e.ShortLink ? {
-                        id: e.ShortLink.id,
-                        slug: e.ShortLink.slug,
-                        clicks: e.ShortLink.clicks,
-                        full_url: `${baseUrl}/s/${e.ShortLink.slug}`
-                    } : null
-                }))
+                enrollments: enrollmentsWithStats
             }
         }
 
