@@ -173,6 +173,7 @@ TRAC_CLIENT_TOKEN, CRON_SECRET
 ├── components/                   # === COMPOSANTS REACT ===
 │   ├── landing/                  # Navbar, Hero, Features, B2BFeatures, FAQ, Footer, Logos, etc.
 │   ├── dashboard/                # Sidebar, AnalyticsChart, GlobeVisualization, DateRangePicker, ActivityFeed, etc.
+│   │   └── CommissionDetailModal.tsx # Modal detail commissions seller (agrege)
 │   ├── seller/                  # WalletButton, etc.
 │   ├── ui/                       # GlobeVisualization, EuropeMap, charts, visuals
 │   ├── CreateLinkModal.tsx       # Modal creation lien affilie (20KB)
