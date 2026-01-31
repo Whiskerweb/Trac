@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, AlertCircle, ExternalLink, Copy, Check, MousePointer, Users, ShoppingCart } from 'lucide-react'
+import { Loader2, AlertCircle, ExternalLink, Copy, Check, ChevronRight, Link2 } from 'lucide-react'
 import Link from 'next/link'
 import { getSellerDashboard } from '@/app/actions/sellers'
 import { getMyEnrollments, getMyGlobalStatsWithTimeseries } from '@/app/actions/marketplace'
@@ -38,13 +38,11 @@ function formatCurrency(cents: number): string {
     return (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 })
 }
 
-function formatNumber(n: number): string {
-    if (n >= 1000) return `${(n / 1000).toFixed(1)}K`
-    return n.toString()
-}
+// =============================================
+// MISSION ROW - Minimalist table row design
+// =============================================
 
-
-function MissionCard({ data }: { data: Enrollment }) {
+function MissionRow({ data }: { data: Enrollment }) {
     const [copied, setCopied] = useState(false)
 
     const copyLink = (e: React.MouseEvent) => {
@@ -56,84 +54,87 @@ function MissionCard({ data }: { data: Enrollment }) {
         setTimeout(() => setCopied(false), 2000)
     }
 
+    const stats = data.link ? [
+        { label: 'Clicks', value: data.link.clicks },
+        { label: 'Leads', value: data.link.leads },
+        { label: 'Sales', value: data.link.sales },
+    ] : []
+
+    const revenue = data.link?.revenue || 0
+
     return (
         <Link href={`/seller/marketplace/${data.mission.id}`}>
-            <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group">
-                <div className="flex items-start justify-between gap-4">
-                    {/* Left: Info */}
-                    <div className="flex items-start gap-4 flex-1 min-w-0">
-                        {/* Icon */}
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center font-bold text-xl flex-shrink-0">
-                            {data.mission.title.charAt(0).toUpperCase()}
-                        </div>
-
-                        {/* Title & Meta */}
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
-                                    {data.mission.title}
-                                </h3>
-                                <ExternalLink className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-
-                            {/* Reward badge */}
-                            <div className="flex items-center gap-2 mt-1.5">
-                                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700 border border-green-200 rounded-full">
-                                    💰 {data.mission.reward}
-                                </span>
-                                <span className="text-xs text-gray-400">par conversion</span>
-                            </div>
-
-                            {/* Stats row */}
-                            {data.link && (
-                                <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
-                                    <span className="flex items-center gap-1.5">
-                                        <MousePointer className="w-3.5 h-3.5 text-blue-500" />
-                                        <span className="font-medium text-gray-700">{data.link.clicks}</span> clicks
-                                    </span>
-                                    <span className="flex items-center gap-1.5">
-                                        <Users className="w-3.5 h-3.5 text-purple-500" />
-                                        <span className="font-medium text-gray-700">{data.link.leads}</span> leads
-                                    </span>
-                                    <span className="flex items-center gap-1.5">
-                                        <ShoppingCart className="w-3.5 h-3.5 text-teal-500" />
-                                        <span className="font-medium text-gray-700">{data.link.sales}</span> ventes
-                                    </span>
-                                </div>
-                            )}
-                        </div>
+            <div className="group px-6 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer">
+                <div className="flex items-center gap-6">
+                    {/* Icon */}
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-600 to-purple-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                        {data.mission.title.charAt(0).toUpperCase()}
                     </div>
 
-                    {/* Right: Copy button */}
+                    {/* Title & Reward */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-gray-900 truncate group-hover:text-violet-600 transition-colors">
+                                {data.mission.title}
+                            </h3>
+                            <ChevronRight className="w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            {data.mission.reward} par conversion
+                        </p>
+                    </div>
+
+                    {/* Stats - Compact inline */}
+                    {data.link && (
+                        <div className="hidden md:flex items-center gap-6 text-xs text-gray-500">
+                            {stats.map((stat) => (
+                                <div key={stat.label} className="text-center">
+                                    <p className="font-semibold text-gray-900 text-sm tabular-nums">
+                                        {stat.value}
+                                    </p>
+                                    <p className="text-gray-400">{stat.label}</p>
+                                </div>
+                            ))}
+                            <div className="text-center pl-4 border-l border-gray-100">
+                                <p className="font-semibold text-violet-600 text-sm tabular-nums">
+                                    {formatCurrency(revenue)}
+                                </p>
+                                <p className="text-gray-400">Gains</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Copy Link Button */}
                     {data.link && (
                         <button
                             onClick={copyLink}
-                            className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors flex-shrink-0"
+                            className={`flex-shrink-0 p-2 rounded-lg transition-all ${
+                                copied
+                                    ? 'bg-green-50 text-green-600'
+                                    : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                            }`}
+                            title={copied ? 'Copié!' : 'Copier le lien'}
                         >
                             {copied ? (
-                                <>
-                                    <Check className="w-4 h-4 text-green-600" />
-                                    <span className="text-green-600 font-medium">Copié!</span>
-                                </>
+                                <Check className="w-4 h-4" />
                             ) : (
-                                <>
-                                    <Copy className="w-4 h-4 text-gray-500" />
-                                    <span className="text-gray-600">Copier lien</span>
-                                </>
+                                <Copy className="w-4 h-4" />
                             )}
                         </button>
                     )}
                 </div>
 
-                {/* Tracking link preview */}
+                {/* Mobile Stats - Show below on small screens */}
                 {data.link && (
-                    <div className="mt-4 pt-3 border-t border-gray-100">
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <span>🔗</span>
-                            <code className="bg-gray-50 px-2 py-0.5 rounded font-mono truncate">
-                                {data.link.full_url}
-                            </code>
-                        </div>
+                    <div className="md:hidden flex items-center gap-4 mt-3 pl-16 text-xs">
+                        {stats.map((stat) => (
+                            <span key={stat.label} className="text-gray-500">
+                                <span className="font-medium text-gray-700">{stat.value}</span> {stat.label.toLowerCase()}
+                            </span>
+                        ))}
+                        <span className="text-violet-600 font-medium">
+                            {formatCurrency(revenue)}
+                        </span>
                     </div>
                 )}
             </div>
@@ -225,39 +226,44 @@ export default function PartnerDashboardPage() {
                     />
                 </div>
 
-                {/* Missions Section */}
-                <div>
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-gray-900">Mes Missions ({enrollments.length})</h2>
+                {/* Missions Section - Minimalist Table Design */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    {/* Header */}
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-sm font-semibold text-gray-900">Programmes</h2>
+                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                {enrollments.length}
+                            </span>
+                        </div>
                         <Link
-                            href="/marketplace"
-                            className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
+                            href="/seller/marketplace"
+                            className="text-xs text-gray-500 hover:text-gray-900 font-medium flex items-center gap-1 transition-colors"
                         >
-                            <ExternalLink className="w-4 h-4" />
-                            Explorer le Marketplace
+                            Explorer
+                            <ChevronRight className="w-3 h-3" />
                         </Link>
                     </div>
 
                     {enrollments.length > 0 ? (
-                        <div className="space-y-3">
+                        <div className="divide-y divide-gray-50">
                             {enrollments.map((enrollment) => (
-                                <MissionCard key={enrollment.id} data={enrollment} />
+                                <MissionRow key={enrollment.id} data={enrollment} />
                             ))}
                         </div>
                     ) : (
-                        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
-                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <ExternalLink className="w-8 h-8 text-gray-400" />
+                        <div className="px-6 py-16 text-center">
+                            <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <Link2 className="w-5 h-5 text-violet-500" />
                             </div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune mission rejointe</h3>
-                            <p className="text-gray-500 mb-6">
-                                Rejoignez des missions pour commencer à gagner des commissions.
+                            <p className="text-sm text-gray-500 mb-4">
+                                Aucun programme rejoint
                             </p>
                             <Link
-                                href="/marketplace"
-                                className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-black transition-colors"
+                                href="/seller/marketplace"
+                                className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black transition-colors"
                             >
-                                Explorer le Marketplace
+                                Découvrir les programmes
                             </Link>
                         </div>
                     )}
