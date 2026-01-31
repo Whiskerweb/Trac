@@ -22,6 +22,11 @@ interface Enrollment {
         title: string
         reward: string
     }
+    startup: {
+        name: string
+        logo_url: string | null
+        industry: string | null
+    }
     link: {
         slug: string
         full_url: string
@@ -66,12 +71,20 @@ function MissionRow({ data }: { data: Enrollment }) {
         <Link href={`/seller/marketplace/${data.mission.id}`}>
             <div className="group px-6 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-6">
-                    {/* Icon */}
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-600 to-purple-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
-                        {data.mission.title.charAt(0).toUpperCase()}
-                    </div>
+                    {/* Startup Logo */}
+                    {data.startup.logo_url ? (
+                        <img
+                            src={data.startup.logo_url}
+                            alt={data.startup.name}
+                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                        />
+                    ) : (
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-600 to-purple-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                            {data.startup.name.charAt(0).toUpperCase()}
+                        </div>
+                    )}
 
-                    {/* Title & Reward */}
+                    {/* Title & Startup */}
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                             <h3 className="text-sm font-medium text-gray-900 truncate group-hover:text-violet-600 transition-colors">
@@ -80,6 +93,8 @@ function MissionRow({ data }: { data: Enrollment }) {
                             <ChevronRight className="w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5">
+                            <span className="text-gray-500">{data.startup.name}</span>
+                            <span className="mx-1.5">·</span>
                             {data.mission.reward} par conversion
                         </p>
                     </div>

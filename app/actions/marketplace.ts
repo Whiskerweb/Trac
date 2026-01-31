@@ -915,6 +915,11 @@ export async function getMyEnrollments(): Promise<{
             title: string
             reward: string
         }
+        startup: {
+            name: string
+            logo_url: string | null
+            industry: string | null
+        }
         link: {
             slug: string
             full_url: string
@@ -954,7 +959,8 @@ export async function getMyEnrollments(): Promise<{
                                 Domain: {
                                     where: { verified: true },
                                     take: 1
-                                }
+                                },
+                                Profile: true  // Include startup profile (logo, industry, etc.)
                             }
                         }
                     }
@@ -990,6 +996,11 @@ export async function getMyEnrollments(): Promise<{
                         id: e.Mission.id,
                         title: e.Mission.title,
                         reward: e.Mission.reward,
+                    },
+                    startup: {
+                        name: e.Mission.Workspace.name,
+                        logo_url: e.Mission.Workspace.Profile?.logo_url || null,
+                        industry: e.Mission.Workspace.Profile?.industry || null,
                     },
                     link: e.ShortLink ? {
                         slug: e.ShortLink.slug,

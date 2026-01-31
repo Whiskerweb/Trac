@@ -54,7 +54,15 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
                 Workspace: {
                     select: {
                         name: true,
-                        slug: true
+                        slug: true,
+                        Profile: {
+                            select: {
+                                logo_url: true,
+                                industry: true,
+                                description: true,
+                                website_url: true
+                            }
+                        }
                     }
                 },
                 Contents: {
@@ -123,6 +131,16 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
                 visibility: m.visibility,
                 industry: m.industry,
                 gain_type: m.gain_type,
+                // Startup info
+                startup: {
+                    name: m.Workspace.name,
+                    slug: m.Workspace.slug,
+                    logo_url: m.Workspace.Profile?.logo_url || null,
+                    industry: m.Workspace.Profile?.industry || null,
+                    description: m.Workspace.Profile?.description || null,
+                    website_url: m.Workspace.Profile?.website_url || null,
+                },
+                // Legacy (keep for backwards compat)
                 workspace_name: m.Workspace.name,
                 has_resources: m.Contents.length > 0,
                 partners_count: m._count.MissionEnrollment,
