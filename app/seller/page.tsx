@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Loader2, AlertCircle, ExternalLink, Copy, Check, MousePointer, Users, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 import { getSellerDashboard } from '@/app/actions/sellers'
-import { getMyEnrollments, getMyGlobalStats } from '@/app/actions/marketplace'
+import { getMyEnrollments, getMyGlobalStatsWithTimeseries } from '@/app/actions/marketplace'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
 
 interface Stats {
@@ -146,6 +146,7 @@ export default function PartnerDashboardPage() {
     const [stats, setStats] = useState<Stats | null>(null)
     const [enrollments, setEnrollments] = useState<Enrollment[]>([])
     const [globalStats, setGlobalStats] = useState({ clicks: 0, leads: 0, sales: 0, revenue: 0 })
+    const [timeseries, setTimeseries] = useState<Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }>>([])
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
@@ -154,7 +155,7 @@ export default function PartnerDashboardPage() {
                 const [dashboardRes, enrollmentsRes, globalStatsRes] = await Promise.all([
                     getSellerDashboard(),
                     getMyEnrollments(),
-                    getMyGlobalStats()
+                    getMyGlobalStatsWithTimeseries(30)  // Get last 30 days with timeseries
                 ])
 
                 if ('stats' in dashboardRes && dashboardRes.stats) {
@@ -165,6 +166,9 @@ export default function PartnerDashboardPage() {
                 }
                 if ('stats' in globalStatsRes && globalStatsRes.stats) {
                     setGlobalStats(globalStatsRes.stats)
+                }
+                if ('timeseries' in globalStatsRes && globalStatsRes.timeseries) {
+                    setTimeseries(globalStatsRes.timeseries)
                 }
                 if ('error' in dashboardRes && 'error' in enrollmentsRes) {
                     setError(dashboardRes.error || enrollmentsRes.error || 'Erreur')
@@ -217,6 +221,7 @@ export default function PartnerDashboardPage() {
                         leads={leads}
                         sales={sales}
                         revenue={revenue}
+                        timeseries={timeseries}
                     />
                 </div>
 

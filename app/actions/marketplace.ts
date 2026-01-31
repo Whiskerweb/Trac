@@ -264,6 +264,177 @@ export async function getMyGlobalStats(): Promise<{
     }
 }
 
+/**
+ * Get global stats WITH timeseries for the seller dashboard chart
+ * Returns both aggregate totals and daily timeseries for the last 30 days
+ */
+export async function getMyGlobalStatsWithTimeseries(days: number = 30): Promise<{
+    success: boolean
+    stats?: AffiliateStats
+    timeseries?: Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }>
+    userId?: string
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    try {
+        // Get aggregate stats
+        const stats = await getAffiliateStatsByUserId(user.id)
+
+        // Get timeseries data
+        const timeseries = await getAffiliateTimeseriesByUserId(user.id, days)
+
+        return { success: true, stats, timeseries, userId: user.id }
+    } catch (error) {
+        console.error('[Marketplace] ❌ Error getting global stats with timeseries:', error)
+        return { success: false, error: 'Failed to fetch stats' }
+    }
+}
+
+/**
+ * Fetch daily timeseries data for a seller from Tinybird
+ */
+async function getAffiliateTimeseriesByUserId(
+    userId: string,
+    days: number = 30
+): Promise<Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }>> {
+    const timeseries: Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }> = []
+
+    if (!userId || !TINYBIRD_TOKEN) {
+        return timeseries
+    }
+
+    // SECURITY: Validate UUID format
+    if (!isValidUUID(userId)) {
+        return timeseries
+    }
+
+    try {
+        // Get all link IDs for this user
+        const enrollments = await prisma.missionEnrollment.findMany({
+            where: { user_id: userId },
+            include: { ShortLink: true }
+        })
+
+        const linkIds = enrollments
+            .filter(e => e.ShortLink)
+            .map(e => e.ShortLink!.id)
+            .filter(id => isValidUUID(id))
+
+        if (linkIds.length === 0) {
+            return timeseries
+        }
+
+        const linkIdList = linkIds.map(id => `'${id}'`).join(',')
+
+        // Calculate date range
+        const dateFrom = new Date()
+        dateFrom.setDate(dateFrom.getDate() - days)
+        const dateFromStr = dateFrom.toISOString().split('T')[0]
+
+        // Initialize map for all dates in range
+        const dateMap = new Map<string, { clicks: number; leads: number; sales: number; revenue: number }>()
+        for (let i = 0; i <= days; i++) {
+            const d = new Date()
+            d.setDate(d.getDate() - (days - i))
+            const dateStr = d.toISOString().split('T')[0]
+            dateMap.set(dateStr, { clicks: 0, leads: 0, sales: 0, revenue: 0 })
+        }
+
+        // 1. GET CLICKS TIMESERIES
+        const clicksQuery = `
+            SELECT toDate(timestamp) as date, count() as clicks
+            FROM clicks
+            WHERE link_id IN (${linkIdList})
+            AND timestamp >= '${dateFromStr}'
+            GROUP BY date
+            ORDER BY date
+        `
+        const clicksResponse = await fetch(
+            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`,
+            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+        )
+
+        if (clicksResponse.ok) {
+            const text = await clicksResponse.text()
+            for (const line of text.trim().split('\n').filter(l => l.trim())) {
+                const [date, clicks] = line.split('\t')
+                if (date && dateMap.has(date)) {
+                    dateMap.get(date)!.clicks = parseInt(clicks) || 0
+                }
+            }
+        }
+
+        // 2. GET LEADS TIMESERIES
+        const leadsQuery = `
+            SELECT toDate(timestamp) as date, count() as leads
+            FROM leads
+            WHERE link_id IN (${linkIdList})
+            AND timestamp >= '${dateFromStr}'
+            GROUP BY date
+            ORDER BY date
+        `
+        const leadsResponse = await fetch(
+            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(leadsQuery)}`,
+            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+        )
+
+        if (leadsResponse.ok) {
+            const text = await leadsResponse.text()
+            for (const line of text.trim().split('\n').filter(l => l.trim())) {
+                const [date, leads] = line.split('\t')
+                if (date && dateMap.has(date)) {
+                    dateMap.get(date)!.leads = parseInt(leads) || 0
+                }
+            }
+        }
+
+        // 3. GET SALES TIMESERIES
+        const salesQuery = `
+            SELECT toDate(timestamp) as date, count() as sales, sum(amount) as revenue
+            FROM sales
+            WHERE link_id IN (${linkIdList})
+            AND timestamp >= '${dateFromStr}'
+            GROUP BY date
+            ORDER BY date
+        `
+        const salesResponse = await fetch(
+            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
+            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
+        )
+
+        if (salesResponse.ok) {
+            const text = await salesResponse.text()
+            for (const line of text.trim().split('\n').filter(l => l.trim())) {
+                const [date, sales, revenue] = line.split('\t')
+                if (date && dateMap.has(date)) {
+                    dateMap.get(date)!.sales = parseInt(sales) || 0
+                    dateMap.get(date)!.revenue = parseInt(revenue) || 0
+                }
+            }
+        }
+
+        // Convert map to sorted array
+        const sortedDates = Array.from(dateMap.keys()).sort()
+        for (const date of sortedDates) {
+            const data = dateMap.get(date)!
+            timeseries.push({ date, ...data })
+        }
+
+        console.log(`[Marketplace] 📈 Timeseries for ${userId}: ${timeseries.length} days`)
+
+    } catch (error) {
+        console.error('[Marketplace] ⚠️ Error fetching timeseries:', error)
+    }
+
+    return timeseries
+}
+
 // =============================================
 // SECURITY HELPERS
 // =============================================
