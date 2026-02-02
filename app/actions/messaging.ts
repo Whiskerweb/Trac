@@ -312,6 +312,67 @@ export async function markAsRead(
 }
 
 /**
+ * Get or create a conversation for a seller with a specific workspace
+ * This allows sellers to initiate conversations with startups
+ */
+export async function getOrCreateConversationForSeller(workspaceId: string): Promise<{
+    success: boolean
+    conversationId?: string
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    try {
+        // Find seller record for this user (global seller with program_id = null)
+        const seller = await prisma.seller.findFirst({
+            where: {
+                user_id: user.id,
+                program_id: null
+            }
+        })
+
+        if (!seller) {
+            return { success: false, error: 'Seller not found' }
+        }
+
+        // Check if conversation already exists
+        const existing = await prisma.conversation.findUnique({
+            where: {
+                workspace_id_seller_id: {
+                    workspace_id: workspaceId,
+                    seller_id: seller.id
+                }
+            }
+        })
+
+        if (existing) {
+            return { success: true, conversationId: existing.id }
+        }
+
+        // Create new conversation
+        const conversation = await prisma.conversation.create({
+            data: {
+                workspace_id: workspaceId,
+                seller_id: seller.id
+            }
+        })
+
+        revalidatePath('/seller/messages')
+
+        return { success: true, conversationId: conversation.id }
+
+    } catch (error) {
+        console.error('[Messaging] ❌ getOrCreateConversationForSeller error:', error)
+        return { success: false, error: 'Failed to start conversation' }
+    }
+}
+
+/**
  * Create an invitation message (when startup invites partner to a mission)
  */
 export async function createInvitationMessage(

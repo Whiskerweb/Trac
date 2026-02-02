@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { MessageSquare, Send, User, Building2, CheckCheck, Gift, ExternalLink } from 'lucide-react'
 import { getConversations, getMessages, sendMessage, markAsRead } from '@/app/actions/messaging'
 import Link from 'next/link'
@@ -27,8 +28,11 @@ interface Message {
 }
 
 export default function PartnerMessagesPage() {
+    const searchParams = useSearchParams()
+    const conversationParam = searchParams.get('conversation')
+
     const [conversations, setConversations] = useState<Conversation[]>([])
-    const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
+    const [selectedConversation, setSelectedConversation] = useState<string | null>(conversationParam)
     const [messages, setMessages] = useState<Message[]>([])
     const [newMessage, setNewMessage] = useState('')
     const [loading, setLoading] = useState(true)
@@ -39,6 +43,13 @@ export default function PartnerMessagesPage() {
     useEffect(() => {
         loadConversations()
     }, [])
+
+    // Handle conversation param from URL
+    useEffect(() => {
+        if (conversationParam && conversationParam !== selectedConversation) {
+            setSelectedConversation(conversationParam)
+        }
+    }, [conversationParam])
 
     // Load messages when conversation changes
     useEffect(() => {
@@ -58,8 +69,8 @@ export default function PartnerMessagesPage() {
         const result = await getConversations('partner')
         if (result.success && result.conversations) {
             setConversations(result.conversations)
-            // Auto-select first conversation
-            if (result.conversations.length > 0 && !selectedConversation) {
+            // Auto-select first conversation only if no conversation is already selected (from URL or previous selection)
+            if (result.conversations.length > 0 && !selectedConversation && !conversationParam) {
                 setSelectedConversation(result.conversations[0].id)
             }
         }

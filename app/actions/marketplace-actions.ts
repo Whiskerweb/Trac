@@ -24,7 +24,7 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
-        // Build where clause
+        // Build where clause with proper AND/OR structure
         const where: any = {
             status: 'ACTIVE',
             visibility: {
@@ -32,19 +32,38 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
             }
         }
 
+        // Collect AND conditions
+        const andConditions: any[] = []
+
+        // Industry filter (stored in WorkspaceProfile)
         if (filters?.industry) {
-            where.industry = filters.industry
+            andConditions.push({
+                Workspace: {
+                    Profile: {
+                        industry: filters.industry
+                    }
+                }
+            })
         }
 
         if (filters?.gainType) {
             where.gain_type = filters.gainType
         }
 
+        // Search in mission title, description AND startup name
         if (filters?.search) {
-            where.OR = [
-                { title: { contains: filters.search, mode: 'insensitive' } },
-                { description: { contains: filters.search, mode: 'insensitive' } }
-            ]
+            andConditions.push({
+                OR: [
+                    { title: { contains: filters.search, mode: 'insensitive' } },
+                    { description: { contains: filters.search, mode: 'insensitive' } },
+                    { Workspace: { name: { contains: filters.search, mode: 'insensitive' } } }
+                ]
+            })
+        }
+
+        // Apply AND conditions if any
+        if (andConditions.length > 0) {
+            where.AND = andConditions
         }
 
         const missions = await prisma.mission.findMany({
@@ -131,6 +150,15 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
                 visibility: m.visibility,
                 industry: m.industry,
                 gain_type: m.gain_type,
+                // Multi-commission fields
+                lead_enabled: m.lead_enabled,
+                lead_reward_amount: m.lead_reward_amount,
+                sale_enabled: m.sale_enabled,
+                sale_reward_amount: m.sale_reward_amount,
+                sale_reward_structure: m.sale_reward_structure,
+                recurring_enabled: m.recurring_enabled,
+                recurring_reward_amount: m.recurring_reward_amount,
+                recurring_reward_structure: m.recurring_reward_structure,
                 // Startup info
                 startup: {
                     name: m.Workspace.name,
@@ -320,6 +348,169 @@ export async function getMissionWithResources(missionId: string) {
 
     } catch (error) {
         console.error('[Marketplace] ❌ Failed to get mission:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }
+    }
+}
+
+/**
+ * Get full mission details for the marketplace detail page
+ * Includes startup info, commission details, enrollment status, and resources (conditionally)
+ */
+export async function getMissionDetailForMarketplace(missionId: string) {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { success: false, error: 'Not authenticated' }
+        }
+
+        const mission = await prisma.mission.findUnique({
+            where: { id: missionId },
+            include: {
+                Workspace: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        Profile: {
+                            select: {
+                                logo_url: true,
+                                description: true,
+                                industry: true,
+                                website_url: true,
+                                twitter_url: true,
+                                linkedin_url: true,
+                                founded_year: true,
+                                company_size: true,
+                                headquarters: true,
+                            }
+                        },
+                        Domain: {
+                            where: { verified: true },
+                            take: 1
+                        }
+                    }
+                },
+                Contents: {
+                    orderBy: { order: 'asc' }
+                },
+                _count: {
+                    select: {
+                        MissionEnrollment: true
+                    }
+                }
+            }
+        })
+
+        if (!mission) {
+            return { success: false, error: 'Mission not found' }
+        }
+
+        // For INVITE_ONLY missions not visible in marketplace
+        if (mission.visibility === 'INVITE_ONLY') {
+            return { success: false, error: 'ACCESS_DENIED' }
+        }
+
+        // Check enrollment status
+        const enrollment = await prisma.missionEnrollment.findFirst({
+            where: {
+                mission_id: missionId,
+                user_id: user.id
+            },
+            include: {
+                ShortLink: true
+            }
+        })
+
+        // Check if there's a pending request (for PRIVATE missions)
+        const seller = await prisma.seller.findFirst({
+            where: { user_id: user.id }
+        })
+
+        let pendingRequest = null
+        if (seller && mission.visibility === 'PRIVATE') {
+            pendingRequest = await prisma.programRequest.findFirst({
+                where: {
+                    seller_id: seller.id,
+                    mission_id: missionId,
+                    status: 'PENDING'
+                }
+            })
+        }
+
+        const isEnrolled = enrollment?.status === 'APPROVED'
+        const customDomain = mission.Workspace.Domain?.[0]?.name
+        const baseUrl = customDomain
+            ? `https://${customDomain}`
+            : process.env.NEXT_PUBLIC_APP_URL
+
+        // Only show resources if enrolled (for any visibility) or if PUBLIC
+        const canSeeResources = isEnrolled || mission.visibility === 'PUBLIC'
+
+        return {
+            success: true,
+            mission: {
+                id: mission.id,
+                title: mission.title,
+                description: mission.description,
+                target_url: mission.target_url,
+                reward: mission.reward,
+                reward_type: mission.reward_type,
+                reward_structure: mission.reward_structure,
+                visibility: mission.visibility,
+                partners_count: mission._count.MissionEnrollment,
+                created_at: mission.created_at,
+                // Multi-commission fields
+                lead_enabled: mission.lead_enabled,
+                lead_reward_amount: mission.lead_reward_amount,
+                sale_enabled: mission.sale_enabled,
+                sale_reward_amount: mission.sale_reward_amount,
+                sale_reward_structure: mission.sale_reward_structure,
+                recurring_enabled: mission.recurring_enabled,
+                recurring_reward_amount: mission.recurring_reward_amount,
+                recurring_reward_structure: mission.recurring_reward_structure,
+            },
+            startup: {
+                id: mission.Workspace.id,
+                name: mission.Workspace.name,
+                slug: mission.Workspace.slug,
+                logo_url: mission.Workspace.Profile?.logo_url || null,
+                description: mission.Workspace.Profile?.description || null,
+                industry: mission.Workspace.Profile?.industry || null,
+                website_url: mission.Workspace.Profile?.website_url || null,
+                twitter_url: mission.Workspace.Profile?.twitter_url || null,
+                linkedin_url: mission.Workspace.Profile?.linkedin_url || null,
+                founded_year: mission.Workspace.Profile?.founded_year || null,
+                company_size: mission.Workspace.Profile?.company_size || null,
+                headquarters: mission.Workspace.Profile?.headquarters || null,
+            },
+            resources: canSeeResources ? mission.Contents.map(c => ({
+                id: c.id,
+                type: c.type,
+                url: c.url,
+                title: c.title,
+                description: c.description
+            })) : [],
+            enrollment: enrollment ? {
+                id: enrollment.id,
+                status: enrollment.status,
+                link_slug: enrollment.ShortLink?.slug || null,
+                link_url: enrollment.ShortLink ? `${baseUrl}/s/${enrollment.ShortLink.slug}` : null
+            } : null,
+            pendingRequest: pendingRequest ? {
+                id: pendingRequest.id,
+                status: pendingRequest.status,
+                created_at: pendingRequest.created_at
+            } : null,
+            canSeeResources,
+        }
+
+    } catch (error) {
+        console.error('[Marketplace] ❌ Failed to get mission detail:', error)
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'
@@ -678,5 +869,295 @@ export async function getMissionPendingRequests(missionId: string): Promise<{
     } catch (error) {
         console.error('[Marketplace] ❌ Failed to get mission pending requests:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+// =============================================
+// TINYBIRD HELPERS FOR ENROLLED MISSION STATS
+// =============================================
+
+const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
+const TINYBIRD_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
+
+function isValidUUID(id: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+}
+
+/**
+ * Get stats for a specific link from Tinybird
+ */
+async function getLinkStats(linkId: string): Promise<{ clicks: number; leads: number; sales: number; revenue: number }> {
+    const stats = { clicks: 0, leads: 0, sales: 0, revenue: 0 }
+
+    if (!linkId || !TINYBIRD_TOKEN || !isValidUUID(linkId)) {
+        return stats
+    }
+
+    try {
+        // Clicks
+        const clicksQuery = `SELECT count() as clicks FROM clicks WHERE link_id = '${linkId}'`
+        const clicksRes = await fetch(`${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`, {
+            headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` }
+        })
+        if (clicksRes.ok) {
+            const text = await clicksRes.text()
+            stats.clicks = parseInt(text.trim()) || 0
+        }
+
+        // Leads
+        const leadsQuery = `SELECT count() as leads FROM leads WHERE link_id = '${linkId}'`
+        const leadsRes = await fetch(`${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(leadsQuery)}`, {
+            headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` }
+        })
+        if (leadsRes.ok) {
+            const text = await leadsRes.text()
+            stats.leads = parseInt(text.trim()) || 0
+        }
+
+        // Sales
+        const salesQuery = `SELECT count() as sales, sum(amount) as revenue FROM sales WHERE link_id = '${linkId}'`
+        const salesRes = await fetch(`${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`, {
+            headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` }
+        })
+        if (salesRes.ok) {
+            const text = await salesRes.text()
+            const [sales, revenue] = text.trim().split('\t')
+            stats.sales = parseInt(sales) || 0
+            stats.revenue = parseInt(revenue) || 0
+        }
+    } catch (error) {
+        console.error('[Marketplace] ⚠️ Error fetching link stats:', error)
+    }
+
+    return stats
+}
+
+/**
+ * Get timeseries data for a specific link from Tinybird
+ */
+async function getLinkTimeseries(linkId: string, days: number = 30): Promise<Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }>> {
+    const timeseries: Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }> = []
+
+    if (!linkId || !TINYBIRD_TOKEN || !isValidUUID(linkId)) {
+        return timeseries
+    }
+
+    try {
+        // Calculate date range
+        const dateFrom = new Date()
+        dateFrom.setDate(dateFrom.getDate() - days)
+        const dateFromStr = dateFrom.toISOString().split('T')[0]
+
+        // Initialize map for all dates in range
+        const dateMap = new Map<string, { clicks: number; leads: number; sales: number; revenue: number }>()
+        for (let i = 0; i <= days; i++) {
+            const d = new Date()
+            d.setDate(d.getDate() - (days - i))
+            const dateStr = d.toISOString().split('T')[0]
+            dateMap.set(dateStr, { clicks: 0, leads: 0, sales: 0, revenue: 0 })
+        }
+
+        // Clicks timeseries
+        const clicksQuery = `
+            SELECT toDate(timestamp) as date, count() as clicks
+            FROM clicks
+            WHERE link_id = '${linkId}' AND timestamp >= '${dateFromStr}'
+            GROUP BY date ORDER BY date
+        `
+        const clicksRes = await fetch(`${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(clicksQuery)}`, {
+            headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` }
+        })
+        if (clicksRes.ok) {
+            const text = await clicksRes.text()
+            for (const line of text.trim().split('\n').filter(l => l.trim())) {
+                const [date, clicks] = line.split('\t')
+                if (date && dateMap.has(date)) {
+                    dateMap.get(date)!.clicks = parseInt(clicks) || 0
+                }
+            }
+        }
+
+        // Leads timeseries
+        const leadsQuery = `
+            SELECT toDate(timestamp) as date, count() as leads
+            FROM leads
+            WHERE link_id = '${linkId}' AND timestamp >= '${dateFromStr}'
+            GROUP BY date ORDER BY date
+        `
+        const leadsRes = await fetch(`${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(leadsQuery)}`, {
+            headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` }
+        })
+        if (leadsRes.ok) {
+            const text = await leadsRes.text()
+            for (const line of text.trim().split('\n').filter(l => l.trim())) {
+                const [date, leads] = line.split('\t')
+                if (date && dateMap.has(date)) {
+                    dateMap.get(date)!.leads = parseInt(leads) || 0
+                }
+            }
+        }
+
+        // Sales timeseries
+        const salesQuery = `
+            SELECT toDate(timestamp) as date, count() as sales, sum(amount) as revenue
+            FROM sales
+            WHERE link_id = '${linkId}' AND timestamp >= '${dateFromStr}'
+            GROUP BY date ORDER BY date
+        `
+        const salesRes = await fetch(`${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`, {
+            headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` }
+        })
+        if (salesRes.ok) {
+            const text = await salesRes.text()
+            for (const line of text.trim().split('\n').filter(l => l.trim())) {
+                const [date, sales, revenue] = line.split('\t')
+                if (date && dateMap.has(date)) {
+                    dateMap.get(date)!.sales = parseInt(sales) || 0
+                    dateMap.get(date)!.revenue = parseInt(revenue) || 0
+                }
+            }
+        }
+
+        // Convert to sorted array
+        const sortedDates = Array.from(dateMap.keys()).sort()
+        for (const date of sortedDates) {
+            timeseries.push({ date, ...dateMap.get(date)! })
+        }
+
+    } catch (error) {
+        console.error('[Marketplace] ⚠️ Error fetching link timeseries:', error)
+    }
+
+    return timeseries
+}
+
+// =============================================
+// ENROLLED MISSION DETAIL FOR SELLER PROGRAM PAGE
+// =============================================
+
+/**
+ * Get full details for an enrolled mission - for /seller/programs/[missionId]
+ * Includes startup info, seller's personal stats, timeseries for chart, and resources
+ */
+export async function getEnrolledMissionDetail(missionId: string) {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { success: false, error: 'Not authenticated' }
+        }
+
+        // Check enrollment exists and is approved
+        const enrollment = await prisma.missionEnrollment.findFirst({
+            where: {
+                mission_id: missionId,
+                user_id: user.id,
+                status: 'APPROVED'
+            },
+            include: {
+                ShortLink: true,
+                Mission: {
+                    include: {
+                        Workspace: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                                Profile: {
+                                    select: {
+                                        logo_url: true,
+                                        description: true,
+                                        industry: true,
+                                        website_url: true,
+                                        pitch_deck_url: true,
+                                        doc_url: true,
+                                    }
+                                },
+                                Domain: {
+                                    where: { verified: true },
+                                    take: 1
+                                }
+                            }
+                        },
+                        Contents: {
+                            orderBy: { order: 'asc' }
+                        }
+                    }
+                }
+            }
+        })
+
+        if (!enrollment) {
+            return { success: false, error: 'NOT_ENROLLED' }
+        }
+
+        const mission = enrollment.Mission
+        const linkId = enrollment.ShortLink?.id
+
+        // Get stats and timeseries from Tinybird
+        const stats = linkId ? await getLinkStats(linkId) : { clicks: 0, leads: 0, sales: 0, revenue: 0 }
+        const timeseries = linkId ? await getLinkTimeseries(linkId, 30) : []
+
+        // Build tracking URL
+        const customDomain = mission.Workspace.Domain?.[0]?.name
+        const baseUrl = customDomain
+            ? `https://${customDomain}`
+            : process.env.NEXT_PUBLIC_APP_URL
+
+        return {
+            success: true,
+            mission: {
+                id: mission.id,
+                title: mission.title,
+                description: mission.description,
+                target_url: mission.target_url,
+                reward: mission.reward,
+                visibility: mission.visibility,
+                // Multi-commission fields
+                lead_enabled: mission.lead_enabled,
+                lead_reward_amount: mission.lead_reward_amount,
+                sale_enabled: mission.sale_enabled,
+                sale_reward_amount: mission.sale_reward_amount,
+                sale_reward_structure: mission.sale_reward_structure,
+                recurring_enabled: mission.recurring_enabled,
+                recurring_reward_amount: mission.recurring_reward_amount,
+                recurring_reward_structure: mission.recurring_reward_structure,
+            },
+            startup: {
+                id: mission.Workspace.id,
+                name: mission.Workspace.name,
+                slug: mission.Workspace.slug,
+                logo_url: mission.Workspace.Profile?.logo_url || null,
+                description: mission.Workspace.Profile?.description || null,
+                industry: mission.Workspace.Profile?.industry || null,
+                website_url: mission.Workspace.Profile?.website_url || null,
+                pitch_deck_url: mission.Workspace.Profile?.pitch_deck_url || null,
+                doc_url: mission.Workspace.Profile?.doc_url || null,
+            },
+            enrollment: {
+                id: enrollment.id,
+                status: enrollment.status,
+                link_slug: enrollment.ShortLink?.slug || null,
+                link_url: enrollment.ShortLink ? `${baseUrl}/s/${enrollment.ShortLink.slug}` : null,
+                created_at: enrollment.created_at
+            },
+            stats,
+            timeseries,
+            resources: mission.Contents.map(c => ({
+                id: c.id,
+                type: c.type,
+                url: c.url,
+                title: c.title,
+                description: c.description
+            }))
+        }
+
+    } catch (error) {
+        console.error('[Marketplace] ❌ Failed to get enrolled mission detail:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }
     }
 }

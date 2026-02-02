@@ -1,226 +1,192 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-    LayoutGrid,
-    Users,
-    Wallet,
-    HelpCircle,
+    Home,
+    CreditCard,
     MessageSquare,
+    Store,
     Settings,
-    Bell,
-    User,
-    ChevronDown,
-    Mail,
-    Banknote,
-    Store
+    User
 } from 'lucide-react'
 import { WalletButton } from '@/components/seller/WalletButton'
 import ProfileCompletionBanner from '@/components/seller/ProfileCompletionBanner'
+import { getMySellerProfile } from '@/app/actions/sellers'
 
 // ==========================================
-// STRICT DESIGN SYSTEM - TRAAACTION STYLE
+// DESIGN SYSTEM - TRAAACTION SELLER
 // ==========================================
 const DS = {
-    rail: {
-        width: 'w-[56px]',
-        bg: 'bg-[#FAFAFA]',
-        border: 'border-r border-[rgba(0,0,0,0.06)]'
-    },
     sidebar: {
-        width: 'w-[240px]',
-        bg: 'bg-white',
-        border: 'border-r border-[rgba(0,0,0,0.06)]'
+        width: 'w-[260px]',
+        bg: 'bg-[#FAFAFA]',
+        border: 'border-r border-gray-200'
     },
     content: {
-        bg: 'bg-[#FAFAFA]'
+        bg: 'bg-white'
     }
 }
 
-// Rail Navigation (Global)
-const RAIL_NAV = [
-    { label: 'Programs', href: '/seller', icon: LayoutGrid },
-    { label: 'Payouts', href: '/seller/payouts', icon: Wallet },
-    { label: 'Members', href: '/seller/members', icon: Users },
-    { label: 'Messages', href: '/seller/messages', icon: MessageSquare },
-]
-
-// Sidebar Navigation - CONTEXT 1: All programs
-const PROGRAMS_NAV = [
-    { label: 'Programs', href: '/seller', icon: LayoutGrid },
-    { label: 'Marketplace', href: '/seller/marketplace', icon: Store },
-    { label: 'Invitations', href: '/seller/invitations', icon: Mail },
-]
-
-
-
-// Sidebar Navigation - CONTEXT 2: Partner Profile
-const PROFILE_NAV = [
-    { label: 'Profile', href: '/seller/profile', icon: User },
-    { label: 'Members', href: '/seller/members', icon: Users },
-    { label: 'Account', href: '/seller/account', icon: Settings },
-    { label: 'Notifications', href: '/seller/notifications', icon: Bell },
-]
-
-export default function PartnerDualLayout({
+export default function SellerLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
     const pathname = usePathname()
+    const [profile, setProfile] = useState<{ name: string; email: string; avatarUrl: string | null } | null>(null)
 
-    // Determine which context we're in
-    const isProfileContext = ['/seller/profile', '/seller/members', '/seller/account', '/seller/notifications'].includes(pathname)
-    const isProgramsContext = ['/seller', '/seller/invitations', '/seller/analytics', '/seller/marketplace'].includes(pathname) || pathname.startsWith('/seller/marketplace/')
-    const isPayoutsContext = pathname === '/seller/payouts'
-    const isMessagesContext = pathname === '/seller/messages'
+    // Load profile data for sidebar
+    useEffect(() => {
+        async function loadProfile() {
+            try {
+                const result = await getMySellerProfile()
+                if (result.success && result.profile) {
+                    setProfile({
+                        name: result.profile.name || '',
+                        email: result.profile.email || '',
+                        avatarUrl: result.profile.avatarUrl || null
+                    })
+                }
+            } catch (err) {
+                console.error('Failed to load profile for sidebar:', err)
+            }
+        }
+        loadProfile()
+    }, [])
 
-    // Helper to check if route is active
-    const isRailActive = (href: string) => {
-        if (href === '/seller') return pathname === '/seller' || pathname === '/seller/invitations'
-        if (href === '/seller/analytics') return pathname === '/seller/analytics'
-        if (href === '/seller/payouts') return pathname === '/seller/payouts'
-        if (href === '/seller/messages') return pathname === '/seller/messages'
-        if (href === '/seller/members') return pathname.startsWith('/seller/members') || pathname.startsWith('/seller/profile') || pathname.startsWith('/seller/account') || pathname.startsWith('/seller/notifications')
-        return pathname.startsWith(href)
+    // Check if route is active
+    const isActive = (href: string) => {
+        if (href === '/seller') {
+            return pathname === '/seller' || pathname.startsWith('/seller/programs')
+        }
+        return pathname === href || pathname.startsWith(href + '/')
     }
 
-    // Payouts and Messages pages have no sidebar, only rail
-    const showSidebar = !isPayoutsContext && !isMessagesContext
-    const currentNav = isProgramsContext ? PROGRAMS_NAV : PROFILE_NAV
-    const sidebarTitle = isProgramsContext ? 'All programs' : 'Partner profile'
+    const isSettingsActive = pathname === '/seller/settings'
+    const isProfileActive = pathname === '/seller/profile'
+
+    // Navigation item component
+    const NavItem = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
+        const active = isActive(href)
+        return (
+            <Link
+                href={href}
+                className={`
+                    flex items-center gap-3 px-3 py-2.5 rounded-xl
+                    text-[14px] font-medium
+                    transition-all duration-150
+                    ${active
+                        ? 'bg-violet-50 text-violet-700'
+                        : 'text-gray-600 hover:bg-white hover:text-gray-900'
+                    }
+                `}
+            >
+                <Icon
+                    strokeWidth={1.5}
+                    size={18}
+                    className={active ? 'text-violet-600' : 'text-gray-400'}
+                />
+                {label}
+            </Link>
+        )
+    }
+
+    // Section label component
+    const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+        <p className="px-3 pt-6 pb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            {children}
+        </p>
+    )
 
     return (
         <div className="flex min-h-screen bg-white">
 
-            {/* 1. LEFT RAIL (Global Navigation) */}
+            {/* SIDEBAR */}
             <aside className={`
                 fixed top-0 left-0 bottom-0 z-50
-                ${DS.rail.width} ${DS.rail.bg} ${DS.rail.border}
-                flex flex-col items-center py-4
+                ${DS.sidebar.width} ${DS.sidebar.bg} ${DS.sidebar.border}
+                flex flex-col
             `}>
-                {/* Logo */}
-                <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-sm mb-8">
-                    T
+                {/* Logo Header */}
+                <div className="px-5 py-5 border-b border-gray-200">
+                    <Link href="/seller" className="flex items-center gap-3">
+                        <img
+                            src="/Logotrac/logo1.png"
+                            alt="Traaaction"
+                            className="w-10 h-10 rounded-xl object-cover"
+                        />
+                        <div>
+                            <p className="text-[15px] font-semibold text-gray-900">{profile?.name || 'Mon compte'}</p>
+                            <p className="text-xs text-gray-500">Seller Dashboard</p>
+                        </div>
+                    </Link>
                 </div>
 
-                {/* Rail Nav Icons */}
-                <nav className="flex-1 space-y-2 w-full px-1.5">
-                    {RAIL_NAV.map((item) => {
-                        const active = isRailActive(item.href)
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`
-                                    w-full h-10 rounded-lg flex items-center justify-center
-                                    transition-all duration-150
-                                    ${active
-                                        ? 'bg-white shadow-sm text-gray-900'
-                                        : 'text-gray-500 hover:bg-gray-100'
-                                    }
-                                `}
-                                title={item.label}
-                            >
-                                <item.icon strokeWidth={1.5} size={20} />
-                            </Link>
-                        )
-                    })}
+                {/* Navigation */}
+                <nav className="flex-1 px-3 overflow-y-auto">
+                    {/* PROGRAMMES Section */}
+                    <SectionLabel>Programmes</SectionLabel>
+                    <div className="space-y-1">
+                        <NavItem href="/seller" icon={Home} label="Overview" />
+                        <NavItem href="/seller/marketplace" icon={Store} label="Marketplace" />
+                    </div>
+
+                    {/* GAINS Section */}
+                    <SectionLabel>Gains</SectionLabel>
+                    <div className="space-y-1">
+                        <NavItem href="/seller/payouts" icon={CreditCard} label="Payouts" />
+                    </div>
+
+                    {/* COMMUNICATION Section */}
+                    <SectionLabel>Communication</SectionLabel>
+                    <div className="space-y-1">
+                        <NavItem href="/seller/messages" icon={MessageSquare} label="Messages" />
+                    </div>
+
+                    {/* COMPTE Section */}
+                    <SectionLabel>Compte</SectionLabel>
+                    <div className="space-y-1">
+                        <NavItem href="/seller/settings" icon={Settings} label="Paramètres" />
+                    </div>
                 </nav>
 
-                {/* Footer Items */}
-                <div className="space-y-2 w-full px-1.5 pb-2">
-                    <button
-                        className="w-full h-10 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
-                        title="Help"
+                {/* Profile Footer */}
+                <div className="p-3 border-t border-gray-200">
+                    <Link
+                        href="/seller/profile"
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+                            isProfileActive ? 'bg-violet-50' : 'hover:bg-white'
+                        }`}
                     >
-                        <HelpCircle strokeWidth={1.5} size={20} />
-                    </button>
-
-                    {/* Avatar */}
-                    <div className="w-full h-10 flex items-center justify-center">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-xs font-medium">
-                            P
+                        {profile?.avatarUrl ? (
+                            <img
+                                src={profile.avatarUrl}
+                                alt={profile.name || 'Profil'}
+                                className="w-9 h-9 rounded-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center">
+                                <User className="w-4 h-4 text-gray-500" />
+                            </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                                {profile?.email || 'Mon compte'}
+                            </p>
                         </div>
-                    </div>
+                    </Link>
                 </div>
             </aside>
 
-            {/* 2. MAIN SIDEBAR (Contextual Navigation) - Hidden for Payouts */}
-            {showSidebar && (
-                <aside className={`
-                    fixed top-0 left-[56px] bottom-0 z-40
-                    ${DS.sidebar.width} ${DS.sidebar.bg} ${DS.sidebar.border}
-                    flex flex-col
-                `}>
-                    {/* Header Section with Dropdown */}
-                    <div className="px-4 py-6 border-b border-gray-100">
-                        <button className="flex items-center justify-between w-full px-2 py-1 hover:bg-gray-50 rounded-lg transition-colors">
-                            <span className="text-sm font-semibold text-gray-900">{sidebarTitle}</span>
-                            <ChevronDown className="w-4 h-4 text-gray-400" />
-                        </button>
-                    </div>
-
-                    {/* Navigation Links - Dynamic based on context */}
-                    <nav className="flex-1 px-3 py-4 space-y-0.5">
-                        {currentNav.map((item) => {
-                            const active = pathname === item.href
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    className={`
-                                        flex items-center gap-3 px-3 py-2 rounded-lg
-                                        text-[14px] font-medium
-                                        transition-colors
-                                        ${active
-                                            ? 'bg-blue-50 text-blue-600'
-                                            : 'text-gray-700 hover:bg-gray-50'
-                                        }
-                                    `}
-                                >
-                                    <item.icon strokeWidth={1.5} size={18} />
-                                    {item.label}
-                                </Link>
-                            )
-                        })}
-                    </nav>
-
-                    {/* Bottom Payouts Section */}
-                    <div className="p-4 border-t border-gray-100">
-                        <Link
-                            href="/seller/payouts"
-                            className="block"
-                        >
-                            <div className="flex items-center gap-2 mb-3">
-                                <Wallet className="w-4 h-4 text-gray-400" strokeWidth={1.5} />
-                                <span className="text-sm font-semibold text-gray-900">Payouts</span>
-                            </div>
-
-                            <div className="space-y-1.5 text-xs">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Upcoming payouts</span>
-                                    <span className="font-medium text-gray-900">$0.00</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Received payouts</span>
-                                    <span className="font-medium text-gray-900">$0.00</span>
-                                </div>
-                            </div>
-                        </Link>
-                    </div>
-                </aside>
-            )}
-
-            {/* 3. MAIN CONTENT */}
-            <main className={`flex-1 ${showSidebar ? 'ml-[296px]' : 'ml-[56px]'} min-h-screen ${DS.content.bg}`}>
+            {/* MAIN CONTENT */}
+            <main className={`flex-1 ml-[260px] min-h-screen ${DS.content.bg}`}>
                 {/* Profile Completion Banner */}
                 <ProfileCompletionBanner />
 
                 {/* Top Header with Wallet Button - only on payouts page */}
-                {isPayoutsContext && (
+                {pathname === '/seller/payouts' && (
                     <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-gray-100">
                         <div className="flex items-center justify-end px-6 py-3">
                             <WalletButton />

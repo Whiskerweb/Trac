@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Search, Loader2, ArrowRight } from 'lucide-react'
+import { Search, Loader2, ArrowRight, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import { getMarketplaceMissions } from '@/app/actions/marketplace-actions'
 
@@ -18,6 +18,15 @@ interface Mission {
     visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
     industry: string | null
     gain_type: string | null
+    // Multi-commission fields
+    lead_enabled: boolean
+    lead_reward_amount: number | null
+    sale_enabled: boolean
+    sale_reward_amount: number | null
+    sale_reward_structure: string | null
+    recurring_enabled: boolean
+    recurring_reward_amount: number | null
+    recurring_reward_structure: string | null
     startup: {
         name: string
         slug: string
@@ -33,101 +42,156 @@ interface Mission {
     request: { status: 'PENDING' | 'APPROVED' | 'REJECTED' } | null
 }
 
+// Helper to format reward display
+function formatRewardAmount(amount: number | null, structure: string | null): string {
+    if (amount === null) return ''
+    if (structure === 'PERCENTAGE') {
+        return `${amount}%`
+    }
+    return `${amount}€`
+}
+
+// Helper to check if mission has multiple commission types
+function hasMultipleCommissions(mission: Mission): boolean {
+    const enabledCount = [
+        mission.lead_enabled,
+        mission.sale_enabled,
+        mission.recurring_enabled
+    ].filter(Boolean).length
+    return enabledCount > 1
+}
+
 // =============================================
 // CATEGORIES - Minimal, no emojis
 // =============================================
 
-const CATEGORIES = [
+// Must match exactly the INDUSTRIES from startup profile creation
+// Main categories shown by default
+const MAIN_CATEGORIES = [
     { id: 'all', label: 'Tous' },
     { id: 'SaaS', label: 'SaaS' },
     { id: 'E-commerce', label: 'E-commerce' },
-    { id: 'Finance', label: 'Finance' },
-    { id: 'Health', label: 'Santé' },
-    { id: 'Education', label: 'Éducation' },
-    { id: 'Marketing', label: 'Marketing' },
+    { id: 'FinTech', label: 'FinTech' },
+    { id: 'AI / ML', label: 'AI / ML' },
+    { id: 'MarTech', label: 'Marketing' },
+]
+
+// Secondary categories shown when expanded
+const MORE_CATEGORIES = [
+    { id: 'HealthTech', label: 'Santé' },
+    { id: 'EdTech', label: 'Éducation' },
+    { id: 'Cybersecurity', label: 'Cyber' },
+    { id: 'CleanTech', label: 'CleanTech' },
+    { id: 'FoodTech', label: 'Food' },
+    { id: 'PropTech', label: 'Immo' },
+    { id: 'LegalTech', label: 'Legal' },
+    { id: 'HRTech', label: 'RH' },
+    { id: 'Gaming', label: 'Gaming' },
+    { id: 'Media', label: 'Media' },
+    { id: 'Marketplace', label: 'Marketplace' },
+    { id: 'B2B Services', label: 'B2B' },
+    { id: 'Consumer Apps', label: 'Consumer' },
 ]
 
 // =============================================
-// PROGRAM CARD - Ultra minimal
+// PROGRAM ROW - Full width minimalist row
 // =============================================
 
-function ProgramCard({ mission, index }: { mission: Mission; index: number }) {
-    const isEnrolled = mission.enrollment?.status === 'APPROVED'
-
+function ProgramRow({ mission, index }: { mission: Mission; index: number }) {
     return (
         <Link href={`/seller/marketplace/${mission.id}`}>
-            <article
-                className="group relative bg-white rounded-2xl p-6 transition-all duration-500 ease-out hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1"
+            <div
+                className="group flex items-center gap-5 px-5 py-4 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200"
                 style={{
-                    animationDelay: `${index * 50}ms`,
+                    animationDelay: `${index * 30}ms`,
                     opacity: 0,
-                    animation: 'fadeSlideIn 0.6s ease-out forwards'
+                    animation: 'fadeSlideIn 0.4s ease-out forwards'
                 }}
             >
-                {/* Subtle border that appears on hover */}
-                <div className="absolute inset-0 rounded-2xl border border-gray-100 group-hover:border-gray-200 transition-colors duration-300" />
+                {/* Logo */}
+                {mission.startup.logo_url ? (
+                    <img
+                        src={mission.startup.logo_url}
+                        alt=""
+                        className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                    />
+                ) : (
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-semibold text-white">
+                            {mission.startup.name.charAt(0)}
+                        </span>
+                    </div>
+                )}
 
-                {/* Content */}
-                <div className="relative">
-                    {/* Logo + Status */}
-                    <div className="flex items-start justify-between mb-6">
-                        {mission.startup.logo_url ? (
-                            <img
-                                src={mission.startup.logo_url}
-                                alt=""
-                                className="w-11 h-11 rounded-xl object-cover"
-                            />
-                        ) : (
-                            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
-                                <span className="text-base font-medium text-gray-400">
-                                    {mission.startup.name.charAt(0)}
-                                </span>
-                            </div>
+                {/* Main info */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-gray-900 truncate group-hover:text-violet-600 transition-colors">
+                            {mission.startup.name}
+                        </h3>
+                        {mission.startup.industry && (
+                            <span className="hidden sm:inline text-[10px] text-gray-400 uppercase tracking-wider px-2 py-0.5 bg-gray-50 rounded-full">
+                                {mission.startup.industry}
+                            </span>
                         )}
-
-                        {isEnrolled && (
-                            <span className="text-[10px] font-medium tracking-wide uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                                Membre
+                        {mission.visibility === 'PRIVATE' && (
+                            <span className="text-[10px] text-amber-600 uppercase tracking-wider px-2 py-0.5 bg-amber-50 rounded-full font-medium">
+                                Privé
                             </span>
                         )}
                     </div>
-
-                    {/* Startup name */}
-                    <h3 className="text-[15px] font-semibold text-gray-900 mb-1 tracking-tight">
-                        {mission.startup.name}
-                    </h3>
-
-                    {/* Industry tag */}
-                    {mission.startup.industry && (
-                        <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-4">
-                            {mission.startup.industry}
-                        </p>
-                    )}
-
-                    {/* Reward - The hero element */}
-                    <div className="flex items-baseline gap-1.5 mb-4">
-                        <span className="text-2xl font-semibold tracking-tight text-gray-900">
-                            {mission.reward}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                            par conversion
-                        </span>
-                    </div>
-
-                    {/* Hover reveal: Arrow */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                        <span className="text-xs text-gray-400">
-                            {mission.partners_count} partenaire{mission.partners_count !== 1 ? 's' : ''}
-                        </span>
-                        <div className="flex items-center gap-1 text-gray-400 group-hover:text-violet-500 transition-colors duration-300">
-                            <span className="text-xs font-medium opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                                Explorer
-                            </span>
-                            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-300" />
-                        </div>
-                    </div>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                        {mission.title}
+                    </p>
                 </div>
-            </article>
+
+                {/* Rewards */}
+                <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+                    {hasMultipleCommissions(mission) ? (
+                        <>
+                            {mission.lead_enabled && mission.lead_reward_amount && (
+                                <div className="text-center px-3 py-1.5 bg-purple-50 rounded-lg">
+                                    <p className="text-sm font-semibold text-purple-900">{mission.lead_reward_amount}€</p>
+                                    <p className="text-[10px] text-purple-600">lead</p>
+                                </div>
+                            )}
+                            {mission.sale_enabled && mission.sale_reward_amount && (
+                                <div className="text-center px-3 py-1.5 bg-emerald-50 rounded-lg">
+                                    <p className="text-sm font-semibold text-emerald-900">{formatRewardAmount(mission.sale_reward_amount, mission.sale_reward_structure)}</p>
+                                    <p className="text-[10px] text-emerald-600">vente</p>
+                                </div>
+                            )}
+                            {mission.recurring_enabled && mission.recurring_reward_amount && (
+                                <div className="text-center px-3 py-1.5 bg-blue-50 rounded-lg">
+                                    <p className="text-sm font-semibold text-blue-900">{formatRewardAmount(mission.recurring_reward_amount, mission.recurring_reward_structure)}</p>
+                                    <p className="text-[10px] text-blue-600">récurrent</p>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="text-right">
+                            <p className="text-base font-semibold text-gray-900">{mission.reward}</p>
+                            <p className="text-[10px] text-gray-400">par conversion</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Mobile rewards */}
+                <div className="md:hidden text-right flex-shrink-0">
+                    <p className="text-sm font-semibold text-gray-900">{mission.reward}</p>
+                </div>
+
+                {/* Partners count */}
+                <div className="hidden sm:block text-right flex-shrink-0 w-16">
+                    <p className="text-xs text-gray-400">
+                        {mission.partners_count}
+                    </p>
+                    <p className="text-[10px] text-gray-300">partenaires</p>
+                </div>
+
+                {/* Arrow */}
+                <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-violet-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+            </div>
         </Link>
     )
 }
@@ -142,6 +206,7 @@ export default function SellerMarketplacePage() {
     const [search, setSearch] = useState('')
     const [selectedCategory, setSelectedCategory] = useState('all')
     const [searchFocused, setSearchFocused] = useState(false)
+    const [showAllCategories, setShowAllCategories] = useState(false)
     const searchRef = useRef<HTMLInputElement>(null)
 
     async function loadMissions() {
@@ -249,9 +314,10 @@ export default function SellerMarketplacePage() {
                     </div>
                 </div>
 
-                {/* Categories - Subtle pills */}
-                <nav className="flex items-center justify-center gap-1 mb-12 flex-wrap">
-                    {CATEGORIES.map((cat) => (
+                {/* Categories - Subtle pills with expand */}
+                <nav className="flex items-center justify-center gap-1.5 mb-12 flex-wrap">
+                    {/* Main categories - always visible */}
+                    {MAIN_CATEGORIES.map((cat) => (
                         <button
                             key={cat.id}
                             onClick={() => setSelectedCategory(cat.id)}
@@ -266,49 +332,98 @@ export default function SellerMarketplacePage() {
                             {cat.label}
                         </button>
                     ))}
+
+                    {/* More categories - shown when expanded */}
+                    {showAllCategories && MORE_CATEGORIES.map((cat) => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategory(cat.id)}
+                            className={`
+                                px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-200
+                                ${selectedCategory === cat.id
+                                    ? 'bg-gray-900 text-white'
+                                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                                }
+                            `}
+                        >
+                            {cat.label}
+                        </button>
+                    ))}
+
+                    {/* Toggle button */}
+                    <button
+                        onClick={() => setShowAllCategories(!showAllCategories)}
+                        className={`
+                            px-3 py-2 rounded-full text-[13px] font-medium transition-all duration-200
+                            flex items-center gap-1
+                            ${showAllCategories
+                                ? 'text-violet-600 bg-violet-50'
+                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                            }
+                        `}
+                    >
+                        {showAllCategories ? 'Moins' : 'Plus'}
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showAllCategories ? 'rotate-180' : ''}`} />
+                    </button>
                 </nav>
 
                 {/* Content */}
-                {loading ? (
-                    <div className="flex items-center justify-center py-32">
-                        <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
-                    </div>
-                ) : missions.length === 0 ? (
-                    <div className="text-center py-32">
-                        <p className="text-gray-400 text-[15px] mb-2">
-                            Aucun programme trouvé
-                        </p>
-                        {(search || selectedCategory !== 'all') && (
-                            <button
-                                onClick={() => {
-                                    setSearch('')
-                                    setSelectedCategory('all')
-                                }}
-                                className="text-[13px] text-violet-500 hover:text-violet-600 font-medium"
-                            >
-                                Réinitialiser
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <>
-                        {/* Results count - Very subtle */}
-                        <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-6 text-center">
-                            {missions.length} programme{missions.length !== 1 ? 's' : ''}
-                        </p>
+                {(() => {
+                    // Filter out missions where user is already enrolled
+                    const availableMissions = missions.filter(m => m.enrollment?.status !== 'APPROVED')
 
-                        {/* Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {missions.map((mission, index) => (
-                                <ProgramCard
-                                    key={mission.id}
-                                    mission={mission}
-                                    index={index}
-                                />
-                            ))}
-                        </div>
-                    </>
-                )}
+                    if (loading) {
+                        return (
+                            <div className="flex items-center justify-center py-32">
+                                <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+                            </div>
+                        )
+                    }
+
+                    if (availableMissions.length === 0) {
+                        return (
+                            <div className="text-center py-32">
+                                <p className="text-gray-400 text-[15px] mb-2">
+                                    {missions.length > 0 && availableMissions.length === 0
+                                        ? 'Vous avez rejoint tous les programmes disponibles'
+                                        : 'Aucun programme trouvé'
+                                    }
+                                </p>
+                                {(search || selectedCategory !== 'all') && (
+                                    <button
+                                        onClick={() => {
+                                            setSearch('')
+                                            setSelectedCategory('all')
+                                        }}
+                                        className="text-[13px] text-violet-500 hover:text-violet-600 font-medium"
+                                    >
+                                        Réinitialiser
+                                    </button>
+                                )}
+                            </div>
+                        )
+                    }
+
+                    return (
+                        <>
+                            {/* Results count - Very subtle */}
+                            <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-6 text-center">
+                                {availableMissions.length} programme{availableMissions.length !== 1 ? 's' : ''} disponible{availableMissions.length !== 1 ? 's' : ''}
+                            </p>
+
+                            {/* List */}
+                            <div className="space-y-2">
+                                {availableMissions.map((mission, index) => (
+                                    <ProgramRow
+                                        key={mission.id}
+                                        mission={mission}
+                                        index={index}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )
+                })()}
             </div>
         </div>
     )

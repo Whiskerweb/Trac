@@ -1,418 +1,608 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
-import {
-    ArrowLeft, Loader2, Gift, Copy, Check, ExternalLink,
-    Play, FileText, Link as LinkIcon, FileType, Building,
-    Lock, Globe, AlertCircle, DollarSign, MousePointer, Users, Trophy,
-    Activity, TrendingUp
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { getMissionWithResources } from '@/app/actions/marketplace-actions'
-import { getMissionStatsForPartner, getPartnerActivityLog, MissionStatsForPartner, ActivityLogEntry } from '@/app/actions/mission-stats'
-
-interface Resource {
-    id: string
-    type: 'YOUTUBE' | 'PDF' | 'LINK' | 'TEXT'
-    url: string | null
-    title: string
-    description: string | null
-}
-
-interface MissionData {
-    id: string
-    title: string
-    description: string
-    target_url: string
-    reward: string
-    visibility: string
-    industry: string | null
-    gain_type: string | null
-    workspace_name: string
-}
-
-interface EnrollmentData {
-    id: string
-    status: string
-    link_slug: string | null
-    link_url: string | null
-}
+import {
+    ArrowLeft, ExternalLink, Globe, Users, Calendar,
+    Building2, MapPin, Loader2, Check, Clock, Lock,
+    FileText, Youtube, Link as LinkIcon, Copy, CheckCircle2,
+    Send, Sparkles
+} from 'lucide-react'
+import { getMissionDetailForMarketplace } from '@/app/actions/marketplace-actions'
+import { joinMission } from '@/app/actions/marketplace'
 
 // =============================================
-// YOUTUBE EMBED COMPONENT
+// TYPES
 // =============================================
 
-function YouTubeEmbed({ url }: { url: string }) {
-    // Extract video ID from YouTube URL
-    const getVideoId = (url: string): string | null => {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
-        const match = url.match(regExp)
-        return match && match[2].length === 11 ? match[2] : null
+interface MissionDetail {
+    mission: {
+        id: string
+        title: string
+        description: string
+        target_url: string
+        reward: string
+        reward_type: string | null
+        reward_structure: string | null
+        visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
+        partners_count: number
+        created_at: Date
+        // Multi-commission fields
+        lead_enabled: boolean
+        lead_reward_amount: number | null
+        sale_enabled: boolean
+        sale_reward_amount: number | null
+        sale_reward_structure: string | null
+        recurring_enabled: boolean
+        recurring_reward_amount: number | null
+        recurring_reward_structure: string | null
     }
+    startup: {
+        id: string
+        name: string
+        slug: string
+        logo_url: string | null
+        description: string | null
+        industry: string | null
+        website_url: string | null
+        twitter_url: string | null
+        linkedin_url: string | null
+        founded_year: string | null
+        company_size: string | null
+        headquarters: string | null
+    }
+    resources: Array<{
+        id: string
+        type: string
+        url: string | null
+        title: string | null
+        description: string | null
+    }>
+    enrollment: {
+        id: string
+        status: string
+        link_slug: string | null
+        link_url: string | null
+    } | null
+    pendingRequest: {
+        id: string
+        status: string
+        created_at: Date
+    } | null
+    canSeeResources: boolean
+}
 
-    const videoId = getVideoId(url)
-    if (!videoId) return null
+// Helper to format reward display
+function formatRewardAmount(amount: number | null, structure: string | null): string {
+    if (amount === null) return ''
+    if (structure === 'PERCENTAGE') {
+        return `${amount}%`
+    }
+    return `${amount}€`
+}
 
-    return (
-        <div className="aspect-video rounded-lg overflow-hidden bg-gray-900">
-            <iframe
-                src={`https://www.youtube.com/embed/${videoId}`}
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-            />
-        </div>
-    )
+// Helper to check if mission has multiple commission types
+function hasMultipleCommissions(mission: MissionDetail['mission']): boolean {
+    const enabledCount = [
+        mission.lead_enabled,
+        mission.sale_enabled,
+        mission.recurring_enabled
+    ].filter(Boolean).length
+    return enabledCount > 1
 }
 
 // =============================================
-// RESOURCE CARD
+// RESOURCE ICON
 // =============================================
 
-function ResourceCard({ resource }: { resource: Resource }) {
-    const icons = {
-        YOUTUBE: Play,
-        PDF: FileText,
-        LINK: LinkIcon,
-        TEXT: FileType
+function ResourceIcon({ type }: { type: string }) {
+    switch (type) {
+        case 'YOUTUBE':
+            return <Youtube className="w-4 h-4" />
+        case 'PDF':
+            return <FileText className="w-4 h-4" />
+        case 'LINK':
+            return <LinkIcon className="w-4 h-4" />
+        default:
+            return <FileText className="w-4 h-4" />
     }
-    const Icon = icons[resource.type]
-
-    const colors = {
-        YOUTUBE: 'bg-red-50 text-red-600 border-red-200',
-        PDF: 'bg-blue-50 text-blue-600 border-blue-200',
-        LINK: 'bg-purple-50 text-purple-600 border-purple-200',
-        TEXT: 'bg-gray-50 text-gray-600 border-gray-200'
-    }
-
-    return (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
-            <div className="flex items-start gap-3">
-                <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${colors[resource.type]}`}>
-                    <Icon className="w-5 h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-900 mb-1">
-                        {resource.title}
-                    </h4>
-                    {resource.description && (
-                        <p className="text-sm text-gray-500 mb-2 line-clamp-2">
-                            {resource.description}
-                        </p>
-                    )}
-                    {resource.url && resource.type !== 'YOUTUBE' && (
-                        <a
-                            href={resource.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
-                        >
-                            {resource.type === 'PDF' ? 'Download' : 'Open Link'}
-                            <ExternalLink className="w-3 h-3" />
-                        </a>
-                    )}
-                </div>
-            </div>
-        </div>
-    )
 }
 
 // =============================================
 // MAIN PAGE
 // =============================================
 
-export default function MissionDetailPage({
-    params
-}: {
-    params: Promise<{ missionId: string }>
-}) {
-    const resolvedParams = use(params)
-    const [mission, setMission] = useState<MissionData | null>(null)
-    const [resources, setResources] = useState<Resource[]>([])
-    const [enrollment, setEnrollment] = useState<EnrollmentData | null>(null)
+export default function MissionDetailPage() {
+    const params = useParams()
+    const router = useRouter()
+    const missionId = params.missionId as string
+
+    const [data, setData] = useState<MissionDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [joining, setJoining] = useState(false)
+    const [joinSuccess, setJoinSuccess] = useState<'enrolled' | 'requested' | null>(null)
     const [copied, setCopied] = useState(false)
-
-    // NEW: Personal stats and activity log
-    const [myStats, setMyStats] = useState<MissionStatsForPartner | null>(null)
-    const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([])
 
     useEffect(() => {
         async function load() {
-            const result = await getMissionWithResources(resolvedParams.missionId)
+            setLoading(true)
+            const result = await getMissionDetailForMarketplace(missionId)
 
-            if (!result.success) {
-                if (result.error === 'ACCESS_DENIED') {
-                    setError('You do not have access to this mission.')
-                } else {
-                    setError(result.error || 'Failed to load mission')
-                }
+            if (result.success) {
+                setData(result as MissionDetail)
             } else {
-                setMission(result.mission as MissionData)
-                setResources((result.resources || []) as Resource[])
-                setEnrollment(result.enrollment as EnrollmentData | null)
-
-                // Load personal stats
-                const statsResult = await getMissionStatsForPartner(resolvedParams.missionId)
-                if (statsResult.success && statsResult.stats) {
-                    setMyStats(statsResult.stats)
-                }
-
-                // Load activity log
-                const logResult = await getPartnerActivityLog(resolvedParams.missionId)
-                if (logResult.success && logResult.entries) {
-                    setActivityLog(logResult.entries)
-                }
+                setError(result.error || 'Mission introuvable')
             }
             setLoading(false)
         }
-
         load()
-    }, [resolvedParams.missionId])
+    }, [missionId])
 
-    async function handleCopyLink() {
-        if (enrollment?.link_url) {
-            await navigator.clipboard.writeText(enrollment.link_url)
-            setCopied(true)
-            setTimeout(() => setCopied(false), 2000)
+    async function handleJoin() {
+        setJoining(true)
+        const result = await joinMission(missionId)
+
+        if (result.success) {
+            setJoinSuccess(result.type || 'enrolled')
+            // Reload data to get updated enrollment status
+            const updated = await getMissionDetailForMarketplace(missionId)
+            if (updated.success) {
+                setData(updated as MissionDetail)
+            }
+        } else {
+            setError(result.error || 'Erreur lors de la demande')
         }
+        setJoining(false)
     }
 
-    // Get featured video (first YouTube resource)
-    const featuredVideo = resources.find(r => r.type === 'YOUTUBE')
-    const otherResources = resources.filter(r => r.type !== 'YOUTUBE' || r.id !== featuredVideo?.id)
+    function copyLink() {
+        if (!data?.enrollment?.link_url) return
+        navigator.clipboard.writeText(data.enrollment.link_url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+    }
 
+    // Loading state
     if (loading) {
         return (
             <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
             </div>
         )
     }
 
-    if (error) {
+    // Error state
+    if (error || !data) {
         return (
             <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
                 <div className="text-center">
-                    <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-                    <h2 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h2>
-                    <p className="text-gray-600 mb-4">{error}</p>
+                    <p className="text-gray-500 mb-4">{error || 'Mission introuvable'}</p>
                     <Link
                         href="/seller/marketplace"
-                        className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+                        className="text-sm text-violet-600 hover:text-violet-700 font-medium"
                     >
-                        <ArrowLeft className="w-4 h-4" />
-                        Back to Marketplace
+                        Retour au marketplace
                     </Link>
                 </div>
             </div>
         )
     }
 
-    if (!mission) return null
+    const { mission, startup, resources, enrollment, pendingRequest, canSeeResources } = data
+    const isEnrolled = enrollment?.status === 'APPROVED'
+    const isPending = pendingRequest?.status === 'PENDING'
+    const isPrivate = mission.visibility === 'PRIVATE'
 
     return (
         <div className="min-h-screen bg-[#FAFAFA]">
-            <div className="max-w-5xl mx-auto px-8 py-10">
+            <div className="max-w-4xl mx-auto px-6 py-12">
 
-                {/* Back Link */}
+                {/* Back button */}
                 <Link
                     href="/seller/marketplace"
-                    className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
+                    className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-10 group"
                 >
-                    <ArrowLeft className="w-4 h-4" />
-                    Back to Marketplace
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                    Marketplace
                 </Link>
 
-                {/* Header */}
-                <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-                    <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Building className="w-4 h-4" />
-                            {mission.workspace_name}
-                        </div>
-                        <div className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full border ${mission.visibility === 'PUBLIC' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                            {mission.visibility === 'PUBLIC' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                            {mission.visibility}
-                        </div>
-                    </div>
+                {/* Header section */}
+                <header className="mb-12">
+                    <div className="flex items-start gap-6">
+                        {/* Startup Logo */}
+                        {startup.logo_url ? (
+                            <img
+                                src={startup.logo_url}
+                                alt={startup.name}
+                                className="w-20 h-20 rounded-2xl object-cover shadow-sm"
+                            />
+                        ) : (
+                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                                <span className="text-2xl font-semibold text-white">
+                                    {startup.name.charAt(0)}
+                                </span>
+                            </div>
+                        )}
 
-                    <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                        {mission.title}
-                    </h1>
+                        <div className="flex-1 min-w-0">
+                            {/* Industry tag */}
+                            {startup.industry && (
+                                <span className="inline-block text-[11px] text-gray-500 uppercase tracking-wider mb-2">
+                                    {startup.industry}
+                                </span>
+                            )}
 
-                    <p className="text-gray-600 mb-4">
-                        {mission.description}
-                    </p>
+                            {/* Startup name */}
+                            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight mb-1">
+                                {startup.name}
+                            </h1>
 
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
-                            <Gift className="w-4 h-4 text-green-600" />
-                            <span className="font-semibold text-green-800">{mission.reward}</span>
+                            {/* Mission title */}
+                            <p className="text-gray-500 text-[15px]">
+                                {mission.title}
+                            </p>
                         </div>
-                        {mission.industry && (
-                            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                {mission.industry}
+
+                        {/* Visibility badge */}
+                        {isPrivate && (
+                            <span className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full">
+                                <Lock className="w-3 h-3" />
+                                Privé
                             </span>
                         )}
                     </div>
-                </div>
+                </header>
 
-                {/* Tracking Link (if enrolled) */}
-                {enrollment?.link_url && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
-                        <h3 className="text-sm font-medium text-blue-900 mb-3">
-                            Your Tracking Link
-                        </h3>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={enrollment.link_url}
-                                readOnly
-                                className="flex-1 px-4 py-2.5 bg-white border border-blue-200 rounded-lg font-mono text-sm text-blue-700"
-                            />
-                            <button
-                                onClick={handleCopyLink}
-                                className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium text-sm flex items-center gap-2 hover:bg-blue-700 transition-colors"
-                            >
-                                {copied ? (
-                                    <>
-                                        <Check className="w-4 h-4" />
-                                        Copied!
-                                    </>
-                                ) : (
-                                    <>
-                                        <Copy className="w-4 h-4" />
-                                        Copy
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                )}
+                {/* Main content grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                {/* Personal Stats Cards */}
-                {myStats && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div className="bg-white border border-gray-200 rounded-xl p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-2 bg-green-50 rounded-lg">
-                                    <DollarSign className="w-4 h-4 text-green-600" />
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-gray-900">{(myStats.my_commission / 100).toFixed(2)}€</p>
-                            <p className="text-xs text-gray-500">Mes gains</p>
-                        </div>
-                        <div className="bg-white border border-gray-200 rounded-xl p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-2 bg-blue-50 rounded-lg">
-                                    <Users className="w-4 h-4 text-blue-600" />
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-gray-900">{myStats.my_leads}</p>
-                            <p className="text-xs text-gray-500">Mes leads</p>
-                        </div>
-                        <div className="bg-white border border-gray-200 rounded-xl p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-2 bg-purple-50 rounded-lg">
-                                    <MousePointer className="w-4 h-4 text-purple-600" />
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-gray-900">{myStats.my_clicks}</p>
-                            <p className="text-xs text-gray-500">Mes clicks</p>
-                        </div>
-                        <div className="bg-white border border-gray-200 rounded-xl p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-2 bg-yellow-50 rounded-lg">
-                                    <Trophy className="w-4 h-4 text-yellow-600" />
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-gray-900">#{myStats.my_rank}</p>
-                            <p className="text-xs text-gray-500">sur {myStats.total_partners}</p>
-                        </div>
-                    </div>
-                )}
+                    {/* Left column - Main content */}
+                    <div className="lg:col-span-2 space-y-8">
 
-                {/* Activity Log */}
-                {activityLog.length > 0 && (
-                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
-                        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-                            <Activity className="w-4 h-4 text-gray-400" />
-                            <h3 className="font-semibold text-gray-900">Historique</h3>
-                        </div>
-                        <div className="divide-y divide-gray-100 max-h-[300px] overflow-y-auto">
-                            {activityLog.map((entry) => (
-                                <div key={entry.id} className="px-5 py-3 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${entry.type === 'sale' ? 'bg-green-100' :
-                                            entry.type === 'lead' ? 'bg-blue-100' : 'bg-gray-100'
-                                            }`}>
-                                            {entry.type === 'sale' ? <DollarSign className="w-4 h-4 text-green-600" /> :
-                                                entry.type === 'lead' ? <Users className="w-4 h-4 text-blue-600" /> :
-                                                    <MousePointer className="w-4 h-4 text-gray-600" />}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{entry.details}</p>
-                                            <p className="text-xs text-gray-400">
-                                                {new Date(entry.timestamp).toLocaleString('fr-FR', {
-                                                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-                                                })}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    {entry.commission && (
-                                        <span className="text-sm font-semibold text-green-600">
-                                            +{(entry.commission / 100).toFixed(2)}€
+                        {/* Startup description */}
+                        {startup.description && (
+                            <section className="bg-white rounded-2xl p-6 border border-gray-100">
+                                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                                    À propos de {startup.name}
+                                </h2>
+                                <p className="text-gray-600 text-[15px] leading-relaxed">
+                                    {startup.description}
+                                </p>
+
+                                {/* Startup meta */}
+                                <div className="flex flex-wrap gap-4 mt-6 pt-5 border-t border-gray-50">
+                                    {startup.website_url && (
+                                        <a
+                                            href={startup.website_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                                        >
+                                            <Globe className="w-3.5 h-3.5" />
+                                            Site web
+                                        </a>
+                                    )}
+                                    {startup.headquarters && (
+                                        <span className="flex items-center gap-1.5 text-sm text-gray-500">
+                                            <MapPin className="w-3.5 h-3.5" />
+                                            {startup.headquarters}
+                                        </span>
+                                    )}
+                                    {startup.company_size && (
+                                        <span className="flex items-center gap-1.5 text-sm text-gray-500">
+                                            <Building2 className="w-3.5 h-3.5" />
+                                            {startup.company_size} employés
+                                        </span>
+                                    )}
+                                    {startup.founded_year && (
+                                        <span className="flex items-center gap-1.5 text-sm text-gray-500">
+                                            <Calendar className="w-3.5 h-3.5" />
+                                            Fondée en {startup.founded_year}
                                         </span>
                                     )}
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Featured Video */}
-                {featuredVideo?.url && (
-                    <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                            {featuredVideo.title}
-                        </h3>
-                        <YouTubeEmbed url={featuredVideo.url} />
-                        {featuredVideo.description && (
-                            <p className="text-sm text-gray-600 mt-3">
-                                {featuredVideo.description}
-                            </p>
+                            </section>
                         )}
-                    </div>
-                )}
 
-                {/* Resources Grid */}
-                {otherResources.length > 0 && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                            Resources & Assets
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {otherResources.map((resource) => (
-                                <ResourceCard key={resource.id} resource={resource} />
-                            ))}
+                        {/* Mission description */}
+                        <section className="bg-white rounded-2xl p-6 border border-gray-100">
+                            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                                La mission
+                            </h2>
+                            <p className="text-gray-600 text-[15px] leading-relaxed whitespace-pre-line">
+                                {mission.description || 'Aucune description disponible.'}
+                            </p>
+
+                            {/* Target URL */}
+                            <div className="mt-6 pt-5 border-t border-gray-50">
+                                <a
+                                    href={mission.target_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 text-sm text-violet-600 hover:text-violet-700 font-medium transition-colors"
+                                >
+                                    <ExternalLink className="w-4 h-4" />
+                                    Voir le produit
+                                </a>
+                            </div>
+                        </section>
+
+                        {/* Resources section */}
+                        <section className="bg-white rounded-2xl p-6 border border-gray-100">
+                            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                                Ressources
+                            </h2>
+
+                            {!canSeeResources ? (
+                                <div className="text-center py-8">
+                                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                        <Lock className="w-5 h-5 text-gray-400" />
+                                    </div>
+                                    <p className="text-sm text-gray-500 mb-1">
+                                        Ressources réservées aux membres
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                        Rejoignez le programme pour accéder aux documents
+                                    </p>
+                                </div>
+                            ) : resources.length === 0 ? (
+                                <p className="text-sm text-gray-400 text-center py-6">
+                                    Aucune ressource disponible
+                                </p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {resources.map((resource) => (
+                                        <a
+                                            key={resource.id}
+                                            href={resource.url || '#'}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors group"
+                                        >
+                                            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 group-hover:bg-violet-100 group-hover:text-violet-600 transition-colors">
+                                                <ResourceIcon type={resource.type} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 truncate">
+                                                    {resource.title || 'Document'}
+                                                </p>
+                                                {resource.description && (
+                                                    <p className="text-xs text-gray-500 truncate">
+                                                        {resource.description}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
+                        </section>
+                    </div>
+
+                    {/* Right column - Sticky CTA */}
+                    <div className="lg:col-span-1">
+                        <div className="sticky top-8 space-y-6">
+
+                            {/* Commission card */}
+                            <div className="bg-white rounded-2xl p-6 border border-gray-100">
+                                <div className="mb-6">
+                                    <p className="text-xs text-gray-400 uppercase tracking-wider mb-4 text-center">
+                                        {hasMultipleCommissions(mission) ? 'Commissions' : 'Commission'}
+                                    </p>
+
+                                    {hasMultipleCommissions(mission) ? (
+                                        <div className="space-y-3">
+                                            {mission.lead_enabled && mission.lead_reward_amount && (
+                                                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-xl">
+                                                    <span className="text-sm text-purple-700 font-medium">Lead</span>
+                                                    <span className="text-lg font-semibold text-purple-900">
+                                                        {mission.lead_reward_amount}€
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {mission.sale_enabled && mission.sale_reward_amount && (
+                                                <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl">
+                                                    <span className="text-sm text-emerald-700 font-medium">Vente</span>
+                                                    <span className="text-lg font-semibold text-emerald-900">
+                                                        {formatRewardAmount(mission.sale_reward_amount, mission.sale_reward_structure)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {mission.recurring_enabled && mission.recurring_reward_amount && (
+                                                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
+                                                    <span className="text-sm text-blue-700 font-medium">Récurrent</span>
+                                                    <span className="text-lg font-semibold text-blue-900">
+                                                        {formatRewardAmount(mission.recurring_reward_amount, mission.recurring_reward_structure)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center">
+                                            <p className="text-3xl font-semibold text-gray-900 tracking-tight">
+                                                {mission.reward}
+                                            </p>
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                par {mission.reward_type === 'LEAD' ? 'lead' : 'conversion'}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Stats */}
+                                <div className="flex items-center justify-center gap-6 py-4 border-t border-gray-50">
+                                    <div className="text-center">
+                                        <p className="text-lg font-semibold text-gray-900">
+                                            {mission.partners_count}
+                                        </p>
+                                        <p className="text-xs text-gray-400">
+                                            Partenaires
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* CTA Button */}
+                                <div className="pt-4 border-t border-gray-50">
+                                    {isEnrolled ? (
+                                        <>
+                                            {/* Already enrolled - show link */}
+                                            <div className="mb-4">
+                                                <p className="flex items-center justify-center gap-2 text-sm text-emerald-600 mb-3">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                    Membre du programme
+                                                </p>
+                                            </div>
+
+                                            {enrollment?.link_url && (
+                                                <div className="space-y-3">
+                                                    <div className="bg-gray-50 rounded-xl p-3">
+                                                        <p className="text-xs text-gray-500 mb-1">Votre lien</p>
+                                                        <p className="text-sm text-gray-900 font-mono truncate">
+                                                            {enrollment.link_url}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        onClick={copyLink}
+                                                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all ${
+                                                            copied
+                                                                ? 'bg-emerald-50 text-emerald-600'
+                                                                : 'bg-gray-900 text-white hover:bg-black'
+                                                        }`}
+                                                    >
+                                                        {copied ? (
+                                                            <>
+                                                                <Check className="w-4 h-4" />
+                                                                Copié !
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Copy className="w-4 h-4" />
+                                                                Copier le lien
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : isPending ? (
+                                        <>
+                                            {/* Request pending */}
+                                            <div className="text-center py-2">
+                                                <p className="flex items-center justify-center gap-2 text-sm text-amber-600 mb-2">
+                                                    <Clock className="w-4 h-4" />
+                                                    Demande en attente
+                                                </p>
+                                                <p className="text-xs text-gray-400">
+                                                    La startup examinera votre demande
+                                                </p>
+                                            </div>
+                                        </>
+                                    ) : joinSuccess ? (
+                                        <>
+                                            {/* Just joined/requested */}
+                                            <div className="text-center py-2">
+                                                {joinSuccess === 'enrolled' ? (
+                                                    <p className="flex items-center justify-center gap-2 text-sm text-emerald-600">
+                                                        <Sparkles className="w-4 h-4" />
+                                                        Bienvenue dans le programme !
+                                                    </p>
+                                                ) : (
+                                                    <p className="flex items-center justify-center gap-2 text-sm text-violet-600">
+                                                        <Send className="w-4 h-4" />
+                                                        Demande envoyée !
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            {/* Not enrolled - show join button */}
+                                            <button
+                                                onClick={handleJoin}
+                                                disabled={joining}
+                                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {joining ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : isPrivate ? (
+                                                    <>
+                                                        <Send className="w-4 h-4" />
+                                                        Demander à rejoindre
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Sparkles className="w-4 h-4" />
+                                                        Rejoindre le programme
+                                                    </>
+                                                )}
+                                            </button>
+
+                                            {isPrivate && (
+                                                <p className="text-xs text-gray-400 text-center mt-3">
+                                                    Votre demande sera examinée par la startup
+                                                </p>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Quick links */}
+                            <div className="bg-white rounded-2xl p-5 border border-gray-100">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                                    Liens rapides
+                                </p>
+                                <div className="space-y-2">
+                                    {startup.website_url && (
+                                        <a
+                                            href={startup.website_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                                        >
+                                            <Globe className="w-4 h-4 text-gray-400" />
+                                            Site web
+                                        </a>
+                                    )}
+                                    {startup.twitter_url && (
+                                        <a
+                                            href={startup.twitter_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                                        >
+                                            <span className="w-4 h-4 text-gray-400 text-center">𝕏</span>
+                                            Twitter
+                                        </a>
+                                    )}
+                                    {startup.linkedin_url && (
+                                        <a
+                                            href={startup.linkedin_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                                        >
+                                            <span className="w-4 h-4 text-gray-400 text-center font-bold text-xs">in</span>
+                                            LinkedIn
+                                        </a>
+                                    )}
+                                    <a
+                                        href={mission.target_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                                    >
+                                        <ExternalLink className="w-4 h-4 text-gray-400" />
+                                        Produit
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                )}
-
-                {/* No Resources */}
-                {resources.length === 0 && (
-                    <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
-                        <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">
-                            No resources yet
-                        </h3>
-                        <p className="text-gray-500">
-                            The program owner hasn't added any resources to this mission.
-                        </p>
-                    </div>
-                )}
+                </div>
             </div>
         </div>
     )
