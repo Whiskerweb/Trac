@@ -10,7 +10,8 @@ import {
     CreditCard,
     Settings,
     Shield,
-    ChevronRight
+    ChevronRight,
+    Wallet
 } from 'lucide-react'
 
 interface NavItem {
@@ -21,6 +22,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'Treasury', href: '/admin/treasury', icon: Wallet },
     { name: 'Gift Cards', href: '/admin/gift-cards', icon: Gift },
     { name: 'Sellers', href: '/admin/sellers', icon: Users },
     { name: 'Payouts', href: '/admin/payouts', icon: CreditCard },
