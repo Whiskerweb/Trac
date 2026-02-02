@@ -38,7 +38,7 @@ export default function LoginPage() {
                 setError(result.error)
             }
         } catch {
-            setError('Une erreur inattendue est survenue')
+            setError('An unexpected error occurred')
         } finally {
             setLoading(false)
         }
@@ -75,7 +75,7 @@ export default function LoginPage() {
                                 className="flex items-center gap-2 text-neutral-500 hover:text-neutral-900 transition-colors text-sm font-medium"
                             >
                                 <ArrowLeft className="w-4 h-4" />
-                                <span>Retour</span>
+                                <span>Back</span>
                             </motion.button>
                         ) : (
                             <motion.div
@@ -99,7 +99,7 @@ export default function LoginPage() {
                             href="/"
                             className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
                         >
-                            Accueil
+                            Home
                         </Link>
                     )}
                 </div>
@@ -120,10 +120,10 @@ export default function LoginPage() {
                         >
                             <div className="text-center mb-14">
                                 <h1 className="text-4xl md:text-5xl font-semibold text-neutral-900 tracking-tight mb-4">
-                                    Bienvenue sur Traaaction
+                                    Welcome to Traaaction
                                 </h1>
                                 <p className="text-lg text-neutral-500 max-w-md mx-auto">
-                                    Choisissez votre espace pour continuer
+                                    Choose your space to continue
                                 </p>
                             </div>
 
@@ -147,7 +147,7 @@ export default function LoginPage() {
                                         Startup
                                     </h2>
                                     <p className="text-neutral-500 text-sm leading-relaxed">
-                                        Créez et gérez vos programmes d&apos;affiliation. Suivez vos conversions et payez vos sellers.
+                                        Create and manage your affiliate programs. Track conversions and pay your sellers.
                                     </p>
 
                                     <div className="mt-6 pt-6 border-t border-neutral-100">
@@ -176,7 +176,7 @@ export default function LoginPage() {
                                         Seller
                                     </h2>
                                     <p className="text-neutral-500 text-sm leading-relaxed">
-                                        Rejoignez des programmes et gagnez des commissions. Suivez vos gains en temps réel.
+                                        Join programs and earn commissions. Track your earnings in real-time.
                                     </p>
 
                                     <div className="mt-6 pt-6 border-t border-neutral-100">
@@ -208,12 +208,12 @@ export default function LoginPage() {
                                 </div>
 
                                 <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight mb-2">
-                                    {mode === 'login' ? 'Connexion' : 'Créer un compte'}
+                                    {mode === 'login' ? 'Sign in' : 'Create account'}
                                 </h1>
                                 <p className="text-neutral-500 text-sm">
                                     {mode === 'login'
-                                        ? `Accédez à votre espace ${userType === 'startup' ? 'Startup' : 'Seller'}`
-                                        : `Rejoignez Traaaction en tant que ${userType === 'startup' ? 'Startup' : 'Seller'}`
+                                        ? `Access your ${userType === 'startup' ? 'Startup' : 'Seller'} dashboard`
+                                        : `Join Traaaction as a ${userType === 'startup' ? 'Startup' : 'Seller'}`
                                     }
                                 </p>
                             </div>
@@ -229,7 +229,7 @@ export default function LoginPage() {
                                             transition={{ duration: 0.2 }}
                                         >
                                             <label htmlFor="name" className="block text-sm font-medium text-neutral-700 mb-2">
-                                                Nom complet
+                                                Full name
                                             </label>
                                             <input
                                                 type="text"
@@ -238,7 +238,7 @@ export default function LoginPage() {
                                                 required={mode === 'signup'}
                                                 autoComplete="name"
                                                 className="w-full h-12 bg-white border border-neutral-200 rounded-xl px-4 text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 transition-all"
-                                                placeholder="Jean Dupont"
+                                                placeholder="John Doe"
                                             />
                                         </motion.div>
                                     )}
@@ -255,13 +255,13 @@ export default function LoginPage() {
                                         required
                                         autoComplete="email"
                                         className="w-full h-12 bg-white border border-neutral-200 rounded-xl px-4 text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 transition-all"
-                                        placeholder="vous@exemple.com"
+                                        placeholder="you@example.com"
                                     />
                                 </div>
 
                                 <div>
                                     <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-2">
-                                        Mot de passe
+                                        Password
                                     </label>
                                     <div className="relative">
                                         <input
@@ -288,7 +288,7 @@ export default function LoginPage() {
                                     </div>
                                     {mode === 'signup' && (
                                         <p className="mt-1.5 text-xs text-neutral-400">
-                                            Minimum 6 caractères
+                                            Minimum 6 characters
                                         </p>
                                     )}
                                 </div>
@@ -315,7 +315,7 @@ export default function LoginPage() {
                                         <Loader2 className="w-5 h-5 animate-spin" />
                                     ) : (
                                         <>
-                                            {mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
+                                            {mode === 'login' ? 'Sign in' : 'Create account'}
                                             <ArrowRight className="w-4 h-4" />
                                         </>
                                     )}
@@ -325,7 +325,7 @@ export default function LoginPage() {
                             {/* Toggle Login/Signup */}
                             <div className="mt-8 text-center">
                                 <p className="text-sm text-neutral-500">
-                                    {mode === 'login' ? "Pas encore de compte ?" : "Déjà un compte ?"}{' '}
+                                    {mode === 'login' ? "Don't have an account?" : "Already have an account?"}{' '}
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -334,20 +334,20 @@ export default function LoginPage() {
                                         }}
                                         className="text-neutral-900 font-medium hover:underline underline-offset-4"
                                     >
-                                        {mode === 'login' ? "S'inscrire" : 'Se connecter'}
+                                        {mode === 'login' ? 'Sign up' : 'Sign in'}
                                     </button>
                                 </p>
                             </div>
 
                             {/* Legal */}
                             <p className="mt-8 text-center text-xs text-neutral-400 leading-relaxed">
-                                En continuant, vous acceptez les{' '}
+                                By continuing, you agree to the{' '}
                                 <Link href="/terms" className="underline underline-offset-2 hover:text-neutral-600 transition-colors">
-                                    Conditions d&apos;utilisation
+                                    Terms of Service
                                 </Link>{' '}
-                                et la{' '}
+                                and{' '}
                                 <Link href="/privacy" className="underline underline-offset-2 hover:text-neutral-600 transition-colors">
-                                    Politique de confidentialité
+                                    Privacy Policy
                                 </Link>
                             </p>
                         </motion.div>

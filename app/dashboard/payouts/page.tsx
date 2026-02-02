@@ -163,7 +163,7 @@ function PayoutsContent() {
             // Auto-select all eligible sellers
             setSelectedSellerIds(new Set(unpaidResult.eligibleSellers.map(s => s.sellerId)))
         } else if (!silent) {
-            setError(unpaidResult.error || 'Erreur lors du chargement')
+            setError(unpaidResult.error || 'Failed to load')
         }
 
         if (historyResult.success && historyResult.totals) {
@@ -222,10 +222,10 @@ function PayoutsContent() {
                             setSuccess(true)
                             loadData()
                         } else {
-                            setError(`Paiement effectué mais confirmation échouée: ${result.error}`)
+                            setError(`Payment completed but confirmation failed: ${result.error}`)
                         }
                     } catch (err) {
-                        setError('Paiement effectué mais confirmation échouée. Veuillez rafraîchir la page.')
+                        setError('Payment completed but confirmation failed. Please refresh the page.')
                     }
                 }
             }
@@ -271,7 +271,7 @@ function PayoutsContent() {
         if (result.success && result.checkoutUrl) {
             window.location.href = result.checkoutUrl
         } else {
-            setError(result.error || 'Erreur lors du paiement')
+            setError(result.error || 'Payment failed')
             setPaying(false)
         }
     }
@@ -306,7 +306,7 @@ function PayoutsContent() {
                     </a>
                     <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                         <Settings className="w-4 h-4" />
-                        Paramètres
+                        Settings
                     </button>
                 </div>
             </div>
@@ -343,13 +343,13 @@ function PayoutsContent() {
                     <p className="text-2xl font-semibold text-amber-900">
                         {formatCurrency(ineligibleSellers.reduce((sum, s) => sum + s.totalCommission, 0))}
                     </p>
-                    <p className="text-xs text-amber-600 mt-1">Sera payé une fois le seuil atteint</p>
+                    <p className="text-xs text-amber-600 mt-1">Will be paid once threshold is reached</p>
                 </div>
 
-                {/* Total payé */}
+                {/* Total paid */}
                 <div className="bg-green-50 border border-green-200 rounded-xl p-5">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-green-700">Total payé</span>
+                        <span className="text-sm text-green-700">Total paid</span>
                         <Check className="w-4 h-4 text-green-600" />
                     </div>
                     <p className="text-2xl font-semibold text-green-900">{formatCurrency(paidTotal * 100)}</p>
@@ -362,27 +362,27 @@ function PayoutsContent() {
                 {/* List Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-4">
-                        <h2 className="font-medium text-gray-900">Sellers à payer</h2>
+                        <h2 className="font-medium text-gray-900">Sellers to pay</h2>
                         {eligibleSellers.length > 0 && (
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={selectAllEligible}
                                     className="text-xs text-violet-600 hover:text-violet-800"
                                 >
-                                    Tout sélectionner
+                                    Select all
                                 </button>
                                 <span className="text-gray-300">|</span>
                                 <button
                                     onClick={deselectAll}
                                     className="text-xs text-gray-500 hover:text-gray-700"
                                 >
-                                    Désélectionner
+                                    Deselect
                                 </button>
                             </div>
                         )}
                     </div>
                     <div className="text-sm text-gray-500">
-                        {selectedSellerIds.size} sur {eligibleSellers.length} sélectionnés
+                        {selectedSellerIds.size} of {eligibleSellers.length} selected
                     </div>
                 </div>
 
@@ -391,7 +391,7 @@ function PayoutsContent() {
                     <div className="px-6 py-12 text-center">
                         <Check className="w-12 h-12 text-green-500 mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-gray-900">Aucun paiement en attente</h3>
-                        <p className="text-gray-500 mt-1">Les commissions des sellers apparaîtront ici.</p>
+                        <p className="text-gray-500 mt-1">Seller commissions will appear here.</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-50">
@@ -434,7 +434,7 @@ function PayoutsContent() {
                     <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">
-                                <span className="font-semibold text-gray-900">{selectedSellerIds.size}</span> sellers sélectionnés
+                                <span className="font-semibold text-gray-900">{selectedSellerIds.size}</span> sellers selected
                                 ({selectedSellers.reduce((sum, s) => sum + s.commissionCount, 0)} commissions)
                             </p>
                             <p className="text-xs text-gray-500 mt-0.5">
@@ -479,7 +479,7 @@ function PayoutsContent() {
                 <div className="fixed bottom-4 right-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3 shadow-lg animate-in slide-in-from-bottom-4">
                     <Check className="w-5 h-5 text-green-600" />
                     <div>
-                        <p className="font-medium text-green-800">Paiements confirmés !</p>
+                        <p className="font-medium text-green-800">Payments confirmed!</p>
                         <p className="text-sm text-green-600">Les transferts sont en cours de traitement.</p>
                     </div>
                     <button

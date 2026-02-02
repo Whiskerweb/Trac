@@ -140,7 +140,7 @@ export function WalletButton() {
                                                 <p className="font-semibold text-green-600">{formatAmount(data?.balance.due || 0)}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-500 mb-1">Total reçu</p>
+                                                <p className="text-xs text-gray-500 mb-1">Total received</p>
                                                 <p className="font-semibold text-gray-900">{formatAmount(data?.balance.total || 0)}</p>
                                             </div>
                                         </div>
@@ -148,7 +148,7 @@ export function WalletButton() {
 
                                     {/* Payout Method Selection */}
                                     <div className="p-6 space-y-4">
-                                        <p className="text-sm font-medium text-gray-700">Méthode de paiement</p>
+                                        <p className="text-sm font-medium text-gray-700">Payment method</p>
 
                                         {/* Stripe Connect Option */}
                                         <label
@@ -193,13 +193,13 @@ export function WalletButton() {
                                                 {data?.stripeStatus === 'pending' && (
                                                     <span className="mt-3 inline-flex items-center gap-1.5 px-2 py-1 bg-yellow-50 text-yellow-700 text-xs rounded-full">
                                                         <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full" />
-                                                        Vérification en cours
+                                                        Verification in progress
                                                     </span>
                                                 )}
                                                 {data?.stripeStatus === 'active' && (
                                                     <span className="mt-3 inline-flex items-center gap-1.5 px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full">
                                                         <Check className="w-3 h-3" />
-                                                        Compte vérifié
+                                                        Account verified
                                                     </span>
                                                 )}
                                             </div>

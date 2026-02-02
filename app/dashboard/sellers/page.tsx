@@ -50,17 +50,17 @@ const INDUSTRIES = [
     { value: 'Marketing', label: 'Marketing' },
     { value: 'Tech', label: 'Tech' },
     { value: 'Education', label: 'Éducation' },
-    { value: 'Healthcare', label: 'Santé' },
+    { value: 'Healthcare', label: 'Health' },
     { value: 'Real Estate', label: 'Immobilier' }
 ]
 
 const ACTIVITY_TYPES = [
-    { value: 'CONTENT_CREATOR', label: 'Créateur de contenu' },
+    { value: 'CONTENT_CREATOR', label: 'Content creator' },
     { value: 'SALES_REP', label: 'Commercial' },
     { value: 'INFLUENCER', label: 'Influenceur' },
     { value: 'MARKETER', label: 'Marketeur' },
     { value: 'BLOGGER', label: 'Blogueur' },
-    { value: 'DEVELOPER', label: 'Développeur' },
+    { value: 'DEVELOPER', label: 'Developer' },
     { value: 'CONSULTANT', label: 'Consultant' },
     { value: 'OTHER', label: 'Autre' }
 ]
@@ -222,7 +222,7 @@ export default function AllSellersPage() {
                         All Sellers
                     </h1>
                     <p className="text-xs text-slate-500 mt-0.5">
-                        Découvrez tous les sellers de la plateforme, triés par CA généré
+                        Discover all platform sellers, sorted by revenue generated
                     </p>
                 </div>
 
@@ -256,7 +256,7 @@ export default function AllSellersPage() {
                     />
 
                     <FilterDropdown
-                        label="Type d'activité"
+                        label="Activity type"
                         options={ACTIVITY_TYPES}
                         selected={selectedActivityTypes}
                         onChange={setSelectedActivityTypes}
@@ -272,7 +272,7 @@ export default function AllSellersPage() {
                             }}
                             className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
                         >
-                            Réinitialiser
+                            Reset
                         </button>
                     )}
                 </div>
@@ -288,7 +288,7 @@ export default function AllSellersPage() {
                             <Search className="w-5 h-5 text-slate-300" />
                         </div>
                         <h3 className="text-sm font-bold text-slate-900 mb-1 tracking-tight">
-                            Aucun seller trouvé
+                            No seller found
                         </h3>
                         <p className="text-xs text-slate-400">
                             Essayez de modifier vos filtres ou votre recherche

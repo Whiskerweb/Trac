@@ -166,26 +166,26 @@ async function addDomainToVercel(domainName: string): Promise<{
 
             // Handle specific error codes
             if (data.error?.code === 'domain_already_in_use') {
-                return { success: false, error: 'Ce domaine est déjà utilisé par un autre projet Vercel' }
+                return { success: false, error: 'This domain is already used by another Vercel project' }
             }
             if (data.error?.code === 'forbidden') {
                 return { success: false, error: 'Token Vercel invalide ou permissions insuffisantes' }
             }
             if (data.error?.code === 'not_found') {
-                return { success: false, error: 'Projet Vercel introuvable. Vérifiez VERCEL_PROJECT_ID.' }
+                return { success: false, error: 'Vercel project not found. Check VERCEL_PROJECT_ID.' }
             }
             if (data.error?.code === 'team_not_found') {
-                return { success: false, error: 'Équipe Vercel introuvable. Vérifiez VERCEL_TEAM_ID.' }
+                return { success: false, error: 'Vercel team not found. Check VERCEL_TEAM_ID.' }
             }
 
-            return { success: false, error: data.error?.message || `Erreur Vercel (${res.status})` }
+            return { success: false, error: data.error?.message || `Vercel error (${res.status})` }
         }
 
         console.log('[Domains] ✅ Domain successfully added to Vercel:', domainName)
         return { success: true, data }
     } catch (err) {
         console.error('[Domains] ❌ Vercel API request failed:', err)
-        return { success: false, error: 'Erreur de connexion à l\'API Vercel' }
+        return { success: false, error: 'Connection error to Vercel API' }
     }
 }
 
@@ -241,7 +241,7 @@ async function checkDomainStatus(domainName: string, skipCache: boolean = false)
 
         if (!res.ok) {
             console.error('[Domains] ❌ Domain config check failed:', data)
-            return { success: false, configured: false, verified: false, error: 'Impossible de vérifier le domaine' }
+            return { success: false, configured: false, verified: false, error: 'Unable to verify domain' }
         }
 
         // Cache the result
@@ -264,7 +264,7 @@ async function checkDomainStatus(domainName: string, skipCache: boolean = false)
         }
     } catch (err) {
         console.error('[Domains] ❌ Domain config check request failed:', err)
-        return { success: false, configured: false, verified: false, error: 'Erreur de connexion' }
+        return { success: false, configured: false, verified: false, error: 'Connection error' }
     }
 }
 
@@ -292,7 +292,7 @@ async function getDomainVerification(domainName: string): Promise<{
 
         if (!res.ok) {
             console.error('[Domains] ❌ Domain verification fetch failed:', data)
-            return { success: false, error: 'Impossible de récupérer les enregistrements de vérification' }
+            return { success: false, error: 'Unable to retrieve verification records' }
         }
 
         console.log('[Domains] 📄 Verification records for', domainName, ':', data.verification)
@@ -303,7 +303,7 @@ async function getDomainVerification(domainName: string): Promise<{
         }
     } catch (err) {
         console.error('[Domains] ❌ Domain verification fetch request failed:', err)
-        return { success: false, error: 'Erreur de connexion' }
+        return { success: false, error: 'Connection error' }
     }
 }
 
@@ -327,14 +327,14 @@ async function removeDomainFromVercel(domainName: string): Promise<{ success: bo
         if (!res.ok && res.status !== 404) {
             const data = await res.json()
             console.error('[Domains] ❌ Vercel domain removal failed:', data)
-            return { success: false, error: data.error?.message || 'Erreur lors de la suppression' }
+            return { success: false, error: data.error?.message || 'Failed to delete' }
         }
 
         console.log('[Domains] ✅ Domain removed from Vercel:', domainName)
         return { success: true }
     } catch (err) {
         console.error('[Domains] ❌ Vercel domain removal request failed:', err)
-        return { success: false, error: 'Erreur de connexion' }
+        return { success: false, error: 'Connection error' }
     }
 }
 
@@ -354,7 +354,7 @@ export async function getDomains(): Promise<{
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-        return { success: false, error: 'Non authentifié' }
+        return { success: false, error: 'Not authenticated' }
     }
 
     try {
@@ -381,7 +381,7 @@ export async function getDomains(): Promise<{
         }
     } catch (error) {
         console.error('[Domains] ❌ getDomains error:', error)
-        return { success: false, error: 'Erreur lors du chargement des domaines' }
+        return { success: false, error: 'Failed to load domains' }
     }
 }
 
@@ -393,7 +393,7 @@ export async function addDomain(domainName: string): Promise<AddDomainResult> {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-        return { success: false, error: 'Non authentifié' }
+        return { success: false, error: 'Not authenticated' }
     }
 
     // Validate domain format
@@ -418,9 +418,9 @@ export async function addDomain(domainName: string): Promise<AddDomainResult> {
 
         if (existing) {
             if (existing.workspace_id === workspace.workspaceId) {
-                return { success: false, error: 'Ce domaine est déjà ajouté à votre workspace' }
+                return { success: false, error: 'This domain is already added to your workspace' }
             }
-            return { success: false, error: 'Ce domaine est déjà utilisé par un autre workspace' }
+            return { success: false, error: 'This domain is already used by another workspace' }
         }
 
         // 🔒 RESTRICTION: Check if workspace already has a domain (Limit: 1)
@@ -429,7 +429,7 @@ export async function addDomain(domainName: string): Promise<AddDomainResult> {
         })
 
         if (count >= 1) {
-            return { success: false, error: 'Vous ne pouvez avoir qu\'un seul domaine personnalisé. Veuillez modifier ou supprimer l\'existant.' }
+            return { success: false, error: 'You can only have one custom domain. Please edit or delete the existing one.' }
         }
 
         // Add to Vercel first
@@ -477,7 +477,7 @@ export async function updateDomain(domainId: string, newName: string): Promise<A
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-        return { success: false, error: 'Non authentifié' }
+        return { success: false, error: 'Not authenticated' }
     }
 
     // Validate domain format
@@ -523,7 +523,7 @@ export async function updateDomain(domainId: string, newName: string): Promise<A
         })
 
         if (existing) {
-            return { success: false, error: 'Ce domaine est déjà utilisé.' }
+            return { success: false, error: 'This domain is already in use.' }
         }
 
         // 1. Remove OLD domain from Vercel
@@ -565,7 +565,7 @@ export async function updateDomain(domainId: string, newName: string): Promise<A
 
     } catch (error) {
         console.error('[Domains] ❌ updateDomain error:', error)
-        return { success: false, error: 'Erreur lors de la modification du domaine' }
+        return { success: false, error: 'Failed to modify domain' }
     }
 }
 
@@ -577,7 +577,7 @@ export async function verifyDomain(domainId: string, skipCache: boolean = false)
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-        return { success: false, error: 'Non authentifié' }
+        return { success: false, error: 'Not authenticated' }
     }
 
     try {
@@ -596,7 +596,7 @@ export async function verifyDomain(domainId: string, skipCache: boolean = false)
         })
 
         if (!domain) {
-            return { success: false, error: 'Domaine non trouvé' }
+            return { success: false, error: 'Domain not found' }
         }
 
         // Check status with Vercel
@@ -646,7 +646,7 @@ export async function verifyDomain(domainId: string, skipCache: boolean = false)
         }
     } catch (error) {
         console.error('[Domains] ❌ verifyDomain error:', error)
-        return { success: false, error: 'Erreur lors de la vérification' }
+        return { success: false, error: 'Verification failed' }
     }
 }
 
@@ -658,7 +658,7 @@ export async function removeDomain(domainId: string): Promise<DomainResult> {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-        return { success: false, error: 'Non authentifié' }
+        return { success: false, error: 'Not authenticated' }
     }
 
     try {
@@ -677,7 +677,7 @@ export async function removeDomain(domainId: string): Promise<DomainResult> {
         })
 
         if (!domain) {
-            return { success: false, error: 'Domaine non trouvé' }
+            return { success: false, error: 'Domain not found' }
         }
 
         // Remove from Vercel first
@@ -717,7 +717,7 @@ export async function removeDomain(domainId: string): Promise<DomainResult> {
         return { success: true }
     } catch (error) {
         console.error('[Domains] ❌ removeDomain error:', error)
-        return { success: false, error: 'Erreur lors de la suppression' }
+        return { success: false, error: 'Failed to delete' }
     }
 }
 
@@ -734,7 +734,7 @@ export async function getVerifiedDomainForWorkspace(): Promise<{
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-        return { success: false, error: 'Non authentifié' }
+        return { success: false, error: 'Not authenticated' }
     }
 
     try {
@@ -763,7 +763,7 @@ export async function getVerifiedDomainForWorkspace(): Promise<{
         }
     } catch (error) {
         console.error('[Domains] ❌ getVerifiedDomainForWorkspace error:', error)
-        return { success: false, error: 'Erreur lors du chargement' }
+        return { success: false, error: 'Failed to load' }
     }
 }
 

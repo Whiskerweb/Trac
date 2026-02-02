@@ -18,8 +18,8 @@ const loginSchema = z.object({
 
 const signupSchema = z.object({
     email: z.string().email('Adresse email invalide'),
-    password: z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
-    name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    name: z.string().min(2, 'Name must be at least 2 characters'),
 })
 
 // =============================================
@@ -155,17 +155,17 @@ export async function signup(formData: FormData) {
     if (error) {
         // Map Supabase errors to user-friendly messages
         if (error.message.includes('User already registered')) {
-            return { error: 'Cette adresse email est déjà utilisée' }
+            return { error: 'This email address is already in use' }
         }
         if (error.message.includes('Password should be')) {
-            return { error: 'Le mot de passe doit contenir au moins 6 caractères' }
+            return { error: 'Password must be at least 6 characters' }
         }
         return { error: error.message }
     }
 
     // Check if email confirmation is required
     if (data?.user?.identities?.length === 0) {
-        return { error: 'Cette adresse email est déjà utilisée' }
+        return { error: 'This email address is already in use' }
     }
 
     const role = String(formData.get('role') || 'startup')
@@ -185,7 +185,7 @@ export async function signup(formData: FormData) {
 
         if (!result.success) {
             console.error('[Auth] ❌ Failed to create seller:', result.error)
-            return { error: 'Erreur lors de la création du compte seller' }
+            return { error: 'Error creating seller account' }
         }
 
         console.log('[Auth] 🤝 Auto-created Global Seller for new user')

@@ -122,7 +122,7 @@ export default function AdminSellersPage() {
                         color="emerald"
                     />
                     <StatCard
-                        label="Total Versé"
+                        label="Total Paid"
                         value={formatCurrency(summary.totalPaid)}
                         icon={CreditCard}
                         color="blue"
@@ -164,7 +164,7 @@ export default function AdminSellersPage() {
                 {filteredSellers.length === 0 ? (
                     <div className="text-center py-12 text-neutral-500">
                         <Users className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                        <p>Aucun seller trouvé</p>
+                        <p>No seller found</p>
                     </div>
                 ) : (
                     filteredSellers.map((seller, index) => (
@@ -219,7 +219,7 @@ export default function AdminSellersPage() {
                                             {seller.totalCommissions} commissions
                                         </p>
                                         <p className="text-xs text-neutral-500">
-                                            {formatCurrency(seller.totalEarned)} gagnés
+                                            {formatCurrency(seller.totalEarned)} earned
                                         </p>
                                     </div>
 

@@ -288,9 +288,9 @@ function MessagesPageContent() {
                         <div className="flex-1 flex items-center justify-center text-gray-500">
                             <div className="text-center">
                                 <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                                <p className="font-medium">Sélectionnez une conversation</p>
+                                <p className="font-medium">Select a conversation</p>
                                 <p className="text-sm text-gray-400 mt-1">
-                                    Choisissez un partenaire pour commencer à discuter
+                                    Choose a partner to start chatting
                                 </p>
                             </div>
                         </div>

@@ -77,7 +77,7 @@ export default function AdminDashboard() {
                                     {stats.pendingGiftCards} demande{stats.pendingGiftCards > 1 ? 's' : ''} de gift card en attente
                                 </p>
                                 <p className="text-sm text-amber-500/70">
-                                    Total: {(stats.pendingGiftCardsAmount / 100).toFixed(0)}€ à traiter
+                                    Total: {(stats.pendingGiftCardsAmount / 100).toFixed(0)}€ to process
                                 </p>
                             </div>
                         </div>
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
                     href="/admin/gift-cards"
                     icon={Gift}
                     title="Gift Cards"
-                    description="Gérer les demandes de cartes cadeaux"
+                    description="Manage gift card requests"
                 />
                 <QuickLink
                     href="/admin/sellers"

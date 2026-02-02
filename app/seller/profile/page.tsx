@@ -40,12 +40,12 @@ function isProfileComplete(profile: ProfileData): boolean {
 }
 
 const ACTIVITY_LABELS: Record<string, string> = {
-    'CONTENT_CREATOR': 'Créateur de contenu',
+    'CONTENT_CREATOR': 'Content creator',
     'SALES_REP': 'Commercial',
     'INFLUENCER': 'Influenceur',
     'MARKETER': 'Marketeur',
     'BLOGGER': 'Blogueur',
-    'DEVELOPER': 'Développeur',
+    'DEVELOPER': 'Developer',
     'CONSULTANT': 'Consultant',
     'OTHER': 'Autre'
 }
@@ -65,14 +65,14 @@ const COUNTRY_NAMES: Record<string, string> = {
     'PT': 'Portugal',
     'AT': 'Autriche',
     'PL': 'Pologne',
-    'SE': 'Suède',
-    'NO': 'Norvège',
+    'SE': 'Sweden',
+    'NO': 'Norway',
     'DK': 'Danemark',
     'FI': 'Finlande',
     'IE': 'Irlande',
     'AU': 'Australie',
     'JP': 'Japon',
-    'BR': 'Brésil',
+    'BR': 'Brazil',
     'MX': 'Mexique',
     'IN': 'Inde',
     'SG': 'Singapour',
@@ -99,10 +99,10 @@ export default function ProfilePage() {
                 if (result.success && result.profile) {
                     setProfile(result.profile as ProfileData)
                 } else {
-                    setError(result.error || 'Erreur de chargement')
+                    setError(result.error || 'Failed to load')
                 }
             } catch (err) {
-                setError('Erreur de chargement')
+                setError('Failed to load')
             } finally {
                 setLoading(false)
             }
@@ -133,9 +133,9 @@ export default function ProfilePage() {
         return (
             <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
                 <div className="text-center">
-                    <p className="text-gray-500 mb-4">{error || 'Profil non trouvé'}</p>
+                    <p className="text-gray-500 mb-4">{error || 'Profile not found'}</p>
                     <Link href="/seller" className="text-violet-600 hover:text-violet-700 text-sm font-medium">
-                        Retour au dashboard
+                        Back to dashboard
                     </Link>
                 </div>
             </div>
@@ -181,7 +181,7 @@ export default function ProfilePage() {
                                     href="/seller/settings"
                                     className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-black transition-colors flex-shrink-0"
                                 >
-                                    Modifier
+                                    Edit
                                 </Link>
                             </div>
 
@@ -243,8 +243,8 @@ export default function ProfilePage() {
                                             <BadgeCheck className="w-5 h-5 text-emerald-600" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-semibold text-emerald-800">Compte validé</p>
-                                            <p className="text-xs text-emerald-600">Votre profil est visible dans le réseau</p>
+                                            <p className="text-sm font-semibold text-emerald-800">Account validated</p>
+                                            <p className="text-xs text-emerald-600">Your profile is visible in the network</p>
                                         </div>
                                     </div>
                                 ) : (
@@ -262,7 +262,7 @@ export default function ProfilePage() {
                                         </div>
                                         <p className="text-xs text-gray-400 mt-2">
                                             <Link href="/seller/settings" className="text-violet-600 hover:text-violet-700">
-                                                Complétez votre profil
+                                                Complete your profile
                                             </Link>
                                             {' '}pour valider votre compte
                                         </p>
@@ -273,10 +273,10 @@ export default function ProfilePage() {
                     })()}
                 </div>
 
-                {/* Secteurs d'intérêt */}
+                {/* Industry interests */}
                 {profile.industryInterests && profile.industryInterests.length > 0 && (
                     <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-                        <h2 className="text-sm font-semibold text-gray-900 mb-4">Secteurs d'intérêt</h2>
+                        <h2 className="text-sm font-semibold text-gray-900 mb-4">Industry interests</h2>
                         <div className="flex flex-wrap gap-2">
                             {profile.industryInterests.map((industry) => (
                                 <span
@@ -290,7 +290,7 @@ export default function ProfilePage() {
                     </div>
                 )}
 
-                {/* Réseaux sociaux */}
+                {/* Social media */}
                 {hasSocials && (
                     <div className="bg-white rounded-2xl border border-gray-200 p-6">
                         <h2 className="text-sm font-semibold text-gray-900 mb-4">Liens</h2>

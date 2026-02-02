@@ -171,7 +171,7 @@ export default function SellerOnboardingPage() {
                     className="flex flex-col items-center gap-4"
                 >
                     <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
-                    <span className="text-xs text-neutral-400 tracking-wide">Chargement</span>
+                    <span className="text-xs text-neutral-400 tracking-wide">Loading</span>
                 </motion.div>
             </div>
         )
@@ -240,7 +240,7 @@ export default function SellerOnboardingPage() {
                         >
                             <div className="text-center mb-12">
                                 <h1 className="text-3xl font-light text-neutral-900 mb-3">
-                                    Bienvenue
+                                    Welcome
                                 </h1>
                                 <p className="text-neutral-400">
                                     Presentez-vous en quelques mots

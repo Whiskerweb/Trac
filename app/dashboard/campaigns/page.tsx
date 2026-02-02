@@ -10,7 +10,7 @@ export default function ComingSoonPage() {
             </div>
             <h1 className="text-xl font-semibold text-gray-900 mb-2">Coming Soon</h1>
             <p className="text-gray-500 max-w-md">
-                Cette fonctionnalité est en cours de développement et sera bientôt disponible.
+                This feature is under development and will be available soon.
             </p>
         </div>
     )

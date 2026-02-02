@@ -89,13 +89,13 @@ export async function POST(
             secretPrefix: endpoint.secret ? endpoint.secret.substring(0, 10) + '...' : 'NO_SECRET',
             signaturePrefix: signature.substring(0, 20) + '...',
             hint: errorMessage.includes('signature')
-                ? 'Le secret webhook dans la DB ne correspond pas à celui de Stripe. Mettez à jour WebhookEndpoint.secret avec le signing secret de Stripe Dashboard.'
-                : 'Vérifiez la configuration du webhook.'
+                ? 'The webhook secret in DB doesn't match Stripe's. Update WebhookEndpoint.secret with the signing secret from Stripe Dashboard.'
+                : 'Check webhook configuration.'
         })
         return NextResponse.json(
             {
                 error: 'Invalid signature',
-                hint: 'Le secret webhook ne correspond pas. Vérifiez WebhookEndpoint.secret dans la DB.'
+                hint: 'Webhook secret doesn't match. Check WebhookEndpoint.secret in DB.'
             },
             { status: 400 }
         )

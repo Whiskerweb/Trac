@@ -37,7 +37,7 @@ function StatusBadge({ status }: { status: CommissionItem['status'] }) {
     const labels = {
         PENDING: 'En attente',
         PROCEED: 'À payer',
-        COMPLETE: 'Payé',
+        COMPLETE: 'Paid',
     }
     return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}>
@@ -56,7 +56,7 @@ function TypeBadge({ type }: { type: 'SALE' | 'LEAD' | 'RECURRING' | null }) {
     const labels: Record<string, string> = {
         SALE: 'Vente',
         LEAD: 'Lead',
-        RECURRING: 'Récurrent',
+        RECURRING: 'Recurring',
     }
     return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[type] || 'bg-gray-50 text-gray-700'}`}>
@@ -189,7 +189,7 @@ export default function CommissionsPage() {
                 </Link>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Payés</p>
+                    <p className="text-sm text-gray-500">Paids</p>
                     <p className="text-2xl font-semibold text-green-600">{formatCurrency(stats.complete)}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
@@ -224,7 +224,7 @@ export default function CommissionsPage() {
                             {status === 'all' && 'Tous'}
                             {status === 'PENDING' && 'En attente'}
                             {status === 'PROCEED' && 'À payer'}
-                            {status === 'COMPLETE' && 'Payés'}
+                            {status === 'COMPLETE' && 'Paids'}
                         </button>
                     ))}
                 </div>
@@ -247,7 +247,7 @@ export default function CommissionsPage() {
                             <Filter className="w-6 h-6 text-gray-400" />
                         </div>
                         <p className="text-gray-900 font-medium">Aucune commission</p>
-                        <p className="text-gray-500 text-sm mt-1">Les commissions apparaîtront ici quand vos partners génèrent des ventes</p>
+                        <p className="text-gray-500 text-sm mt-1">Commissions will appear here when your partners generate sales</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-50">
@@ -313,14 +313,14 @@ export default function CommissionsPage() {
                                 disabled={currentPage === 1}
                                 className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Précédent
+                                Previous
                             </button>
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
                                 disabled={currentPage === pagination.totalPages}
                                 className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Suivant
+                                Next
                             </button>
                         </div>
                     </div>

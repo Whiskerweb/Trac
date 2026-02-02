@@ -413,7 +413,7 @@ export async function createInvitationMessage(
         }
 
         // Create invitation message
-        const invitationContent = `🎯 Vous êtes invité à rejoindre la mission "${missionTitle}". Cliquez pour voir les détails et accepter l'invitation.`
+        const invitationContent = `🎯 You are invited to join the mission "${missionTitle}". Click to see details and accept the invitation.`
 
         await prisma.message.create({
             data: {

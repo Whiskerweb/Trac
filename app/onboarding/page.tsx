@@ -148,8 +148,8 @@ export default function OnboardingPage() {
                                 </div>
                             </div>
                             <p className="text-xs text-gray-500 mt-1.5">
-                                {slugStatus === 'taken' && <span className="text-red-500">Ce slug est déjà pris</span>}
-                                {slugStatus === 'invalid' && <span className="text-red-500">Caractères invalides</span>}
+                                {slugStatus === 'taken' && <span className="text-red-500">This slug is already taken</span>}
+                                {slugStatus === 'invalid' && <span className="text-red-500">Invalid characters</span>}
                                 {slugStatus === 'available' && <span className="text-green-600">Disponible !</span>}
                                 {(slugStatus === 'idle' || slugStatus === 'checking') && 'Lettres minuscules, chiffres et tirets uniquement'}
                             </p>
@@ -171,7 +171,7 @@ export default function OnboardingPage() {
                             {isPending ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                    Création...
+                                    Creating...
                                 </>
                             ) : (
                                 <>

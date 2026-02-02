@@ -18,7 +18,7 @@ export default function AdminDebugPage() {
     const [processing, setProcessing] = useState<string | null>(null)
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-    // Vérifier qu'on est en dev (utilise NEXT_PUBLIC_ car côté client)
+    // Check if we are in dev (uses NEXT_PUBLIC_ for client side)
     const isDev = process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLS === 'true'
 
     useEffect(() => {
@@ -35,7 +35,7 @@ export default function AdminDebugPage() {
                 setCommissions(data.commissions || [])
             }
         } catch (error) {
-            console.error('Erreur chargement commissions:', error)
+            console.error('Failed to load commissions:', error)
         } finally {
             setLoading(false)
         }
@@ -55,14 +55,14 @@ export default function AdminDebugPage() {
             const data = await response.json()
 
             if (data.success) {
-                setMessage({ type: 'success', text: 'Commission passée en PROCEED !' })
+                setMessage({ type: 'success', text: 'Commission moved to PROCEED!' })
                 // Recharger la liste
                 await loadPendingCommissions()
             } else {
-                setMessage({ type: 'error', text: data.error || 'Erreur inconnue' })
+                setMessage({ type: 'error', text: data.error || 'Error inconnue' })
             }
         } catch (error) {
-            setMessage({ type: 'error', text: 'Erreur réseau' })
+            setMessage({ type: 'error', text: 'Network error' })
         } finally {
             setProcessing(null)
         }
@@ -73,8 +73,8 @@ export default function AdminDebugPage() {
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
                     <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <h1 className="text-xl font-semibold text-gray-900">Accès refusé</h1>
-                    <p className="text-gray-500 mt-2">Cette page est uniquement disponible en développement</p>
+                    <h1 className="text-xl font-semibold text-gray-900">Access denied</h1>
+                    <p className="text-gray-500 mt-2">This page is only available in development</p>
                 </div>
             </div>
         )
@@ -88,7 +88,7 @@ export default function AdminDebugPage() {
                     <h1 className="text-2xl font-bold text-gray-900">Admin Debug - Force Maturation</h1>
                 </div>
                 <p className="text-gray-500 text-sm">
-                    Bypass le délai de 30 jours pour tester le flow de paiement immédiatement
+                    Bypass the 30 day delay to test the payment flow immediately
                 </p>
             </div>
 
@@ -98,11 +98,11 @@ export default function AdminDebugPage() {
                     <AlertTriangle className="w-5 h-5 text-yellow-400 mr-3 flex-shrink-0" />
                     <div>
                         <p className="text-sm text-yellow-700 font-medium">
-                            ⚠️ Outil de développement uniquement
+                            ⚠️ Development tool only
                         </p>
                         <p className="text-sm text-yellow-700 mt-1">
-                            Cet endpoint force les commissions PENDING à passer en PROCEED pour tester le système de paiement.
-                            Désactivé automatiquement en production.
+                            This endpoint forces PENDING commissions to PROCEED to test the payment system.
+                            Automatically disabled in production.
                         </p>
                     </div>
                 </div>
@@ -135,7 +135,7 @@ export default function AdminDebugPage() {
                         Commissions en attente ({commissions.length})
                     </h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        Cliquez sur "Forcer PROCEED" pour bypasser le délai de 30 jours
+                        Click "Force PROCEED" to bypass the 30 day delay
                     </p>
                 </div>
 
@@ -147,7 +147,7 @@ export default function AdminDebugPage() {
                     <div className="px-6 py-12 text-center">
                         <p className="text-gray-500">Aucune commission PENDING</p>
                         <p className="text-sm text-gray-400 mt-2">
-                            Faites un paiement test pour voir les commissions apparaître ici
+                            Make a test payment to see commissions appear here
                         </p>
                     </div>
                 ) : (
@@ -175,7 +175,7 @@ export default function AdminDebugPage() {
                                                 Commission: {(commission.amount / 100).toFixed(2)}€
                                             </span>
                                             <span>
-                                                Créée: {new Date(commission.createdAt).toLocaleDateString('fr-FR')}
+                                                Created: {new Date(commission.createdAt).toLocaleDateString('fr-FR')}
                                             </span>
                                         </div>
                                         <p className="text-xs text-gray-400 mt-1 font-mono">
@@ -211,10 +211,10 @@ export default function AdminDebugPage() {
                 <h3 className="text-sm font-medium text-blue-900 mb-2">📖 Comment tester le flow complet ?</h3>
                 <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
                     <li>Faites un paiement test (via lien d'affiliation)</li>
-                    <li>La commission apparaît ici en statut PENDING</li>
+                    <li>Commission appears here in PENDING status</li>
                     <li>Cliquez sur "Forcer PROCEED" pour bypasser les 30 jours</li>
                     <li>Allez sur <a href="/dashboard/payouts" className="underline font-medium">/dashboard/payouts</a> pour payer le seller</li>
-                    <li>Testez le système de paiement startup → seller complet</li>
+                    <li>Test the complete startup → seller payment system</li>
                 </ol>
             </div>
         </div>

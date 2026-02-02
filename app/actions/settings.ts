@@ -41,7 +41,7 @@ export async function getOrCreateApiKey(): Promise<{
         const activeWorkspace = await getActiveWorkspaceForUser()
 
         if (!activeWorkspace) {
-            return { success: false, error: 'Veuillez creer un workspace via /onboarding' }
+            return { success: false, error: 'Please create a workspace via /onboarding' }
         }
 
         // Get API keys for this workspace

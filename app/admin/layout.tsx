@@ -73,7 +73,7 @@ export default function AdminLayout({
             <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
                     <Shield className="w-8 h-8 text-neutral-600 animate-pulse" />
-                    <span className="text-sm text-neutral-500">Vérification des accès...</span>
+                    <span className="text-sm text-neutral-500">Verifying access...</span>
                 </div>
             </div>
         )
@@ -84,7 +84,7 @@ export default function AdminLayout({
             <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
                 <div className="text-center">
                     <Shield className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <h1 className="text-xl font-medium text-white mb-2">Accès refusé</h1>
+                    <h1 className="text-xl font-medium text-white mb-2">Access denied</h1>
                     <p className="text-neutral-400 text-sm">
                         Vous n'avez pas les droits administrateur.
                     </p>

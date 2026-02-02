@@ -30,7 +30,7 @@ function Avatar({ name, avatar, size = 'md' }: { name: string | null; avatar: st
 }
 
 function formatDate(date: Date): string {
-    return new Date(date).toLocaleDateString('fr-FR', {
+    return new Date(date).toLocaleDateString('en-US', {
         day: 'numeric',
         month: 'short',
         year: 'numeric'
@@ -104,7 +104,7 @@ export default function CustomersPage() {
                     <div className="group relative">
                         <Info className="w-4 h-4 text-gray-400 cursor-help" />
                         <div className="absolute left-0 top-6 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-2 w-64 z-10">
-                            Les customers sont les leads trackés via vos liens. Chaque inscription via un lien affilié crée un customer.
+                            Customers are leads tracked through your links. Each signup via an affiliate link creates a customer.
                         </div>
                     </div>
                 </div>
@@ -177,12 +177,12 @@ export default function CustomersPage() {
                     <div className="px-6 py-12 text-center">
                         <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-900 font-medium">
-                            {customers.length === 0 ? 'Aucun customer' : 'Aucun résultat'}
+                            {customers.length === 0 ? 'No customers' : 'No results'}
                         </p>
                         <p className="text-gray-500 text-sm mt-1">
                             {customers.length === 0
-                                ? 'Les customers apparaîtront quand des leads seront trackés via vos liens'
-                                : 'Essayez de modifier vos critères de recherche'
+                                ? 'Customers will appear when leads are tracked through your links'
+                                : 'Try modifying your search criteria'
                             }
                         </p>
                     </div>
@@ -257,7 +257,7 @@ export default function CustomersPage() {
             {/* Footer info */}
             {filteredCustomers.length > 0 && (
                 <p className="text-xs text-gray-500 text-center">
-                    {filteredCustomers.length} customer{filteredCustomers.length > 1 ? 's' : ''} affiché{filteredCustomers.length > 1 ? 's' : ''}
+                    {filteredCustomers.length} customer{filteredCustomers.length > 1 ? 's' : ''} displayed{filteredCustomers.length > 1 ? 's' : ''}
                 </p>
             )}
         </div>

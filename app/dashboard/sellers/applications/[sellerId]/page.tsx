@@ -151,13 +151,13 @@ export default function SellerProfilePage() {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
                 <div className="text-center">
-                    <h3 className="font-medium text-gray-900 mb-2">Seller non trouvé</h3>
-                    <p className="text-gray-500 text-sm mb-4">Ce seller n'existe pas ou vous n'avez pas accès.</p>
+                    <h3 className="font-medium text-gray-900 mb-2">Seller not found</h3>
+                    <p className="text-gray-500 text-sm mb-4">This seller does not exist or you don't have access.</p>
                     <button
                         onClick={() => router.push('/dashboard/sellers/applications')}
                         className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800"
                     >
-                        Retour aux sellers
+                        Back to sellers
                     </button>
                 </div>
             </div>

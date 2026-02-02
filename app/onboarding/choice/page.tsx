@@ -71,7 +71,7 @@ export default function OnboardingChoicePage() {
                             Je suis une Startup
                         </h2>
                         <p className="text-slate-600 mb-6">
-                            Créez votre programme d'affiliation, invitez des partenaires et boostez votre croissance.
+                            Create your affiliate program, invite partners and boost your growth.
                         </p>
                         <ul className="space-y-3 mb-8">
                             <li className="flex items-center gap-3 text-slate-600">
@@ -80,7 +80,7 @@ export default function OnboardingChoicePage() {
                             </li>
                             <li className="flex items-center gap-3 text-slate-600">
                                 <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                <span>Suivre les ventes en temps réel</span>
+                                <span>Track sales in real-time</span>
                             </li>
                             <li className="flex items-center gap-3 text-slate-600">
                                 <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -91,7 +91,7 @@ export default function OnboardingChoicePage() {
                             {loading === 'startup' ? (
                                 <>
                                     <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                                    Création du compte...
+                                    Creating account...
                                 </>
                             ) : (
                                 <>
@@ -119,15 +119,15 @@ export default function OnboardingChoicePage() {
                         <ul className="space-y-3 mb-8">
                             <li className="flex items-center gap-3 text-slate-600">
                                 <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                <span>Accès immédiat au Marketplace</span>
+                                <span>Immediate access to Marketplace</span>
                             </li>
                             <li className="flex items-center gap-3 text-slate-600">
                                 <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                <span>Liens de tracking personnalisés</span>
+                                <span>Custom tracking links</span>
                             </li>
                             <li className="flex items-center gap-3 text-slate-600">
                                 <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                <span>Paiements rapides et sécurisés</span>
+                                <span>Fast and secure payments</span>
                             </li>
                         </ul>
                         <div className="flex items-center text-indigo-600 font-semibold group-hover:gap-2 transition-all">

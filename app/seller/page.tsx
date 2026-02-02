@@ -128,7 +128,7 @@ function MissionRow({ data }: { data: Enrollment }) {
                                     ? 'bg-green-50 text-green-600'
                                     : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
                             }`}
-                            title={copied ? 'Copié!' : 'Copier le lien'}
+                            title={copied ? 'Copied!' : 'Copy link'}
                         >
                             {copied ? (
                                 <Check className="w-4 h-4" />
@@ -187,10 +187,10 @@ export default function PartnerDashboardPage() {
                     setTimeseries(globalStatsRes.timeseries)
                 }
                 if ('error' in dashboardRes && 'error' in enrollmentsRes) {
-                    setError(dashboardRes.error || enrollmentsRes.error || 'Erreur')
+                    setError(dashboardRes.error || enrollmentsRes.error || 'Error')
                 }
             } catch (e) {
-                setError('Erreur inattendue')
+                setError('Unexpected error')
             } finally {
                 setLoading(false)
             }
@@ -278,7 +278,7 @@ export default function PartnerDashboardPage() {
                                 href="/seller/marketplace"
                                 className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black transition-colors"
                             >
-                                Découvrir les programmes
+                                Discover programs
                             </Link>
                         </div>
                     )}

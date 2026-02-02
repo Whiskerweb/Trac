@@ -125,7 +125,7 @@ export default function AdminTreasuryPage() {
     if (!data) {
         return (
             <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
-                <p className="text-neutral-400">Erreur de chargement</p>
+                <p className="text-neutral-400">Failed to load</p>
             </div>
         )
     }

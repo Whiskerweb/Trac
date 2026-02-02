@@ -39,7 +39,7 @@ export async function getMySellers(): Promise<GetMySellersResponse> {
     try {
         const workspace = await getActiveWorkspaceForUser()
         if (!workspace) {
-            return { success: false, error: 'Non authentifié' }
+            return { success: false, error: 'Not authenticated' }
         }
 
         // Get enrollments for this workspace with ShortLink to get affiliate_id
@@ -251,12 +251,12 @@ export async function getMySellers(): Promise<GetMySellersResponse> {
 
             // Map activity type to label
             const activityTypeLabels: Record<string, string> = {
-                'CONTENT_CREATOR': 'Créateur de contenu',
+                'CONTENT_CREATOR': 'Content creator',
                 'SALES_REP': 'Commercial',
                 'INFLUENCER': 'Influenceur',
                 'MARKETER': 'Marketeur',
                 'BLOGGER': 'Blogueur',
-                'DEVELOPER': 'Développeur',
+                'DEVELOPER': 'Developer',
                 'CONSULTANT': 'Consultant',
                 'OTHER': 'Autre'
             }
@@ -302,7 +302,7 @@ export async function getMySellers(): Promise<GetMySellersResponse> {
         }
     } catch (error) {
         console.error('Error fetching my sellers:', error)
-        return { success: false, error: 'Erreur lors du chargement' }
+        return { success: false, error: 'Failed to load' }
     }
 }
 
@@ -491,12 +491,12 @@ export async function getAllPlatformSellers(filters?: {
 
             // Format activity type for display
             const activityTypeLabels: Record<string, string> = {
-                'CONTENT_CREATOR': 'Créateur de contenu',
+                'CONTENT_CREATOR': 'Content creator',
                 'SALES_REP': 'Commercial',
                 'INFLUENCER': 'Influenceur',
                 'MARKETER': 'Marketeur',
                 'BLOGGER': 'Blogueur',
-                'DEVELOPER': 'Développeur',
+                'DEVELOPER': 'Developer',
                 'CONSULTANT': 'Consultant',
                 'OTHER': 'Autre'
             }
@@ -528,7 +528,7 @@ export async function getAllPlatformSellers(filters?: {
         return { success: true, sellers: formattedSellers }
     } catch (error) {
         console.error('Error fetching platform sellers:', error)
-        return { success: false, error: 'Erreur lors du chargement' }
+        return { success: false, error: 'Failed to load' }
     }
 }
 
@@ -543,7 +543,7 @@ export async function getSellerProfile(sellerId: string) {
         const workspace = await getActiveWorkspaceForUser()
         if (!workspace) {
             console.log('[getSellerProfile] No workspace found')
-            return { success: false, error: 'Non authentifié' }
+            return { success: false, error: 'Not authenticated' }
         }
 
         console.log('[getSellerProfile] Workspace:', workspace.workspaceId)
@@ -558,7 +558,7 @@ export async function getSellerProfile(sellerId: string) {
 
         if (!seller) {
             console.log('[getSellerProfile] Seller not found:', sellerId)
-            return { success: false, error: 'Seller non trouvé' }
+            return { success: false, error: 'Seller not found' }
         }
 
         console.log('[getSellerProfile] Seller found:', seller.id, 'user_id:', seller.user_id)
@@ -710,7 +710,7 @@ export async function getSellerProfile(sellerId: string) {
         console.error('[getSellerProfile] ❌ Error:', error)
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Erreur lors du chargement'
+            error: error instanceof Error ? error.message : 'Failed to load'
         }
     }
 }
@@ -807,7 +807,7 @@ export async function getSellerByUserId(userId: string) {
 export async function getSellerDashboard() {
     try {
         const currentUser = await getCurrentUser()
-        if (!currentUser) return { error: 'Non authentifié' }
+        if (!currentUser) return { error: 'Not authenticated' }
 
         // Find the seller for this user
         const seller = await prisma.seller.findFirst({
@@ -860,7 +860,7 @@ export async function getSellerDashboard() {
         }
     } catch (error) {
         console.error('Error fetching seller dashboard:', error)
-        return { error: 'Erreur load dashboard' }
+        return { error: 'Dashboard load error' }
     }
 }
 
@@ -933,7 +933,7 @@ export async function getMySellerProfile(): Promise<{
     try {
         const currentUser = await getCurrentUser()
         if (!currentUser) {
-            return { success: false, error: 'Non authentifié' }
+            return { success: false, error: 'Not authenticated' }
         }
 
         // Fetch all seller records for this user (there can be multiple due to
@@ -946,7 +946,7 @@ export async function getMySellerProfile(): Promise<{
         })
 
         if (sellers.length === 0) {
-            return { success: false, error: 'Seller non trouvé' }
+            return { success: false, error: 'Seller not found' }
         }
 
         // Prefer the seller that has a Profile, otherwise pick the global one (program_id=null)
@@ -997,7 +997,7 @@ export async function getMySellerProfile(): Promise<{
         }
     } catch (error) {
         console.error('Error fetching seller profile:', error)
-        return { success: false, error: 'Erreur lors du chargement du profil' }
+        return { success: false, error: 'Failed to load profile' }
     }
 }
 
@@ -1055,7 +1055,7 @@ export async function updateMySellerProfile(input: UpdateSellerProfileInput): Pr
 
         const currentUser = await getCurrentUser()
         if (!currentUser) {
-            return { success: false, error: 'Non authentifié' }
+            return { success: false, error: 'Not authenticated' }
         }
 
         // Fetch all seller records for this user (multiple possible due to compound unique)
@@ -1065,7 +1065,7 @@ export async function updateMySellerProfile(input: UpdateSellerProfileInput): Pr
         })
 
         if (sellers.length === 0) {
-            return { success: false, error: 'Seller non trouvé' }
+            return { success: false, error: 'Seller not found' }
         }
 
         // Always use the same seller: prefer one with Profile, then global (program_id=null)
@@ -1135,7 +1135,7 @@ export async function updateMySellerProfile(input: UpdateSellerProfileInput): Pr
         return { success: true }
     } catch (error) {
         console.error('Error updating seller profile:', error)
-        return { success: false, error: 'Erreur lors de la mise à jour du profil' }
+        return { success: false, error: 'Failed to update profile' }
     }
 }
 
@@ -1169,7 +1169,7 @@ export async function getProfileCompletionStatus(): Promise<{
     try {
         const currentUser = await getCurrentUser()
         if (!currentUser) {
-            return { success: false, error: 'Non authentifié' }
+            return { success: false, error: 'Not authenticated' }
         }
 
         const seller = await prisma.seller.findFirst({
@@ -1178,7 +1178,7 @@ export async function getProfileCompletionStatus(): Promise<{
         })
 
         if (!seller) {
-            return { success: false, error: 'Seller non trouvé' }
+            return { success: false, error: 'Seller not found' }
         }
 
         const missingFields: string[] = []
@@ -1262,7 +1262,7 @@ export async function getProfileCompletionStatus(): Promise<{
         }
     } catch (error) {
         console.error('Error checking profile completion:', error)
-        return { success: false, error: 'Erreur lors de la vérification du profil' }
+        return { success: false, error: 'Profile verification failed' }
     }
 }
 
@@ -1285,6 +1285,6 @@ export async function updatePayoutMethod(
         return { success: true }
     } catch (error) {
         console.error('Error updating payout method:', error)
-        return { success: false, error: 'Erreur lors de la mise à jour' }
+        return { success: false, error: 'Failed to update' }
     }
 }

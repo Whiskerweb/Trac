@@ -78,7 +78,7 @@ const MAIN_CATEGORIES = [
 
 // Secondary categories shown when expanded
 const MORE_CATEGORIES = [
-    { id: 'HealthTech', label: 'Santé' },
+    { id: 'HealthTech', label: 'Health' },
     { id: 'EdTech', label: 'Éducation' },
     { id: 'Cybersecurity', label: 'Cyber' },
     { id: 'CleanTech', label: 'CleanTech' },
@@ -136,7 +136,7 @@ function ProgramRow({ mission, index }: { mission: Mission; index: number }) {
                         )}
                         {mission.visibility === 'PRIVATE' && (
                             <span className="text-[10px] text-amber-600 uppercase tracking-wider px-2 py-0.5 bg-amber-50 rounded-full font-medium">
-                                Privé
+                                Private
                             </span>
                         )}
                     </div>
@@ -164,7 +164,7 @@ function ProgramRow({ mission, index }: { mission: Mission; index: number }) {
                             {mission.recurring_enabled && mission.recurring_reward_amount && (
                                 <div className="text-center px-3 py-1.5 bg-blue-50 rounded-lg">
                                     <p className="text-sm font-semibold text-blue-900">{formatRewardAmount(mission.recurring_reward_amount, mission.recurring_reward_structure)}</p>
-                                    <p className="text-[10px] text-blue-600">récurrent</p>
+                                    <p className="text-[10px] text-blue-600">recurring</p>
                                 </div>
                             )}
                         </>
@@ -386,7 +386,7 @@ export default function SellerMarketplacePage() {
                                 <p className="text-gray-400 text-[15px] mb-2">
                                     {missions.length > 0 && availableMissions.length === 0
                                         ? 'Vous avez rejoint tous les programmes disponibles'
-                                        : 'Aucun programme trouvé'
+                                        : 'No programs found'
                                     }
                                 </p>
                                 {(search || selectedCategory !== 'all') && (
@@ -397,7 +397,7 @@ export default function SellerMarketplacePage() {
                                         }}
                                         className="text-[13px] text-violet-500 hover:text-violet-600 font-medium"
                                     >
-                                        Réinitialiser
+                                        Reset
                                     </button>
                                 )}
                             </div>

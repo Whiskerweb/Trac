@@ -10,7 +10,7 @@ interface DiscountBannerProps {
 /**
  * DiscountBanner - Traaaction-style referral banner
  * 
- * Displays "{partner} vous offre {discount}% de réduction" when a user
+ * Displays "{partner} offers you {discount}% off" when a user
  * arrives via ?via=john or similar referral link.
  * 
  * Usage:
@@ -27,8 +27,8 @@ export function DiscountBanner({ className = '' }: DiscountBannerProps) {
     if (!partner || !discount) return null
 
     const discountText = discount.type === 'PERCENTAGE'
-        ? `${discount.amount}% de réduction`
-        : `${discount.amount}€ de réduction`
+        ? `${discount.amount}% off`
+        : `${discount.amount}€ off`
 
     return (
         <div className={`flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-lg ${className}`}>
@@ -50,7 +50,7 @@ export function DiscountBanner({ className = '' }: DiscountBannerProps) {
                 </div>
             )}
             <p className="text-sm text-gray-700">
-                <span className="font-medium">{partner.name}</span> vous offre{' '}
+                <span className="font-medium">{partner.name}</span> offers you{' '}
                 <span className="font-bold text-purple-600">
                     {discountText}
                 </span>
@@ -69,8 +69,8 @@ export function DiscountBannerMinimal() {
 
     return (
         <span>
-            {partner.name} vous offre {discount.amount}
-            {discount.type === 'PERCENTAGE' ? '%' : '€'} de réduction
+            {partner.name} offers you {discount.amount}
+            {discount.type === 'PERCENTAGE' ? '%' : '€'} off
         </span>
     )
 }

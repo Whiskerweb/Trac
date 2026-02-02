@@ -195,7 +195,7 @@ function MissionCard({
                                         {copied ? (
                                             <>
                                                 <Check className="w-3 h-3" />
-                                                Copié
+                                                Copied
                                             </>
                                         ) : (
                                             <>
@@ -211,7 +211,7 @@ function MissionCard({
                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                         </svg>
-                                        <span>Lien non-sécurisé (domaine par défaut)</span>
+                                        <span>Unsecured link (default domain)</span>
                                     </div>
                                 )}
                                 <p className="text-xs text-slate-500 flex items-center gap-1">
@@ -274,7 +274,7 @@ export default function MarketplacePage() {
                     className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 mb-8 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    Retour au Dashboard
+                    Back to Dashboard
                 </Link>
 
                 {/* Header */}
@@ -305,7 +305,7 @@ export default function MarketplacePage() {
                             Aucune mission disponible
                         </h3>
                         <p className="text-slate-500">
-                            De nouvelles opportunités seront bientôt disponibles.
+                            New opportunities will be available soon.
                         </p>
                     </div>
                 ) : (
@@ -326,10 +326,10 @@ export default function MarketplacePage() {
                         <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-white">
                             <div>
                                 <h3 className="text-2xl font-bold mb-1">
-                                    Prêt à gagner ?
+                                    Ready to earn?
                                 </h3>
                                 <p className="text-purple-200">
-                                    Rejoignez une mission et commencez à partager.
+                                    Join a mission and start sharing.
                                 </p>
                             </div>
                             <div className="flex items-center gap-8">

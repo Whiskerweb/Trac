@@ -152,7 +152,7 @@ export default function MissionDetailPage() {
                 setData(updated as MissionDetail)
             }
         } else {
-            setError(result.error || 'Erreur lors de la demande')
+            setError(result.error || 'Request failed')
         }
         setJoining(false)
     }
@@ -183,7 +183,7 @@ export default function MissionDetailPage() {
                         href="/seller/marketplace"
                         className="text-sm text-violet-600 hover:text-violet-700 font-medium"
                     >
-                        Retour au marketplace
+                        Back to marketplace
                     </Link>
                 </div>
             </div>
@@ -249,7 +249,7 @@ export default function MissionDetailPage() {
                         {isPrivate && (
                             <span className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full">
                                 <Lock className="w-3 h-3" />
-                                Privé
+                                Private
                             </span>
                         )}
                     </div>
@@ -293,13 +293,13 @@ export default function MissionDetailPage() {
                                     {startup.company_size && (
                                         <span className="flex items-center gap-1.5 text-sm text-gray-500">
                                             <Building2 className="w-3.5 h-3.5" />
-                                            {startup.company_size} employés
+                                            {startup.company_size} employees
                                         </span>
                                     )}
                                     {startup.founded_year && (
                                         <span className="flex items-center gap-1.5 text-sm text-gray-500">
                                             <Calendar className="w-3.5 h-3.5" />
-                                            Fondée en {startup.founded_year}
+                                            Founded in {startup.founded_year}
                                         </span>
                                     )}
                                 </div>
@@ -341,10 +341,10 @@ export default function MissionDetailPage() {
                                         <Lock className="w-5 h-5 text-gray-400" />
                                     </div>
                                     <p className="text-sm text-gray-500 mb-1">
-                                        Ressources réservées aux membres
+                                        Resources reserved for members
                                     </p>
                                     <p className="text-xs text-gray-400">
-                                        Rejoignez le programme pour accéder aux documents
+                                        Join the program to access the documents
                                     </p>
                                 </div>
                             ) : resources.length === 0 ? (
@@ -413,7 +413,7 @@ export default function MissionDetailPage() {
                                             )}
                                             {mission.recurring_enabled && mission.recurring_reward_amount && (
                                                 <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
-                                                    <span className="text-sm text-blue-700 font-medium">Récurrent</span>
+                                                    <span className="text-sm text-blue-700 font-medium">Recurring</span>
                                                     <span className="text-lg font-semibold text-blue-900">
                                                         {formatRewardAmount(mission.recurring_reward_amount, mission.recurring_reward_structure)}
                                                     </span>
@@ -475,7 +475,7 @@ export default function MissionDetailPage() {
                                                         {copied ? (
                                                             <>
                                                                 <Check className="w-4 h-4" />
-                                                                Copié !
+                                                                Copied!
                                                             </>
                                                         ) : (
                                                             <>
@@ -507,12 +507,12 @@ export default function MissionDetailPage() {
                                                 {joinSuccess === 'enrolled' ? (
                                                     <p className="flex items-center justify-center gap-2 text-sm text-emerald-600">
                                                         <Sparkles className="w-4 h-4" />
-                                                        Bienvenue dans le programme !
+                                                        Welcome to the program !
                                                     </p>
                                                 ) : (
                                                     <p className="flex items-center justify-center gap-2 text-sm text-violet-600">
                                                         <Send className="w-4 h-4" />
-                                                        Demande envoyée !
+                                                        Request sent!
                                                     </p>
                                                 )}
                                             </div>
@@ -530,7 +530,7 @@ export default function MissionDetailPage() {
                                                 ) : isPrivate ? (
                                                     <>
                                                         <Send className="w-4 h-4" />
-                                                        Demander à rejoindre
+                                                        Request to join
                                                     </>
                                                 ) : (
                                                     <>
@@ -542,7 +542,7 @@ export default function MissionDetailPage() {
 
                                             {isPrivate && (
                                                 <p className="text-xs text-gray-400 text-center mt-3">
-                                                    Votre demande sera examinée par la startup
+                                                    Your request will be reviewed by the startup
                                                 </p>
                                             )}
                                         </>

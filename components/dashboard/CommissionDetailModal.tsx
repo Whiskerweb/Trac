@@ -117,7 +117,7 @@ export function CommissionDetailModal({ isOpen, onClose, seller, isSelected, onT
 
                         {/* Commission List */}
                         <div className="flex-1 overflow-y-auto p-6">
-                            <h4 className="text-sm font-medium text-gray-700 mb-4">Détail des commissions</h4>
+                            <h4 className="text-sm font-medium text-gray-700 mb-4">Commission details</h4>
                             <div className="space-y-3">
                                 {seller.commissions.map((commission) => (
                                     <div
@@ -168,7 +168,7 @@ export function CommissionDetailModal({ isOpen, onClose, seller, isSelected, onT
                                     {isSelected ? (
                                         <>
                                             <Check className="w-5 h-5" />
-                                            Sélectionné pour paiement
+                                            Selected for payment
                                         </>
                                     ) : (
                                         'Ajouter au paiement'

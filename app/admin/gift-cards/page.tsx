@@ -31,7 +31,7 @@ interface GiftCardRedemption {
 
 const STATUS_CONFIG = {
     PENDING: {
-        label: 'En attente',
+        label: 'Pending',
         color: 'bg-amber-500/20 text-amber-400',
         icon: Clock
     },
@@ -41,12 +41,12 @@ const STATUS_CONFIG = {
         icon: Loader2
     },
     DELIVERED: {
-        label: 'Livré',
+        label: 'Delivered',
         color: 'bg-emerald-500/20 text-emerald-400',
         icon: CheckCircle2
     },
     FAILED: {
-        label: 'Échoué',
+        label: 'Failed',
         color: 'bg-red-500/20 text-red-400',
         icon: XCircle
     },
@@ -92,7 +92,7 @@ export default function AdminGiftCardsPage() {
     async function markAsDelivered(redemptionId: string) {
         const code = codeInput[redemptionId]
         if (!code?.trim()) {
-            alert('Veuillez entrer le code de la carte cadeau')
+            alert('Please enter the gift card code')
             return
         }
 
@@ -113,18 +113,18 @@ export default function AdminGiftCardsPage() {
                 setCodeInput(prev => ({ ...prev, [redemptionId]: '' }))
                 setExpandedId(null)
             } else {
-                alert(data.error || 'Erreur lors de la livraison')
+                alert(data.error || 'Delivery failed')
             }
         } catch (error) {
             console.error('Failed to deliver:', error)
-            alert('Erreur lors de la livraison')
+            alert('Delivery failed')
         } finally {
             setProcessingId(null)
         }
     }
 
     async function markAsFailed(redemptionId: string) {
-        if (!confirm('Marquer comme échoué ? Le solde sera recrédité au seller.')) return
+        if (!confirm('Mark as failed? Balance will be credited back to seller.')) return
 
         setProcessingId(redemptionId)
         try {
@@ -137,7 +137,7 @@ export default function AdminGiftCardsPage() {
             if (data.success) {
                 await loadRedemptions()
             } else {
-                alert(data.error || 'Erreur')
+                alert(data.error || 'Error')
             }
         } catch (error) {
             console.error('Failed:', error)
@@ -172,7 +172,7 @@ export default function AdminGiftCardsPage() {
                     Gift Cards
                 </h1>
                 <p className="text-sm text-neutral-500">
-                    Gérer les demandes de cartes cadeaux des sellers
+                    Manage sellers gift card requests
                 </p>
             </div>
 
@@ -192,7 +192,7 @@ export default function AdminGiftCardsPage() {
                                 {pendingCount} demande{pendingCount > 1 ? 's' : ''} en attente
                             </p>
                             <p className="text-sm text-amber-500/70">
-                                Total: {(totalPendingAmount / 100).toFixed(0)}€ à traiter
+                                Total: {(totalPendingAmount / 100).toFixed(0)}€ to process
                             </p>
                         </div>
                     </div>
@@ -211,7 +211,7 @@ export default function AdminGiftCardsPage() {
                                 : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'
                         }`}
                     >
-                        {f === 'all' ? 'Toutes' : f === 'PENDING' ? 'En attente' : 'Livrées'}
+                        {f === 'all' ? 'All' : f === 'PENDING' ? 'Pending' : 'Deliveredes'}
                     </button>
                 ))}
             </div>
@@ -368,7 +368,7 @@ export default function AdminGiftCardsPage() {
                                                                     ) : (
                                                                         <CheckCircle2 className="w-4 h-4" />
                                                                     )}
-                                                                    Marquer comme livré
+                                                                    Mark as delivered
                                                                 </button>
                                                                 <button
                                                                     onClick={(e) => {
@@ -378,7 +378,7 @@ export default function AdminGiftCardsPage() {
                                                                     disabled={processingId === redemption.id}
                                                                     className="px-4 py-2 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/10 disabled:opacity-50 transition-colors"
                                                                 >
-                                                                    Échoué
+                                                                    Failed
                                                                 </button>
                                                             </div>
                                                         </>
@@ -387,7 +387,7 @@ export default function AdminGiftCardsPage() {
                                                     {redemption.status === 'DELIVERED' && redemption.gift_card_code && (
                                                         <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                                                             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                                            <span className="text-sm text-emerald-400">Code livré:</span>
+                                                            <span className="text-sm text-emerald-400">Code delivered:</span>
                                                             <code className="px-2 py-1 bg-neutral-800 rounded text-sm font-mono text-white">
                                                                 {redemption.gift_card_code}
                                                             </code>
@@ -419,8 +419,8 @@ export default function AdminGiftCardsPage() {
                     💡 Automatisation disponible
                 </h3>
                 <p className="text-sm text-neutral-500">
-                    Intégrez Tremendous, Tango Card ou Runa pour automatiser l'achat et la livraison des cartes cadeaux.
-                    L'infrastructure est prête pour l'intégration API.
+                    Integrate Tremendous, Tango Card or Runa to automate gift card purchase and delivery.
+                    The infrastructure is ready for API integration.
                 </p>
             </div>
         </div>

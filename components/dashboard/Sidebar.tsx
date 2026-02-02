@@ -54,7 +54,7 @@ const navigation: NavSection[] = [
     {
         title: 'Configuration',
         items: [
-            { name: 'Intégration', href: '/dashboard/integration', icon: Puzzle, external: true },
+            { name: 'Integration', href: '/dashboard/integration', icon: Puzzle, external: true },
             { name: 'Domains', href: '/dashboard/domains', icon: Globe },
         ]
     },

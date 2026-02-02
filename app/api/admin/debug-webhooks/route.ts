@@ -63,7 +63,7 @@ export async function GET() {
                     '1. Va sur Stripe Dashboard → Developers → Webhooks',
                     '2. Clique sur ton webhook endpoint',
                     '3. Copie le "Signing secret" (commence par whsec_)',
-                    '4. Met à jour le champ "secret" dans la table WebhookEndpoint ci-dessous'
+                    '4. Update the "secret" field in the WebhookEndpoint table below'
                 ]
             },
 
@@ -95,7 +95,7 @@ export async function GET() {
                 paidAt: p.paid_at,
                 // Diagnosis
                 diagnosis: p.status === 'PENDING' && p.stripe_session_id
-                    ? '⚠️ Paiement effectué mais webhook non traité - vérifier le secret webhook!'
+                    ? '⚠️ Payment completed but webhook not processed - check webhook secret!'
                     : p.status === 'PAID'
                         ? '✅ OK'
                         : 'En attente de paiement'

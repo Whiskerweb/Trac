@@ -31,7 +31,7 @@ export interface TracPartnerData {
  * function DiscountBanner() {
  *   const { partner, discount } = useTracAnalytics()
  *   if (!partner || !discount) return null
- *   return <p>{partner.name} vous offre {discount.amount}% de réduction</p>
+ *   return <p>{partner.name} offers you {discount.amount}% off</p>
  * }
  * ```
  */

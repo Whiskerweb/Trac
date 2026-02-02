@@ -146,7 +146,7 @@ export default function SellerProgramDetailPage() {
                     router.push('/seller/marketplace/' + missionId)
                     return
                 }
-                setError(result.error || 'Erreur')
+                setError(result.error || 'Error')
             } else {
                 setData(result as unknown as MissionData)
             }
@@ -192,13 +192,13 @@ export default function SellerProgramDetailPage() {
             <div className="min-h-screen bg-[#FAFAFB] flex items-center justify-center">
                 <div className="text-center">
                     <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-3" />
-                    <p className="text-gray-600">{error || 'Erreur de chargement'}</p>
+                    <p className="text-gray-600">{error || 'Failed to load'}</p>
                     <Link
                         href="/seller"
                         className="mt-4 inline-flex items-center gap-2 text-violet-600 hover:text-violet-700 text-sm font-medium"
                     >
                         <ArrowLeft className="w-4 h-4" />
-                        Retour
+                        Back
                     </Link>
                 </div>
             </div>
@@ -265,7 +265,7 @@ export default function SellerProgramDetailPage() {
                             )}
                             {mission.recurring_enabled && mission.recurring_reward_amount && (
                                 <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
-                                    {formatRewardAmount(mission.recurring_reward_amount, mission.recurring_reward_structure)} / récurrent
+                                    {formatRewardAmount(mission.recurring_reward_amount, mission.recurring_reward_structure)} / recurring
                                 </span>
                             )}
                             {!hasMultipleCommissions(mission) && (
@@ -327,7 +327,7 @@ export default function SellerProgramDetailPage() {
                                 {copied ? (
                                     <span className="flex items-center gap-1.5">
                                         <Check className="w-4 h-4" />
-                                        Copié
+                                        Copied
                                     </span>
                                 ) : (
                                     <span className="flex items-center gap-1.5">

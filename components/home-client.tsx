@@ -66,8 +66,8 @@ export default function HomeClient() {
         <div className="max-w-2xl">
             {/* Create Link Form Replaced by Mission CTA */}
             <div className="bg-zinc-900 rounded-xl p-8 mb-6 border border-zinc-800 text-center">
-                <h2 className="text-xl font-semibold mb-2 text-white">Prêt à tracker ?</h2>
-                <p className="text-zinc-400 mb-6">Lancez une mission pour générer vos liens de tracking.</p>
+                <h2 className="text-xl font-semibold mb-2 text-white">Ready to track?</h2>
+                <p className="text-zinc-400 mb-6">Launch a mission to generate your tracking links.</p>
 
                 <a
                     href="/dashboard/missions"

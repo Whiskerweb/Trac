@@ -102,7 +102,7 @@ export default function SellerWalletPage() {
                     className="flex flex-col items-center gap-3"
                 >
                     <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
-                    <span className="text-xs text-neutral-400 tracking-wide">Chargement</span>
+                    <span className="text-xs text-neutral-400 tracking-wide">Loading</span>
                 </motion.div>
             </div>
         )

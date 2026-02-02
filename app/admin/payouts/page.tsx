@@ -150,7 +150,7 @@ export default function AdminPayoutsPage() {
                     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
                         <div className="flex items-center gap-2 mb-2">
                             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                            <span className="text-xs text-neutral-500">Versé</span>
+                            <span className="text-xs text-neutral-500">Paid</span>
                         </div>
                         <p className="text-2xl font-light text-white">{formatCurrency(summary.complete.amount)}</p>
                         <p className="text-xs text-neutral-500">{summary.complete.count} commissions</p>

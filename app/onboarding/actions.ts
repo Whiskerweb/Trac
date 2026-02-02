@@ -11,10 +11,10 @@ import { setActiveWorkspaceId } from '@/lib/workspace-context'
 // =============================================
 
 const createWorkspaceSchema = z.object({
-    name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères').max(50, 'Le nom ne peut pas dépasser 50 caractères'),
+    name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name cannot exceed 50 characters'),
     slug: z.string()
-        .min(3, 'Le slug doit contenir au moins 3 caractères')
-        .max(30, 'Le slug ne peut pas dépasser 30 caractères')
+        .min(3, 'Slug must be at least 3 characters')
+        .max(30, 'Slug cannot exceed 30 characters')
         .regex(/^[a-z0-9-]+$/, 'Le slug ne peut contenir que des lettres minuscules, chiffres et tirets'),
 })
 
@@ -27,18 +27,18 @@ export async function checkSlugAvailability(slug: string): Promise<{
     error?: string
 }> {
     if (!slug || slug.length < 3) {
-        return { available: false, error: 'Le slug doit contenir au moins 3 caractères' }
+        return { available: false, error: 'Slug must be at least 3 characters' }
     }
 
     const slugRegex = /^[a-z0-9-]+$/
     if (!slugRegex.test(slug)) {
-        return { available: false, error: 'Caractères invalides' }
+        return { available: false, error: 'Invalid characters' }
     }
 
     // Reserved slugs
     const reserved = ['app', 'api', 'admin', 'dashboard', 'login', 'signup', 'onboarding', 'settings', 'www', 'blog', 'help', 'support', 'status', 'docs']
     if (reserved.includes(slug)) {
-        return { available: false, error: 'Ce slug est réservé' }
+        return { available: false, error: 'This slug is reserved' }
     }
 
     try {
@@ -50,7 +50,7 @@ export async function checkSlugAvailability(slug: string): Promise<{
         return { available: !existing }
     } catch (err) {
         console.error('[Onboarding] ❌ Slug check error:', err)
-        return { available: false, error: 'Erreur de vérification' }
+        return { available: false, error: 'Verification error' }
     }
 }
 
@@ -68,7 +68,7 @@ export async function createWorkspaceOnboarding(formData: FormData): Promise<{
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-        return { success: false, error: 'Non authentifié' }
+        return { success: false, error: 'Not authenticated' }
     }
 
     const name = String(formData.get('name') || '').trim()
@@ -83,7 +83,7 @@ export async function createWorkspaceOnboarding(formData: FormData): Promise<{
     // Check availability
     const availability = await checkSlugAvailability(slug)
     if (!availability.available) {
-        return { success: false, error: availability.error || 'Ce slug est déjà pris' }
+        return { success: false, error: availability.error || 'This slug is already taken' }
     }
 
     try {
@@ -132,6 +132,6 @@ export async function createWorkspaceOnboarding(formData: FormData): Promise<{
         return { success: true, slug: workspace.slug, redirectTo: '/dashboard/domains?setup=true' }
     } catch (err) {
         console.error('[Onboarding] ❌ Workspace creation error:', err)
-        return { success: false, error: 'Erreur lors de la création du workspace' }
+        return { success: false, error: 'Error creating workspace' }
     }
 }

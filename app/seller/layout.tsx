@@ -150,7 +150,7 @@ export default function SellerLayout({
                     {/* COMPTE Section */}
                     <SectionLabel>Compte</SectionLabel>
                     <div className="space-y-1">
-                        <NavItem href="/seller/settings" icon={Settings} label="Paramètres" />
+                        <NavItem href="/seller/settings" icon={Settings} label="Settings" />
                     </div>
                 </nav>
 

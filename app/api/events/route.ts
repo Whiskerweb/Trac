@@ -18,38 +18,38 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: Request) {
-    // 🔍 DEBUG: Vérification de la variable d'environnement
-    console.log("🔍 DEBUG ENV VAR TINYBIRD_ADMIN_TOKEN:", process.env.TINYBIRD_ADMIN_TOKEN ? "✅ Présent" : "❌ Manquant")
+    // 🔍 DEBUG: Checking environment variable
+    console.log("🔍 DEBUG ENV VAR TINYBIRD_ADMIN_TOKEN:", process.env.TINYBIRD_ADMIN_TOKEN ? "✅ Present" : "❌ Missing")
 
-    // 🔑 Récupération et validation de l'API Key multi-tenant
+    // 🔑 Retrieve and validate multi-tenant API Key
     const publishableKey = request.headers.get('x-publishable-key');
 
     // A. Si absente -> 401
     if (!publishableKey) {
-        console.warn("⚠️ [API] Requête sans API Key");
+        console.warn("⚠️ [API] Request without API Key");
         return NextResponse.json(
             { success: false, error: 'Missing API Key' },
             { status: 401, headers: corsHeaders }
         )
     }
 
-    // B. Vérification en base de données - lookup by public_key in ApiKey model
+    // B. Database verification - lookup by public_key in ApiKey model
     const apiKey = await prisma.apiKey.findUnique({
         where: { public_key: publishableKey },
         include: { Workspace: true }
     });
 
-    // C. Si clé inconnue -> 403
+    // C. If unknown key -> 403
     if (!apiKey) {
-        console.warn("❌ [API] Clé invalide:", publishableKey);
+        console.warn("❌ [API] Invalid key:", publishableKey);
         return NextResponse.json(
             { success: false, error: 'Invalid API Key' },
             { status: 403, headers: corsHeaders }
         )
     }
 
-    // D. Clé valide -> Continue
-    console.log("✅ Workspace identifié:", apiKey.Workspace.name, "(", apiKey.public_key, ")");
+    // D. Valid key -> Continue
+    console.log("✅ Workspace identified:", apiKey.Workspace.name, "(", apiKey.public_key, ")");
 
     try {
         const body = await request.json()

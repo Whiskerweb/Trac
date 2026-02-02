@@ -168,7 +168,7 @@ export async function getActiveWorkspaceAction(): Promise<{
         const workspace = await getActiveWorkspaceForUser()
 
         if (!workspace) {
-            return { success: false, error: 'Veuillez creer un workspace via /onboarding' }
+            return { success: false, error: 'Please create a workspace via /onboarding' }
         }
 
         // Fetch slug for existing workspace

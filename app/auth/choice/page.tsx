@@ -3,12 +3,16 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Building2, Users, Loader2, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
 
 interface UserRoles {
     hasWorkspace: boolean
+    hasSeller: boolean
     hasPartner: boolean
-    primaryRole: 'startup' | 'partner' | 'none'
+    primaryRole: 'startup' | 'seller' | 'partner' | 'none'
     workspaces: { id: string; name: string; slug: string }[]
+    sellers: { id: string; programName: string; status: string }[]
     partners: { id: string; programName: string; status: string }[]
 }
 
@@ -16,7 +20,7 @@ export default function AuthChoicePage() {
     const router = useRouter()
     const [loading, setLoading] = useState(true)
     const [roles, setRoles] = useState<UserRoles | null>(null)
-    const [selecting, setSelecting] = useState<'startup' | 'partner' | null>(null)
+    const [selecting, setSelecting] = useState<'startup' | 'seller' | null>(null)
 
     useEffect(() => {
         async function loadRoles() {
@@ -26,16 +30,18 @@ export default function AuthChoicePage() {
                     const data = await res.json()
                     setRoles(data)
 
+                    const hasSeller = data.hasSeller || data.hasPartner
+
                     // If only one role, redirect immediately
-                    if (data.hasWorkspace && !data.hasPartner) {
+                    if (data.hasWorkspace && !hasSeller) {
                         router.replace('/dashboard')
                         return
                     }
-                    if (data.hasPartner && !data.hasWorkspace) {
+                    if (hasSeller && !data.hasWorkspace) {
                         router.replace('/seller')
                         return
                     }
-                    if (!data.hasWorkspace && !data.hasPartner) {
+                    if (!data.hasWorkspace && !hasSeller) {
                         router.replace('/onboarding')
                         return
                     }
@@ -54,7 +60,7 @@ export default function AuthChoicePage() {
         loadRoles()
     }, [router])
 
-    const handleChoice = async (role: 'startup' | 'partner') => {
+    const handleChoice = async (role: 'startup' | 'seller') => {
         setSelecting(role)
 
         // Set preference cookie (30 days)
@@ -70,112 +76,139 @@ export default function AuthChoicePage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center">
-                <div className="flex items-center gap-3 text-slate-500">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>Chargement...</span>
-                </div>
+            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
             </div>
         )
     }
 
-    if (!roles || (!roles.hasWorkspace && !roles.hasPartner)) {
+    const hasSeller = roles?.hasSeller || roles?.hasPartner
+    const sellers = roles?.sellers || roles?.partners || []
+
+    if (!roles || (!roles.hasWorkspace && !hasSeller)) {
         return null // Will redirect
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-6">
-            <div className="max-w-2xl w-full">
-                {/* Header */}
-                <div className="text-center mb-10">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4">
-                        <Users className="w-8 h-8 text-white" />
+        <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
+            {/* Header */}
+            <header className="fixed top-0 left-0 right-0 z-50 px-6 py-5">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                    <Link href="/" className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                            T
+                        </div>
+                        <span className="font-semibold text-neutral-900 tracking-tight">Traaaction</span>
+                    </Link>
+                </div>
+            </header>
+
+            {/* Main Content */}
+            <main className="flex-1 flex items-center justify-center px-6 pt-20 pb-12">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    className="w-full max-w-3xl"
+                >
+                    {/* Header */}
+                    <div className="text-center mb-14">
+                        <h1 className="text-4xl md:text-5xl font-semibold text-neutral-900 tracking-tight mb-4">
+                            Welcome back
+                        </h1>
+                        <p className="text-lg text-neutral-500 max-w-md mx-auto">
+                            You have access to multiple spaces. Which one would you like to open?
+                        </p>
                     </div>
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                        Bienvenue sur Traaaction
-                    </h1>
-                    <p className="text-slate-600">
-                        Vous avez accès à plusieurs espaces. Lequel souhaitez-vous ouvrir ?
+
+                    {/* Choice Cards */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                        {/* Startup Option */}
+                        <motion.button
+                            onClick={() => handleChoice('startup')}
+                            disabled={selecting !== null}
+                            className="group relative bg-white rounded-2xl p-8 text-left border border-neutral-200/60 hover:border-neutral-300 transition-all duration-300 hover:shadow-lg hover:shadow-neutral-200/50 disabled:opacity-70"
+                            whileHover={{ y: -2 }}
+                            whileTap={{ scale: 0.995 }}
+                        >
+                            <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <ArrowRight className="w-5 h-5 text-neutral-400" />
+                            </div>
+
+                            <div className="w-14 h-14 bg-neutral-900 rounded-xl flex items-center justify-center mb-6">
+                                <Building2 className="w-7 h-7 text-white" />
+                            </div>
+
+                            <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+                                Startup Dashboard
+                            </h2>
+                            <p className="text-neutral-500 text-sm leading-relaxed mb-6">
+                                Manage your links, track conversions and run your affiliate campaigns.
+                            </p>
+
+                            {roles.workspaces.length > 0 && (
+                                <div className="text-xs text-neutral-500 bg-neutral-50 rounded-lg px-3 py-2">
+                                    {roles.workspaces.length} workspace{roles.workspaces.length > 1 ? 's' : ''} •{' '}
+                                    {roles.workspaces[0]?.name}
+                                </div>
+                            )}
+
+                            {selecting === 'startup' && (
+                                <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center">
+                                    <Loader2 className="w-5 h-5 animate-spin text-neutral-900" />
+                                </div>
+                            )}
+                        </motion.button>
+
+                        {/* Seller Option */}
+                        <motion.button
+                            onClick={() => handleChoice('seller')}
+                            disabled={selecting !== null}
+                            className="group relative bg-white rounded-2xl p-8 text-left border border-neutral-200/60 hover:border-neutral-300 transition-all duration-300 hover:shadow-lg hover:shadow-neutral-200/50 disabled:opacity-70"
+                            whileHover={{ y: -2 }}
+                            whileTap={{ scale: 0.995 }}
+                        >
+                            <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <ArrowRight className="w-5 h-5 text-neutral-400" />
+                            </div>
+
+                            <div className="w-14 h-14 bg-neutral-900 rounded-xl flex items-center justify-center mb-6">
+                                <Users className="w-7 h-7 text-white" />
+                            </div>
+
+                            <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+                                Seller Dashboard
+                            </h2>
+                            <p className="text-neutral-500 text-sm leading-relaxed mb-6">
+                                View your earnings, track conversions and request payouts.
+                            </p>
+
+                            {sellers.length > 0 && (
+                                <div className="text-xs text-neutral-500 bg-neutral-50 rounded-lg px-3 py-2">
+                                    {sellers.length} program{sellers.length > 1 ? 's' : ''} •{' '}
+                                    {sellers[0]?.programName}
+                                </div>
+                            )}
+
+                            {selecting === 'seller' && (
+                                <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center">
+                                    <Loader2 className="w-5 h-5 animate-spin text-neutral-900" />
+                                </div>
+                            )}
+                        </motion.button>
+                    </div>
+
+                    {/* Footer note */}
+                    <p className="text-center text-neutral-400 text-sm mt-10">
+                        You can switch spaces anytime from your profile.
                     </p>
-                </div>
+                </motion.div>
+            </main>
 
-                {/* Choice Cards */}
-                <div className="grid md:grid-cols-2 gap-6">
-                    {/* Startup Option */}
-                    <button
-                        onClick={() => handleChoice('startup')}
-                        disabled={selecting !== null}
-                        className="group relative bg-white border-2 border-slate-200 rounded-2xl p-8 text-left hover:border-indigo-500 hover:shadow-lg transition-all duration-200 disabled:opacity-70"
-                    >
-                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ArrowRight className="w-5 h-5 text-indigo-500" />
-                        </div>
-
-                        <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-4">
-                            <Building2 className="w-7 h-7 text-white" />
-                        </div>
-
-                        <h2 className="text-xl font-bold text-slate-900 mb-2">
-                            Mon Startup
-                        </h2>
-                        <p className="text-slate-600 text-sm mb-4">
-                            Gérer mes liens, voir mes conversions et piloter mes campagnes d&apos;affiliation.
-                        </p>
-
-                        {roles.workspaces.length > 0 && (
-                            <div className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
-                                {roles.workspaces.length} workspace{roles.workspaces.length > 1 ? 's' : ''} •
-                                {roles.workspaces[0]?.name}
-                            </div>
-                        )}
-
-                        {selecting === 'startup' && (
-                            <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center">
-                                <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-                            </div>
-                        )}
-                    </button>
-
-                    {/* Partner Option */}
-                    <button
-                        onClick={() => handleChoice('partner')}
-                        disabled={selecting !== null}
-                        className="group relative bg-white border-2 border-slate-200 rounded-2xl p-8 text-left hover:border-purple-500 hover:shadow-lg transition-all duration-200 disabled:opacity-70"
-                    >
-                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ArrowRight className="w-5 h-5 text-purple-500" />
-                        </div>
-
-                        <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-4">
-                            <Users className="w-7 h-7 text-white" />
-                        </div>
-
-                        <h2 className="text-xl font-bold text-slate-900 mb-2">
-                            Mon Compte Partenaire
-                        </h2>
-                        <p className="text-slate-600 text-sm mb-4">
-                            Voir mes gains, suivre mes conversions et demander des versements.
-                        </p>
-
-                        {roles.partners.length > 0 && (
-                            <div className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
-                                {roles.partners.length} programme{roles.partners.length > 1 ? 's' : ''} •
-                                {roles.partners[0]?.programName}
-                            </div>
-                        )}
-
-                        {selecting === 'partner' && (
-                            <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center">
-                                <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
-                            </div>
-                        )}
-                    </button>
-                </div>
-
-                {/* Footer note */}
-                <p className="text-center text-slate-500 text-sm mt-8">
-                    Vous pouvez changer d&apos;espace à tout moment depuis votre profil.
-                </p>
+            {/* Subtle Background Pattern */}
+            <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-neutral-200/30 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-neutral-200/20 rounded-full blur-3xl" />
             </div>
         </div>
     )

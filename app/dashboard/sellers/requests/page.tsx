@@ -121,10 +121,10 @@ export default function SellerRequestsPage() {
             if (result.success && 'requests' in result && result.requests) {
                 setRequests(result.requests as ProgramRequest[])
             } else {
-                setError(('error' in result && result.error) || 'Erreur lors du chargement')
+                setError(('error' in result && result.error) || 'Failed to load')
             }
         } catch (err) {
-            setError('Erreur inattendue')
+            setError('Unexpected error')
         }
         setLoading(false)
     }
@@ -171,9 +171,9 @@ export default function SellerRequestsPage() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-black tracking-tight">Demandes d'accès</h1>
+                <h1 className="text-2xl font-bold text-black tracking-tight">Access requests</h1>
                 <p className="text-gray-500 text-sm mt-1">
-                    Gérez les demandes de sellers pour vos missions privées.
+                    Manage seller requests for your private missions.
                 </p>
             </div>
 
@@ -187,7 +187,7 @@ export default function SellerRequestsPage() {
                         Aucune demande en attente
                     </h3>
                     <p className="text-gray-500 text-sm max-w-md mx-auto">
-                        Les demandes d'accès aux missions privées apparaîtront ici lorsque des sellers postuleront.
+                        Access requests for private missions will appear here when sellers apply.
                     </p>
                 </div>
             ) : (

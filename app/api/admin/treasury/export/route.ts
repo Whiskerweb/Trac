@@ -90,7 +90,7 @@ export async function GET() {
         csv += `Total en attente (hold);${(totalPending / 100).toFixed(2)} EUR\n`
         csv += `Total deja paye (gift cards);${(totalPaidOut / 100).toFixed(2)} EUR\n`
         csv += `Total recu des startups;${(totalReceivedFromStartups / 100).toFixed(2)} EUR\n`
-        csv += `Frais plateforme perçus;${(totalPlatformFees / 100).toFixed(2)} EUR\n`
+        csv += `Platform fees collected;${(totalPlatformFees / 100).toFixed(2)} EUR\n`
         csv += `Nombre de sellers PLATFORM;${platformSellers.length}\n`
         csv += '\n'
 

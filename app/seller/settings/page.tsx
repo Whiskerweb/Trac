@@ -20,40 +20,40 @@ const TRAFFIC_OPTIONS = [
 // Countries with ISO codes - must match mission country filter codes
 const COUNTRIES = [
     { code: 'FR', name: 'France' },
-    { code: 'US', name: 'États-Unis' },
-    { code: 'GB', name: 'Royaume-Uni' },
-    { code: 'DE', name: 'Allemagne' },
-    { code: 'ES', name: 'Espagne' },
-    { code: 'IT', name: 'Italie' },
+    { code: 'US', name: 'United States' },
+    { code: 'GB', name: 'United Kingdom' },
+    { code: 'DE', name: 'Germany' },
+    { code: 'ES', name: 'Spain' },
+    { code: 'IT', name: 'Italy' },
     { code: 'CA', name: 'Canada' },
-    { code: 'NL', name: 'Pays-Bas' },
-    { code: 'BE', name: 'Belgique' },
-    { code: 'CH', name: 'Suisse' },
+    { code: 'NL', name: 'Netherlands' },
+    { code: 'BE', name: 'Belgium' },
+    { code: 'CH', name: 'Switzerland' },
     { code: 'PT', name: 'Portugal' },
-    { code: 'AT', name: 'Autriche' },
-    { code: 'PL', name: 'Pologne' },
-    { code: 'SE', name: 'Suède' },
-    { code: 'NO', name: 'Norvège' },
-    { code: 'DK', name: 'Danemark' },
-    { code: 'FI', name: 'Finlande' },
-    { code: 'IE', name: 'Irlande' },
-    { code: 'AU', name: 'Australie' },
-    { code: 'JP', name: 'Japon' },
-    { code: 'BR', name: 'Brésil' },
-    { code: 'MX', name: 'Mexique' },
-    { code: 'IN', name: 'Inde' },
-    { code: 'SG', name: 'Singapour' },
+    { code: 'AT', name: 'Austria' },
+    { code: 'PL', name: 'Poland' },
+    { code: 'SE', name: 'Sweden' },
+    { code: 'NO', name: 'Norway' },
+    { code: 'DK', name: 'Denmark' },
+    { code: 'FI', name: 'Finland' },
+    { code: 'IE', name: 'Ireland' },
+    { code: 'AU', name: 'Australia' },
+    { code: 'JP', name: 'Japan' },
+    { code: 'BR', name: 'Brazil' },
+    { code: 'MX', name: 'Mexico' },
+    { code: 'IN', name: 'India' },
+    { code: 'SG', name: 'Singapore' },
 ]
 
 // Profile completion tasks (7 tasks for account validation)
 const PROFILE_TASKS = [
-    { id: 'basic_info', label: 'Informations de base' },
-    { id: 'description', label: 'Description de profil' },
-    { id: 'earning_structure', label: 'Préférences de gains' },
-    { id: 'healthy_profile', label: 'Profil sain' },
-    { id: 'website_social', label: 'Site web ou réseaux sociaux' },
-    { id: 'traffic', label: 'Trafic mensuel estimé' },
-    { id: 'sales_channels', label: 'Canaux de vente' },
+    { id: 'basic_info', label: 'Basic information' },
+    { id: 'description', label: 'Profile description' },
+    { id: 'earning_structure', label: 'Earning preferences' },
+    { id: 'healthy_profile', label: 'Healthy profile' },
+    { id: 'website_social', label: 'Website or social media' },
+    { id: 'traffic', label: 'Estimated monthly traffic' },
+    { id: 'sales_channels', label: 'Sales channels' },
 ]
 
 type TabType = 'profile' | 'account'
@@ -158,11 +158,11 @@ export default function SettingsPage() {
                         setSalesChannels(profile.salesChannels)
                     }
                 } else {
-                    setError(result.error || 'Erreur de chargement')
+                    setError(result.error || 'Failed to load')
                 }
             } catch (err) {
                 console.error('Error loading profile:', err)
-                setError('Erreur de chargement')
+                setError('Failed to load')
             } finally {
                 setLoading(false)
             }
@@ -188,11 +188,11 @@ export default function SettingsPage() {
             if (data.success && data.url) {
                 setAvatarUrl(data.url)
             } else {
-                setError(data.error || 'Erreur d\'upload de la photo')
+                setError(data.error || 'Error d\'upload de la photo')
             }
         } catch (err) {
             console.error('Avatar upload error:', err)
-            setError('Erreur d\'upload de la photo')
+            setError('Error d\'upload de la photo')
         } finally {
             setUploadingAvatar(false)
         }
@@ -216,11 +216,11 @@ export default function SettingsPage() {
             if (data.success && data.url) {
                 setCvUrl(data.url)
             } else {
-                setError(data.error || 'Erreur d\'upload du CV')
+                setError(data.error || 'Error d\'upload du CV')
             }
         } catch (err) {
             console.error('CV upload error:', err)
-            setError('Erreur d\'upload du CV')
+            setError('Error d\'upload du CV')
         } finally {
             setUploadingCv(false)
         }
@@ -259,11 +259,11 @@ export default function SettingsPage() {
                 setSaveSuccess(true)
                 setTimeout(() => setSaveSuccess(false), 3000)
             } else {
-                setError(result.error || 'Erreur de sauvegarde')
+                setError(result.error || 'Failed to save')
             }
         } catch (err) {
             console.error('Error saving profile:', err)
-            setError('Erreur de sauvegarde')
+            setError('Failed to save')
         } finally {
             setSaving(false)
         }
@@ -321,10 +321,10 @@ export default function SettingsPage() {
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-2xl font-semibold text-gray-900 tracking-tight mb-2">
-                        Paramètres
+                        Settings
                     </h1>
                     <p className="text-gray-500">
-                        Gérez votre profil et vos préférences de compte
+                        Manage your profile and account preferences
                     </p>
                 </div>
 
@@ -363,7 +363,7 @@ export default function SettingsPage() {
                 {saveSuccess && (
                     <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
                         <Check className="w-4 h-4" />
-                        Profil mis à jour avec succès
+                        Profile updated successfully
                     </div>
                 )}
 
@@ -379,9 +379,9 @@ export default function SettingsPage() {
                                         <CheckCircle2 className="w-6 h-6" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-semibold">Compte validé</h3>
+                                        <h3 className="text-lg font-semibold">Account validated</h3>
                                         <p className="text-sm text-white/80">
-                                            Votre profil est complet. Vous êtes visible dans le réseau des partenaires.
+                                            Your profile is complete. You are visible in the partner network.
                                         </p>
                                     </div>
                                 </div>
@@ -393,7 +393,7 @@ export default function SettingsPage() {
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center gap-2 bg-white/10 rounded-full px-3 py-1">
                                             <div className="w-2 h-2 rounded-full bg-amber-400"></div>
-                                            <span className="text-sm font-medium">{completedTasks.length} / {PROFILE_TASKS.length} tâches</span>
+                                            <span className="text-sm font-medium">{completedTasks.length} / {PROFILE_TASKS.length} tasks</span>
                                         </div>
                                     </div>
                                     <button
@@ -406,9 +406,9 @@ export default function SettingsPage() {
 
                                 {isExpanded && (
                                     <div className="px-6 pb-6">
-                                        <h3 className="text-lg font-semibold mb-1">Soyez découvert</h3>
+                                        <h3 className="text-lg font-semibold mb-1">Get discovered</h3>
                                         <p className="text-sm text-white/70 mb-6">
-                                            Complétez ces étapes pour valider votre compte et apparaître dans le réseau.
+                                            Complete these steps to validate your account and appear in the network.
                                         </p>
                                         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
                                             {PROFILE_TASKS.map((task) => {
@@ -434,14 +434,14 @@ export default function SettingsPage() {
 
                         {/* Profile details */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h2 className="text-base font-semibold mb-1">Détails du profil</h2>
+                            <h2 className="text-base font-semibold mb-1">Profile details</h2>
                             <p className="text-sm text-gray-500 mb-6">
-                                Informations de base qui composent votre profil.
+                                Basic information qui composent votre profil.
                             </p>
 
                             <div className="space-y-6">
                                 <div>
-                                    <h3 className="text-sm font-medium mb-4">Informations de base</h3>
+                                    <h3 className="text-sm font-medium mb-4">Basic information</h3>
 
                                     <div className="flex items-start gap-6 mb-6">
                                         <div className="relative">
@@ -478,7 +478,7 @@ export default function SettingsPage() {
                                         </div>
                                         <div className="flex-1">
                                             <label className="block text-sm font-medium mb-1">Photo de profil</label>
-                                            <p className="text-xs text-gray-500">Recommandé: 400x400. Formats: JPG, PNG, WebP. Max 5MB.</p>
+                                            <p className="text-xs text-gray-500">Recommended: 400x400. Formats: JPG, PNG, WebP. Max 5MB.</p>
                                         </div>
                                     </div>
 
@@ -500,7 +500,7 @@ export default function SettingsPage() {
                                                 onChange={(e) => setCountry(e.target.value)}
                                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-sm"
                                             >
-                                                <option value="">Sélectionner un pays</option>
+                                                <option value="">Select a country</option>
                                                 {COUNTRIES.map(c => (
                                                     <option key={c.code} value={c.code}>{c.name}</option>
                                                 ))}
@@ -541,7 +541,7 @@ export default function SettingsPage() {
 
                         {/* Website and socials */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h3 className="text-sm font-medium mb-2">Site web et réseaux sociaux</h3>
+                            <h3 className="text-sm font-medium mb-2">Website and social media</h3>
                             <p className="text-xs text-gray-500 mb-4">
                                 Ajoutez votre site et vos comptes sociaux que vous utilisez pour partager des liens.
                             </p>
@@ -634,7 +634,7 @@ export default function SettingsPage() {
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
                             <h3 className="text-sm font-medium mb-2">À propos de vous</h3>
                             <p className="text-xs text-gray-500 mb-4">
-                                Aidez les programmes à vous connaître, votre parcours et ce qui fait de vous un bon partenaire.
+                                Help programs know you, your background and what makes you a good partner.
                             </p>
 
                             <div className="mb-1">
@@ -645,7 +645,7 @@ export default function SettingsPage() {
                                 <textarea
                                     value={aboutYou}
                                     onChange={(e) => setAboutYou(e.target.value)}
-                                    placeholder="Décrivez votre expérience, vos compétences et ce qui vous rend unique..."
+                                    placeholder="Describe your experience, skills and what makes you unique..."
                                     rows={4}
                                     maxLength={1000}
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-sm resize-none"
@@ -655,9 +655,9 @@ export default function SettingsPage() {
 
                         {/* Industry interests */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h3 className="text-sm font-medium mb-2">Secteurs d'intérêt</h3>
+                            <h3 className="text-sm font-medium mb-2">Industry interests</h3>
                             <p className="text-xs text-gray-500 mb-4">
-                                Sélectionnez les secteurs qui vous passionnent.
+                                Select the industries you are passionate about.
                             </p>
 
                             <div className="flex flex-wrap gap-2">
@@ -678,9 +678,9 @@ export default function SettingsPage() {
 
                         {/* Traffic */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h3 className="text-sm font-medium mb-2">Trafic mensuel estimé</h3>
+                            <h3 className="text-sm font-medium mb-2">Estimated monthly traffic</h3>
                             <p className="text-xs text-gray-500 mb-4">
-                                Estimez le trafic de vos sites, newsletters et réseaux sociaux.
+                                Estimate the traffic of your websites, newsletters and social media.
                             </p>
 
                             <div className="space-y-2">
@@ -701,9 +701,9 @@ export default function SettingsPage() {
 
                         {/* Activity Type */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h3 className="text-sm font-medium mb-2">Type d'activité</h3>
+                            <h3 className="text-sm font-medium mb-2">Activity type</h3>
                             <p className="text-xs text-gray-500 mb-4">
-                                Sélectionnez votre activité principale.
+                                Select your main activity.
                             </p>
 
                             <select
@@ -711,13 +711,13 @@ export default function SettingsPage() {
                                 onChange={(e) => setActivityType(e.target.value as any)}
                                 className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
                             >
-                                <option value="">Sélectionner...</option>
-                                <option value="CONTENT_CREATOR">Créateur de contenu</option>
+                                <option value="">Select...</option>
+                                <option value="CONTENT_CREATOR">Content creator</option>
                                 <option value="SALES_REP">Commercial</option>
                                 <option value="INFLUENCER">Influenceur</option>
                                 <option value="MARKETER">Marketeur</option>
                                 <option value="BLOGGER">Blogueur</option>
-                                <option value="DEVELOPER">Développeur</option>
+                                <option value="DEVELOPER">Developer</option>
                                 <option value="CONSULTANT">Consultant</option>
                                 <option value="OTHER">Autre</option>
                             </select>
@@ -727,11 +727,11 @@ export default function SettingsPage() {
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
                             <h3 className="text-sm font-medium mb-2">Comment vous travaillez</h3>
                             <p className="text-xs text-gray-500 mb-4">
-                                Choisissez comment vous aimez être rémunéré et promouvoir des produits.
+                                Choose how you like to be paid and promote products.
                             </p>
 
                             <div className="mb-6">
-                                <h4 className="text-sm font-medium mb-3">Structure de gains préférée</h4>
+                                <h4 className="text-sm font-medium mb-3">Preferred earning structure</h4>
                                 <div className="grid grid-cols-2 gap-3">
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
@@ -773,7 +773,7 @@ export default function SettingsPage() {
                             </div>
 
                             <div>
-                                <h4 className="text-sm font-medium mb-3">Canaux de vente</h4>
+                                <h4 className="text-sm font-medium mb-3">Sales channels</h4>
                                 <div className="grid grid-cols-2 gap-3">
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
@@ -800,7 +800,7 @@ export default function SettingsPage() {
                                             onChange={(e) => setSalesChannels(prev => ({ ...prev, socialMedia: e.target.checked }))}
                                             className="w-4 h-4 rounded border-gray-300 text-violet-600"
                                         />
-                                        <span className="text-sm">Réseaux sociaux</span>
+                                        <span className="text-sm">Social media</span>
                                     </label>
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
@@ -809,7 +809,7 @@ export default function SettingsPage() {
                                             onChange={(e) => setSalesChannels(prev => ({ ...prev, events: e.target.checked }))}
                                             className="w-4 h-4 rounded border-gray-300 text-violet-600"
                                         />
-                                        <span className="text-sm">Événements</span>
+                                        <span className="text-sm">Events</span>
                                     </label>
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
@@ -818,7 +818,7 @@ export default function SettingsPage() {
                                             onChange={(e) => setSalesChannels(prev => ({ ...prev, companyReferrals: e.target.checked }))}
                                             className="w-4 h-4 rounded border-gray-300 text-violet-600"
                                         />
-                                        <span className="text-sm">Références d'entreprises</span>
+                                        <span className="text-sm">Business referrals</span>
                                     </label>
                                 </div>
                             </div>
@@ -828,7 +828,7 @@ export default function SettingsPage() {
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
                             <h3 className="text-sm font-medium mb-2">Portfolio & CV</h3>
                             <p className="text-xs text-gray-500 mb-4">
-                                Partagez votre portfolio et CV pour aider les startups à comprendre votre expérience.
+                                Share your portfolio and resume to help startups understand your experience.
                             </p>
 
                             <div className="mb-6">
@@ -854,7 +854,7 @@ export default function SettingsPage() {
                                             </div>
                                             <div>
                                                 <p className="text-sm font-medium">CV.pdf</p>
-                                                <p className="text-xs text-gray-500">Téléchargé avec succès</p>
+                                                <p className="text-xs text-gray-500">Uploaded successfully</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -870,7 +870,7 @@ export default function SettingsPage() {
                                                 onClick={() => setCvUrl(null)}
                                                 className="text-sm text-red-600 hover:text-red-700"
                                             >
-                                                Supprimer
+                                                Delete
                                             </button>
                                         </div>
                                     </div>
@@ -889,12 +889,12 @@ export default function SettingsPage() {
                                         {uploadingCv ? (
                                             <>
                                                 <Loader2 className="w-8 h-8 text-gray-400 animate-spin mb-2" />
-                                                <p className="text-sm text-gray-600">Téléchargement...</p>
+                                                <p className="text-sm text-gray-600">Uploading...</p>
                                             </>
                                         ) : (
                                             <>
                                                 <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                                                <p className="text-sm text-gray-600 mb-1">Cliquez pour télécharger</p>
+                                                <p className="text-sm text-gray-600 mb-1">Click to upload</p>
                                                 <p className="text-xs text-gray-500">PDF uniquement. Max 10MB.</p>
                                             </>
                                         )}
@@ -911,7 +911,7 @@ export default function SettingsPage() {
                                 className="px-5 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                {saving ? 'Enregistrement...' : 'Enregistrer'}
+                                {saving ? 'Saving...' : 'Save'}
                             </button>
                         </div>
                     </>
@@ -922,9 +922,9 @@ export default function SettingsPage() {
                     <>
                         {/* Account Settings */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h2 className="text-base font-semibold mb-1">Paramètres du compte</h2>
+                            <h2 className="text-base font-semibold mb-1">Settings du compte</h2>
                             <p className="text-sm text-gray-500 mb-6">
-                                Gérez les paramètres de votre compte.
+                                Manage your account settings.
                             </p>
 
                             <div className="space-y-6">
@@ -937,12 +937,12 @@ export default function SettingsPage() {
                                         className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 text-sm"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Votre email est utilisé pour la connexion et les notifications
+                                        Your email is used for login and notifications
                                     </p>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium mb-2">Mot de passe</label>
+                                    <label className="block text-sm font-medium mb-2">Password</label>
                                     <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
                                         Changer le mot de passe
                                     </button>
@@ -951,7 +951,7 @@ export default function SettingsPage() {
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Langue</label>
                                     <select className="w-full max-w-xs px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-sm">
-                                        <option>Français</option>
+                                        <option>French</option>
                                         <option>English</option>
                                         <option>Español</option>
                                     </select>
@@ -963,14 +963,14 @@ export default function SettingsPage() {
                         <div className="bg-white rounded-xl border border-red-200 p-6">
                             <h2 className="text-base font-semibold text-red-600 mb-1">Zone de danger</h2>
                             <p className="text-sm text-gray-500 mb-6">
-                                Actions irréversibles qui affectent votre compte.
+                                Irreversible actions that affect your account.
                             </p>
 
                             <button className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
-                                Supprimer le compte
+                                Delete account
                             </button>
                             <p className="text-xs text-gray-500 mt-2">
-                                Cela supprimera définitivement votre compte et toutes les données associées.
+                                This will permanently delete your account and all associated data.
                             </p>
                         </div>
                     </>

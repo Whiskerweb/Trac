@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
         // Auth check
         const currentUser = await getCurrentUser()
         if (!currentUser) {
-            return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+            return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
         }
 
         const formData = await request.formData()
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
         const validTypes = ['avatar', 'cv', 'logo', 'pitch_deck', 'doc']
         if (!type || !validTypes.includes(type)) {
-            return NextResponse.json({ error: `Type invalide. Types acceptés: ${validTypes.join(', ')}` }, { status: 400 })
+            return NextResponse.json({ error: `Invalid type. Accepted types: ${validTypes.join(', ')}` }, { status: 400 })
         }
 
         // Validate file type
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
             const errorMessage = error.message.includes('policies') || error.message.includes('policy')
                 ? 'Permissions insuffisantes. Configurez les politiques Supabase Storage (RLS).'
                 : error.message.includes('not found') || error.message.includes('does not exist')
-                ? 'Bucket Supabase Storage introuvable. Vérifiez que le bucket "upload" existe.'
+                ? 'Supabase Storage bucket not found. Check that the "upload" bucket exists.'
                 : `Erreur upload: ${error.message}`
 
             return NextResponse.json({

@@ -22,7 +22,7 @@ export async function createShortLink(formData: FormData) {
     const workspace = await getActiveWorkspaceForUser()
 
     if (!workspace) {
-        return { success: false, error: 'Veuillez creer un workspace via /onboarding' }
+        return { success: false, error: 'Please create a workspace via /onboarding' }
     }
 
     // Get form data

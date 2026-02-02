@@ -63,11 +63,11 @@ function formatTimeAgo(date: Date): string {
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
 
-    if (minutes < 1) return 'à l\'instant'
-    if (minutes < 60) return `il y a ${minutes}m`
-    if (hours < 24) return `il y a ${hours}h`
-    if (days < 7) return `il y a ${days}j`
-    return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    if (minutes < 1) return 'just now'
+    if (minutes < 60) return `${minutes}m ago`
+    if (hours < 24) return `${hours}h ago`
+    if (days < 7) return `${days}d ago`
+    return new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
 }
 
 // =============================================
@@ -77,7 +77,7 @@ function formatTimeAgo(date: Date): string {
 function VisibilityDot({ visibility }: { visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY' }) {
     const config = {
         PUBLIC: { color: 'bg-emerald-500', label: 'Public' },
-        PRIVATE: { color: 'bg-amber-500', label: 'Privé' },
+        PRIVATE: { color: 'bg-amber-500', label: 'Private' },
         INVITE_ONLY: { color: 'bg-violet-500', label: 'Sur invitation' },
     }
     const { color, label } = config[visibility] || config.PUBLIC
@@ -141,7 +141,7 @@ function MissionRow({
     }
 
     async function handleDelete() {
-        if (!confirm('Supprimer cette mission définitivement ?')) return
+        if (!confirm('Delete this mission permanently?')) return
         setLoading(true)
         await deleteMission(mission.id)
         onRefresh()
@@ -216,7 +216,7 @@ function MissionRow({
                         <Link
                             href={`/dashboard/missions/${mission.id}`}
                             className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-colors"
-                            title="Voir les détails"
+                            title="View details"
                         >
                             <Eye className="w-4 h-4" />
                         </Link>
@@ -245,7 +245,7 @@ function MissionRow({
                                             className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                                         >
                                             <Trash2 className="w-4 h-4" />
-                                            Supprimer
+                                            Delete
                                         </button>
                                     </div>
                                 </>
@@ -286,7 +286,7 @@ function MissionRow({
                         href={`/dashboard/missions/${mission.id}`}
                         className="text-xs font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-1 transition-colors"
                     >
-                        Gérer
+                        Manage
                         <ArrowUpRight className="w-3 h-3" />
                     </Link>
                 </div>
@@ -423,7 +423,7 @@ function ActivitySidebar({
                 <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
                     <Activity className="w-4 h-4 text-neutral-400" />
                     <h3 className="text-sm font-semibold text-neutral-900">
-                        Activité récente
+                        Recent activity
                     </h3>
                 </div>
                 {hasActivity ? (
@@ -436,7 +436,7 @@ function ActivitySidebar({
                     <div className="px-4 py-8 text-center">
                         <Activity className="w-8 h-8 text-neutral-200 mx-auto mb-2" />
                         <p className="text-sm text-neutral-400">
-                            Aucune activité récente
+                            No recent activity
                         </p>
                     </div>
                 )}
@@ -456,10 +456,10 @@ function EmptyState() {
                 <Target className="w-8 h-8 text-neutral-300" />
             </div>
             <h3 className="text-xl font-medium text-neutral-900 mb-2">
-                Créez votre première mission
+                Create your first mission
             </h3>
             <p className="text-neutral-500 mb-8 max-w-md mx-auto leading-relaxed">
-                Une mission est un programme d'affiliation. Définissez les commissions
+                A mission is an affiliate program. Define commissions
                 et recrutez des sellers pour promouvoir votre produit.
             </p>
             <Link
@@ -624,7 +624,7 @@ function MissionsContent() {
                         Missions
                     </h1>
                     <p className="text-neutral-500 mt-2">
-                        Gérez vos programmes d'affiliation
+                        Manage your affiliate programs
                     </p>
                 </div>
                 <div className="flex items-center gap-4">

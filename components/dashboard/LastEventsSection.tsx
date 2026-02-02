@@ -106,9 +106,9 @@ export function LastEventsSection() {
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <Users className="w-5 h-5 text-gray-400" />
                 </div>
-                <h3 className="text-sm font-medium text-gray-900">Aucun événement</h3>
+                <h3 className="text-sm font-medium text-gray-900">No events</h3>
                 <p className="text-gray-500 text-xs mt-1">
-                    Les activités de vos partenaires apparaîtront ici.
+                    Your partners' activities will appear here.
                 </p>
             </div>
         )

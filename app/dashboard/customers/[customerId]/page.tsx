@@ -34,7 +34,7 @@ function Avatar({ name, avatar, size = 'md' }: { name: string | null; avatar: st
 }
 
 function formatDate(date: Date): string {
-    return new Date(date).toLocaleDateString('fr-FR', {
+    return new Date(date).toLocaleDateString('en-US', {
         day: 'numeric',
         month: 'short',
         year: 'numeric'
@@ -43,11 +43,11 @@ function formatDate(date: Date): string {
 
 function formatDateTime(date: Date): string {
     const d = new Date(date)
-    return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+    return `${d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} at ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
 }
 
 function formatCurrency(cents: number): string {
-    return `€${(cents / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `€${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function getActivityIcon(type: CustomerActivity['type']) {
@@ -106,12 +106,12 @@ export default function CustomerProfilePage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px]">
                 <User className="w-12 h-12 text-gray-300 mb-4" />
-                <p className="text-gray-900 font-medium">Customer non trouvé</p>
+                <p className="text-gray-900 font-medium">Customer not found</p>
                 <button
                     onClick={() => router.push('/dashboard/customers')}
                     className="mt-4 text-sm text-blue-600 hover:underline"
                 >
-                    Retour aux customers
+                    Back to customers
                 </button>
             </div>
         )
@@ -144,7 +144,7 @@ export default function CustomerProfilePage() {
                             )}
                             {customer.referrerName && (
                                 <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-xs text-gray-400">Référé par</span>
+                                    <span className="text-xs text-gray-400">Referred by</span>
                                     <span className="text-sm font-medium text-purple-600">{customer.referrerName}</span>
                                 </div>
                             )}
@@ -203,11 +203,11 @@ export default function CustomerProfilePage() {
 
                     {/* Activity Timeline */}
                     <div>
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Activité</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity</h2>
                         {customer.activity.length === 0 ? (
                             <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
                                 <Globe className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                                <p className="text-gray-500 text-sm">Aucune activité enregistrée</p>
+                                <p className="text-gray-500 text-sm">No activity recorded</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
@@ -248,7 +248,7 @@ export default function CustomerProfilePage() {
 
                 {/* Right Column - Details */}
                 <div className="w-64 shrink-0">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Détails</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Details</h3>
                     <div className="space-y-4">
                         {/* Location */}
                         {(customer.city || customer.country) && (
@@ -335,7 +335,7 @@ export default function CustomerProfilePage() {
                             <>
                                 <hr className="border-gray-100" />
                                 <div>
-                                    <p className="text-xs font-medium text-gray-500 mb-2">Référent</p>
+                                    <p className="text-xs font-medium text-gray-500 mb-2">Referrer</p>
                                     <div className="flex items-center gap-2">
                                         <Avatar name={customer.referrerName} avatar={customer.referrerAvatar} size="sm" />
                                         <div>

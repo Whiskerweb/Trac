@@ -113,7 +113,7 @@ export default function GiftCardsPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error || 'Erreur')
+                throw new Error(data.error || 'Error')
             }
 
             if (data.success) {
@@ -126,7 +126,7 @@ export default function GiftCardsPage() {
                 }, 2000)
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Erreur')
+            setError(err instanceof Error ? err.message : 'Error')
         } finally {
             setSubmitting(false)
         }
@@ -155,7 +155,7 @@ export default function GiftCardsPage() {
                     className="flex flex-col items-center gap-3"
                 >
                     <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
-                    <span className="text-xs text-neutral-400 tracking-wide">Chargement</span>
+                    <span className="text-xs text-neutral-400 tracking-wide">Loading</span>
                 </motion.div>
             </div>
         )
@@ -179,7 +179,7 @@ export default function GiftCardsPage() {
                     className="inline-flex items-center gap-2 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
                 >
                     <ArrowLeft className="w-3 h-3" />
-                    Retour au wallet
+                    Back to wallet
                 </Link>
             </motion.div>
 
@@ -363,7 +363,7 @@ export default function GiftCardsPage() {
                             {submitting ? (
                                 <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                             ) : (
-                                'Confirmer'
+                                'Confirm'
                             )}
                         </button>
                     </motion.div>

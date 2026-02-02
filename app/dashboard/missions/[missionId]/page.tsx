@@ -175,7 +175,7 @@ export default function MissionDetailPage({
                     }
                 }
             } else {
-                setError(result.error || 'Erreur de chargement')
+                setError(result.error || 'Failed to load')
             }
             setLoading(false)
         }
@@ -487,7 +487,7 @@ export default function MissionDetailPage({
                         {/* Bulk actions */}
                         {selectedRequests.size > 0 && (
                             <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500">{selectedRequests.size} sélectionné{selectedRequests.size > 1 ? 's' : ''}</span>
+                                <span className="text-xs text-gray-500">{selectedRequests.size} selected{selectedRequests.size > 1 ? 's' : ''}</span>
                                 <button
                                     onClick={handleBulkApprove}
                                     disabled={processingRequest !== null}
@@ -517,7 +517,7 @@ export default function MissionDetailPage({
                             />
                         </div>
                         <div>Seller</div>
-                        <div className="text-right">CA généré</div>
+                        <div className="text-right">Revenue generated</div>
                         <div className="text-right">Ventes</div>
                         <div className="text-right">Clicks</div>
                         <div className="text-center">Actions</div>
@@ -792,7 +792,7 @@ export default function MissionDetailPage({
                 <div className="w-72 shrink-0 space-y-4">
                     {/* Mission Details */}
                     <div className="bg-white border border-gray-200 rounded-xl p-5">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-4">Détails</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-4">Details</h3>
                         <div className="space-y-3">
                             <div>
                                 <p className="text-xs text-gray-500 mb-1">URL cible</p>
@@ -807,15 +807,15 @@ export default function MissionDetailPage({
                                 </a>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Récompense</p>
+                                <p className="text-xs text-gray-500 mb-1">Reward</p>
                                 <p className="text-sm font-medium text-green-600">{mission.reward}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Visibilité</p>
+                                <p className="text-xs text-gray-500 mb-1">Visibility</p>
                                 <p className="text-sm text-gray-900">{mission.visibility || 'PUBLIC'}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Créée le</p>
+                                <p className="text-xs text-gray-500 mb-1">Created on</p>
                                 <p className="text-sm text-gray-900">{formatDate(mission.created_at)}</p>
                             </div>
                         </div>
@@ -827,7 +827,7 @@ export default function MissionDetailPage({
                         <div className="space-y-2">
                             <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
                                 <Edit className="w-4 h-4" />
-                                Modifier
+                                Edit
                             </button>
                             <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
                                 <Archive className="w-4 h-4" />
@@ -835,7 +835,7 @@ export default function MissionDetailPage({
                             </button>
                             <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                 <Trash2 className="w-4 h-4" />
-                                Supprimer
+                                Delete
                             </button>
                         </div>
                     </div>

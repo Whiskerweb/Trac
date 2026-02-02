@@ -56,7 +56,7 @@ export function DNSGatekeeper({ children }: { children: React.ReactNode }) {
                     </h3>
 
                     <p className="text-gray-600 mb-6 leading-relaxed">
-                        Pour protéger votre attribution contre les bloqueurs de publicité et Safari ITP, un domaine personnalisé est requis.
+                        To protect your attribution against ad blockers and Safari ITP, a custom domain is required.
                     </p>
 
                     <div className="space-y-4">

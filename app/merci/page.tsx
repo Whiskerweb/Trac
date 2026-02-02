@@ -66,12 +66,12 @@ export default function MerciPage() {
                         <div className="flex items-center gap-3">
                             <span className={`w-3 h-3 rounded-full ${clickId ? 'bg-green-500' : 'bg-red-500'}`} />
                             <span className="font-mono text-sm">
-                                {clickId ? `click_id: ${clickId}` : 'Aucun click_id trouvé'}
+                                {clickId ? `click_id: ${clickId}` : 'No click_id found'}
                             </span>
                         </div>
                         {!clickId && (
                             <p className="text-zinc-500 text-sm mt-2">
-                                💡 Pour tester, créez un lien puis cliquez dessus pour arriver ici avec un ref_id
+                                💡 To test, create a link then click on it to arrive here with a ref_id
                             </p>
                         )}
                     </div>
@@ -112,7 +112,7 @@ export default function MerciPage() {
                     {/* Back Link */}
                     <div className="mt-6 text-center">
                         <a href="/" className="text-blue-400 hover:text-blue-300">
-                            ← Retour à l&apos;accueil
+                            ← Back to home
                         </a>
                     </div>
                 </div>

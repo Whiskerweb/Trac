@@ -136,7 +136,7 @@ export default function ApplicationsPage() {
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Commissions versées</p>
+                    <p className="text-sm text-gray-500">Commissions paid</p>
                     <p className="text-2xl font-semibold text-gray-900">{formatCurrency(stats.totalCommissions)}</p>
                 </div>
             </div>
@@ -186,9 +186,9 @@ export default function ApplicationsPage() {
                 {filteredSellers.length === 0 ? (
                     <div className="px-6 py-12 text-center">
                         <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-900 font-medium">Aucun seller trouvé</p>
+                        <p className="text-gray-900 font-medium">No seller found</p>
                         <p className="text-gray-500 text-sm mt-1">
-                            Les sellers apparaîtront ici quand ils rejoindront vos missions
+                            Sellers will appear here when they join your missions
                         </p>
                     </div>
                 ) : (

@@ -97,7 +97,7 @@ export async function forceAddDomainToVercel(domainName: string): Promise<{
     if (!VERCEL_AUTH_TOKEN || !VERCEL_PROJECT_ID) {
         return {
             success: false,
-            error: 'VERCEL_AUTH_TOKEN ou VERCEL_PROJECT_ID non configuré'
+            error: 'VERCEL_AUTH_TOKEN or VERCEL_PROJECT_ID not configured'
         }
     }
 

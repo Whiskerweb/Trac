@@ -142,14 +142,14 @@ module.exports = {
 
     const leadSnippet = customDomain
         ? `// Backend (Next.js API ou Server Action)
-// Récupère le clickId depuis le cookie trac_id
+// Get clickId from trac_id cookie
 const clickId = cookies().get('trac_id')?.value;
 
 await fetch('/_trac/api/track/lead', {
   method: 'POST',
   headers: { 
     'Content-Type': 'application/json',
-    'x-publishable-key': '${publicKey}'  // Clé publique du workspace
+    'x-publishable-key': '${publicKey}'  // Workspace public key
   },
   body: JSON.stringify({
     eventName: 'sign_up',
@@ -166,23 +166,23 @@ await fetch('https://traaaction.com/api/track/lead', {
   method: 'POST',
   headers: { 
     'Content-Type': 'application/json',
-    'x-publishable-key': '${publicKey}'  // Clé publique de ton workspace
+    'x-publishable-key': '${publicKey}'  // Your workspace public key
   },
   body: JSON.stringify({
     eventName: 'sign_up',
     customerExternalId: user.id,  // Obligatoire
-    clickId,                       // Récupéré du cookie
+    clickId,                       // Retrieved from cookie
     customerEmail: user.email
   })
 });`
 
-    const stripeSnippet = `// Backend - Création Stripe Checkout
+    const stripeSnippet = `// Backend - Stripe Checkout creation
 const session = await stripe.checkout.sessions.create({
   line_items: [...],
   mode: 'payment',
   metadata: {
-    tracCustomerExternalId: user.id,  // Même ID que trackLead
-    tracClickId: clickId              // Optionnel si lead créé
+    tracCustomerExternalId: user.id,  // Same ID as trackLead
+    tracClickId: clickId              // Optional if lead created
   }
 });`
 
@@ -200,7 +200,7 @@ const session = await stripe.checkout.sessions.create({
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
                     <Code2 className="w-6 h-6 text-gray-700" />
-                    <h1 className="text-2xl font-bold text-gray-900">Intégration</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">Integration</h1>
                     {workspaceName && (
                         <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full flex items-center gap-1">
                             <Building2 className="w-3 h-3" />{workspaceName}
@@ -226,7 +226,7 @@ const session = await stripe.checkout.sessions.create({
                         <div>
                             <p className="font-medium text-amber-800">Mode Third-Party</p>
                             <p className="text-sm text-gray-600">
-                                <Link href="/dashboard/domains" className="underline">Configure un domaine</Link> pour éviter les adblockers
+                                <Link href="/dashboard/domains" className="underline">Configure a domain</Link> to avoid adblockers
                             </p>
                         </div>
                     </div>
@@ -248,7 +248,7 @@ const session = await stripe.checkout.sessions.create({
                     {eventCount > 0 && (
                         <div className="mt-3 flex items-center gap-2 text-green-600 text-sm">
                             <Zap className="w-4 h-4" />
-                            <span>{eventCount} événements reçus</span>
+                            <span>{eventCount} events received</span>
                         </div>
                     )}
                 </section>
@@ -258,16 +258,16 @@ const session = await stripe.checkout.sessions.create({
                     <StepHeader
                         number={2}
                         title="Track les Signups"
-                        description="Appelle l'API lors de la création d'un compte"
+                        description="Call the API when creating an account"
                         color="purple"
                     />
                     <CodeBlock code={leadSnippet} />
                     <div className="mt-3 space-y-2">
                         <InfoBox type="success">
-                            <strong>🔑 x-publishable-key:</strong> Cette clé identifie ton workspace. Elle est affichée automatiquement dans le code ci-dessus.
+                            <strong>🔑 x-publishable-key:</strong> This key identifies your workspace. It is automatically displayed in the code above.
                         </InfoBox>
                         <InfoBox type="info">
-                            <strong>💡 Attribution automatique:</strong> Une fois le lead créé avec un <code className="bg-blue-100 px-1 rounded">clickId</code>, toutes les ventes futures de ce client sont attribuées au partenaire.
+                            <strong>💡 Attribution automatique:</strong> Once the lead is created with a <code className="bg-blue-100 px-1 rounded">clickId</code>, all future sales from this customer are attributed to the partner.
                         </InfoBox>
                     </div>
                 </section>
@@ -288,7 +288,7 @@ const session = await stripe.checkout.sessions.create({
                     <StepHeader
                         number={4}
                         title="Configure le Webhook Stripe"
-                        description="Pour recevoir les paiements et créer les commissions"
+                        description="To receive payments and create commissions"
                         color="gray"
                     />
                     <WebhookManager onStatusChange={() => { }} />
@@ -301,7 +301,7 @@ const session = await stripe.checkout.sessions.create({
                 <summary className="px-4 py-3 cursor-pointer flex items-center justify-between hover:bg-gray-100 transition-colors rounded-xl">
                     <div className="flex items-center gap-3">
                         <Code2 className="w-4 h-4 text-gray-600" />
-                        <span className="font-medium text-gray-900">Clés API</span>
+                        <span className="font-medium text-gray-900">API Keys</span>
                     </div>
                     <ExternalLink className="w-4 h-4 text-gray-400" />
                 </summary>
@@ -336,7 +336,7 @@ const session = await stripe.checkout.sessions.create({
                                 <code className="font-mono text-sm text-gray-400">sk_live_••••••••••••••••••••••••</code>
                                 <button
                                     onClick={async () => {
-                                        if (confirm('Régénérer invalidera la clé actuelle. Continuer ?')) {
+                                        if (confirm('Regenerate will invalidate the current key. Continue?')) {
                                             const result = await regenerateApiKey()
                                             if (result.success) {
                                                 setPublicKey(result.publicKey!)
@@ -347,7 +347,7 @@ const session = await stripe.checkout.sessions.create({
                                     }}
                                     className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
                                 >
-                                    <RefreshCw className="w-3 h-3" /> Régénérer
+                                    <RefreshCw className="w-3 h-3" /> Regenerate
                                 </button>
                             </div>
                         )}

@@ -71,7 +71,7 @@ export async function sendGiftCardEmail(data: GiftCardEmailData): Promise<EmailR
         const { error } = await resend.emails.send({
             from: FROM_EMAIL,
             to: sellerEmail,
-            subject: `Votre carte cadeau ${cardName} de ${amountFormatted}€ est prête`,
+            subject: `Your ${cardName} gift card worth ${amountFormatted}€ is ready`,
             html: `
 <!DOCTYPE html>
 <html>
@@ -91,10 +91,10 @@ export async function sendGiftCardEmail(data: GiftCardEmailData): Promise<EmailR
                                 <span style="font-size: 24px;">🎁</span>
                             </div>
                             <h1 style="margin: 0; font-size: 24px; font-weight: 500; color: #171717;">
-                                Votre carte ${cardName}
+                                Your ${cardName} card
                             </h1>
                             <p style="margin: 8px 0 0; font-size: 14px; color: #737373;">
-                                ${amountFormatted}€ • Prête à utiliser
+                                ${amountFormatted}€ • Ready to use
                             </p>
                         </td>
                     </tr>
@@ -104,7 +104,7 @@ export async function sendGiftCardEmail(data: GiftCardEmailData): Promise<EmailR
                         <td style="padding: 0 40px 32px;">
                             <div style="background-color: #fafafa; border: 2px dashed #e5e5e5; border-radius: 12px; padding: 24px; text-align: center;">
                                 <p style="margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #a3a3a3;">
-                                    Votre code
+                                    Your code
                                 </p>
                                 <p style="margin: 0; font-size: 24px; font-weight: 600; font-family: monospace; color: #171717; letter-spacing: 0.05em;">
                                     ${code}
@@ -117,8 +117,8 @@ export async function sendGiftCardEmail(data: GiftCardEmailData): Promise<EmailR
                     <tr>
                         <td style="padding: 0 40px 32px;">
                             <p style="margin: 0; font-size: 14px; color: #525252; line-height: 1.6;">
-                                Bonjour ${firstName},<br><br>
-                                Merci pour votre fidélité ! Votre carte cadeau <strong>${cardName}</strong> d'une valeur de <strong>${amountFormatted}€</strong> est maintenant disponible.
+                                Hi ${firstName},<br><br>
+                                Thank you for your loyalty! Your <strong>${cardName}</strong> gift card worth <strong>${amountFormatted}€</strong> is now available.
                             </p>
                         </td>
                     </tr>
@@ -127,12 +127,12 @@ export async function sendGiftCardEmail(data: GiftCardEmailData): Promise<EmailR
                     <tr>
                         <td style="padding: 0 40px 40px;">
                             <p style="margin: 0 0 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #a3a3a3;">
-                                Comment utiliser
+                                How to use
                             </p>
                             <ol style="margin: 0; padding-left: 20px; font-size: 14px; color: #525252; line-height: 1.8;">
-                                <li>Rendez-vous sur le site ${cardName}</li>
-                                <li>Ajoutez le code dans la section "Carte cadeau" ou "Code promo"</li>
-                                <li>Le montant sera crédité sur votre compte</li>
+                                <li>Go to the ${cardName} website</li>
+                                <li>Add the code in the "Gift card" or "Promo code" section</li>
+                                <li>The amount will be credited to your account</li>
                             </ol>
                         </td>
                     </tr>
@@ -141,8 +141,8 @@ export async function sendGiftCardEmail(data: GiftCardEmailData): Promise<EmailR
                     <tr>
                         <td style="padding: 24px 40px; background-color: #fafafa; border-top: 1px solid #f5f5f5;">
                             <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
-                                Ce code est personnel et à usage unique.<br>
-                                Conservez cet email précieusement.
+                                This code is personal and for single use only.<br>
+                                Please keep this email safe.
                             </p>
                         </td>
                     </tr>
@@ -165,23 +165,23 @@ export async function sendGiftCardEmail(data: GiftCardEmailData): Promise<EmailR
 </html>
             `,
             text: `
-Votre carte cadeau ${cardName} de ${amountFormatted}€
+Your ${cardName} gift card worth ${amountFormatted}€
 
-Bonjour ${firstName},
+Hi ${firstName},
 
-Votre carte cadeau ${cardName} est prête !
+Your ${cardName} gift card is ready!
 
-VOTRE CODE: ${code}
+YOUR CODE: ${code}
 
-Montant: ${amountFormatted}€
+Amount: ${amountFormatted}€
 
-Comment utiliser:
-1. Rendez-vous sur le site ${cardName}
-2. Ajoutez le code dans la section "Carte cadeau" ou "Code promo"
-3. Le montant sera crédité sur votre compte
+How to use:
+1. Go to the ${cardName} website
+2. Add the code in the "Gift card" or "Promo code" section
+3. The amount will be credited to your account
 
-Ce code est personnel et à usage unique.
-Conservez cet email précieusement.
+This code is personal and for single use only.
+Please keep this email safe.
 
 ---
 Traaaction • Seller Marketing Platform

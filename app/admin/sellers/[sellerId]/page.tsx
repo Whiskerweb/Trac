@@ -182,7 +182,7 @@ export default function AdminSellerDetailPage() {
     if (!seller) {
         return (
             <div className="p-8 text-center text-neutral-500">
-                Seller non trouvé
+                Seller not found
             </div>
         )
     }
@@ -195,7 +195,7 @@ export default function AdminSellerDetailPage() {
                 className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white mb-6"
             >
                 <ArrowLeft className="w-4 h-4" />
-                Retour aux sellers
+                Back to sellers
             </Link>
 
             {/* Header */}
@@ -238,7 +238,7 @@ export default function AdminSellerDetailPage() {
                 <div className="flex gap-6 text-right">
                     <div>
                         <p className="text-2xl font-light text-white">{formatCurrency(stats?.totalEarned || 0)}</p>
-                        <p className="text-xs text-neutral-500">Total gagné</p>
+                        <p className="text-xs text-neutral-500">Total earned</p>
                     </div>
                     <div>
                         <p className="text-2xl font-light text-white">{stats?.totalCommissions || 0}</p>
@@ -273,7 +273,7 @@ export default function AdminSellerDetailPage() {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
-                            <p className="text-xs text-neutral-500 mb-1">Balance stockée</p>
+                            <p className="text-xs text-neutral-500 mb-1">Stored balance</p>
                             <p className="text-xl font-light text-white">{formatCurrency(seller.balance.stored)}</p>
                         </div>
                         <div>
@@ -405,7 +405,7 @@ export default function AdminSellerDetailPage() {
             {activeTab === 'ledger' && (
                 <div className="space-y-2">
                     {ledger.length === 0 ? (
-                        <p className="text-neutral-500 text-center py-8">Aucune entrée ledger</p>
+                        <p className="text-neutral-500 text-center py-8">No ledger entries</p>
                     ) : (
                         ledger.map(entry => (
                             <div
