@@ -56,9 +56,9 @@ export async function GET() {
             card_type: r.card_type,
             amount: r.amount,
             status: r.status,
-            gift_card_code: r.gift_card_code,
+            gift_card_code: r.card_code,
             created_at: r.created_at.toISOString(),
-            delivered_at: r.delivered_at?.toISOString() || null
+            delivered_at: r.fulfilled_at?.toISOString() || null
         }))
 
         return NextResponse.json({
@@ -134,8 +134,8 @@ export async function POST(request: NextRequest) {
                 where: { id: redemptionId },
                 data: {
                     status: 'DELIVERED',
-                    gift_card_code: code.trim(),
-                    delivered_at: new Date()
+                    card_code: code.trim(),
+                    fulfilled_at: new Date()
                 }
             })
 
