@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Share2, CreditCard, CheckCircle, Loader2, ExternalLink, Wallet, Zap, Gift } from 'lucide-react'
+import { Loader2, ExternalLink, Check, ArrowRight } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
     saveOnboardingStep1,
     saveOnboardingStep2,
@@ -11,12 +12,20 @@ import {
     getOnboardingStatus
 } from '@/app/actions/seller-onboarding'
 
+const STEPS = [
+    { number: 1, label: 'Profil' },
+    { number: 2, label: 'Reseaux' },
+    { number: 3, label: 'Paiement' },
+    { number: 4, label: 'Termine' },
+]
+
 export default function SellerOnboardingPage() {
     const router = useRouter()
     const [currentStep, setCurrentStep] = useState(1)
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [sellerId, setSellerId] = useState<string | null>(null)
+    const [direction, setDirection] = useState(1)
 
     // Step 1 state
     const [name, setName] = useState('')
@@ -28,10 +37,8 @@ export default function SellerOnboardingPage() {
     const [twitter, setTwitter] = useState('')
     const [youtube, setYoutube] = useState('')
     const [website, setWebsite] = useState('')
-    const [profileScore, setProfileScore] = useState(0)
 
     // Step 3 state
-    const [stripeUrl, setStripeUrl] = useState<string | null>(null)
     const [payoutChoice, setPayoutChoice] = useState<'stripe' | 'wallet' | null>(null)
 
     useEffect(() => {
@@ -45,7 +52,6 @@ export default function SellerOnboardingPage() {
 
             setSellerId(result.seller.id)
 
-            // Resume at last incomplete step
             const step = result.seller.onboardingStep
             if (step >= 4) {
                 router.push('/seller')
@@ -54,7 +60,6 @@ export default function SellerOnboardingPage() {
 
             setCurrentStep(step + 1)
 
-            // Pre-fill existing data
             if (result.seller.name) setName(result.seller.name)
             if (result.profile) {
                 setBio(result.profile.bio || '')
@@ -63,7 +68,6 @@ export default function SellerOnboardingPage() {
                 setTwitter(result.profile.twitterUrl || '')
                 setYoutube(result.profile.youtubeUrl || '')
                 setWebsite(result.profile.websiteUrl || '')
-                setProfileScore(result.profile.profileScore || 0)
             }
 
             setLoading(false)
@@ -71,6 +75,11 @@ export default function SellerOnboardingPage() {
 
         loadStatus()
     }, [router])
+
+    const goToStep = (step: number) => {
+        setDirection(step > currentStep ? 1 : -1)
+        setCurrentStep(step)
+    }
 
     const handleStep1Submit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -80,7 +89,7 @@ export default function SellerOnboardingPage() {
         const result = await saveOnboardingStep1({ sellerId, name, bio })
 
         if (result.success) {
-            setCurrentStep(2)
+            goToStep(2)
         }
         setSubmitting(false)
     }
@@ -100,57 +109,31 @@ export default function SellerOnboardingPage() {
         })
 
         if (result.success) {
-            setProfileScore(result.profileScore || 0)
-            setCurrentStep(3)
+            goToStep(3)
         }
         setSubmitting(false)
     }
 
     const handleStep3Submit = async () => {
-        if (!sellerId || !payoutChoice) {
-            console.log('[Onboarding] Cannot submit step 3:', { sellerId, payoutChoice })
-            return
-        }
+        if (!sellerId || !payoutChoice) return
 
-        console.log('[Onboarding] Submitting step 3:', { sellerId, payoutChoice })
         setSubmitting(true)
 
         try {
             if (payoutChoice === 'stripe') {
-                console.log('[Onboarding] Creating Stripe Connect account...')
-                // Create Stripe Connect account and redirect
                 const result = await createStripeConnectAccount(sellerId)
-
-                console.log('[Onboarding] Stripe Connect result:', result)
-
                 if (result.success && result.url) {
-                    setStripeUrl(result.url)
-                    console.log('[Onboarding] Redirecting to Stripe:', result.url)
-                    // Redirect to Stripe
                     window.location.href = result.url
-                } else {
-                    console.error('[Onboarding] Stripe Connect failed:', result)
-                    alert('Erreur lors de la création du compte Stripe. Veuillez réessayer.')
                 }
             } else {
-                console.log('[Onboarding] Setting payout method to PLATFORM...')
-                // Skip Stripe, set payout method to PLATFORM
                 const { updatePayoutMethod } = await import('@/app/actions/sellers')
                 const result = await updatePayoutMethod(sellerId, 'PLATFORM')
-
-                console.log('[Onboarding] Update payout method result:', result)
-
                 if (result.success) {
-                    // Move to step 4
-                    setCurrentStep(4)
-                } else {
-                    console.error('[Onboarding] Update payout method failed:', result)
-                    alert('Erreur lors de la configuration. Veuillez réessayer.')
+                    goToStep(4)
                 }
             }
         } catch (error) {
-            console.error('[Onboarding] Error in step 3:', error)
-            alert('Erreur inattendue. Veuillez réessayer.')
+            console.error('[Onboarding] Error:', error)
         } finally {
             setSubmitting(false)
         }
@@ -164,81 +147,132 @@ export default function SellerOnboardingPage() {
         router.push('/seller')
     }
 
+    const slideVariants = {
+        enter: (direction: number) => ({
+            x: direction > 0 ? 100 : -100,
+            opacity: 0
+        }),
+        center: {
+            x: 0,
+            opacity: 1
+        },
+        exit: (direction: number) => ({
+            x: direction < 0 ? 100 : -100,
+            opacity: 0
+        })
+    }
+
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+            <div className="min-h-screen flex items-center justify-center bg-white">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center gap-4"
+                >
+                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                    <span className="text-xs text-neutral-400 tracking-wide">Chargement</span>
+                </motion.div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-6">
-            <div className="max-w-2xl mx-auto">
-                {/* Progress Bar */}
-                <div className="mb-8">
-                    <div className="flex items-center justify-between mb-4">
-                        {[1, 2, 3, 4].map((step) => (
-                            <div key={step} className="flex items-center">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${step < currentStep
-                                    ? 'bg-green-500 text-white'
-                                    : step === currentStep
-                                        ? 'bg-purple-600 text-white'
-                                        : 'bg-slate-200 text-slate-400'
-                                    }`}>
-                                    {step < currentStep ? <CheckCircle className="w-5 h-5" /> : step}
-                                </div>
-                                {step < 4 && (
-                                    <div className={`w-16 h-1 mx-2 ${step < currentStep ? 'bg-green-500' : 'bg-slate-200'
-                                        }`} />
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                    <p className="text-center text-slate-600 text-sm">
-                        Étape {currentStep} sur 4
-                    </p>
-                </div>
+        <div className="min-h-screen bg-white">
+            {/* Progress bar */}
+            <div className="fixed top-0 left-0 right-0 h-0.5 bg-neutral-100 z-50">
+                <motion.div
+                    className="h-full bg-neutral-900"
+                    initial={{ width: '0%' }}
+                    animate={{ width: `${(currentStep / 4) * 100}%` }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+            </div>
 
-                {/* Step Content */}
-                <div className="bg-white rounded-2xl shadow-lg p-8">
+            <div className="max-w-lg mx-auto px-6 py-16">
+                {/* Step indicator */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-center gap-8 mb-16"
+                >
+                    {STEPS.map((step, index) => (
+                        <div key={step.number} className="flex items-center">
+                            <div className="flex flex-col items-center">
+                                <span className={`text-sm tabular-nums transition-colors duration-300 ${
+                                    currentStep >= step.number
+                                        ? 'text-neutral-900 font-medium'
+                                        : 'text-neutral-300'
+                                }`}>
+                                    {step.number}
+                                </span>
+                                <span className={`text-[10px] uppercase tracking-wider mt-1 transition-colors duration-300 ${
+                                    currentStep >= step.number
+                                        ? 'text-neutral-500'
+                                        : 'text-neutral-300'
+                                }`}>
+                                    {step.label}
+                                </span>
+                            </div>
+                            {index < STEPS.length - 1 && (
+                                <div className={`w-12 h-px mx-4 transition-colors duration-300 ${
+                                    currentStep > step.number
+                                        ? 'bg-neutral-900'
+                                        : 'bg-neutral-200'
+                                }`} />
+                            )}
+                        </div>
+                    ))}
+                </motion.div>
+
+                {/* Content */}
+                <AnimatePresence mode="wait" custom={direction}>
                     {currentStep === 1 && (
-                        <form onSubmit={handleStep1Submit}>
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                                    <User className="w-6 h-6 text-purple-600" />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-slate-900">Informations de base</h2>
-                                    <p className="text-slate-600">Commençons par vous connaître</p>
-                                </div>
+                        <motion.form
+                            key="step1"
+                            custom={direction}
+                            variants={slideVariants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            onSubmit={handleStep1Submit}
+                        >
+                            <div className="text-center mb-12">
+                                <h1 className="text-3xl font-light text-neutral-900 mb-3">
+                                    Bienvenue
+                                </h1>
+                                <p className="text-neutral-400">
+                                    Presentez-vous en quelques mots
+                                </p>
                             </div>
 
-                            <div className="space-y-5">
+                            <div className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        Nom ou pseudo public
+                                    <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-3">
+                                        Nom ou pseudo
                                     </label>
                                     <input
                                         type="text"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         required
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                        placeholder="Ex: Alex Martin"
+                                        className="w-full px-0 py-3 bg-transparent border-0 border-b border-neutral-200 text-neutral-900 text-lg focus:outline-none focus:border-neutral-900 transition-colors placeholder:text-neutral-300"
+                                        placeholder="Comment souhaitez-vous etre appele ?"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        Bio courte (optionnel)
+                                    <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-3">
+                                        Bio
+                                        <span className="normal-case tracking-normal ml-2 text-neutral-300">optionnel</span>
                                     </label>
                                     <textarea
                                         value={bio}
                                         onChange={(e) => setBio(e.target.value)}
-                                        rows={4}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                        placeholder="Parlez de vous, votre niche, votre audience..."
+                                        rows={3}
+                                        className="w-full px-0 py-3 bg-transparent border-0 border-b border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900 transition-colors placeholder:text-neutral-300 resize-none"
+                                        placeholder="Votre audience, votre niche..."
                                     />
                                 </div>
                             </div>
@@ -246,182 +280,189 @@ export default function SellerOnboardingPage() {
                             <button
                                 type="submit"
                                 disabled={submitting || !name}
-                                className="mt-6 w-full py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="mt-12 w-full py-4 bg-neutral-900 text-white text-sm tracking-wide rounded-full hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                             >
-                                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continuer'}
+                                {submitting ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <>
+                                        Continuer
+                                        <ArrowRight className="w-4 h-4" />
+                                    </>
+                                )}
                             </button>
-                        </form>
+                        </motion.form>
                     )}
 
                     {currentStep === 2 && (
-                        <form onSubmit={handleStep2Submit}>
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                                    <Share2 className="w-6 h-6 text-purple-600" />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-slate-900">Réseaux sociaux</h2>
-                                    <p className="text-slate-600">Augmentez votre visibilité</p>
-                                </div>
+                        <motion.form
+                            key="step2"
+                            custom={direction}
+                            variants={slideVariants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            onSubmit={handleStep2Submit}
+                        >
+                            <div className="text-center mb-12">
+                                <h1 className="text-3xl font-light text-neutral-900 mb-3">
+                                    Vos reseaux
+                                </h1>
+                                <p className="text-neutral-400">
+                                    Aidez les startups a vous connaitre
+                                </p>
                             </div>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">TikTok</label>
-                                    <input
-                                        type="url"
-                                        value={tiktok}
-                                        onChange={(e) => setTiktok(e.target.value)}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500"
-                                        placeholder="https://tiktok.com/@username"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">Instagram</label>
-                                    <input
-                                        type="url"
-                                        value={instagram}
-                                        onChange={(e) => setInstagram(e.target.value)}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500"
-                                        placeholder="https://instagram.com/username"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">Twitter/X</label>
-                                    <input
-                                        type="url"
-                                        value={twitter}
-                                        onChange={(e) => setTwitter(e.target.value)}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500"
-                                        placeholder="https://x.com/username"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">YouTube</label>
-                                    <input
-                                        type="url"
-                                        value={youtube}
-                                        onChange={(e) => setYoutube(e.target.value)}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500"
-                                        placeholder="https://youtube.com/@channel"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">Site web</label>
-                                    <input
-                                        type="url"
-                                        value={website}
-                                        onChange={(e) => setWebsite(e.target.value)}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500"
-                                        placeholder="https://votre-site.com"
-                                    />
-                                </div>
+                            <div className="space-y-5">
+                                {[
+                                    { label: 'TikTok', value: tiktok, setter: setTiktok, placeholder: 'tiktok.com/@...' },
+                                    { label: 'Instagram', value: instagram, setter: setInstagram, placeholder: 'instagram.com/...' },
+                                    { label: 'X / Twitter', value: twitter, setter: setTwitter, placeholder: 'x.com/...' },
+                                    { label: 'YouTube', value: youtube, setter: setYoutube, placeholder: 'youtube.com/@...' },
+                                    { label: 'Site web', value: website, setter: setWebsite, placeholder: 'votre-site.com' },
+                                ].map((field) => (
+                                    <div key={field.label}>
+                                        <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-2">
+                                            {field.label}
+                                        </label>
+                                        <input
+                                            type="url"
+                                            value={field.value}
+                                            onChange={(e) => field.setter(e.target.value)}
+                                            className="w-full px-0 py-2.5 bg-transparent border-0 border-b border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900 transition-colors placeholder:text-neutral-300 text-sm"
+                                            placeholder={field.placeholder}
+                                        />
+                                    </div>
+                                ))}
                             </div>
+
+                            <p className="text-xs text-neutral-400 text-center mt-8">
+                                Vous pouvez passer cette etape et completer plus tard
+                            </p>
 
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="mt-6 w-full py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="mt-6 w-full py-4 bg-neutral-900 text-white text-sm tracking-wide rounded-full hover:bg-neutral-800 disabled:bg-neutral-200 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                             >
-                                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continuer'}
+                                {submitting ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <>
+                                        Continuer
+                                        <ArrowRight className="w-4 h-4" />
+                                    </>
+                                )}
                             </button>
-                        </form>
+                        </motion.form>
                     )}
 
                     {currentStep === 3 && (
-                        <div>
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                                    <CreditCard className="w-6 h-6 text-purple-600" />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-slate-900">Mode de paiement</h2>
-                                    <p className="text-slate-600">Choisissez comment recevoir vos gains</p>
-                                </div>
+                        <motion.div
+                            key="step3"
+                            custom={direction}
+                            variants={slideVariants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        >
+                            <div className="text-center mb-12">
+                                <h1 className="text-3xl font-light text-neutral-900 mb-3">
+                                    Vos gains
+                                </h1>
+                                <p className="text-neutral-400">
+                                    Choisissez comment recevoir vos commissions
+                                </p>
                             </div>
 
-                            <div className="space-y-4 mb-6">
-                                {/* Option 1: Stripe Connect */}
+                            <div className="space-y-4">
+                                {/* Stripe Option */}
                                 <button
                                     onClick={() => setPayoutChoice('stripe')}
-                                    className={`w-full p-6 rounded-xl border-2 transition-all text-left ${
+                                    className={`w-full p-6 rounded-2xl border text-left transition-all duration-300 ${
                                         payoutChoice === 'stripe'
-                                            ? 'border-purple-500 bg-purple-50'
-                                            : 'border-slate-200 hover:border-purple-300'
+                                            ? 'border-neutral-900 bg-neutral-50'
+                                            : 'border-neutral-200 hover:border-neutral-300'
                                     }`}
                                 >
-                                    <div className="flex items-start gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                                            payoutChoice === 'stripe' ? 'bg-purple-600' : 'bg-slate-100'
-                                        }`}>
-                                            <Zap className={`w-6 h-6 ${payoutChoice === 'stripe' ? 'text-white' : 'text-slate-600'}`} />
-                                        </div>
+                                    <div className="flex items-start justify-between">
                                         <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <h3 className="font-semibold text-slate-900">Transferts automatiques</h3>
-                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                                                    Recommandé
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <h3 className="font-medium text-neutral-900">
+                                                    Virement bancaire
+                                                </h3>
+                                                <span className="text-[10px] uppercase tracking-wider text-neutral-400 px-2 py-0.5 bg-neutral-100 rounded">
+                                                    Recommande
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-slate-600 mb-3">
-                                                Recevez vos gains directement sur votre compte bancaire automatiquement quand les startups paient.
+                                            <p className="text-sm text-neutral-500 mb-4">
+                                                Recevez automatiquement vos gains sur votre compte
                                             </p>
-                                            <ul className="space-y-1.5 text-sm text-slate-700">
-                                                <li className="flex items-start gap-2">
-                                                    <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                                    <span>Paiements automatiques sous 2-3 jours</span>
-                                                </li>
-                                                <li className="flex items-start gap-2">
-                                                    <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                                    <span>Vérification d'identité sécurisée (KYC)</span>
-                                                </li>
-                                                <li className="flex items-start gap-2">
-                                                    <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                                    <span>Aucun effort, tout est automatisé</span>
-                                                </li>
+                                            <ul className="space-y-2">
+                                                {[
+                                                    'Transferts automatiques',
+                                                    'Delai 2-3 jours',
+                                                    'Verification KYC securisee'
+                                                ].map((item) => (
+                                                    <li key={item} className="flex items-center gap-2 text-xs text-neutral-600">
+                                                        <span className="w-1 h-1 rounded-full bg-neutral-400" />
+                                                        {item}
+                                                    </li>
+                                                ))}
                                             </ul>
+                                        </div>
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                            payoutChoice === 'stripe'
+                                                ? 'border-neutral-900 bg-neutral-900'
+                                                : 'border-neutral-300'
+                                        }`}>
+                                            {payoutChoice === 'stripe' && (
+                                                <Check className="w-3 h-3 text-white" />
+                                            )}
                                         </div>
                                     </div>
                                 </button>
 
-                                {/* Option 2: Platform Wallet */}
+                                {/* Wallet Option */}
                                 <button
                                     onClick={() => setPayoutChoice('wallet')}
-                                    className={`w-full p-6 rounded-xl border-2 transition-all text-left ${
+                                    className={`w-full p-6 rounded-2xl border text-left transition-all duration-300 ${
                                         payoutChoice === 'wallet'
-                                            ? 'border-purple-500 bg-purple-50'
-                                            : 'border-slate-200 hover:border-purple-300'
+                                            ? 'border-neutral-900 bg-neutral-50'
+                                            : 'border-neutral-200 hover:border-neutral-300'
                                     }`}
                                 >
-                                    <div className="flex items-start gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                                            payoutChoice === 'wallet' ? 'bg-purple-600' : 'bg-slate-100'
-                                        }`}>
-                                            <Wallet className={`w-6 h-6 ${payoutChoice === 'wallet' ? 'text-white' : 'text-slate-600'}`} />
-                                        </div>
+                                    <div className="flex items-start justify-between">
                                         <div className="flex-1">
-                                            <h3 className="font-semibold text-slate-900 mb-2">Wallet Traaaction</h3>
-                                            <p className="text-sm text-slate-600 mb-3">
-                                                Accumulez vos gains sur votre wallet. Vous pourrez connecter Stripe plus tard ou échanger contre des cartes cadeaux.
+                                            <h3 className="font-medium text-neutral-900 mb-2">
+                                                Wallet Traaaction
+                                            </h3>
+                                            <p className="text-sm text-neutral-500 mb-4">
+                                                Accumulez et echangez contre des cartes cadeaux
                                             </p>
-                                            <ul className="space-y-1.5 text-sm text-slate-700">
-                                                <li className="flex items-start gap-2">
-                                                    <Gift className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                                                    <span>Échangez contre cartes cadeaux (Amazon, iTunes, etc.)</span>
-                                                </li>
-                                                <li className="flex items-start gap-2">
-                                                    <Gift className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                                                    <span>Connectez Stripe plus tard pour retirer en cash</span>
-                                                </li>
-                                                <li className="flex items-start gap-2">
-                                                    <Gift className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                                                    <span>Pas de vérification d'identité requise</span>
-                                                </li>
+                                            <ul className="space-y-2">
+                                                {[
+                                                    'Amazon, Netflix, Spotify...',
+                                                    'Pas de verification requise',
+                                                    'Connectez Stripe plus tard'
+                                                ].map((item) => (
+                                                    <li key={item} className="flex items-center gap-2 text-xs text-neutral-600">
+                                                        <span className="w-1 h-1 rounded-full bg-neutral-400" />
+                                                        {item}
+                                                    </li>
+                                                ))}
                                             </ul>
+                                        </div>
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                            payoutChoice === 'wallet'
+                                                ? 'border-neutral-900 bg-neutral-900'
+                                                : 'border-neutral-300'
+                                        }`}>
+                                            {payoutChoice === 'wallet' && (
+                                                <Check className="w-3 h-3 text-white" />
+                                            )}
                                         </div>
                                     </div>
                                 </button>
@@ -430,42 +471,82 @@ export default function SellerOnboardingPage() {
                             <button
                                 onClick={handleStep3Submit}
                                 disabled={submitting || !payoutChoice}
-                                className="w-full py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="mt-8 w-full py-4 bg-neutral-900 text-white text-sm tracking-wide rounded-full hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                             >
                                 {submitting ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : payoutChoice === 'stripe' ? (
                                     <>
-                                        Continuer avec Stripe
+                                        Configurer Stripe
                                         <ExternalLink className="w-4 h-4" />
                                     </>
                                 ) : (
-                                    'Continuer'
+                                    <>
+                                        Continuer
+                                        <ArrowRight className="w-4 h-4" />
+                                    </>
                                 )}
                             </button>
-                        </div>
+                        </motion.div>
                     )}
 
                     {currentStep === 4 && (
-                        <div className="text-center">
-                            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <CheckCircle className="w-10 h-10 text-green-600" />
-                            </div>
-                            <h2 className="text-2xl font-bold text-slate-900 mb-3">Configuration terminée !</h2>
-                            <p className="text-slate-600 mb-8">
-                                Votre compte partenaire est prêt. Vous pouvez maintenant commencer à gagner des commissions.
-                            </p>
-
-                            <button
-                                onClick={handleStep4Complete}
-                                disabled={submitting}
-                                className="px-8 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2 mx-auto"
+                        <motion.div
+                            key="step4"
+                            custom={direction}
+                            variants={slideVariants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            className="text-center"
+                        >
+                            {/* Animated checkmark */}
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 15 }}
+                                className="w-20 h-20 rounded-full bg-neutral-900 flex items-center justify-center mx-auto mb-8"
                             >
-                                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Accéder à mon dashboard'}
-                            </button>
-                        </div>
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: 0.4 }}
+                                >
+                                    <Check className="w-10 h-10 text-white" strokeWidth={1.5} />
+                                </motion.div>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.5 }}
+                            >
+                                <h1 className="text-3xl font-light text-neutral-900 mb-3">
+                                    Tout est pret
+                                </h1>
+                                <p className="text-neutral-400 mb-12">
+                                    Votre compte est configure. Decouvrez les programmes et commencez a gagner.
+                                </p>
+
+                                <button
+                                    onClick={handleStep4Complete}
+                                    disabled={submitting}
+                                    className="px-8 py-4 bg-neutral-900 text-white text-sm tracking-wide rounded-full hover:bg-neutral-800 disabled:bg-neutral-200 disabled:cursor-not-allowed transition-all inline-flex items-center gap-2"
+                                >
+                                    {submitting ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            Acceder au dashboard
+                                            <ArrowRight className="w-4 h-4" />
+                                        </>
+                                    )}
+                                </button>
+                            </motion.div>
+                        </motion.div>
                     )}
-                </div>
+                </AnimatePresence>
             </div>
         </div>
     )
