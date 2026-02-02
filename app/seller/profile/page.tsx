@@ -50,6 +50,34 @@ const ACTIVITY_LABELS: Record<string, string> = {
     'OTHER': 'Autre'
 }
 
+// Country code to name mapping
+const COUNTRY_NAMES: Record<string, string> = {
+    'FR': 'France',
+    'US': 'États-Unis',
+    'GB': 'Royaume-Uni',
+    'DE': 'Allemagne',
+    'ES': 'Espagne',
+    'IT': 'Italie',
+    'CA': 'Canada',
+    'NL': 'Pays-Bas',
+    'BE': 'Belgique',
+    'CH': 'Suisse',
+    'PT': 'Portugal',
+    'AT': 'Autriche',
+    'PL': 'Pologne',
+    'SE': 'Suède',
+    'NO': 'Norvège',
+    'DK': 'Danemark',
+    'FI': 'Finlande',
+    'IE': 'Irlande',
+    'AU': 'Australie',
+    'JP': 'Japon',
+    'BR': 'Brésil',
+    'MX': 'Mexique',
+    'IN': 'Inde',
+    'SG': 'Singapour',
+}
+
 export default function ProfilePage() {
     const [loading, setLoading] = useState(true)
     const [profile, setProfile] = useState<ProfileData | null>(null)
@@ -162,7 +190,7 @@ export default function ProfilePage() {
                                 {profile.country && (
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
                                         <MapPin className="w-3 h-3" />
-                                        {profile.country}
+                                        {COUNTRY_NAMES[profile.country] || profile.country}
                                     </span>
                                 )}
                                 {profile.activityType && (

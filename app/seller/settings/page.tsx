@@ -17,6 +17,34 @@ const TRAFFIC_OPTIONS = [
     '100,000+'
 ]
 
+// Countries with ISO codes - must match mission country filter codes
+const COUNTRIES = [
+    { code: 'FR', name: 'France' },
+    { code: 'US', name: 'États-Unis' },
+    { code: 'GB', name: 'Royaume-Uni' },
+    { code: 'DE', name: 'Allemagne' },
+    { code: 'ES', name: 'Espagne' },
+    { code: 'IT', name: 'Italie' },
+    { code: 'CA', name: 'Canada' },
+    { code: 'NL', name: 'Pays-Bas' },
+    { code: 'BE', name: 'Belgique' },
+    { code: 'CH', name: 'Suisse' },
+    { code: 'PT', name: 'Portugal' },
+    { code: 'AT', name: 'Autriche' },
+    { code: 'PL', name: 'Pologne' },
+    { code: 'SE', name: 'Suède' },
+    { code: 'NO', name: 'Norvège' },
+    { code: 'DK', name: 'Danemark' },
+    { code: 'FI', name: 'Finlande' },
+    { code: 'IE', name: 'Irlande' },
+    { code: 'AU', name: 'Australie' },
+    { code: 'JP', name: 'Japon' },
+    { code: 'BR', name: 'Brésil' },
+    { code: 'MX', name: 'Mexique' },
+    { code: 'IN', name: 'Inde' },
+    { code: 'SG', name: 'Singapour' },
+]
+
 // Profile completion tasks (7 tasks for account validation)
 const PROFILE_TASKS = [
     { id: 'basic_info', label: 'Informations de base' },
@@ -473,13 +501,9 @@ export default function SettingsPage() {
                                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-sm"
                                             >
                                                 <option value="">Sélectionner un pays</option>
-                                                <option>France</option>
-                                                <option>États-Unis</option>
-                                                <option>Royaume-Uni</option>
-                                                <option>Allemagne</option>
-                                                <option>Espagne</option>
-                                                <option>Italie</option>
-                                                <option>Canada</option>
+                                                {COUNTRIES.map(c => (
+                                                    <option key={c.code} value={c.code}>{c.name}</option>
+                                                ))}
                                             </select>
                                         </div>
                                     </div>

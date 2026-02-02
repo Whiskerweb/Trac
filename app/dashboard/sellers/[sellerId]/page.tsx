@@ -106,6 +106,34 @@ function formatDate(date: Date): string {
     return new Date(date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
+// Country code to name mapping
+const COUNTRY_NAMES: Record<string, string> = {
+    'FR': 'France',
+    'US': 'États-Unis',
+    'GB': 'Royaume-Uni',
+    'DE': 'Allemagne',
+    'ES': 'Espagne',
+    'IT': 'Italie',
+    'CA': 'Canada',
+    'NL': 'Pays-Bas',
+    'BE': 'Belgique',
+    'CH': 'Suisse',
+    'PT': 'Portugal',
+    'AT': 'Autriche',
+    'PL': 'Pologne',
+    'SE': 'Suède',
+    'NO': 'Norvège',
+    'DK': 'Danemark',
+    'FI': 'Finlande',
+    'IE': 'Irlande',
+    'AU': 'Australie',
+    'JP': 'Japon',
+    'BR': 'Brésil',
+    'MX': 'Mexique',
+    'IN': 'Inde',
+    'SG': 'Singapour',
+}
+
 function formatPreferenceKey(key: string): string {
     const labels: Record<string, string> = {
         revShare: 'Rev-share',
@@ -266,7 +294,7 @@ export default function SellerProfilePage() {
                                             <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-full">
                                                 <MapPin className="w-3 h-3 text-slate-400" />
                                                 <span className="text-xs font-medium text-slate-600 tracking-tight">
-                                                    {seller.country}
+                                                    {COUNTRY_NAMES[seller.country] || seller.country}
                                                 </span>
                                             </div>
                                         )}
