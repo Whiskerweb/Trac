@@ -9,20 +9,9 @@ import {
     Users,
     CreditCard,
     Settings,
-    LogOut,
     Shield,
     ChevronRight
 } from 'lucide-react'
-
-// =============================================
-// ADMIN EMAIL WHITELIST
-// Add your admin emails here
-// =============================================
-const ADMIN_EMAILS = [
-    'lucas@traaaction.com',
-    'admin@traaaction.com',
-    'lucas.music.manager@gmail.com', // Add your email here
-]
 
 interface NavItem {
     name: string
@@ -64,7 +53,7 @@ export default function AdminLayout({
 
             setUserEmail(data.user.email)
 
-            if (ADMIN_EMAILS.includes(data.user.email.toLowerCase())) {
+            if (data.user.isAdmin) {
                 setIsAdmin(true)
             } else {
                 setIsAdmin(false)

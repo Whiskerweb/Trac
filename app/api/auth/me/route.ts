@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { isAdmin } from '@/lib/admin'
 
 // Force dynamic to never cache user data
 export const dynamic = 'force-dynamic'
@@ -24,6 +25,7 @@ export async function GET() {
             id: user.id,
             email: user.email,
             created_at: user.created_at,
+            isAdmin: isAdmin(user.email),
         }
     })
 }

@@ -8,13 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
-
-// Admin email whitelist (should match layout.tsx)
-const ADMIN_EMAILS = [
-    'lucas@traaaction.com',
-    'admin@traaaction.com',
-    'lucas.music.manager@gmail.com',
-]
+import { isAdmin } from '@/lib/admin'
 
 // =============================================
 // GET - List all redemptions
@@ -30,7 +24,7 @@ export async function GET() {
         }
 
         // Check admin access
-        if (!ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+        if (!isAdmin(user.email)) {
             return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
         }
 
@@ -89,7 +83,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check admin access
-        if (!ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+        if (!isAdmin(user.email)) {
             return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
         }
 
