@@ -9,7 +9,8 @@ import {
     MessageSquare,
     Store,
     Settings,
-    User
+    User,
+    Wallet
 } from 'lucide-react'
 import { WalletButton } from '@/components/seller/WalletButton'
 import ProfileCompletionBanner from '@/components/seller/ProfileCompletionBanner'
@@ -137,6 +138,7 @@ export default function SellerLayout({
                     <SectionLabel>Gains</SectionLabel>
                     <div className="space-y-1">
                         <NavItem href="/seller/payouts" icon={CreditCard} label="Payouts" />
+                        <NavItem href="/seller/wallet" icon={Wallet} label="Wallet" />
                     </div>
 
                     {/* COMMUNICATION Section */}

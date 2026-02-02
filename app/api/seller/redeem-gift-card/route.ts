@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         const { cardType, amount } = body
 
         // Validate card type
-        const validTypes = ['amazon', 'itunes', 'steam', 'paypal_gift']
+        const validTypes = ['amazon', 'itunes', 'steam', 'paypal_gift', 'fnac', 'google_play', 'netflix', 'spotify']
         if (!validTypes.includes(cardType)) {
             return NextResponse.json(
                 { error: 'Invalid card type' },

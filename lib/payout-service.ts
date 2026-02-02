@@ -253,15 +253,19 @@ async function processPlatformBalance(request: PayoutRequest): Promise<PayoutRes
 
 export interface GiftCardRequest {
     sellerId: string
-    cardType: 'amazon' | 'itunes' | 'steam' | 'paypal_gift'
+    cardType: 'amazon' | 'itunes' | 'steam' | 'paypal_gift' | 'fnac' | 'google_play' | 'netflix' | 'spotify'
     amount: number // in cents
 }
 
 const GIFT_CARD_MIN = {
-    amazon: 1000,      // 10€
-    itunes: 1500,      // 15€
-    steam: 2000,       // 20€
-    paypal_gift: 1000, // 10€
+    amazon: 1000,       // 10€
+    itunes: 1500,       // 15€
+    steam: 2000,        // 20€
+    paypal_gift: 1000,  // 10€
+    fnac: 1500,         // 15€
+    google_play: 1500,  // 15€
+    netflix: 1500,      // 15€
+    spotify: 1000,      // 10€
 }
 
 export async function requestGiftCard(request: GiftCardRequest): Promise<{
@@ -319,6 +323,28 @@ export async function requestGiftCard(request: GiftCardRequest): Promise<{
         success: true,
         redemptionId: redemption.id,
     }
+}
+
+// =============================================
+// GET GIFT CARD REDEMPTIONS HISTORY
+// =============================================
+
+export async function getGiftCardRedemptions(sellerId: string) {
+    const redemptions = await prisma.giftCardRedemption.findMany({
+        where: { seller_id: sellerId },
+        orderBy: { created_at: 'desc' },
+        take: 20
+    })
+
+    return redemptions.map(r => ({
+        id: r.id,
+        cardType: r.card_type,
+        amount: r.amount,
+        status: r.status,
+        createdAt: r.created_at.toISOString(),
+        deliveredAt: r.fulfilled_at?.toISOString() || null,
+        code: r.card_code || null
+    }))
 }
 
 // =============================================
