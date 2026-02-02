@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { MessageSquare, Send, User, Building2, CheckCheck, Gift, ExternalLink } from 'lucide-react'
+import { MessageSquare, Send, User, Building2, CheckCheck, Gift, ExternalLink, Loader2 } from 'lucide-react'
 import { getConversations, getMessages, sendMessage, markAsRead } from '@/app/actions/messaging'
 import Link from 'next/link'
 
@@ -27,7 +27,25 @@ interface Message {
     read_at: Date | null
 }
 
+// Loading fallback for Suspense
+function MessagesLoading() {
+    return (
+        <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        </div>
+    )
+}
+
+// Main page wrapper with Suspense
 export default function PartnerMessagesPage() {
+    return (
+        <Suspense fallback={<MessagesLoading />}>
+            <MessagesContent />
+        </Suspense>
+    )
+}
+
+function MessagesContent() {
     const searchParams = useSearchParams()
     const conversationParam = searchParams.get('conversation')
 
