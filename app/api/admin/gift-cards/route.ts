@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
 import { isAdmin } from '@/lib/admin'
+import { sendGiftCardEmail } from '@/lib/email'
 
 // =============================================
 // GET - List all redemptions
@@ -123,6 +124,12 @@ export async function POST(request: NextRequest) {
                 )
             }
 
+            // Get seller info for email
+            const seller = await prisma.seller.findUnique({
+                where: { id: redemption.seller_id },
+                select: { email: true, name: true }
+            })
+
             // Mark as delivered
             await prisma.giftCardRedemption.update({
                 where: { id: redemptionId },
@@ -140,11 +147,26 @@ export async function POST(request: NextRequest) {
                 cardType: redemption.card_type
             })
 
-            // TODO: Send notification email to seller with the code
+            // Send email notification to seller
+            let emailSent = false
+            if (seller?.email) {
+                const emailResult = await sendGiftCardEmail({
+                    sellerEmail: seller.email,
+                    sellerName: seller.name,
+                    cardType: redemption.card_type,
+                    amount: redemption.amount,
+                    code: code.trim()
+                })
+                emailSent = emailResult.success
+                if (!emailResult.success) {
+                    console.error('[AdminGiftCards] Email failed:', emailResult.error)
+                }
+            }
 
             return NextResponse.json({
                 success: true,
-                message: 'Gift card delivered'
+                message: 'Gift card delivered',
+                emailSent
             })
 
         } else if (action === 'fail') {

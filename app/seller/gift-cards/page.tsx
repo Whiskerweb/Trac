@@ -394,29 +394,38 @@ export default function GiftCardsPage() {
                                 exit={{ opacity: 0, height: 0 }}
                                 className="overflow-hidden"
                             >
-                                <div className="pt-6 space-y-1">
+                                <div className="pt-6 space-y-2">
                                     {redemptions.map((r, index) => (
                                         <motion.div
                                             key={r.id}
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: 0.03 * index }}
-                                            className="flex items-center justify-between py-3"
+                                            className={`py-3 ${r.status === 'DELIVERED' && r.code ? 'bg-neutral-50 rounded-xl px-4 -mx-4' : ''}`}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-1.5 h-1.5 rounded-full ${
-                                                    r.status === 'DELIVERED' ? 'bg-green-500' :
-                                                    r.status === 'FAILED' ? 'bg-red-400' :
-                                                    'bg-amber-400'
-                                                }`} />
-                                                <div>
-                                                    <p className="text-sm text-neutral-700">{CARD_NAME_MAP[r.cardType]}</p>
-                                                    <p className="text-xs text-neutral-400">{formatDate(r.createdAt)}</p>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-1.5 h-1.5 rounded-full ${
+                                                        r.status === 'DELIVERED' ? 'bg-green-500' :
+                                                        r.status === 'FAILED' ? 'bg-red-400' :
+                                                        'bg-amber-400'
+                                                    }`} />
+                                                    <div>
+                                                        <p className="text-sm text-neutral-700">{CARD_NAME_MAP[r.cardType]}</p>
+                                                        <p className="text-xs text-neutral-400">{formatDate(r.createdAt)}</p>
+                                                    </div>
                                                 </div>
+                                                <p className="font-medium text-neutral-900 tabular-nums text-sm">
+                                                    {formatCurrency(r.amount)} EUR
+                                                </p>
                                             </div>
-                                            <p className="font-medium text-neutral-900 tabular-nums text-sm">
-                                                {formatCurrency(r.amount)} EUR
-                                            </p>
+                                            {/* Show code if delivered */}
+                                            {r.status === 'DELIVERED' && r.code && (
+                                                <div className="mt-3 pt-3 border-t border-neutral-200">
+                                                    <p className="text-xs text-neutral-400 mb-1">Code</p>
+                                                    <p className="font-mono text-sm font-medium text-neutral-900 select-all">{r.code}</p>
+                                                </div>
+                                            )}
                                         </motion.div>
                                     ))}
                                 </div>
