@@ -11,6 +11,7 @@
 import { prisma } from '@/lib/db'
 import { createPayout as stripeConnectPayout } from '@/lib/stripe-connect'
 import { updateSellerBalance } from '@/lib/commission/engine'
+import { LedgerEntryType, LedgerReferenceType } from './generated/prisma/enums'
 
 // =============================================
 // TYPES
@@ -40,6 +41,152 @@ const MIN_PAYOUT = {
     PAYPAL: 1000,         // 10€
     IBAN: 2500,           // 25€ (higher for bank transfers)
     PLATFORM: 0,          // No minimum for platform balance
+}
+
+// =============================================
+// WALLET LEDGER (IMMUTABLE AUDIT TRAIL)
+// =============================================
+
+/**
+ * Record an immutable ledger entry for wallet movements
+ * This creates a complete audit trail for reconciliation
+ */
+async function recordLedgerEntry(params: {
+    sellerId: string
+    entryType: LedgerEntryType
+    amount: number // in cents, always positive
+    referenceType: LedgerReferenceType
+    referenceId: string
+    description: string
+}): Promise<{ ledgerId: string; balanceAfter: number }> {
+    // Get current balance from ledger (source of truth)
+    const currentLedgerBalance = await calculateLedgerBalance(params.sellerId)
+
+    // Calculate new balance
+    const balanceAfter = params.entryType === 'CREDIT'
+        ? currentLedgerBalance + params.amount
+        : currentLedgerBalance - params.amount
+
+    // Create immutable ledger entry
+    const entry = await prisma.walletLedger.create({
+        data: {
+            seller_id: params.sellerId,
+            entry_type: params.entryType,
+            amount: params.amount,
+            reference_type: params.referenceType,
+            reference_id: params.referenceId,
+            balance_after: balanceAfter,
+            description: params.description,
+        }
+    })
+
+    console.log('[Ledger] 📝 Entry recorded:', {
+        id: entry.id,
+        sellerId: params.sellerId,
+        type: params.entryType,
+        amount: `${params.amount / 100}€`,
+        balanceAfter: `${balanceAfter / 100}€`,
+        reference: `${params.referenceType}:${params.referenceId}`,
+    })
+
+    return { ledgerId: entry.id, balanceAfter }
+}
+
+/**
+ * Calculate balance from ledger entries (source of truth)
+ * Balance = SUM(CREDIT amounts) - SUM(DEBIT amounts)
+ */
+export async function calculateLedgerBalance(sellerId: string): Promise<number> {
+    const result = await prisma.walletLedger.groupBy({
+        by: ['entry_type'],
+        where: { seller_id: sellerId },
+        _sum: { amount: true },
+    })
+
+    let credits = 0
+    let debits = 0
+
+    for (const row of result) {
+        if (row.entry_type === 'CREDIT') {
+            credits = row._sum.amount || 0
+        } else if (row.entry_type === 'DEBIT') {
+            debits = row._sum.amount || 0
+        }
+    }
+
+    return credits - debits
+}
+
+/**
+ * Get ledger history for a seller
+ */
+export async function getLedgerHistory(sellerId: string, limit = 50) {
+    return prisma.walletLedger.findMany({
+        where: { seller_id: sellerId },
+        orderBy: { created_at: 'desc' },
+        take: limit,
+    })
+}
+
+/**
+ * Reconcile ledger balance with SellerBalance.balance
+ * Returns true if they match, false if there's a discrepancy
+ */
+export async function reconcileSellerBalance(sellerId: string): Promise<{
+    isReconciled: boolean
+    ledgerBalance: number
+    storedBalance: number
+    discrepancy: number
+}> {
+    const [ledgerBalance, storedBalanceRecord] = await Promise.all([
+        calculateLedgerBalance(sellerId),
+        prisma.sellerBalance.findUnique({ where: { seller_id: sellerId } })
+    ])
+
+    const storedBalance = storedBalanceRecord?.balance || 0
+    const discrepancy = ledgerBalance - storedBalance
+
+    if (discrepancy !== 0) {
+        console.warn('[Ledger] ⚠️ Balance discrepancy detected:', {
+            sellerId,
+            ledgerBalance: `${ledgerBalance / 100}€`,
+            storedBalance: `${storedBalance / 100}€`,
+            discrepancy: `${discrepancy / 100}€`,
+        })
+    }
+
+    return {
+        isReconciled: discrepancy === 0,
+        ledgerBalance,
+        storedBalance,
+        discrepancy,
+    }
+}
+
+/**
+ * Fix balance discrepancy by syncing SellerBalance with ledger
+ * Only use this after manual verification!
+ */
+export async function syncBalanceFromLedger(sellerId: string): Promise<number> {
+    const ledgerBalance = await calculateLedgerBalance(sellerId)
+
+    await prisma.sellerBalance.upsert({
+        where: { seller_id: sellerId },
+        create: {
+            seller_id: sellerId,
+            balance: ledgerBalance,
+        },
+        update: {
+            balance: ledgerBalance,
+        }
+    })
+
+    console.log('[Ledger] 🔄 Balance synced from ledger:', {
+        sellerId,
+        newBalance: `${ledgerBalance / 100}€`,
+    })
+
+    return ledgerBalance
 }
 
 // =============================================
@@ -226,24 +373,38 @@ async function processPlatformBalance(request: PayoutRequest): Promise<PayoutRes
     // Recalculate balance from commissions (this sets pending/due/paid_total correctly)
     await updateSellerBalance(request.sellerId)
 
-    // Add platform wallet credit (separate from the due/paid_total tracking)
-    // This is money the seller can use for gift cards
+    // Create a reference ID for this batch of commissions
+    const batchRefId = `commission_batch_${Date.now()}`
+
+    // Record ledger entry for each commission (for precise audit trail)
+    // Or alternatively, one entry per batch - we'll do per batch for simplicity
+    const { balanceAfter } = await recordLedgerEntry({
+        sellerId: request.sellerId,
+        entryType: 'CREDIT',
+        amount: request.amount,
+        referenceType: 'COMMISSION',
+        referenceId: batchRefId,
+        description: `Commission payout: ${request.commissionIds.length} commission(s) - ${request.amount / 100}€`,
+    })
+
+    // Update SellerBalance to match ledger (belt and suspenders)
     await prisma.sellerBalance.update({
         where: { seller_id: request.sellerId },
         data: {
-            balance: { increment: request.amount },
+            balance: balanceAfter,
         }
     })
 
-    console.log('[PayoutService] 💰 Platform balance updated:', {
+    console.log('[PayoutService] 💰 Platform balance updated with ledger:', {
         partnerId: request.sellerId,
         amount: `${request.amount / 100}€`,
+        newBalance: `${balanceAfter / 100}€`,
     })
 
     return {
         success: true,
         method: 'PLATFORM',
-        transferId: `platform_${Date.now()}`,
+        transferId: batchRefId,
     }
 }
 
@@ -282,12 +443,10 @@ export async function requestGiftCard(request: GiftCardRequest): Promise<{
         }
     }
 
-    // Check balance
-    const balance = await prisma.sellerBalance.findUnique({
-        where: { seller_id: request.sellerId }
-    })
+    // Check balance from LEDGER (source of truth)
+    const ledgerBalance = await calculateLedgerBalance(request.sellerId)
 
-    if (!balance || balance.balance < request.amount) {
+    if (ledgerBalance < request.amount) {
         return {
             success: false,
             error: 'Insufficient platform balance'
@@ -304,19 +463,30 @@ export async function requestGiftCard(request: GiftCardRequest): Promise<{
         }
     })
 
-    // Deduct from balance
+    // Record DEBIT ledger entry
+    const { balanceAfter } = await recordLedgerEntry({
+        sellerId: request.sellerId,
+        entryType: 'DEBIT',
+        amount: request.amount,
+        referenceType: 'GIFT_CARD_REDEMPTION',
+        referenceId: redemption.id,
+        description: `Gift card redemption: ${request.cardType} - ${request.amount / 100}€`,
+    })
+
+    // Sync SellerBalance with ledger
     await prisma.sellerBalance.update({
         where: { seller_id: request.sellerId },
         data: {
-            balance: { decrement: request.amount },
+            balance: balanceAfter,
         }
     })
 
-    console.log('[PayoutService] 🎁 Gift card requested:', {
+    console.log('[PayoutService] 🎁 Gift card requested with ledger:', {
         redemptionId: redemption.id,
         partnerId: request.sellerId,
         cardType: request.cardType,
         amount: `${request.amount / 100}€`,
+        newBalance: `${balanceAfter / 100}€`,
     })
 
     return {

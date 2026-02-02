@@ -827,6 +827,55 @@ enum StartupPaymentStatus {
   PAID
 }
 
+// === WALLET LEDGER (IMMUTABLE AUDIT TRAIL) ===
+
+/// Ledger entry type - direction of money movement
+enum LedgerEntryType {
+  /// Money coming in (commission payout)
+  CREDIT
+  /// Money going out (gift card redemption)
+  DEBIT
+}
+
+/// Reference type for ledger entries - what triggered this movement
+enum LedgerReferenceType {
+  /// Commission payout from startup
+  COMMISSION
+  /// Gift card redemption
+  GIFT_CARD_REDEMPTION
+  /// Manual adjustment by admin
+  ADJUSTMENT
+  /// Refund/clawback
+  REFUND
+}
+
+/// Immutable ledger for tracking all wallet movements
+/// Balance = SUM(CREDIT amounts) - SUM(DEBIT amounts)
+/// This provides a complete audit trail for reconciliation
+model WalletLedger {
+  id             String              @id @default(cuid())
+  seller_id      String
+  /// CREDIT (money in) or DEBIT (money out)
+  entry_type     LedgerEntryType
+  /// Amount in cents (always positive, direction determined by entry_type)
+  amount         Int
+  /// What triggered this entry
+  reference_type LedgerReferenceType
+  /// ID of the related record (commission_id, gift_card_redemption_id, etc.)
+  reference_id   String
+  /// Seller's balance after this entry (cached for quick lookups)
+  balance_after  Int
+  /// Human-readable description
+  description    String
+  /// Immutable timestamp
+  created_at     DateTime            @default(now())
+
+  @@index([seller_id])
+  @@index([reference_type])
+  @@index([reference_id])
+  @@index([created_at])
+}
+
 // === STARTUP BATCH PAYMENT ===
 
 /// Batch payment from startup to pay multiple commissions at once
