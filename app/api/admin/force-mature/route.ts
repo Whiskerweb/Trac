@@ -1,162 +1,117 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-import { getCurrentUser } from '@/lib/auth'
-
 /**
+ * Admin: Force Mature Commission
+ *
  * POST /api/admin/force-mature
+ * Body: { commissionId: string } or { sellerId: string } (mature all for seller)
  *
- * Force une commission PENDING à passer en PROCEED immédiatement
- * (bypass le délai de 30 jours pour tester)
- *
- * IMPORTANT: Seulement en développement !
- *
- * Body: { commissionId: string }
+ * DEV/TEST ONLY - Forces PENDING commissions to PROCEED status
  */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/utils/supabase/server'
+import { prisma } from '@/lib/db'
+import { updateSellerBalance } from '@/lib/commission/engine'
+
 export async function POST(request: NextRequest) {
-    // ⚠️ SÉCURITÉ: Seulement si ENABLE_DEV_TOOLS=true
-    if (process.env.ENABLE_DEV_TOOLS !== 'true') {
-        return NextResponse.json(
-            { error: 'Endpoint disponible uniquement en mode développement' },
-            { status: 403 }
-        )
-    }
-
     try {
-        const user = await getCurrentUser()
-        if (!user) {
-            return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+        // Auth check - must be logged in
+        const supabase = await createClient()
+        const { data: { user }, error } = await supabase.auth.getUser()
+
+        if (error || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const { commissionId } = await request.json()
+        // Check if user is a startup owner (has workspace)
+        const workspaceMember = await prisma.workspaceMember.findFirst({
+            where: { user_id: user.id, role: 'OWNER' }
+        })
 
-        if (!commissionId) {
-            return NextResponse.json(
-                { error: 'commissionId requis' },
-                { status: 400 }
-            )
+        if (!workspaceMember) {
+            return NextResponse.json({ error: 'Not a workspace owner' }, { status: 403 })
         }
 
-        // Récupérer la commission
-        const commission = await prisma.commission.findUnique({
-            where: { id: commissionId },
-            include: {
-                Seller: {
-                    select: {
-                        email: true,
-                        name: true
-                    }
+        const body = await request.json()
+        const { commissionId, sellerId } = body
+
+        const now = new Date()
+        let matured = 0
+
+        if (commissionId) {
+            // Mature specific commission
+            const commission = await prisma.commission.findUnique({
+                where: { id: commissionId }
+            })
+
+            if (!commission) {
+                return NextResponse.json({ error: 'Commission not found' }, { status: 404 })
+            }
+
+            if (commission.status !== 'PENDING') {
+                return NextResponse.json({
+                    error: `Commission is not PENDING (current: ${commission.status})`
+                }, { status: 400 })
+            }
+
+            // Verify commission belongs to workspace
+            if (commission.program_id !== workspaceMember.workspace_id) {
+                return NextResponse.json({ error: 'Commission not in your workspace' }, { status: 403 })
+            }
+
+            await prisma.commission.update({
+                where: { id: commissionId },
+                data: {
+                    status: 'PROCEED',
+                    matured_at: now
                 }
+            })
+
+            await updateSellerBalance(commission.seller_id)
+            matured = 1
+
+        } else if (sellerId) {
+            // Mature all PENDING commissions for a seller in this workspace
+            const commissions = await prisma.commission.findMany({
+                where: {
+                    seller_id: sellerId,
+                    program_id: workspaceMember.workspace_id,
+                    status: 'PENDING'
+                }
+            })
+
+            for (const commission of commissions) {
+                await prisma.commission.update({
+                    where: { id: commission.id },
+                    data: {
+                        status: 'PROCEED',
+                        matured_at: now
+                    }
+                })
+                matured++
             }
-        })
 
-        if (!commission) {
-            return NextResponse.json(
-                { error: 'Commission introuvable' },
-                { status: 404 }
-            )
-        }
-
-        // Vérifier que c'est bien PENDING
-        if (commission.status !== 'PENDING') {
-            return NextResponse.json(
-                { error: `Commission déjà en statut ${commission.status}` },
-                { status: 400 }
-            )
-        }
-
-        // 🎯 FORCER LA MATURATION
-        // On recule created_at de 31 jours pour simuler une commission mature
-        const thirtyOneDaysAgo = new Date()
-        thirtyOneDaysAgo.setDate(thirtyOneDaysAgo.getDate() - 31)
-
-        const updated = await prisma.commission.update({
-            where: { id: commissionId },
-            data: {
-                status: 'PROCEED',
-                created_at: thirtyOneDaysAgo,
-                matured_at: new Date()
+            if (matured > 0) {
+                await updateSellerBalance(sellerId)
             }
-        })
-
-        console.log(`[Admin] 🚀 Commission ${commissionId} forcée en PROCEED (test mode)`)
+        } else {
+            return NextResponse.json({
+                error: 'Provide commissionId or sellerId'
+            }, { status: 400 })
+        }
 
         return NextResponse.json({
             success: true,
-            message: 'Commission maturée avec succès',
-            commission: {
-                id: updated.id,
-                status: updated.status,
-                seller: commission.Seller?.name || commission.Seller?.email,
-                amount: updated.commission_amount,
-                createdAt: updated.created_at,
-                maturedAt: updated.matured_at
-            }
+            matured,
+            message: `${matured} commission(s) matured to PROCEED`
         })
 
     } catch (error) {
-        console.error('[Admin] Erreur force-mature:', error)
+        console.error('[Admin/ForceMature] Error:', error)
         return NextResponse.json(
-            { error: 'Erreur lors de la maturation forcée' },
+            { error: 'Internal server error' },
             { status: 500 }
         )
     }
 }
 
-/**
- * GET /api/admin/force-mature
- *
- * Liste toutes les commissions PENDING pour faciliter les tests
- */
-export async function GET(request: NextRequest) {
-    // ⚠️ SÉCURITÉ: Seulement si ENABLE_DEV_TOOLS=true
-    if (process.env.ENABLE_DEV_TOOLS !== 'true') {
-        return NextResponse.json(
-            { error: 'Endpoint disponible uniquement en mode développement' },
-            { status: 403 }
-        )
-    }
-
-    try {
-        const user = await getCurrentUser()
-        if (!user) {
-            return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
-        }
-
-        // Récupérer toutes les commissions PENDING
-        const pendingCommissions = await prisma.commission.findMany({
-            where: { status: 'PENDING' },
-            include: {
-                Seller: {
-                    select: {
-                        email: true,
-                        name: true
-                    }
-                }
-            },
-            orderBy: { created_at: 'desc' },
-            take: 20
-        })
-
-        const formatted = pendingCommissions.map(c => ({
-            id: c.id,
-            seller: c.Seller?.name || c.Seller?.email || 'Unknown',
-            amount: c.commission_amount,
-            grossAmount: c.gross_amount,
-            createdAt: c.created_at,
-            daysOld: Math.floor((Date.now() - c.created_at.getTime()) / (1000 * 60 * 60 * 24))
-        }))
-
-        return NextResponse.json({
-            success: true,
-            count: formatted.length,
-            commissions: formatted
-        })
-
-    } catch (error) {
-        console.error('[Admin] Erreur liste pending:', error)
-        return NextResponse.json(
-            { error: 'Erreur lors de la récupération des commissions' },
-            { status: 500 }
-        )
-    }
-}
+export const dynamic = 'force-dynamic'
