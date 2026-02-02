@@ -8,7 +8,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/db'
-import { calculateLedgerBalance } from '@/lib/payout-service'
+
+// Admin email whitelist (should match layout.tsx)
+const ADMIN_EMAILS = [
+    'lucas@traaaction.com',
+    'admin@traaaction.com',
+    'lucas.music.manager@gmail.com',
+]
 
 // =============================================
 // GET - List all redemptions
@@ -19,16 +25,12 @@ export async function GET() {
         const supabase = await createClient()
         const { data: { user }, error } = await supabase.auth.getUser()
 
-        if (error || !user) {
+        if (error || !user?.email) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // Check if user is a workspace owner (admin)
-        const workspaceMember = await prisma.workspaceMember.findFirst({
-            where: { user_id: user.id, role: 'OWNER' }
-        })
-
-        if (!workspaceMember) {
+        // Check admin access
+        if (!ADMIN_EMAILS.includes(user.email.toLowerCase())) {
             return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
         }
 
@@ -82,16 +84,12 @@ export async function POST(request: NextRequest) {
         const supabase = await createClient()
         const { data: { user }, error } = await supabase.auth.getUser()
 
-        if (error || !user) {
+        if (error || !user?.email) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // Check if user is a workspace owner (admin)
-        const workspaceMember = await prisma.workspaceMember.findFirst({
-            where: { user_id: user.id, role: 'OWNER' }
-        })
-
-        if (!workspaceMember) {
+        // Check admin access
+        if (!ADMIN_EMAILS.includes(user.email.toLowerCase())) {
             return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
         }
 

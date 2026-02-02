@@ -10,8 +10,7 @@ import {
     Loader2,
     Copy,
     ExternalLink,
-    ChevronDown,
-    Search
+    ChevronDown
 } from 'lucide-react'
 
 interface GiftCardRedemption {
@@ -30,22 +29,22 @@ interface GiftCardRedemption {
 const STATUS_CONFIG = {
     PENDING: {
         label: 'En attente',
-        color: 'bg-amber-100 text-amber-700',
+        color: 'bg-amber-500/20 text-amber-400',
         icon: Clock
     },
     PROCESSING: {
         label: 'En cours',
-        color: 'bg-blue-100 text-blue-700',
+        color: 'bg-blue-500/20 text-blue-400',
         icon: Loader2
     },
     DELIVERED: {
         label: 'Livré',
-        color: 'bg-emerald-100 text-emerald-700',
+        color: 'bg-emerald-500/20 text-emerald-400',
         icon: CheckCircle2
     },
     FAILED: {
         label: 'Échoué',
-        color: 'bg-red-100 text-red-700',
+        color: 'bg-red-500/20 text-red-400',
         icon: XCircle
     },
 }
@@ -61,7 +60,7 @@ const CARD_TYPE_INFO: Record<string, { name: string; buyUrl: string }> = {
     spotify: { name: 'Spotify', buyUrl: 'https://www.spotify.com/fr/gift-cards/' },
 }
 
-export default function GiftCardsAdminPage() {
+export default function AdminGiftCardsPage() {
     const [redemptions, setRedemptions] = useState<GiftCardRedemption[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState<'all' | 'PENDING' | 'DELIVERED'>('all')
@@ -157,16 +156,16 @@ export default function GiftCardsAdminPage() {
     if (loading) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                <Loader2 className="w-5 h-5 animate-spin text-neutral-500" />
             </div>
         )
     }
 
     return (
-        <div className="max-w-4xl mx-auto py-8 px-4">
+        <div className="p-8">
             {/* Header */}
             <div className="mb-8">
-                <h1 className="text-2xl font-light text-neutral-900 mb-2">
+                <h1 className="text-2xl font-light text-white mb-2">
                     Gift Cards
                 </h1>
                 <p className="text-sm text-neutral-500">
@@ -179,21 +178,19 @@ export default function GiftCardsAdminPage() {
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl"
+                    className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl"
                 >
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                                <Gift className="w-5 h-5 text-amber-600" />
-                            </div>
-                            <div>
-                                <p className="font-medium text-amber-900">
-                                    {pendingCount} demande{pendingCount > 1 ? 's' : ''} en attente
-                                </p>
-                                <p className="text-sm text-amber-700">
-                                    Total: {(totalPendingAmount / 100).toFixed(0)}€ à traiter
-                                </p>
-                            </div>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
+                            <Gift className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div>
+                            <p className="font-medium text-amber-400">
+                                {pendingCount} demande{pendingCount > 1 ? 's' : ''} en attente
+                            </p>
+                            <p className="text-sm text-amber-500/70">
+                                Total: {(totalPendingAmount / 100).toFixed(0)}€ à traiter
+                            </p>
                         </div>
                     </div>
                 </motion.div>
@@ -207,8 +204,8 @@ export default function GiftCardsAdminPage() {
                         onClick={() => setFilter(f)}
                         className={`px-4 py-2 text-sm rounded-lg transition-colors ${
                             filter === f
-                                ? 'bg-neutral-900 text-white'
-                                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                                ? 'bg-violet-500 text-white'
+                                : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'
                         }`}
                     >
                         {f === 'all' ? 'Toutes' : f === 'PENDING' ? 'En attente' : 'Livrées'}
@@ -218,7 +215,7 @@ export default function GiftCardsAdminPage() {
 
             {/* List */}
             {filteredRedemptions.length === 0 ? (
-                <div className="text-center py-16 text-neutral-400">
+                <div className="text-center py-16 text-neutral-500">
                     <Gift className="w-8 h-8 mx-auto mb-3 opacity-50" />
                     <p>Aucune demande</p>
                 </div>
@@ -227,7 +224,6 @@ export default function GiftCardsAdminPage() {
                     <AnimatePresence>
                         {filteredRedemptions.map((redemption) => {
                             const status = STATUS_CONFIG[redemption.status]
-                            const StatusIcon = status.icon
                             const cardInfo = CARD_TYPE_INFO[redemption.card_type]
                             const isExpanded = expandedId === redemption.id
 
@@ -237,20 +233,20 @@ export default function GiftCardsAdminPage() {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
-                                    className="bg-white border border-neutral-200 rounded-xl overflow-hidden"
+                                    className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden"
                                 >
                                     {/* Main row */}
                                     <div
-                                        className="p-4 flex items-center justify-between cursor-pointer hover:bg-neutral-50 transition-colors"
+                                        className="p-4 flex items-center justify-between cursor-pointer hover:bg-neutral-800/50 transition-colors"
                                         onClick={() => setExpandedId(isExpanded ? null : redemption.id)}
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center">
-                                                <Gift className="w-5 h-5 text-neutral-600" />
+                                            <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center">
+                                                <Gift className="w-5 h-5 text-neutral-400" />
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-medium text-neutral-900">
+                                                    <span className="font-medium text-white">
                                                         {cardInfo?.name || redemption.card_type}
                                                     </span>
                                                     <span className={`px-2 py-0.5 text-xs rounded-full ${status.color}`}>
@@ -263,10 +259,10 @@ export default function GiftCardsAdminPage() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4">
-                                            <span className="text-lg font-medium text-neutral-900">
+                                            <span className="text-lg font-medium text-white">
                                                 {(redemption.amount / 100).toFixed(0)}€
                                             </span>
-                                            <ChevronDown className={`w-5 h-5 text-neutral-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                            <ChevronDown className={`w-5 h-5 text-neutral-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                                         </div>
                                     </div>
 
@@ -277,18 +273,18 @@ export default function GiftCardsAdminPage() {
                                                 initial={{ height: 0, opacity: 0 }}
                                                 animate={{ height: 'auto', opacity: 1 }}
                                                 exit={{ height: 0, opacity: 0 }}
-                                                className="border-t border-neutral-100"
+                                                className="border-t border-neutral-800"
                                             >
-                                                <div className="p-4 bg-neutral-50 space-y-4">
+                                                <div className="p-4 bg-neutral-900/50 space-y-4">
                                                     {/* Details */}
                                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                                         <div>
                                                             <p className="text-neutral-500">Seller</p>
-                                                            <p className="text-neutral-900">{redemption.seller_email}</p>
+                                                            <p className="text-white">{redemption.seller_email}</p>
                                                         </div>
                                                         <div>
                                                             <p className="text-neutral-500">Date demande</p>
-                                                            <p className="text-neutral-900">
+                                                            <p className="text-white">
                                                                 {new Date(redemption.created_at).toLocaleDateString('fr-FR', {
                                                                     day: 'numeric',
                                                                     month: 'short',
@@ -307,7 +303,7 @@ export default function GiftCardsAdminPage() {
                                                                     href={cardInfo.buyUrl}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
-                                                                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                                                                    className="flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300"
                                                                 >
                                                                     <ExternalLink className="w-4 h-4" />
                                                                     Acheter une carte {cardInfo.name}
@@ -324,16 +320,20 @@ export default function GiftCardsAdminPage() {
                                                                         ...prev,
                                                                         [redemption.id]: e.target.value
                                                                     }))}
-                                                                    className="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="flex-1 px-3 py-2 text-sm bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                                                                 />
                                                             </div>
 
                                                             {/* Actions */}
                                                             <div className="flex gap-2">
                                                                 <button
-                                                                    onClick={() => markAsDelivered(redemption.id)}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        markAsDelivered(redemption.id)
+                                                                    }}
                                                                     disabled={processingId === redemption.id}
-                                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 disabled:opacity-50 transition-colors"
                                                                 >
                                                                     {processingId === redemption.id ? (
                                                                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -343,9 +343,12 @@ export default function GiftCardsAdminPage() {
                                                                     Marquer comme livré
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => markAsFailed(redemption.id)}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        markAsFailed(redemption.id)
+                                                                    }}
                                                                     disabled={processingId === redemption.id}
-                                                                    className="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                                                                    className="px-4 py-2 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/10 disabled:opacity-50 transition-colors"
                                                                 >
                                                                     Échoué
                                                                 </button>
@@ -354,17 +357,20 @@ export default function GiftCardsAdminPage() {
                                                     )}
 
                                                     {redemption.status === 'DELIVERED' && redemption.gift_card_code && (
-                                                        <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg">
-                                                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                                            <span className="text-sm text-emerald-700">Code livré:</span>
-                                                            <code className="px-2 py-1 bg-white rounded text-sm font-mono">
+                                                        <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                                                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                                            <span className="text-sm text-emerald-400">Code livré:</span>
+                                                            <code className="px-2 py-1 bg-neutral-800 rounded text-sm font-mono text-white">
                                                                 {redemption.gift_card_code}
                                                             </code>
                                                             <button
-                                                                onClick={() => navigator.clipboard.writeText(redemption.gift_card_code!)}
-                                                                className="p-1 hover:bg-emerald-100 rounded"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    navigator.clipboard.writeText(redemption.gift_card_code!)
+                                                                }}
+                                                                className="p-1 hover:bg-emerald-500/20 rounded"
                                                             >
-                                                                <Copy className="w-4 h-4 text-emerald-600" />
+                                                                <Copy className="w-4 h-4 text-emerald-400" />
                                                             </button>
                                                         </div>
                                                     )}
@@ -380,8 +386,8 @@ export default function GiftCardsAdminPage() {
             )}
 
             {/* Automation note */}
-            <div className="mt-12 p-4 bg-neutral-50 rounded-xl border border-neutral-200">
-                <h3 className="text-sm font-medium text-neutral-700 mb-2">
+            <div className="mt-12 p-4 bg-neutral-900 rounded-xl border border-neutral-800">
+                <h3 className="text-sm font-medium text-neutral-300 mb-2">
                     💡 Automatisation disponible
                 </h3>
                 <p className="text-sm text-neutral-500">
