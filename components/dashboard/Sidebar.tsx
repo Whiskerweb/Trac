@@ -3,7 +3,7 @@
 import {
     Home, MessageSquare, CreditCard, Users, UserPlus,
     Contact, Coins, Shield, Globe,
-    Puzzle, User, ExternalLink, Target, Zap
+    Puzzle, User, ExternalLink, Target, Zap, Gift
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -31,6 +31,7 @@ const navigation: NavSection[] = [
         items: [
             { name: 'Overview', href: '/dashboard', icon: Home },
             { name: 'Payouts', href: '/dashboard/payouts', icon: CreditCard },
+            { name: 'Gift Cards', href: '/dashboard/gift-cards', icon: Gift },
             { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
         ]
     },
