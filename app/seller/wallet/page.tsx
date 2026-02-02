@@ -1,12 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import {
-    Wallet, TrendingUp, Clock, CheckCircle2,
-    ArrowDownToLine, DollarSign, Loader2,
-    AlertCircle, ExternalLink, X, Gift, Zap, CreditCard
-} from 'lucide-react'
+import { ArrowUpRight, Loader2, Gift, Zap } from 'lucide-react'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface Commission {
     id: string
@@ -31,9 +28,6 @@ interface WalletData {
 
 export default function SellerWalletPage() {
     const [loading, setLoading] = useState(true)
-    const [withdrawing, setWithdrawing] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-    const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
     const [wallet, setWallet] = useState<WalletData>({
         balance: 0,
         pending: 0,
@@ -53,431 +47,260 @@ export default function SellerWalletPage() {
             setLoading(true)
             const response = await fetch('/api/seller/wallet')
             const data = await response.json()
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to load wallet')
-            }
-
             if (data.success && data.wallet) {
                 setWallet(data.wallet)
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load wallet')
+            console.error('Failed to load wallet:', err)
         } finally {
             setLoading(false)
         }
     }
 
-    async function handleWithdraw() {
-        try {
-            setWithdrawing(true)
-            setNotification(null)
-
-            const response = await fetch('/api/seller/withdraw', {
-                method: 'POST'
-            })
-
-            const data = await response.json()
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Withdraw failed')
-            }
-
-            if (data.success) {
-                setNotification({
-                    type: 'success',
-                    message: `Paiement de ${data.amountFormatted} envoye avec succes !`
-                })
-                await loadWallet()
-            }
-        } catch (err) {
-            setNotification({
-                type: 'error',
-                message: err instanceof Error ? err.message : 'Erreur lors du retrait'
-            })
-        } finally {
-            setWithdrawing(false)
-        }
-    }
-
     const formatCurrency = (cents: number) => {
         return new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'EUR'
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         }).format(cents / 100)
     }
 
-    const getStatusBadge = (status: Commission['status']) => {
-        const badges = {
-            PENDING: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'En attente' },
-            PROCEED: { bg: 'bg-green-100', text: 'text-green-700', label: 'Disponible' },
-            COMPLETE: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Verse' }
-        }
-        const badge = badges[status]
-        return (
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
-                {badge.label}
-            </span>
-        )
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'short'
+        })
     }
 
-    const getMaturationInfo = (commission: Commission) => {
-        if (commission.status !== 'PENDING') return null
+    const getStatusLabel = (status: Commission['status']) => {
+        const labels = {
+            PENDING: 'En cours',
+            PROCEED: 'Disponible',
+            COMPLETE: 'Verse'
+        }
+        return labels[status]
+    }
 
+    const getDaysLeft = (commission: Commission) => {
+        if (commission.status !== 'PENDING') return null
         const holdDays = commission.hold_days || 30
         const createdAt = new Date(commission.created_at)
         const maturesAt = new Date(createdAt.getTime() + holdDays * 24 * 60 * 60 * 1000)
         const now = new Date()
-        const daysLeft = Math.ceil((maturesAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
-
-        if (daysLeft > 0) {
-            return (
-                <span className="text-xs text-orange-600">
-                    Mature dans {daysLeft}j
-                </span>
-            )
-        }
-        return (
-            <span className="text-xs text-green-600">
-                Pret pour payout
-            </span>
-        )
+        return Math.max(0, Math.ceil((maturesAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
     }
+
+    const totalEarned = wallet.pending + (wallet.balance || 0) + (wallet.due || 0) + wallet.paid_total
+    const isStripeMode = wallet.method === 'STRIPE_CONNECT'
+    const mainAmount = isStripeMode ? wallet.due : wallet.balance
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
-            </div>
-        )
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">
-                <div className="max-w-md text-center">
-                    <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">Erreur</h2>
-                    <p className="text-gray-600 mb-6">{error}</p>
-                    <Link
-                        href="/seller"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700"
-                    >
-                        Retour au dashboard
-                    </Link>
-                </div>
+            <div className="min-h-[80vh] flex items-center justify-center">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center gap-3"
+                >
+                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                    <span className="text-xs text-neutral-400 tracking-wide">Chargement</span>
+                </motion.div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA]">
-            <div className="max-w-5xl mx-auto">
-                {/* Notification */}
-                {notification && (
-                    <div className={`mb-6 p-4 rounded-xl flex items-center justify-between ${
-                        notification.type === 'success'
-                            ? 'bg-green-50 border border-green-200 text-green-800'
-                            : 'bg-red-50 border border-red-200 text-red-800'
-                    }`}>
-                        <div className="flex items-center gap-3">
-                            {notification.type === 'success' ? (
-                                <CheckCircle2 className="w-5 h-5" />
-                            ) : (
-                                <AlertCircle className="w-5 h-5" />
-                            )}
-                            <span className="font-medium">{notification.message}</span>
-                        </div>
-                        <button
-                            onClick={() => setNotification(null)}
-                            className="text-current opacity-60 hover:opacity-100"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="max-w-2xl mx-auto py-8"
+        >
+            {/* Hero Balance */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.5 }}
+                className="text-center mb-16"
+            >
+                <p className="text-xs uppercase tracking-[0.2em] text-neutral-400 mb-4">
+                    {isStripeMode ? 'Prochain versement' : 'Solde disponible'}
+                </p>
+                <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-6xl md:text-7xl font-extralight tracking-tight text-neutral-900">
+                        {formatCurrency(mainAmount || 0)}
+                    </span>
+                    <span className="text-2xl font-light text-neutral-300">EUR</span>
+                </div>
+
+                {/* Sub info */}
+                {wallet.pending > 0 && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                        className="mt-4 text-sm text-neutral-400"
+                    >
+                        +{formatCurrency(wallet.pending)} EUR en maturation
+                    </motion.p>
                 )}
 
-                {/* Header */}
-                <div className="mb-8">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
-                            <Wallet className="w-5 h-5 text-white" />
-                        </div>
-                        <h1 className="text-2xl font-bold text-gray-900">Le Wallet</h1>
-                    </div>
-                    <p className="text-gray-600">Gerez vos gains et vos versements</p>
-                </div>
+                {/* Stripe auto badge */}
+                {isStripeMode && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.4 }}
+                        className="inline-flex items-center gap-1.5 mt-6 px-3 py-1.5 bg-neutral-900 text-white text-xs rounded-full"
+                    >
+                        <Zap className="w-3 h-3" />
+                        <span>Versement automatique</span>
+                    </motion.div>
+                )}
+            </motion.div>
 
-                {/* Main Balance Card */}
-                <div className="bg-gradient-to-r from-violet-600 to-purple-600 rounded-2xl p-8 text-white mb-8">
-                    {wallet.method === 'STRIPE_CONNECT' ? (
-                        // STRIPE CONNECT MODE: Automatic payouts
-                        <div>
-                            <div className="flex items-center gap-2 mb-4">
-                                <Zap className="w-5 h-5 text-yellow-300" />
-                                <span className="text-violet-100 text-sm font-medium">Paiements automatiques actives</span>
-                            </div>
-                            <p className="text-violet-200 text-sm mb-1">Prochain versement</p>
-                            <p className="text-4xl font-bold mb-2">{formatCurrency(wallet.due || 0)}</p>
-                            <p className="text-violet-200 text-sm">
-                                +{formatCurrency(wallet.pending || 0)} en maturation (30j)
-                            </p>
-
-                            {/* 10EUR Minimum Threshold Message */}
-                            {wallet.due > 0 && wallet.due < 1000 && (
-                                <div className="mt-6 bg-amber-400/20 backdrop-blur-sm rounded-xl p-4 border border-amber-400/30">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <AlertCircle className="w-5 h-5 text-amber-300" />
-                                        <div>
-                                            <p className="font-medium text-white">
-                                                Retirable a partir de 10EUR
-                                            </p>
-                                            <p className="text-sm text-violet-100">
-                                                Vous avez {formatCurrency(wallet.due)} - Il vous manque {formatCurrency(1000 - wallet.due)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    {/* Progress bar */}
-                                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-amber-400 to-yellow-300 transition-all duration-500"
-                                            style={{ width: `${Math.min((wallet.due / 1000) * 100, 100)}%` }}
-                                        />
-                                    </div>
-                                    <p className="text-xs text-violet-200 mt-2 text-right">
-                                        {((wallet.due / 1000) * 100).toFixed(0)}% du minimum
-                                    </p>
-                                </div>
-                            )}
-
-                            {wallet.due === 0 && wallet.pending > 0 && (
-                                <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                                    <p className="text-sm text-violet-100 mb-2">
-                                        Vos commissions sont en maturation. Elles seront disponibles apres 30 jours.
-                                    </p>
-                                </div>
-                            )}
-
-                            {wallet.due >= 1000 && (
-                                <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                                    <p className="text-sm text-violet-100 mb-2">
-                                        Vos gains sont automatiquement transferes sur votre compte bancaire quand les startups paient.
-                                    </p>
-                                    <p className="text-xs text-violet-200">
-                                        Delai de reception : 2-3 jours apres paiement startup
-                                    </p>
-                                </div>
-                            )}
-
-                            {wallet.due === 0 && wallet.pending === 0 && (
-                                <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                                    <p className="text-sm text-violet-100 mb-2">
-                                        Vos gains sont automatiquement transferes sur votre compte bancaire quand les startups paient.
-                                    </p>
-                                    <p className="text-xs text-violet-200">
-                                        Delai de reception : 2-3 jours apres paiement startup
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        // PLATFORM WALLET MODE: Manual withdraw or gift cards
+            {/* Action Card - Platform Mode */}
+            {!isStripeMode && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="mb-12"
+                >
+                    <Link
+                        href="/seller/gift-cards"
+                        className="group block bg-white rounded-2xl p-6 transition-all duration-300 hover:shadow-lg hover:shadow-neutral-200/50"
+                    >
                         <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-violet-200 text-sm mb-1">Solde wallet Traaaction</p>
-                                <p className="text-4xl font-bold">{formatCurrency(wallet.balance || 0)}</p>
-                                <p className="text-violet-200 text-sm mt-2">
-                                    +{formatCurrency(wallet.pending || 0)} en maturation (30j)
-                                </p>
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                    <Gift className="w-5 h-5 text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="font-medium text-neutral-900">Cartes cadeaux</h3>
+                                    <p className="text-sm text-neutral-500">Amazon, Netflix, Spotify...</p>
+                                </div>
                             </div>
-                            <div className="flex flex-col gap-3">
-                                <Link
-                                    href="/seller/gift-cards"
-                                    className="px-6 py-3 bg-white text-violet-700 font-semibold rounded-xl hover:bg-violet-50 transition-colors flex items-center gap-2 whitespace-nowrap"
-                                >
-                                    <Gift className="w-5 h-5" />
-                                    Cartes cadeaux
-                                </Link>
-                                <Link
-                                    href="/seller/settings"
-                                    className="px-6 py-3 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-xl hover:bg-white/30 transition-colors flex items-center gap-2 whitespace-nowrap text-sm"
-                                >
-                                    <CreditCard className="w-4 h-4" />
-                                    Connecter Stripe
-                                </Link>
-                            </div>
+                            <ArrowUpRight className="w-5 h-5 text-neutral-300 group-hover:text-neutral-900 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                         </div>
-                    )}
+                    </Link>
+                </motion.div>
+            )}
+
+            {/* Stats Grid */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="grid grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-12"
+            >
+                <div className="bg-white p-6 text-center">
+                    <p className="text-2xl font-light text-neutral-900">{formatCurrency(totalEarned)}</p>
+                    <p className="text-xs text-neutral-400 mt-1">Total gagne</p>
+                </div>
+                <div className="bg-white p-6 text-center">
+                    <p className="text-2xl font-light text-neutral-900">{formatCurrency(wallet.pending)}</p>
+                    <p className="text-xs text-neutral-400 mt-1">En attente</p>
+                </div>
+                <div className="bg-white p-6 text-center">
+                    <p className="text-2xl font-light text-neutral-900">{formatCurrency(wallet.paid_total)}</p>
+                    <p className="text-xs text-neutral-400 mt-1">Verse</p>
+                </div>
+            </motion.div>
+
+            {/* Commission History */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+            >
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xs uppercase tracking-[0.15em] text-neutral-400">Historique</h2>
+                    <span className="text-xs text-neutral-300">{wallet.commissions.length} transactions</span>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                    <div className="bg-white border border-gray-200 rounded-xl p-5">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="p-2 rounded-lg bg-violet-100 text-violet-700">
-                                <DollarSign className="w-5 h-5" />
-                            </div>
-                            <span className="text-gray-600 text-sm">Total gagne</span>
-                        </div>
-                        <div className="text-2xl font-bold text-gray-900">
-                            {formatCurrency(wallet.pending + (wallet.balance || 0) + (wallet.due || 0) + wallet.paid_total)}
-                        </div>
-                        <div className="text-sm text-gray-500 mt-1">{wallet.commissions.length} commissions</div>
+                {wallet.commissions.length === 0 ? (
+                    <div className="text-center py-16">
+                        <p className="text-neutral-400 text-sm">Aucune commission</p>
+                        <p className="text-neutral-300 text-xs mt-1">Partagez vos liens pour commencer</p>
                     </div>
-
-                    <div className="bg-white border border-gray-200 rounded-xl p-5">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="p-2 rounded-lg bg-amber-100 text-amber-700">
-                                <Clock className="w-5 h-5" />
-                            </div>
-                            <span className="text-gray-600 text-sm">En maturation</span>
-                        </div>
-                        <div className="text-2xl font-bold text-gray-900">{formatCurrency(wallet.pending || 0)}</div>
-                        <div className="text-sm text-gray-500 mt-1">Disponible dans 30 jours</div>
-                    </div>
-
-                    {wallet.method === 'STRIPE_CONNECT' ? (
-                        <div className={`bg-white border rounded-xl p-5 ${
-                            wallet.due > 0 && wallet.due < 1000
-                                ? 'border-amber-300 bg-amber-50/50'
-                                : 'border-gray-200'
-                        }`}>
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className={`p-2 rounded-lg ${
-                                    wallet.due > 0 && wallet.due < 1000
-                                        ? 'bg-amber-100 text-amber-700'
-                                        : 'bg-blue-100 text-blue-700'
-                                }`}>
-                                    {wallet.due > 0 && wallet.due < 1000 ? (
-                                        <AlertCircle className="w-5 h-5" />
-                                    ) : (
-                                        <Zap className="w-5 h-5" />
-                                    )}
-                                </div>
-                                <span className="text-gray-600 text-sm">Prochain versement</span>
-                            </div>
-                            <div className="text-2xl font-bold text-gray-900">{formatCurrency(wallet.due || 0)}</div>
-                            {wallet.due > 0 && wallet.due < 1000 ? (
-                                <div className="text-sm text-amber-600 mt-1">
-                                    Min. 10EUR / -{formatCurrency(1000 - wallet.due)}
-                                </div>
-                            ) : (
-                                <div className="text-sm text-gray-500 mt-1">Transfert auto 2-3j</div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="bg-white border border-gray-200 rounded-xl p-5">
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="p-2 rounded-lg bg-green-100 text-green-700">
-                                    <Wallet className="w-5 h-5" />
-                                </div>
-                                <span className="text-gray-600 text-sm">Wallet actuel</span>
-                            </div>
-                            <div className="text-2xl font-bold text-gray-900">{formatCurrency(wallet.balance || 0)}</div>
-                            <div className="text-sm text-gray-500 mt-1">Disponible maintenant</div>
-                        </div>
-                    )}
-
-                    <div className="bg-white border border-gray-200 rounded-xl p-5">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="p-2 rounded-lg bg-gray-100 text-gray-700">
-                                <ArrowDownToLine className="w-5 h-5" />
-                            </div>
-                            <span className="text-gray-600 text-sm">Verse</span>
-                        </div>
-                        <div className="text-2xl font-bold text-gray-900">{formatCurrency(wallet.paid_total || 0)}</div>
-                        <div className="text-sm text-gray-500 mt-1">Total historique</div>
-                    </div>
-                </div>
-
-                {/* Commission History */}
-                <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Historique des commissions</h2>
-
-                    {wallet.commissions.length === 0 ? (
-                        <div className="text-center py-12">
-                            <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                            <p className="text-gray-600 mb-2">Aucune commission pour le moment</p>
-                            <p className="text-sm text-gray-500">
-                                Partagez votre lien pour commencer a gagner
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {wallet.commissions.map((commission) => (
-                                <div
-                                    key={commission.id}
-                                    className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="font-medium text-gray-900">
-                                                {formatCurrency(commission.commission_amount)}
-                                            </span>
-                                            {getStatusBadge(commission.status)}
-                                            {getMaturationInfo(commission)}
+                ) : (
+                    <div className="space-y-1">
+                        <AnimatePresence>
+                            {wallet.commissions.slice(0, 10).map((commission, index) => {
+                                const daysLeft = getDaysLeft(commission)
+                                return (
+                                    <motion.div
+                                        key={commission.id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.05 * index }}
+                                        className="group flex items-center justify-between py-4 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors cursor-default"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${
+                                                commission.status === 'COMPLETE' ? 'bg-neutral-300' :
+                                                commission.status === 'PROCEED' ? 'bg-green-500' :
+                                                'bg-amber-400'
+                                            }`} />
+                                            <div>
+                                                <p className="text-sm text-neutral-600">
+                                                    {getStatusLabel(commission.status)}
+                                                    {daysLeft !== null && daysLeft > 0 && (
+                                                        <span className="text-neutral-400 ml-2">
+                                                            {daysLeft}j
+                                                        </span>
+                                                    )}
+                                                </p>
+                                                <p className="text-xs text-neutral-400">
+                                                    {formatDate(commission.created_at)}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <p className="text-sm text-gray-500">
-                                            Vente: {formatCurrency(commission.gross_amount)} / {new Date(commission.created_at).toLocaleDateString('fr-FR')}
+                                        <p className="font-medium text-neutral-900 tabular-nums">
+                                            +{formatCurrency(commission.commission_amount)} EUR
                                         </p>
-                                    </div>
-                                    <button className="text-gray-400 hover:text-gray-600">
-                                        <ExternalLink className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                                    </motion.div>
+                                )
+                            })}
+                        </AnimatePresence>
+                    </div>
+                )}
+            </motion.div>
 
-                {/* Info Section */}
-                <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
-                    <h3 className="font-semibold text-blue-900 mb-3">Comment ca fonctionne</h3>
-                    {wallet.method === 'STRIPE_CONNECT' ? (
-                        <div className="grid md:grid-cols-3 gap-4">
-                            <div>
-                                <p className="font-medium text-blue-900 text-sm mb-1">1. Maturation (30j)</p>
-                                <p className="text-blue-700 text-sm">
-                                    Les commissions restent en attente 30 jours pour eviter les fraudes/refunds
-                                </p>
-                            </div>
-                            <div>
-                                <p className="font-medium text-blue-900 text-sm mb-1">2. Startup paie</p>
-                                <p className="text-blue-700 text-sm">
-                                    Apres 30j, la startup paie votre commission + 15% frais plateforme
-                                </p>
-                            </div>
-                            <div>
-                                <p className="font-medium text-blue-900 text-sm mb-1">3. Transfert auto</p>
-                                <p className="text-blue-700 text-sm">
-                                    Votre argent est automatiquement transfere sur votre compte bancaire (2-3j)
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="grid md:grid-cols-3 gap-4">
-                            <div>
-                                <p className="font-medium text-blue-900 text-sm mb-1">1. Maturation (30j)</p>
-                                <p className="text-blue-700 text-sm">
-                                    Les commissions restent en attente 30 jours pour eviter les fraudes/refunds
-                                </p>
-                            </div>
-                            <div>
-                                <p className="font-medium text-blue-900 text-sm mb-1">2. Wallet Traaaction</p>
-                                <p className="text-blue-700 text-sm">
-                                    Apres paiement startup, votre argent arrive sur votre wallet Traaaction
-                                </p>
-                            </div>
-                            <div>
-                                <p className="font-medium text-blue-900 text-sm mb-1">3. Utilisation</p>
-                                <p className="text-blue-700 text-sm">
-                                    Echangez contre cartes cadeaux ou connectez Stripe pour retirer en cash
-                                </p>
-                            </div>
-                        </div>
-                    )}
+            {/* How it works - collapsed by default */}
+            <motion.details
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-12 group"
+            >
+                <summary className="text-xs uppercase tracking-[0.15em] text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors list-none flex items-center gap-2">
+                    <span className="w-4 h-px bg-neutral-200 group-open:rotate-90 transition-transform" />
+                    Comment ca fonctionne
+                </summary>
+                <div className="mt-6 pl-6 space-y-4 text-sm text-neutral-500 border-l border-neutral-100">
+                    <p><span className="text-neutral-400">1.</span> Les commissions sont en attente 30 jours</p>
+                    <p><span className="text-neutral-400">2.</span> La startup paie apres validation</p>
+                    <p><span className="text-neutral-400">3.</span> {isStripeMode ? 'Transfert automatique sous 2-3 jours' : 'Echangez contre des cartes cadeaux'}</p>
                 </div>
-            </div>
-        </div>
+            </motion.details>
+
+            {/* Connect Stripe CTA - Platform Mode */}
+            {!isStripeMode && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6 }}
+                    className="mt-12 text-center"
+                >
+                    <Link
+                        href="/seller/settings"
+                        className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                    >
+                        Connecter Stripe pour des retraits en cash
+                    </Link>
+                </motion.div>
+            )}
+        </motion.div>
     )
 }

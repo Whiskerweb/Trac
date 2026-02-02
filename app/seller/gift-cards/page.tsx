@@ -1,19 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import {
-    Gift, Loader2, AlertCircle, CheckCircle2, X, ShoppingBag, Music, Gamepad2,
-    CreditCard, Tv, Headphones, PlayCircle, ShoppingCart, Clock, ArrowLeft, Wallet
-} from 'lucide-react'
+import { Loader2, Check, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
+
+type CardType = 'amazon' | 'itunes' | 'steam' | 'paypal_gift' | 'fnac' | 'google_play' | 'netflix' | 'spotify'
 
 interface GiftCard {
-    type: 'amazon' | 'itunes' | 'steam' | 'paypal_gift' | 'fnac' | 'google_play' | 'netflix' | 'spotify'
+    type: CardType
     name: string
-    icon: React.ReactNode
     minAmount: number
-    description: string
-    color: string
 }
 
 interface Redemption {
@@ -27,81 +24,25 @@ interface Redemption {
 }
 
 const GIFT_CARDS: GiftCard[] = [
-    {
-        type: 'amazon',
-        name: 'Amazon',
-        icon: <ShoppingBag className="w-7 h-7" />,
-        minAmount: 1000, // 10EUR
-        description: 'Carte cadeau Amazon France',
-        color: 'from-orange-500 to-orange-600'
-    },
-    {
-        type: 'fnac',
-        name: 'Fnac / Darty',
-        icon: <ShoppingCart className="w-7 h-7" />,
-        minAmount: 1500, // 15EUR
-        description: 'Carte cadeau Fnac et Darty',
-        color: 'from-yellow-500 to-amber-600'
-    },
-    {
-        type: 'itunes',
-        name: 'iTunes / App Store',
-        icon: <Music className="w-7 h-7" />,
-        minAmount: 1500, // 15EUR
-        description: 'Carte cadeau Apple',
-        color: 'from-pink-500 to-rose-600'
-    },
-    {
-        type: 'google_play',
-        name: 'Google Play',
-        icon: <PlayCircle className="w-7 h-7" />,
-        minAmount: 1500, // 15EUR
-        description: 'Carte cadeau Google Play Store',
-        color: 'from-green-500 to-emerald-600'
-    },
-    {
-        type: 'netflix',
-        name: 'Netflix',
-        icon: <Tv className="w-7 h-7" />,
-        minAmount: 1500, // 15EUR
-        description: 'Carte cadeau Netflix',
-        color: 'from-red-600 to-red-700'
-    },
-    {
-        type: 'spotify',
-        name: 'Spotify',
-        icon: <Headphones className="w-7 h-7" />,
-        minAmount: 1000, // 10EUR
-        description: 'Carte cadeau Spotify Premium',
-        color: 'from-green-400 to-green-600'
-    },
-    {
-        type: 'steam',
-        name: 'Steam',
-        icon: <Gamepad2 className="w-7 h-7" />,
-        minAmount: 2000, // 20EUR
-        description: 'Carte cadeau Steam',
-        color: 'from-blue-600 to-indigo-600'
-    },
-    {
-        type: 'paypal_gift',
-        name: 'PayPal Gift',
-        icon: <CreditCard className="w-7 h-7" />,
-        minAmount: 1000, // 10EUR
-        description: 'Carte cadeau PayPal',
-        color: 'from-blue-500 to-cyan-500'
-    }
+    { type: 'amazon', name: 'Amazon', minAmount: 1000 },
+    { type: 'fnac', name: 'Fnac', minAmount: 1500 },
+    { type: 'itunes', name: 'Apple', minAmount: 1500 },
+    { type: 'google_play', name: 'Google Play', minAmount: 1500 },
+    { type: 'netflix', name: 'Netflix', minAmount: 1500 },
+    { type: 'spotify', name: 'Spotify', minAmount: 1000 },
+    { type: 'steam', name: 'Steam', minAmount: 2000 },
+    { type: 'paypal_gift', name: 'PayPal', minAmount: 1000 },
 ]
 
 const CARD_NAME_MAP: Record<string, string> = {
     amazon: 'Amazon',
-    fnac: 'Fnac / Darty',
-    itunes: 'iTunes / App Store',
+    fnac: 'Fnac',
+    itunes: 'Apple',
     google_play: 'Google Play',
     netflix: 'Netflix',
     spotify: 'Spotify',
     steam: 'Steam',
-    paypal_gift: 'PayPal Gift'
+    paypal_gift: 'PayPal'
 }
 
 export default function GiftCardsPage() {
@@ -110,44 +51,35 @@ export default function GiftCardsPage() {
     const [balance, setBalance] = useState(0)
     const [selectedCard, setSelectedCard] = useState<GiftCard | null>(null)
     const [amount, setAmount] = useState('')
-    const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+    const [success, setSuccess] = useState(false)
+    const [error, setError] = useState<string | null>(null)
     const [redemptions, setRedemptions] = useState<Redemption[]>([])
-    const [loadingHistory, setLoadingHistory] = useState(true)
+    const [showHistory, setShowHistory] = useState(false)
 
     useEffect(() => {
-        loadWalletData()
-        loadRedemptionHistory()
+        loadData()
     }, [])
 
-    async function loadWalletData() {
+    async function loadData() {
         try {
             setLoading(true)
-            const response = await fetch('/api/seller/wallet')
-            const data = await response.json()
+            const [walletRes, historyRes] = await Promise.all([
+                fetch('/api/seller/wallet'),
+                fetch('/api/seller/gift-card-history')
+            ])
+            const walletData = await walletRes.json()
+            const historyData = await historyRes.json()
 
-            if (data.success && data.wallet) {
-                setBalance(data.wallet.balance || 0)
+            if (walletData.success && walletData.wallet) {
+                setBalance(walletData.wallet.balance || 0)
+            }
+            if (historyData.success && historyData.redemptions) {
+                setRedemptions(historyData.redemptions)
             }
         } catch (err) {
-            console.error('Failed to load wallet:', err)
+            console.error('Failed to load data:', err)
         } finally {
             setLoading(false)
-        }
-    }
-
-    async function loadRedemptionHistory() {
-        try {
-            setLoadingHistory(true)
-            const response = await fetch('/api/seller/gift-card-history')
-            const data = await response.json()
-
-            if (data.success && data.redemptions) {
-                setRedemptions(data.redemptions)
-            }
-        } catch (err) {
-            console.error('Failed to load redemptions:', err)
-        } finally {
-            setLoadingHistory(false)
         }
     }
 
@@ -157,23 +89,18 @@ export default function GiftCardsPage() {
         const amountCents = Math.round(parseFloat(amount) * 100)
 
         if (amountCents < selectedCard.minAmount) {
-            setNotification({
-                type: 'error',
-                message: `Montant minimum : ${selectedCard.minAmount / 100}EUR`
-            })
+            setError(`Minimum ${selectedCard.minAmount / 100} EUR`)
             return
         }
 
         if (amountCents > balance) {
-            setNotification({
-                type: 'error',
-                message: `Solde insuffisant. Disponible : ${balance / 100}EUR`
-            })
+            setError('Solde insuffisant')
             return
         }
 
         try {
             setSubmitting(true)
+            setError(null)
             const response = await fetch('/api/seller/redeem-gift-card', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -186,24 +113,20 @@ export default function GiftCardsPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error || 'Erreur lors de la demande')
+                throw new Error(data.error || 'Erreur')
             }
 
             if (data.success) {
-                setNotification({
-                    type: 'success',
-                    message: `Demande de carte ${selectedCard.name} envoyee ! Vous recevrez un email sous 24-48h.`
-                })
-                setSelectedCard(null)
-                setAmount('')
-                await loadWalletData()
-                await loadRedemptionHistory()
+                setSuccess(true)
+                setTimeout(() => {
+                    setSuccess(false)
+                    setSelectedCard(null)
+                    setAmount('')
+                    loadData()
+                }, 2000)
             }
         } catch (err) {
-            setNotification({
-                type: 'error',
-                message: err instanceof Error ? err.message : 'Erreur reseau'
-            })
+            setError(err instanceof Error ? err.message : 'Erreur')
         } finally {
             setSubmitting(false)
         }
@@ -211,250 +134,307 @@ export default function GiftCardsPage() {
 
     const formatCurrency = (cents: number) => {
         return new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'EUR'
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
         }).format(cents / 100)
     }
 
-    const getStatusBadge = (status: Redemption['status']) => {
-        const badges = {
-            PENDING: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'En attente' },
-            PROCESSING: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'En cours' },
-            DELIVERED: { bg: 'bg-green-100', text: 'text-green-700', label: 'Livree' },
-            FAILED: { bg: 'bg-red-100', text: 'text-red-700', label: 'Echouee' }
-        }
-        const badge = badges[status]
-        return (
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
-                {badge.label}
-            </span>
-        )
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'short'
+        })
     }
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+            <div className="min-h-[80vh] flex items-center justify-center">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center gap-3"
+                >
+                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                    <span className="text-xs text-neutral-400 tracking-wide">Chargement</span>
+                </motion.div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA]">
-            <div className="max-w-5xl mx-auto">
-                {/* Notification */}
-                {notification && (
-                    <div className={`mb-6 p-4 rounded-xl flex items-center justify-between ${
-                        notification.type === 'success'
-                            ? 'bg-green-50 border border-green-200 text-green-800'
-                            : 'bg-red-50 border border-red-200 text-red-800'
-                    }`}>
-                        <div className="flex items-center gap-3">
-                            {notification.type === 'success' ? (
-                                <CheckCircle2 className="w-5 h-5" />
-                            ) : (
-                                <AlertCircle className="w-5 h-5" />
-                            )}
-                            <span className="font-medium">{notification.message}</span>
-                        </div>
-                        <button
-                            onClick={() => setNotification(null)}
-                            className="text-current opacity-60 hover:opacity-100"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
-                )}
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="max-w-xl mx-auto py-8"
+        >
+            {/* Back link */}
+            <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="mb-8"
+            >
+                <Link
+                    href="/seller/wallet"
+                    className="inline-flex items-center gap-2 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                >
+                    <ArrowLeft className="w-3 h-3" />
+                    Retour au wallet
+                </Link>
+            </motion.div>
 
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
-                                <Gift className="w-5 h-5 text-white" />
-                            </div>
-                            <h1 className="text-2xl font-bold text-gray-900">Cartes Cadeaux</h1>
-                        </div>
-                        <p className="text-gray-600">Echangez votre solde contre des cartes cadeaux</p>
-                    </div>
-                    <Link
-                        href="/seller/wallet"
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+            {/* Balance */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-center mb-12"
+            >
+                <p className="text-xs uppercase tracking-[0.2em] text-neutral-400 mb-3">
+                    Solde disponible
+                </p>
+                <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-5xl font-extralight tracking-tight text-neutral-900">
+                        {formatCurrency(balance)}
+                    </span>
+                    <span className="text-lg font-light text-neutral-300">EUR</span>
+                </div>
+            </motion.div>
+
+            {/* Card Selection */}
+            <AnimatePresence mode="wait">
+                {!selectedCard ? (
+                    <motion.div
+                        key="selection"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                     >
-                        <Wallet className="w-4 h-4" />
-                        Voir le Wallet
-                    </Link>
-                </div>
-
-                {/* Balance Card */}
-                <div className="bg-gradient-to-r from-violet-600 to-purple-600 rounded-2xl p-6 text-white mb-8">
-                    <p className="text-violet-200 text-sm mb-1">Solde disponible</p>
-                    <p className="text-3xl font-bold">{formatCurrency(balance)}</p>
-                    {balance < 1000 && (
-                        <p className="text-violet-200 text-sm mt-2">
-                            Minimum 10EUR requis pour echanger
+                        <p className="text-xs uppercase tracking-[0.15em] text-neutral-400 mb-6">
+                            Choisir une carte
                         </p>
-                    )}
-                </div>
-
-                {/* Gift Cards Grid */}
-                <div className="mb-8">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Choisissez une carte</h2>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {GIFT_CARDS.map((card) => {
-                            const isSelected = selectedCard?.type === card.type
-                            const canAfford = balance >= card.minAmount
-
-                            return (
-                                <button
-                                    key={card.type}
-                                    onClick={() => canAfford && setSelectedCard(card)}
-                                    disabled={!canAfford}
-                                    className={`p-4 rounded-xl border-2 transition-all text-left ${
-                                        isSelected
-                                            ? 'border-violet-500 bg-violet-50'
-                                            : canAfford
-                                            ? 'border-gray-200 hover:border-violet-300 bg-white'
-                                            : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
-                                    }`}
+                        <div className="grid grid-cols-2 gap-3">
+                            {GIFT_CARDS.map((card, index) => {
+                                const canAfford = balance >= card.minAmount
+                                return (
+                                    <motion.button
+                                        key={card.type}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.05 * index }}
+                                        onClick={() => canAfford && setSelectedCard(card)}
+                                        disabled={!canAfford}
+                                        className={`group relative p-5 rounded-2xl text-left transition-all duration-300 ${
+                                            canAfford
+                                                ? 'bg-white hover:shadow-lg hover:shadow-neutral-200/60 cursor-pointer'
+                                                : 'bg-neutral-50 opacity-40 cursor-not-allowed'
+                                        }`}
+                                    >
+                                        <p className="font-medium text-neutral-900 mb-1">{card.name}</p>
+                                        <p className="text-xs text-neutral-400">
+                                            Min. {formatCurrency(card.minAmount)} EUR
+                                        </p>
+                                        {canAfford && (
+                                            <div className="absolute top-4 right-4 w-5 h-5 rounded-full border border-neutral-200 group-hover:border-neutral-900 group-hover:bg-neutral-900 transition-all flex items-center justify-center">
+                                                <Check className="w-3 h-3 text-transparent group-hover:text-white transition-colors" />
+                                            </div>
+                                        )}
+                                    </motion.button>
+                                )
+                            })}
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="amount"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="bg-white rounded-2xl p-8"
+                    >
+                        {/* Success state */}
+                        <AnimatePresence>
+                            {success && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 bg-white rounded-2xl flex flex-col items-center justify-center z-10"
                                 >
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center text-white flex-shrink-0`}>
-                                            {card.icon}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-semibold text-gray-900 text-sm truncate">{card.name}</h3>
-                                            <p className="text-xs text-gray-500">Min. {formatCurrency(card.minAmount)}</p>
-                                        </div>
-                                    </div>
-                                    <p className="text-xs text-gray-500 truncate">{card.description}</p>
-                                </button>
-                            )
-                        })}
-                    </div>
-                </div>
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ type: 'spring', damping: 15 }}
+                                        className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-4"
+                                    >
+                                        <Check className="w-8 h-8 text-white" />
+                                    </motion.div>
+                                    <p className="text-neutral-900 font-medium">Demande envoyee</p>
+                                    <p className="text-sm text-neutral-400 mt-1">Email sous 24-48h</p>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
-                {/* Amount Input */}
-                {selectedCard && (
-                    <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8">
-                        <h3 className="font-semibold text-gray-900 mb-4">
-                            Montant de la carte {selectedCard.name}
-                        </h3>
-                        <div className="flex gap-4">
-                            <div className="flex-1">
-                                <div className="relative">
-                                    <input
-                                        type="number"
-                                        value={amount}
-                                        onChange={(e) => setAmount(e.target.value)}
-                                        placeholder={`Min. ${selectedCard.minAmount / 100}EUR`}
-                                        min={selectedCard.minAmount / 100}
-                                        max={balance / 100}
-                                        step="5"
-                                        className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                                    />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">EUR</span>
-                                </div>
-                                <p className="text-xs text-gray-500 mt-2">
-                                    Max disponible: {formatCurrency(balance)}
-                                </p>
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <p className="font-medium text-neutral-900">{selectedCard.name}</p>
+                                <p className="text-xs text-neutral-400">Min. {formatCurrency(selectedCard.minAmount)} EUR</p>
                             </div>
                             <button
-                                onClick={handleRedeem}
-                                disabled={submitting || !amount || parseFloat(amount) < selectedCard.minAmount / 100}
-                                className="px-6 py-3 bg-violet-600 text-white font-semibold rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                                onClick={() => {
+                                    setSelectedCard(null)
+                                    setAmount('')
+                                    setError(null)
+                                }}
+                                className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
                             >
-                                {submitting ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        Traitement...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Gift className="w-5 h-5" />
-                                        Demander
-                                    </>
-                                )}
+                                Changer
                             </button>
                         </div>
-                    </div>
-                )}
 
-                {/* Redemption History */}
-                <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Historique des demandes</h2>
-
-                    {loadingHistory ? (
-                        <div className="flex items-center justify-center py-8">
-                            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                        </div>
-                    ) : redemptions.length === 0 ? (
-                        <div className="text-center py-8">
-                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <Clock className="w-6 h-6 text-gray-400" />
+                        {/* Amount input */}
+                        <div className="mb-6">
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    value={amount}
+                                    onChange={(e) => {
+                                        setAmount(e.target.value)
+                                        setError(null)
+                                    }}
+                                    placeholder="0"
+                                    min={selectedCard.minAmount / 100}
+                                    max={balance / 100}
+                                    step="5"
+                                    className="w-full text-center text-4xl font-light text-neutral-900 bg-transparent border-none outline-none placeholder:text-neutral-200"
+                                    autoFocus
+                                />
+                                <span className="absolute right-0 top-1/2 -translate-y-1/2 text-lg text-neutral-300">EUR</span>
                             </div>
-                            <p className="text-gray-600 mb-1">Aucune demande</p>
-                            <p className="text-sm text-gray-500">
-                                Vos demandes de cartes cadeaux apparaitront ici
-                            </p>
+                            <div className="h-px bg-neutral-100 mt-2" />
+                            <div className="flex justify-between mt-3 text-xs text-neutral-400">
+                                <span>Min. {formatCurrency(selectedCard.minAmount)}</span>
+                                <span>Max. {formatCurrency(balance)}</span>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {redemptions.map((redemption) => (
-                                <div
-                                    key={redemption.id}
-                                    className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                            <Gift className="w-5 h-5 text-gray-500" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-gray-900">
-                                                {CARD_NAME_MAP[redemption.cardType] || redemption.cardType}
-                                            </p>
-                                            <p className="text-sm text-gray-500">
-                                                {new Date(redemption.createdAt).toLocaleDateString('fr-FR', {
-                                                    day: 'numeric',
-                                                    month: 'short',
-                                                    year: 'numeric',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className="font-semibold text-gray-900">
-                                            {formatCurrency(redemption.amount)}
-                                        </span>
-                                        {getStatusBadge(redemption.status)}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
 
-                {/* Info */}
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                    <h3 className="font-semibold text-blue-900 mb-3">Comment ca marche ?</h3>
-                    <div className="space-y-2 text-sm text-blue-700">
-                        <p>1. Selectionnez le type de carte cadeau que vous souhaitez</p>
-                        <p>2. Choisissez le montant (minimum selon le type de carte)</p>
-                        <p>3. Votre demande est envoyee a notre equipe</p>
-                        <p>4. Vous recevrez votre carte par email sous 24-48h</p>
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-blue-200">
-                        <p className="text-sm text-blue-800">
-                            Vous pouvez aussi connecter Stripe pour retirer en cash !{' '}
-                            <Link href="/seller/settings" className="underline font-medium">
-                                Configurer Stripe
-                            </Link>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
+                        {/* Quick amounts */}
+                        <div className="flex gap-2 mb-6">
+                            {[10, 25, 50, 100].map((val) => {
+                                const cents = val * 100
+                                const canSelect = balance >= cents && cents >= selectedCard.minAmount
+                                return (
+                                    <button
+                                        key={val}
+                                        onClick={() => canSelect && setAmount(val.toString())}
+                                        disabled={!canSelect}
+                                        className={`flex-1 py-2 rounded-lg text-sm transition-all ${
+                                            canSelect
+                                                ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                                                : 'bg-neutral-50 text-neutral-300 cursor-not-allowed'
+                                        } ${amount === val.toString() ? 'ring-2 ring-neutral-900' : ''}`}
+                                    >
+                                        {val}
+                                    </button>
+                                )
+                            })}
+                        </div>
+
+                        {/* Error */}
+                        <AnimatePresence>
+                            {error && (
+                                <motion.p
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="text-sm text-red-500 text-center mb-4"
+                                >
+                                    {error}
+                                </motion.p>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Submit */}
+                        <button
+                            onClick={handleRedeem}
+                            disabled={submitting || !amount || parseFloat(amount) < selectedCard.minAmount / 100}
+                            className="w-full py-4 bg-neutral-900 text-white rounded-xl font-medium transition-all hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed"
+                        >
+                            {submitting ? (
+                                <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                            ) : (
+                                'Confirmer'
+                            )}
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* History toggle */}
+            {redemptions.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="mt-12"
+                >
+                    <button
+                        onClick={() => setShowHistory(!showHistory)}
+                        className="w-full text-left text-xs uppercase tracking-[0.15em] text-neutral-400 hover:text-neutral-600 transition-colors flex items-center gap-2"
+                    >
+                        <span className={`w-4 h-px bg-neutral-300 transition-transform ${showHistory ? 'rotate-0' : '-rotate-45'}`} />
+                        Historique ({redemptions.length})
+                    </button>
+
+                    <AnimatePresence>
+                        {showHistory && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="pt-6 space-y-1">
+                                    {redemptions.map((r, index) => (
+                                        <motion.div
+                                            key={r.id}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.03 * index }}
+                                            className="flex items-center justify-between py-3"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                                    r.status === 'DELIVERED' ? 'bg-green-500' :
+                                                    r.status === 'FAILED' ? 'bg-red-400' :
+                                                    'bg-amber-400'
+                                                }`} />
+                                                <div>
+                                                    <p className="text-sm text-neutral-700">{CARD_NAME_MAP[r.cardType]}</p>
+                                                    <p className="text-xs text-neutral-400">{formatDate(r.createdAt)}</p>
+                                                </div>
+                                            </div>
+                                            <p className="font-medium text-neutral-900 tabular-nums text-sm">
+                                                {formatCurrency(r.amount)} EUR
+                                            </p>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </motion.div>
+            )}
+
+            {/* Info footer */}
+            <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-12 text-center text-xs text-neutral-400"
+            >
+                Carte envoyee par email sous 24-48h
+            </motion.p>
+        </motion.div>
     )
 }
