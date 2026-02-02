@@ -29,11 +29,6 @@ async function migrateLedgerBalances() {
     const sellersWithBalance = await prisma.sellerBalance.findMany({
         where: {
             balance: { gt: 0 }
-        },
-        include: {
-            // We need to check if seller uses PLATFORM method
-            // But SellerBalance doesn't have a direct relation to Seller
-            // So we'll check after fetching
         }
     })
 
