@@ -103,7 +103,7 @@ export async function GET() {
             id: p.id,
             workspaceName: p.Workspace?.name || 'Unknown',
             totalAmount: p.total_amount,
-            sellerTotal: p.seller_total,
+            sellerTotal: p.partner_total,
             platformTotal: p.platform_total,
             commissionCount: p.commission_count,
             status: p.status,

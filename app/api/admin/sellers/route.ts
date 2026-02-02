@@ -25,17 +25,23 @@ export async function GET(request: NextRequest) {
         // Get all sellers with their balances and commission stats
         const sellers = await prisma.seller.findMany({
             include: {
-                SellerProfile: true,
-                SellerBalance: true,
+                Profile: true,
                 _count: {
                     select: {
-                        Commission: true,
-                        GiftCardRedemption: true,
+                        Commissions: true,
+                        GiftCardRedemptions: true,
                     }
                 }
             },
             orderBy: { created_at: 'desc' }
         })
+
+        // Get all seller balances
+        const sellerIds = sellers.map(s => s.id)
+        const balances = await prisma.sellerBalance.findMany({
+            where: { seller_id: { in: sellerIds } }
+        })
+        const balanceMap = new Map(balances.map(b => [b.seller_id, b]))
 
         // Get commission aggregates per seller
         const commissionStats = await prisma.commission.groupBy({
@@ -73,6 +79,7 @@ export async function GET(request: NextRequest) {
             const stats = statsMap.get(seller.id) || {
                 pending: 0, proceed: 0, complete: 0, totalCommissions: 0, totalEarned: 0
             }
+            const balance = balanceMap.get(seller.id)
 
             return {
                 id: seller.id,
@@ -85,11 +92,11 @@ export async function GET(request: NextRequest) {
                 createdAt: seller.created_at.toISOString(),
 
                 // Profile
-                bio: seller.SellerProfile?.bio || null,
-                profileScore: seller.SellerProfile?.profile_score || 0,
+                bio: seller.Profile?.bio || null,
+                profileScore: seller.Profile?.profile_score || 0,
 
                 // Balance
-                balance: seller.SellerBalance?.balance || 0,
+                balance: balance?.balance || 0,
                 pending: stats.pending,
                 due: stats.proceed,
                 paidTotal: stats.complete,
@@ -97,7 +104,7 @@ export async function GET(request: NextRequest) {
 
                 // Counts
                 totalCommissions: stats.totalCommissions,
-                giftCardCount: seller._count.GiftCardRedemption,
+                giftCardCount: seller._count.GiftCardRedemptions,
             }
         })
 

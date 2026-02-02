@@ -27,13 +27,17 @@ export async function GET(
 
         const { sellerId } = await params
 
-        // Get seller with all related data
+        // Get seller with profile
         const seller = await prisma.seller.findUnique({
             where: { id: sellerId },
             include: {
-                SellerProfile: true,
-                SellerBalance: true,
+                Profile: true,
             }
+        })
+
+        // Get balance separately (no back-relation on Seller)
+        const sellerBalance = await prisma.sellerBalance.findUnique({
+            where: { seller_id: sellerId }
         })
 
         if (!seller) {
@@ -123,7 +127,7 @@ export async function GET(
         }
 
         // Check for balance discrepancy
-        const storedBalance = seller.SellerBalance?.balance || 0
+        const storedBalance = sellerBalance?.balance || 0
         const hasDiscrepancy = ledgerBalance !== storedBalance && seller.payout_method === 'PLATFORM'
 
         // Stats summary
@@ -165,14 +169,14 @@ export async function GET(
                 createdAt: seller.created_at.toISOString(),
 
                 // Profile
-                profile: seller.SellerProfile ? {
-                    bio: seller.SellerProfile.bio,
-                    tiktok: seller.SellerProfile.tiktok_url,
-                    instagram: seller.SellerProfile.instagram_url,
-                    twitter: seller.SellerProfile.twitter_url,
-                    youtube: seller.SellerProfile.youtube_url,
-                    website: seller.SellerProfile.website_url,
-                    profileScore: seller.SellerProfile.profile_score,
+                profile: seller.Profile ? {
+                    bio: seller.Profile.bio,
+                    tiktok: seller.Profile.tiktok_url,
+                    instagram: seller.Profile.instagram_url,
+                    twitter: seller.Profile.twitter_url,
+                    youtube: seller.Profile.youtube_url,
+                    website: seller.Profile.website_url,
+                    profileScore: seller.Profile.profile_score,
                 } : null,
 
                 // Balance
@@ -180,9 +184,9 @@ export async function GET(
                     stored: storedBalance,
                     ledger: ledgerBalance,
                     hasDiscrepancy,
-                    pending: seller.SellerBalance?.pending || 0,
-                    due: seller.SellerBalance?.due || 0,
-                    paidTotal: seller.SellerBalance?.paid_total || 0,
+                    pending: sellerBalance?.pending || 0,
+                    due: sellerBalance?.due || 0,
+                    paidTotal: sellerBalance?.paid_total || 0,
                 }
             },
             stats,
