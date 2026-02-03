@@ -12,7 +12,6 @@ import {
     User,
     Wallet
 } from 'lucide-react'
-import { WalletButton } from '@/components/seller/WalletButton'
 import ProfileCompletionBanner from '@/components/seller/ProfileCompletionBanner'
 import { getMySellerProfile } from '@/app/actions/sellers'
 
@@ -186,15 +185,6 @@ export default function SellerLayout({
             <main className={`flex-1 ml-[260px] min-h-screen ${DS.content.bg}`}>
                 {/* Profile Completion Banner */}
                 <ProfileCompletionBanner />
-
-                {/* Top Header with Wallet Button - only on payouts page */}
-                {pathname === '/seller/payouts' && (
-                    <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-gray-100">
-                        <div className="flex items-center justify-end px-6 py-3">
-                            <WalletButton />
-                        </div>
-                    </div>
-                )}
 
                 {/* Page Content */}
                 <div className="p-6">
