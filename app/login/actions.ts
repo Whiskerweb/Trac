@@ -142,13 +142,21 @@ export async function signup(formData: FormData) {
         return { error: validation.error.issues[0].message }
     }
 
+    const role = String(formData.get('role') || 'startup')
+
+    // Build the confirmation redirect URL with role
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.traaaction.com'
+    const confirmRedirectUrl = `${siteUrl}/auth/callback?role=${role}`
+
     const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
             data: {
                 full_name: name,
+                role: role, // Store role in user metadata for callback
             },
+            emailRedirectTo: confirmRedirectUrl,
         },
     })
 
@@ -163,18 +171,38 @@ export async function signup(formData: FormData) {
         return { error: error.message }
     }
 
-    // Check if email confirmation is required
+    // Check if email confirmation is required (duplicate email detection)
     if (data?.user?.identities?.length === 0) {
         return { error: 'This email address is already in use' }
     }
 
-    const role = String(formData.get('role') || 'startup')
-
-    console.log('[Auth] ✅ Signup success for:', email, '- Role:', role)
+    console.log('[Auth] ✅ Signup initiated for:', email, '- Role:', role)
 
     // =============================================
+    // EMAIL CONFIRMATION REQUIRED
+    // =============================================
+    // Check if email confirmation is enabled in Supabase
+    // If user.email_confirmed_at is null, they need to confirm
+    if (data.user && !data.user.email_confirmed_at) {
+        console.log('[Auth] 📧 Email confirmation required for:', email)
+        // Return success with confirmation required flag
+        // The UI will show a "check your email" message
+        return {
+            success: true,
+            confirmationRequired: true,
+            email: email,
+            role: role,
+            message: 'Please check your email to confirm your account'
+        }
+    }
+
+    // =============================================
+    // EMAIL ALREADY CONFIRMED (rare case)
+    // =============================================
+    // If email is already confirmed (e.g., confirmation disabled in Supabase)
+    // proceed with account setup
+
     // SELLER AUTO-CREATION (Split Flow)
-    // =============================================
     if (data.user && role === 'seller') {
         const { createGlobalSeller } = await import('@/app/actions/sellers')
         const result = await createGlobalSeller({
@@ -190,9 +218,6 @@ export async function signup(formData: FormData) {
 
         console.log('[Auth] 🤝 Auto-created Global Seller for new user')
 
-        // =============================================
-        // SHADOW SELLER CLAIM (Traaaction Style)
-        // =============================================
         const claimed = await claimSellers(data.user.id, email)
         if (claimed.success && claimed.claimed && claimed.claimed > 0) {
             console.log(`[Auth] ✨ Claimed ${claimed.claimed} shadow sellers for ${email}`)
@@ -202,9 +227,7 @@ export async function signup(formData: FormData) {
         redirect('/seller/onboarding')
     }
 
-    // =============================================
-    // STARTUP FLOW - SHADOW SELLER CLAIM
-    // =============================================
+    // STARTUP FLOW
     if (data.user) {
         const claimed = await claimSellers(data.user.id, email)
         if (claimed.success && claimed.claimed && claimed.claimed > 0) {
@@ -213,10 +236,6 @@ export async function signup(formData: FormData) {
     }
 
     revalidatePath('/', 'layout')
-
-    // =============================================
-    // STARTUP ONBOARDING
-    // =============================================
     redirect('/onboarding')
 }
 
@@ -229,5 +248,35 @@ export async function logout() {
     await supabase.auth.signOut()
     revalidatePath('/', 'layout')
     redirect('/login')
+}
+
+// =============================================
+// RESEND CONFIRMATION EMAIL ACTION
+// =============================================
+
+export async function resendConfirmationEmail(email: string, role: string = 'startup') {
+    const supabase = await createClient()
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.traaaction.com'
+    const confirmRedirectUrl = `${siteUrl}/auth/callback?role=${role}`
+
+    const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+            emailRedirectTo: confirmRedirectUrl,
+        },
+    })
+
+    if (error) {
+        console.error('[Auth] ❌ Failed to resend confirmation:', error.message)
+        if (error.message.includes('rate limit')) {
+            return { error: 'Please wait a few minutes before requesting another email' }
+        }
+        return { error: 'Failed to resend confirmation email' }
+    }
+
+    console.log('[Auth] 📧 Confirmation email resent to:', email)
+    return { success: true, message: 'Confirmation email sent' }
 }
 

@@ -1,14 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { login, signup } from './actions'
+import { login, signup, resendConfirmationEmail } from './actions'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Building2, Users, Loader2, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Building2, Users, Loader2, Eye, EyeOff, Mail, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 
 type UserType = 'startup' | 'seller' | null
 type Mode = 'login' | 'signup'
+type ViewState = 'form' | 'confirmation-pending'
 
 function GoogleIcon({ className }: { className?: string }) {
     return (
@@ -24,16 +25,46 @@ function GoogleIcon({ className }: { className?: string }) {
 export default function LoginPage() {
     const [userType, setUserType] = useState<UserType>(null)
     const [mode, setMode] = useState<Mode>('login')
+    const [viewState, setViewState] = useState<ViewState>('form')
     const [error, setError] = useState('')
+    const [successMessage, setSuccessMessage] = useState('')
     const [loading, setLoading] = useState(false)
     const [googleLoading, setGoogleLoading] = useState(false)
+    const [resendLoading, setResendLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [mounted, setMounted] = useState(false)
+    const [confirmationEmail, setConfirmationEmail] = useState('')
+    const [confirmationRole, setConfirmationRole] = useState<string>('startup')
 
     const supabase = createClient()
 
     useEffect(() => {
         setMounted(true)
+
+        // Check for error in URL params (from auth callback)
+        const params = new URLSearchParams(window.location.search)
+        const urlError = params.get('error')
+        const urlMessage = params.get('message')
+
+        if (urlError) {
+            let errorMessage = urlMessage || 'An error occurred during authentication'
+
+            // Map error codes to user-friendly messages
+            if (urlError === 'link_expired') {
+                errorMessage = 'The confirmation link has expired. Please request a new one.'
+            } else if (urlError === 'email_exists' || urlError === 'email_conflict') {
+                errorMessage = 'An account with this email already exists. Please sign in instead.'
+            } else if (urlError === 'no_code') {
+                errorMessage = 'Invalid authentication link. Please try again.'
+            } else if (urlError === 'seller_creation_failed') {
+                errorMessage = urlMessage || 'Failed to create your seller account. Please try again.'
+            }
+
+            setError(errorMessage)
+
+            // Clean up URL
+            window.history.replaceState({}, '', '/login')
+        }
     }, [])
 
     async function handleGoogleSignIn() {
@@ -69,6 +100,7 @@ export default function LoginPage() {
 
         setLoading(true)
         setError('')
+        setSuccessMessage('')
 
         try {
             formData.set('role', userType)
@@ -79,6 +111,11 @@ export default function LoginPage() {
 
             if (result?.error) {
                 setError(result.error)
+            } else if (result && 'confirmationRequired' in result && result.confirmationRequired) {
+                // Email confirmation is required - show confirmation pending view
+                setConfirmationEmail(result.email || '')
+                setConfirmationRole(result.role || userType)
+                setViewState('confirmation-pending')
             }
         } catch {
             setError('An unexpected error occurred')
@@ -87,10 +124,37 @@ export default function LoginPage() {
         }
     }
 
+    async function handleResendConfirmation() {
+        if (!confirmationEmail) return
+
+        setResendLoading(true)
+        setError('')
+        setSuccessMessage('')
+
+        try {
+            const result = await resendConfirmationEmail(confirmationEmail, confirmationRole)
+
+            if (result.error) {
+                setError(result.error)
+            } else {
+                setSuccessMessage('Confirmation email sent! Please check your inbox.')
+            }
+        } catch {
+            setError('Failed to resend confirmation email')
+        } finally {
+            setResendLoading(false)
+        }
+    }
+
     const handleBack = () => {
-        if (userType) {
+        if (viewState === 'confirmation-pending') {
+            setViewState('form')
+            setError('')
+            setSuccessMessage('')
+        } else if (userType) {
             setUserType(null)
             setError('')
+            setSuccessMessage('')
         }
     }
 
@@ -108,7 +172,7 @@ export default function LoginPage() {
             <header className="fixed top-0 left-0 right-0 z-50 px-6 py-5">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <AnimatePresence mode="wait">
-                        {userType ? (
+                        {userType || viewState === 'confirmation-pending' ? (
                             <motion.button
                                 key="back"
                                 initial={{ opacity: 0, x: -10 }}
@@ -151,7 +215,88 @@ export default function LoginPage() {
             {/* Main Content */}
             <main className="flex-1 flex items-center justify-center px-6 pt-20 pb-12">
                 <AnimatePresence mode="wait">
-                    {!userType ? (
+                    {viewState === 'confirmation-pending' ? (
+                        /* Email Confirmation Pending View */
+                        <motion.div
+                            key="confirmation"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+                            className="w-full max-w-[420px] text-center"
+                        >
+                            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Mail className="w-10 h-10 text-green-600" />
+                            </div>
+
+                            <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight mb-3">
+                                Check your email
+                            </h1>
+                            <p className="text-neutral-500 mb-2">
+                                We sent a confirmation link to
+                            </p>
+                            <p className="text-neutral-900 font-medium mb-6">
+                                {confirmationEmail}
+                            </p>
+
+                            <div className="bg-neutral-100 rounded-xl p-4 mb-6">
+                                <p className="text-sm text-neutral-600">
+                                    Click the link in your email to verify your account and complete your registration.
+                                </p>
+                            </div>
+
+                            <AnimatePresence>
+                                {error && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="bg-red-50 border border-red-100 rounded-xl p-4 text-sm text-red-600 mb-4"
+                                    >
+                                        {error}
+                                    </motion.div>
+                                )}
+                                {successMessage && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="bg-green-50 border border-green-100 rounded-xl p-4 text-sm text-green-600 mb-4 flex items-center justify-center gap-2"
+                                    >
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        {successMessage}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <button
+                                onClick={handleResendConfirmation}
+                                disabled={resendLoading}
+                                className="w-full h-12 bg-neutral-900 hover:bg-neutral-800 disabled:bg-neutral-400 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+                            >
+                                {resendLoading ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    'Resend confirmation email'
+                                )}
+                            </button>
+
+                            <p className="mt-6 text-sm text-neutral-400">
+                                Did not receive the email? Check your spam folder or try another email address.
+                            </p>
+
+                            <button
+                                onClick={() => {
+                                    setViewState('form')
+                                    setError('')
+                                    setSuccessMessage('')
+                                }}
+                                className="mt-4 text-sm text-neutral-600 hover:text-neutral-900 font-medium"
+                            >
+                                Use a different email
+                            </button>
+                        </motion.div>
+                    ) : !userType ? (
                         /* User Type Selection */
                         <motion.div
                             key="selection"
