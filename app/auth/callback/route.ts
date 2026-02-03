@@ -48,13 +48,14 @@ export async function GET(request: Request) {
 
                     if (result.success) {
                         console.log('[Auth Callback] 🤝 Auto-created Global Seller for Google user')
-                        return NextResponse.redirect(`${origin}/seller/onboarding`)
+                        // Seller → direct to /seller (skip onboarding for Google users)
+                        return NextResponse.redirect(`${origin}/seller`)
                     } else {
                         console.error('[Auth Callback] ❌ Failed to create seller:', result.error)
                     }
                 }
 
-                // Startup flow or fallback - redirect to onboarding
+                // Startup flow → onboarding to create workspace
                 return NextResponse.redirect(`${origin}/onboarding`)
             }
 
