@@ -399,48 +399,118 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                         ) : !isProfileComplete ? (
-                            // Progress state - show when profile incomplete
-                            <div className="bg-[#18181B] text-white rounded-xl mb-8 overflow-hidden">
-                                <div className="px-6 py-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-2 bg-white/10 rounded-full px-3 py-1">
-                                            <div className="w-2 h-2 rounded-full bg-amber-400"></div>
-                                            <span className="text-sm font-medium">{completedTasks.length} / {PROFILE_TASKS.length} tasks</span>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setIsExpanded(!isExpanded)}
-                                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
-                                    >
-                                        {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                                    </button>
-                                </div>
+                            // Progress state - Modern glass card with gradient accent
+                            <div className="relative mb-8 group">
+                                {/* Ambient glow effect */}
+                                <div className="absolute -inset-1 bg-gradient-to-r from-violet-600/20 via-fuchsia-500/20 to-amber-500/20 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
 
-                                {isExpanded && (
-                                    <div className="px-6 pb-6">
-                                        <h3 className="text-lg font-semibold mb-1">Get discovered</h3>
-                                        <p className="text-sm text-white/70 mb-6">
-                                            Complete these steps to validate your account and appear in the network.
-                                        </p>
-                                        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-                                            {PROFILE_TASKS.map((task) => {
-                                                const isCompleted = completedTasks.includes(task.id)
-                                                return (
-                                                    <div key={task.id} className="flex items-center gap-3">
-                                                        {isCompleted ? (
-                                                            <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
-                                                        ) : (
-                                                            <Circle className="w-5 h-5 text-white/40 flex-shrink-0" />
-                                                        )}
-                                                        <span className={`text-sm ${isCompleted ? 'text-white' : 'text-white/60'}`}>
-                                                            {task.label}
+                                <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl overflow-hidden border border-white/10">
+                                    {/* Top accent line */}
+                                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-500 via-fuchsia-500 to-amber-400" />
+
+                                    {/* Main content */}
+                                    <div className="px-6 py-5">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                {/* Animated progress ring */}
+                                                <div className="relative w-14 h-14">
+                                                    <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
+                                                        <circle
+                                                            cx="28"
+                                                            cy="28"
+                                                            r="24"
+                                                            strokeWidth="4"
+                                                            className="fill-none stroke-white/10"
+                                                        />
+                                                        <circle
+                                                            cx="28"
+                                                            cy="28"
+                                                            r="24"
+                                                            strokeWidth="4"
+                                                            strokeLinecap="round"
+                                                            className="fill-none stroke-[url(#progressGradient)]"
+                                                            style={{
+                                                                strokeDasharray: `${(completedTasks.length / PROFILE_TASKS.length) * 150.8} 150.8`,
+                                                                transition: 'stroke-dasharray 0.6s ease-out'
+                                                            }}
+                                                        />
+                                                        <defs>
+                                                            <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                                <stop offset="0%" stopColor="#8B5CF6" />
+                                                                <stop offset="50%" stopColor="#D946EF" />
+                                                                <stop offset="100%" stopColor="#F59E0B" />
+                                                            </linearGradient>
+                                                        </defs>
+                                                    </svg>
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <span className="text-white font-semibold text-sm">
+                                                            {Math.round((completedTasks.length / PROFILE_TASKS.length) * 100)}%
                                                         </span>
                                                     </div>
-                                                )
-                                            })}
+                                                </div>
+
+                                                <div>
+                                                    <h3 className="text-white font-semibold text-base tracking-tight">
+                                                        Almost there!
+                                                    </h3>
+                                                    <p className="text-slate-400 text-sm mt-0.5">
+                                                        {PROFILE_TASKS.length - completedTasks.length} step{PROFILE_TASKS.length - completedTasks.length !== 1 ? 's' : ''} left to join the Seller Network
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={() => setIsExpanded(!isExpanded)}
+                                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200 text-white text-sm font-medium"
+                                            >
+                                                {isExpanded ? 'Hide' : 'View'} tasks
+                                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                            </button>
                                         </div>
+
+                                        {/* Expandable tasks section */}
+                                        {isExpanded && (
+                                            <div className="mt-6 pt-5 border-t border-white/10">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {PROFILE_TASKS.map((task, index) => {
+                                                        const isCompleted = completedTasks.includes(task.id)
+                                                        return (
+                                                            <div
+                                                                key={task.id}
+                                                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                                                                    isCompleted
+                                                                        ? 'bg-emerald-500/10 border border-emerald-500/20'
+                                                                        : 'bg-white/5 border border-white/5 hover:border-white/10'
+                                                                }`}
+                                                                style={{ animationDelay: `${index * 50}ms` }}
+                                                            >
+                                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                                                    isCompleted
+                                                                        ? 'bg-emerald-500'
+                                                                        : 'border-2 border-slate-600'
+                                                                }`}>
+                                                                    {isCompleted && (
+                                                                        <Check className="w-3 h-3 text-white" />
+                                                                    )}
+                                                                </div>
+                                                                <span className={`text-sm ${
+                                                                    isCompleted ? 'text-white' : 'text-slate-400'
+                                                                }`}>
+                                                                    {task.label}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+
+                                                {/* Helper text */}
+                                                <p className="text-slate-500 text-xs mt-4 text-center">
+                                                    CV and Portfolio are optional — focus on the essentials above
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+                                </div>
                             </div>
                         ) : null}
 
