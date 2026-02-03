@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowUpRight, Loader2, Gift, Zap } from 'lucide-react'
+import { ArrowUpRight, Loader2, Gift, Zap, X, AlertTriangle, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -37,6 +37,8 @@ export default function SellerWalletPage() {
         method: null,
         commissions: []
     })
+    const [showStripeModal, setShowStripeModal] = useState(false)
+    const [connectingStripe, setConnectingStripe] = useState(false)
 
     useEffect(() => {
         loadWallet()
@@ -92,6 +94,31 @@ export default function SellerWalletPage() {
     const totalEarned = wallet.pending + (wallet.balance || 0) + (wallet.due || 0) + wallet.paid_total
     const isStripeMode = wallet.method === 'STRIPE_CONNECT'
     const mainAmount = isStripeMode ? wallet.due : wallet.balance
+
+    async function handleConnectStripe() {
+        setConnectingStripe(true)
+        try {
+            const response = await fetch('/api/seller/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ country: 'FR' })
+            })
+            const data = await response.json()
+
+            if (data.success && data.onboardingUrl) {
+                window.location.href = data.onboardingUrl
+            } else if (data.alreadyEnabled) {
+                setShowStripeModal(false)
+                loadWallet()
+            } else {
+                console.error('Failed to connect Stripe:', data.error)
+                setConnectingStripe(false)
+            }
+        } catch (err) {
+            console.error('Failed to connect Stripe:', err)
+            setConnectingStripe(false)
+        }
+    }
 
     if (loading) {
         return (
@@ -288,19 +315,126 @@ export default function SellerWalletPage() {
             {/* Connect Stripe CTA - Platform Mode */}
             {!isStripeMode && (
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
-                    className="mt-12 text-center"
+                    className="mt-12"
                 >
-                    <Link
-                        href="/seller/settings"
-                        className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                    <button
+                        onClick={() => setShowStripeModal(true)}
+                        className="group w-full bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 text-left"
                     >
-                        Connect Stripe for cash withdrawals
-                    </Link>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+                                    <CreditCard className="w-5 h-5 text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="font-medium text-white">Connect Stripe</h3>
+                                    <p className="text-sm text-white/60">Receive payouts directly to your bank</p>
+                                </div>
+                            </div>
+                            <ArrowUpRight className="w-5 h-5 text-white/40 group-hover:text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                        </div>
+                    </button>
                 </motion.div>
             )}
+
+            {/* Stripe Connect Modal */}
+            <AnimatePresence>
+                {showStripeModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => !connectingStripe && setShowStripeModal(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl"
+                        >
+                            {/* Header */}
+                            <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between">
+                                <h2 className="text-lg font-semibold text-neutral-900">Connect to Stripe</h2>
+                                {!connectingStripe && (
+                                    <button
+                                        onClick={() => setShowStripeModal(false)}
+                                        className="p-2 -mr-2 rounded-lg hover:bg-neutral-100 transition-colors"
+                                    >
+                                        <X className="w-5 h-5 text-neutral-400" />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6">
+                                {/* Warning Card */}
+                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+                                    <div className="flex gap-3">
+                                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <h3 className="font-medium text-amber-900 mb-1">Important notice</h3>
+                                            <p className="text-sm text-amber-800">
+                                                Your current wallet balance of <span className="font-semibold">{formatCurrency(wallet.balance)} EUR</span> cannot be transferred to Stripe. This amount will remain available for gift cards only.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Info */}
+                                <div className="space-y-4 text-sm text-neutral-600">
+                                    <p>
+                                        By connecting Stripe, all your <span className="font-medium text-neutral-900">future earnings</span> will be automatically transferred to your bank account.
+                                    </p>
+                                    <div className="bg-neutral-50 rounded-xl p-4 space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                            <span>Automatic payouts every week</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                            <span>Direct deposit to your bank</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                            <span>No minimum withdrawal amount</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="px-6 py-4 bg-neutral-50 border-t border-neutral-100 flex gap-3">
+                                <button
+                                    onClick={() => setShowStripeModal(false)}
+                                    disabled={connectingStripe}
+                                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-600 hover:bg-neutral-200 transition-colors disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleConnectStripe}
+                                    disabled={connectingStripe}
+                                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-neutral-900 text-white hover:bg-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {connectingStripe ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Connecting...
+                                        </>
+                                    ) : (
+                                        'Continue to Stripe'
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     )
 }
