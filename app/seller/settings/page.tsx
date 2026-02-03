@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Upload, Check, ChevronUp, ChevronDown, CheckCircle2, Circle, Youtube, Globe, Loader2, User, Settings } from 'lucide-react'
+import { Upload, Check, ChevronUp, ChevronDown, CheckCircle2, Circle, Youtube, Globe, Loader2, User, Settings, LogOut } from 'lucide-react'
 import { getMySellerProfile, updateMySellerProfile, type MySellerProfileData } from '@/app/actions/sellers'
+import { logout } from '@/app/login/actions'
 
 const INDUSTRY_INTERESTS = [
     'AI', 'SaaS', 'Sales', 'E-commerce', 'Developer tools',
@@ -922,7 +923,7 @@ export default function SettingsPage() {
                     <>
                         {/* Account Settings */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h2 className="text-base font-semibold mb-1">Settings du compte</h2>
+                            <h2 className="text-base font-semibold mb-1">Account settings</h2>
                             <p className="text-sm text-gray-500 mb-6">
                                 Manage your account settings.
                             </p>
@@ -944,24 +945,42 @@ export default function SettingsPage() {
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Password</label>
                                     <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
-                                        Changer le mot de passe
+                                        Change password
                                     </button>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium mb-2">Langue</label>
+                                    <label className="block text-sm font-medium mb-2">Language</label>
                                     <select className="w-full max-w-xs px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-sm">
-                                        <option>French</option>
                                         <option>English</option>
+                                        <option>French</option>
                                         <option>Español</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Sign Out */}
+                        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                            <h2 className="text-base font-semibold mb-1">Sign out</h2>
+                            <p className="text-sm text-gray-500 mb-4">
+                                Sign out of your account on this device.
+                            </p>
+
+                            <form action={logout}>
+                                <button
+                                    type="submit"
+                                    className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white text-sm font-medium rounded-lg hover:bg-neutral-800 transition-colors"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    Sign out
+                                </button>
+                            </form>
+                        </div>
+
                         {/* Danger Zone */}
                         <div className="bg-white rounded-xl border border-red-200 p-6">
-                            <h2 className="text-base font-semibold text-red-600 mb-1">Zone de danger</h2>
+                            <h2 className="text-base font-semibold text-red-600 mb-1">Danger zone</h2>
                             <p className="text-sm text-gray-500 mb-6">
                                 Irreversible actions that affect your account.
                             </p>
