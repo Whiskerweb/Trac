@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { recordLeadToTinybird } from '@/lib/analytics/tinybird'
 import { validatePublicKey } from '@/lib/api-keys'
+import { sanitizeClickId } from '@/lib/sql-sanitize'
 
 /**
  * POST /api/track/lead
@@ -108,45 +109,51 @@ export async function POST(request: NextRequest) {
 
             // ✅ FIXED: PRIORITY 2: Fallback to Tinybird if Redis miss
             if (!linkId && resolvedClickId) {
-                console.log(`[track/lead] 🔄 Redis miss, falling back to Tinybird for clickId=${resolvedClickId}`)
+                // 🔒 SECURITY: Validate clickId format before SQL interpolation
+                const safeClickId = sanitizeClickId(resolvedClickId)
+                if (!safeClickId) {
+                    console.warn(`[track/lead] ⚠️ Invalid clickId format rejected: ${resolvedClickId?.slice(0, 30)}`)
+                } else {
+                    console.log(`[track/lead] 🔄 Redis miss, falling back to Tinybird for clickId=${safeClickId}`)
 
-                try {
-                    const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
-                    const TINYBIRD_ADMIN_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
+                    try {
+                        const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.europe-west2.gcp.tinybird.co'
+                        const TINYBIRD_ADMIN_TOKEN = process.env.TINYBIRD_ADMIN_TOKEN
 
-                    const tinybirdSQL = `
-                        SELECT link_id, affiliate_id, workspace_id
-                        FROM clicks
-                        WHERE click_id = '${resolvedClickId}'
-                        LIMIT 1
-                        FORMAT JSON
-                    `
+                        const tinybirdSQL = `
+                            SELECT link_id, affiliate_id, workspace_id
+                            FROM clicks
+                            WHERE click_id = '${safeClickId}'
+                            LIMIT 1
+                            FORMAT JSON
+                        `
 
-                    const response = await fetch(`${TINYBIRD_HOST}/v0/sql`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${TINYBIRD_ADMIN_TOKEN}`,
-                            'Content-Type': 'text/plain',
-                        },
-                        body: tinybirdSQL,
-                        signal: AbortSignal.timeout(5000)  // 5s timeout
-                    })
+                        const response = await fetch(`${TINYBIRD_HOST}/v0/sql`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${TINYBIRD_ADMIN_TOKEN}`,
+                                'Content-Type': 'text/plain',
+                            },
+                            body: tinybirdSQL,
+                            signal: AbortSignal.timeout(5000)  // 5s timeout
+                        })
 
-                    if (response.ok) {
-                        const result = await response.json()
-                        if (result.data?.[0]) {
-                            linkId = result.data[0].link_id || null
-                            affiliateId = result.data[0].affiliate_id || null
-                            console.log(`[track/lead] ✅ Tinybird recovery: linkId=${linkId}, affiliateId=${affiliateId}`)
+                        if (response.ok) {
+                            const result = await response.json()
+                            if (result.data?.[0]) {
+                                linkId = result.data[0].link_id || null
+                                affiliateId = result.data[0].affiliate_id || null
+                                console.log(`[track/lead] ✅ Tinybird recovery: linkId=${linkId}, affiliateId=${affiliateId}`)
+                            } else {
+                                console.log(`[track/lead] ⚠️ Tinybird: No click found for clickId=${safeClickId}`)
+                            }
                         } else {
-                            console.log(`[track/lead] ⚠️ Tinybird: No click found for clickId=${resolvedClickId}`)
+                            console.error(`[track/lead] ❌ Tinybird error: ${response.status}`)
                         }
-                    } else {
-                        console.error(`[track/lead] ❌ Tinybird error: ${response.status}`)
+                    } catch (tinybirdError) {
+                        console.error('[track/lead] ❌ Tinybird fallback failed:', tinybirdError)
+                        // Continue without link data (will be orphaned)
                     }
-                } catch (tinybirdError) {
-                    console.error('[track/lead] ❌ Tinybird fallback failed:', tinybirdError)
-                    // Continue without link data (will be orphaned)
                 }
             }
         }

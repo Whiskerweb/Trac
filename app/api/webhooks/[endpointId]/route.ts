@@ -6,6 +6,7 @@ import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics
 import { waitUntil } from '@vercel/functions'
 import { createCommission, findSellerForSale, handleClawback, getMissionCommissionConfig } from '@/lib/commission/engine'
 import { CommissionSource } from '@/lib/generated/prisma/client'
+import { sanitizeClickId, sanitizeUUID } from '@/lib/sql-sanitize'
 
 export const dynamic = 'force-dynamic'
 
@@ -407,46 +408,54 @@ export async function POST(
 
                             // ✅ IMPROVED: Step 2: If Redis miss, fallback to Tinybird query with timeout
                             if (!linkId && clickId) {
-                                console.log(`[Multi-Tenant Webhook] 🔄 Redis miss, falling back to Tinybird for clickId=${clickId}`)
+                                // 🔒 SECURITY: Validate clickId and workspaceId formats before SQL interpolation
+                                const safeClickId = sanitizeClickId(clickId)
+                                const safeWorkspaceId = sanitizeUUID(workspaceId)
 
-                                try {
-                                    // Query both link_id AND affiliate_id from Tinybird
-                                    const tinybirdSQL = `
-                                        SELECT link_id, affiliate_id
-                                        FROM clicks
-                                        WHERE click_id = '${clickId}' AND workspace_id = '${workspaceId}'
-                                        LIMIT 1
-                                        FORMAT JSON
-                                    `
+                                if (!safeClickId || !safeWorkspaceId) {
+                                    console.warn(`[Multi-Tenant Webhook] ⚠️ Invalid ID format rejected - clickId: ${clickId?.slice(0, 30)}, workspaceId: ${workspaceId?.slice(0, 40)}`)
+                                } else {
+                                    console.log(`[Multi-Tenant Webhook] 🔄 Redis miss, falling back to Tinybird for clickId=${safeClickId}`)
 
-                                    const tinybirdResponse = await fetch(`${TINYBIRD_HOST}/v0/sql`, {
-                                        method: 'POST',
-                                        headers: {
-                                            'Authorization': `Bearer ${TINYBIRD_TOKEN}`,
-                                            'Content-Type': 'text/plain',
-                                        },
-                                        body: tinybirdSQL,
-                                        signal: AbortSignal.timeout(5000)  // ✅ 5s timeout to prevent blocking
-                                    })
+                                    try {
+                                        // Query both link_id AND affiliate_id from Tinybird
+                                        const tinybirdSQL = `
+                                            SELECT link_id, affiliate_id
+                                            FROM clicks
+                                            WHERE click_id = '${safeClickId}' AND workspace_id = '${safeWorkspaceId}'
+                                            LIMIT 1
+                                            FORMAT JSON
+                                        `
 
-                                    if (tinybirdResponse.ok) {
-                                        const result = await tinybirdResponse.json()
-                                        if (result.data?.[0]?.link_id) {
-                                            linkId = result.data[0].link_id
-                                            // Also get affiliate_id if available
-                                            if (result.data[0].affiliate_id) {
-                                                sellerId = result.data[0].affiliate_id
+                                        const tinybirdResponse = await fetch(`${TINYBIRD_HOST}/v0/sql`, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Authorization': `Bearer ${TINYBIRD_TOKEN}`,
+                                                'Content-Type': 'text/plain',
+                                            },
+                                            body: tinybirdSQL,
+                                            signal: AbortSignal.timeout(5000)  // ✅ 5s timeout to prevent blocking
+                                        })
+
+                                        if (tinybirdResponse.ok) {
+                                            const result = await tinybirdResponse.json()
+                                            if (result.data?.[0]?.link_id) {
+                                                linkId = result.data[0].link_id
+                                                // Also get affiliate_id if available
+                                                if (result.data[0].affiliate_id) {
+                                                    sellerId = result.data[0].affiliate_id
+                                                }
+                                                console.log(`[Multi-Tenant Webhook] ✅ Tinybird recovery: linkId=${linkId}, sellerId=${sellerId}`)
+                                            } else {
+                                                console.log(`[Multi-Tenant Webhook] ⚠️ Tinybird: No click found for clickId=${safeClickId}`)
                                             }
-                                            console.log(`[Multi-Tenant Webhook] ✅ Tinybird recovery: linkId=${linkId}, sellerId=${sellerId}`)
                                         } else {
-                                            console.log(`[Multi-Tenant Webhook] ⚠️ Tinybird: No click found for clickId=${clickId}`)
+                                            console.error(`[Multi-Tenant Webhook] ❌ Tinybird error: ${tinybirdResponse.status}`)
                                         }
-                                    } else {
-                                        console.error(`[Multi-Tenant Webhook] ❌ Tinybird error: ${tinybirdResponse.status}`)
+                                    } catch (tinybirdError) {
+                                        console.error('[Multi-Tenant Webhook] ❌ Tinybird fallback failed:', tinybirdError)
+                                        // Continue without linkId (will be orphaned sale)
                                     }
-                                } catch (tinybirdError) {
-                                    console.error('[Multi-Tenant Webhook] ❌ Tinybird fallback failed:', tinybirdError)
-                                    // Continue without linkId (will be orphaned sale)
                                 }
                             }
 

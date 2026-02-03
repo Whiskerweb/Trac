@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
+import { sanitizeUUID } from '@/lib/sql-sanitize'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,11 +54,22 @@ export async function GET() {
     }
 
     try {
+        // 🔒 SECURITY: Validate workspaceId format before SQL interpolation
+        const safeWorkspaceId = sanitizeUUID(workspace.workspaceId)
+        if (!safeWorkspaceId) {
+            console.warn('[Check Installation] Invalid workspaceId format:', workspace.workspaceId?.slice(0, 40))
+            return NextResponse.json({
+                installed: false,
+                eventCount: 0,
+                status: 'invalid_workspace'
+            })
+        }
+
         // Query clicks datasource for this workspace
         const params = new URLSearchParams({
-            q: `SELECT count() as event_count, max(timestamp) as last_event 
-                FROM click_events 
-                WHERE workspace_id = '${workspace.workspaceId}'`
+            q: `SELECT count() as event_count, max(timestamp) as last_event
+                FROM click_events
+                WHERE workspace_id = '${safeWorkspaceId}'`
         })
 
         const response = await fetch(

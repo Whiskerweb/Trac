@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
+import { sanitizeClickId, sanitizeUUID, sanitizeExternalId } from '@/lib/sql-sanitize'
 
 // =============================================
 // CUSTOMERS SERVER ACTIONS
@@ -214,14 +215,24 @@ async function getCustomerActivityFromTinybird(
     }
 
     try {
+        // 🔒 SECURITY: Sanitize all IDs before SQL interpolation
+        const safeWorkspaceId = sanitizeUUID(workspaceId)
+        const safeClickId = sanitizeClickId(clickId)
+        const safeExternalId = sanitizeExternalId(customerExternalId)
+
+        if (!safeWorkspaceId) {
+            console.warn('[Customers] Invalid workspaceId format, skipping Tinybird fetch')
+            return { clicks: [], sales: [] }
+        }
+
         // Fetch clicks for this customer (via click_id)
         let clicks: Array<any> = []
-        if (clickId) {
+        if (safeClickId) {
             const clicksSQL = `
                 SELECT click_id, timestamp, country, city, device, user_agent, referrer, link_id
                 FROM clicks
-                WHERE workspace_id = '${workspaceId}'
-                  AND click_id = '${clickId}'
+                WHERE workspace_id = '${safeWorkspaceId}'
+                  AND click_id = '${safeClickId}'
                 ORDER BY timestamp DESC
                 LIMIT 50
                 FORMAT JSON
@@ -242,12 +253,17 @@ async function getCustomerActivityFromTinybird(
             }
         }
 
-        // Fetch sales for this customer
+        // Fetch sales for this customer (only if we have valid externalId)
+        if (!safeExternalId) {
+            console.warn('[Customers] Invalid customerExternalId format, skipping sales fetch')
+            return { clicks, sales: [] }
+        }
+
         const salesSQL = `
             SELECT invoice_id, timestamp, amount, net_amount, currency
             FROM sales
-            WHERE workspace_id = '${workspaceId}'
-              AND (customer_external_id = '${customerExternalId}' ${clickId ? `OR click_id = '${clickId}'` : ''})
+            WHERE workspace_id = '${safeWorkspaceId}'
+              AND (customer_external_id = '${safeExternalId}' ${safeClickId ? `OR click_id = '${safeClickId}'` : ''})
             ORDER BY timestamp DESC
             LIMIT 50
             FORMAT JSON
