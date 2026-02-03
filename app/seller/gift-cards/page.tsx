@@ -94,7 +94,7 @@ export default function GiftCardsPage() {
         }
 
         if (amountCents > balance) {
-            setError('Solde insuffisant')
+            setError('Insufficient balance')
             return
         }
 
@@ -191,7 +191,7 @@ export default function GiftCardsPage() {
                 className="text-center mb-12"
             >
                 <p className="text-xs uppercase tracking-[0.2em] text-neutral-400 mb-3">
-                    Solde disponible
+                    Available balance
                 </p>
                 <div className="flex items-baseline justify-center gap-1">
                     <span className="text-5xl font-extralight tracking-tight text-neutral-900">
@@ -211,7 +211,7 @@ export default function GiftCardsPage() {
                         exit={{ opacity: 0 }}
                     >
                         <p className="text-xs uppercase tracking-[0.15em] text-neutral-400 mb-6">
-                            Choisir une carte
+                            Choose a card
                         </p>
                         <div className="grid grid-cols-2 gap-3">
                             {GIFT_CARDS.map((card, index) => {
@@ -269,8 +269,8 @@ export default function GiftCardsPage() {
                                     >
                                         <Check className="w-8 h-8 text-white" />
                                     </motion.div>
-                                    <p className="text-neutral-900 font-medium">Demande envoyee</p>
-                                    <p className="text-sm text-neutral-400 mt-1">Email sous 24-48h</p>
+                                    <p className="text-neutral-900 font-medium">Request sent</p>
+                                    <p className="text-sm text-neutral-400 mt-1">Email within 24-48h</p>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -288,7 +288,7 @@ export default function GiftCardsPage() {
                                 }}
                                 className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
                             >
-                                Changer
+                                Change
                             </button>
                         </div>
 
@@ -383,7 +383,7 @@ export default function GiftCardsPage() {
                         className="w-full text-left text-xs uppercase tracking-[0.15em] text-neutral-400 hover:text-neutral-600 transition-colors flex items-center gap-2"
                     >
                         <span className={`w-4 h-px bg-neutral-300 transition-transform ${showHistory ? 'rotate-0' : '-rotate-45'}`} />
-                        Historique ({redemptions.length})
+                        History ({redemptions.length})
                     </button>
 
                     <AnimatePresence>
@@ -442,7 +442,7 @@ export default function GiftCardsPage() {
                 transition={{ delay: 0.5 }}
                 className="mt-12 text-center text-xs text-neutral-400"
             >
-                Carte envoyee par email sous 24-48h
+                Card sent by email within 24-48h
             </motion.p>
         </motion.div>
     )

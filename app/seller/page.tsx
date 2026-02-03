@@ -95,7 +95,7 @@ function MissionRow({ data }: { data: Enrollment }) {
                         <p className="text-xs text-gray-400 mt-0.5">
                             <span className="text-gray-500">{data.startup.name}</span>
                             <span className="mx-1.5">·</span>
-                            {data.mission.reward} par conversion
+                            {data.mission.reward} per conversion
                         </p>
                     </div>
 
@@ -114,7 +114,7 @@ function MissionRow({ data }: { data: Enrollment }) {
                                 <p className="font-semibold text-violet-600 text-sm tabular-nums">
                                     {formatCurrency(revenue)}
                                 </p>
-                                <p className="text-gray-400">Gains</p>
+                                <p className="text-gray-400">Earnings</p>
                             </div>
                         </div>
                     )}
@@ -227,7 +227,7 @@ export default function PartnerDashboardPage() {
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Analytics</h1>
-                    <p className="text-gray-500 mt-1">Vue d'ensemble de vos performances</p>
+                    <p className="text-gray-500 mt-1">Overview of your performance</p>
                 </div>
 
                 {/* Analytics Chart (same as startup dashboard) */}
@@ -255,7 +255,7 @@ export default function PartnerDashboardPage() {
                             href="/seller/marketplace"
                             className="text-xs text-gray-500 hover:text-gray-900 font-medium flex items-center gap-1 transition-colors"
                         >
-                            Explorer
+                            Explore
                             <ChevronRight className="w-3 h-3" />
                         </Link>
                     </div>
@@ -272,7 +272,7 @@ export default function PartnerDashboardPage() {
                                 <Link2 className="w-5 h-5 text-violet-500" />
                             </div>
                             <p className="text-sm text-gray-500 mb-4">
-                                Aucun programme rejoint
+                                No programs joined yet
                             </p>
                             <Link
                                 href="/seller/marketplace"

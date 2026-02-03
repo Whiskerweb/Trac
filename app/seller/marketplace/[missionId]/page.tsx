@@ -133,7 +133,7 @@ export default function MissionDetailPage() {
             if (result.success) {
                 setData(result as MissionDetail)
             } else {
-                setError(result.error || 'Mission introuvable')
+                setError(result.error || 'Mission not found')
             }
             setLoading(false)
         }
@@ -178,7 +178,7 @@ export default function MissionDetailPage() {
         return (
             <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
                 <div className="text-center">
-                    <p className="text-gray-500 mb-4">{error || 'Mission introuvable'}</p>
+                    <p className="text-gray-500 mb-4">{error || 'Mission not found'}</p>
                     <Link
                         href="/seller/marketplace"
                         className="text-sm text-violet-600 hover:text-violet-700 font-medium"
@@ -265,7 +265,7 @@ export default function MissionDetailPage() {
                         {startup.description && (
                             <section className="bg-white rounded-2xl p-6 border border-gray-100">
                                 <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-                                    À propos de {startup.name}
+                                    About {startup.name}
                                 </h2>
                                 <p className="text-gray-600 text-[15px] leading-relaxed">
                                     {startup.description}
@@ -281,7 +281,7 @@ export default function MissionDetailPage() {
                                             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
                                         >
                                             <Globe className="w-3.5 h-3.5" />
-                                            Site web
+                                            Website
                                         </a>
                                     )}
                                     {startup.headquarters && (
@@ -309,10 +309,10 @@ export default function MissionDetailPage() {
                         {/* Mission description */}
                         <section className="bg-white rounded-2xl p-6 border border-gray-100">
                             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-                                La mission
+                                The mission
                             </h2>
                             <p className="text-gray-600 text-[15px] leading-relaxed whitespace-pre-line">
-                                {mission.description || 'Aucune description disponible.'}
+                                {mission.description || 'No description available.'}
                             </p>
 
                             {/* Target URL */}
@@ -324,7 +324,7 @@ export default function MissionDetailPage() {
                                     className="inline-flex items-center gap-2 text-sm text-violet-600 hover:text-violet-700 font-medium transition-colors"
                                 >
                                     <ExternalLink className="w-4 h-4" />
-                                    Voir le produit
+                                    View the product
                                 </a>
                             </div>
                         </section>
@@ -332,7 +332,7 @@ export default function MissionDetailPage() {
                         {/* Resources section */}
                         <section className="bg-white rounded-2xl p-6 border border-gray-100">
                             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-                                Ressources
+                                Resources
                             </h2>
 
                             {!canSeeResources ? (
@@ -349,7 +349,7 @@ export default function MissionDetailPage() {
                                 </div>
                             ) : resources.length === 0 ? (
                                 <p className="text-sm text-gray-400 text-center py-6">
-                                    Aucune ressource disponible
+                                    No resources available
                                 </p>
                             ) : (
                                 <div className="space-y-2">
@@ -405,7 +405,7 @@ export default function MissionDetailPage() {
                                             )}
                                             {mission.sale_enabled && mission.sale_reward_amount && (
                                                 <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl">
-                                                    <span className="text-sm text-emerald-700 font-medium">Vente</span>
+                                                    <span className="text-sm text-emerald-700 font-medium">Sale</span>
                                                     <span className="text-lg font-semibold text-emerald-900">
                                                         {formatRewardAmount(mission.sale_reward_amount, mission.sale_reward_structure)}
                                                     </span>
@@ -426,7 +426,7 @@ export default function MissionDetailPage() {
                                                 {mission.reward}
                                             </p>
                                             <p className="text-sm text-gray-500 mt-1">
-                                                par {mission.reward_type === 'LEAD' ? 'lead' : 'conversion'}
+                                                per {mission.reward_type === 'LEAD' ? 'lead' : 'conversion'}
                                             </p>
                                         </div>
                                     )}
@@ -439,7 +439,7 @@ export default function MissionDetailPage() {
                                             {mission.partners_count}
                                         </p>
                                         <p className="text-xs text-gray-400">
-                                            Partenaires
+                                            Partners
                                         </p>
                                     </div>
                                 </div>
@@ -452,14 +452,14 @@ export default function MissionDetailPage() {
                                             <div className="mb-4">
                                                 <p className="flex items-center justify-center gap-2 text-sm text-emerald-600 mb-3">
                                                     <CheckCircle2 className="w-4 h-4" />
-                                                    Membre du programme
+                                                    Program member
                                                 </p>
                                             </div>
 
                                             {enrollment?.link_url && (
                                                 <div className="space-y-3">
                                                     <div className="bg-gray-50 rounded-xl p-3">
-                                                        <p className="text-xs text-gray-500 mb-1">Votre lien</p>
+                                                        <p className="text-xs text-gray-500 mb-1">Your link</p>
                                                         <p className="text-sm text-gray-900 font-mono truncate">
                                                             {enrollment.link_url}
                                                         </p>
@@ -480,7 +480,7 @@ export default function MissionDetailPage() {
                                                         ) : (
                                                             <>
                                                                 <Copy className="w-4 h-4" />
-                                                                Copier le lien
+                                                                Copy link
                                                             </>
                                                         )}
                                                     </button>
@@ -493,10 +493,10 @@ export default function MissionDetailPage() {
                                             <div className="text-center py-2">
                                                 <p className="flex items-center justify-center gap-2 text-sm text-amber-600 mb-2">
                                                     <Clock className="w-4 h-4" />
-                                                    Demande en attente
+                                                    Request pending
                                                 </p>
                                                 <p className="text-xs text-gray-400">
-                                                    La startup examinera votre demande
+                                                    The startup will review your request
                                                 </p>
                                             </div>
                                         </>
@@ -535,7 +535,7 @@ export default function MissionDetailPage() {
                                                 ) : (
                                                     <>
                                                         <Sparkles className="w-4 h-4" />
-                                                        Rejoindre le programme
+                                                        Join the program
                                                     </>
                                                 )}
                                             </button>
@@ -553,7 +553,7 @@ export default function MissionDetailPage() {
                             {/* Quick links */}
                             <div className="bg-white rounded-2xl p-5 border border-gray-100">
                                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                                    Liens rapides
+                                    Quick links
                                 </p>
                                 <div className="space-y-2">
                                     {startup.website_url && (
@@ -564,7 +564,7 @@ export default function MissionDetailPage() {
                                             className="flex items-center gap-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
                                         >
                                             <Globe className="w-4 h-4 text-gray-400" />
-                                            Site web
+                                            Website
                                         </a>
                                     )}
                                     {startup.twitter_url && (
@@ -596,7 +596,7 @@ export default function MissionDetailPage() {
                                         className="flex items-center gap-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
                                     >
                                         <ExternalLink className="w-4 h-4 text-gray-400" />
-                                        Produit
+                                        Product
                                     </a>
                                 </div>
                             </div>

@@ -46,15 +46,14 @@ const COUNTRIES = [
     { code: 'SG', name: 'Singapore' },
 ]
 
-// Profile completion tasks (7 tasks for account validation)
+// Profile completion tasks (6 tasks for account validation)
 const PROFILE_TASKS = [
-    { id: 'basic_info', label: 'Basic information' },
+    { id: 'country', label: 'Country' },
+    { id: 'social_media', label: 'At least one social media' },
     { id: 'description', label: 'Profile description' },
-    { id: 'earning_structure', label: 'Earning preferences' },
-    { id: 'healthy_profile', label: 'Healthy profile' },
-    { id: 'website_social', label: 'Website or social media' },
-    { id: 'traffic', label: 'Estimated monthly traffic' },
-    { id: 'sales_channels', label: 'Sales channels' },
+    { id: 'industry_interests', label: 'Industry interests' },
+    { id: 'activity_type', label: 'Activity type' },
+    { id: 'how_you_work', label: 'How you work' },
 ]
 
 type TabType = 'profile' | 'account'
@@ -189,11 +188,11 @@ export default function SettingsPage() {
             if (data.success && data.url) {
                 setAvatarUrl(data.url)
             } else {
-                setError(data.error || 'Error d\'upload de la photo')
+                setError(data.error || 'Error uploading photo')
             }
         } catch (err) {
             console.error('Avatar upload error:', err)
-            setError('Error d\'upload de la photo')
+            setError('Error uploading photo')
         } finally {
             setUploadingAvatar(false)
         }
@@ -217,11 +216,11 @@ export default function SettingsPage() {
             if (data.success && data.url) {
                 setCvUrl(data.url)
             } else {
-                setError(data.error || 'Error d\'upload du CV')
+                setError(data.error || 'Error uploading CV')
             }
         } catch (err) {
             console.error('CV upload error:', err)
-            setError('Error d\'upload du CV')
+            setError('Error uploading CV')
         } finally {
             setUploadingCv(false)
         }
@@ -273,15 +272,27 @@ export default function SettingsPage() {
     // Calculate completed tasks
     const completedTasks = useMemo(() => {
         const completed: string[] = []
-        if (fullName.trim().length > 0) completed.push('basic_info')
+        // Country is required
+        if (country.trim().length > 0) completed.push('country')
+        // At least one social media is required
+        const hasSocialMedia = websiteUrl.trim().length > 0 ||
+            youtubeUrl.trim().length > 0 ||
+            twitterUrl.trim().length > 0 ||
+            linkedinUrl.trim().length > 0 ||
+            instagramUrl.trim().length > 0 ||
+            tiktokUrl.trim().length > 0
+        if (hasSocialMedia) completed.push('social_media')
+        // Description is required (min 10 chars)
         if (aboutYou.trim().length > 10) completed.push('description')
-        if (Object.values(earningPreferences).some(v => v)) completed.push('earning_structure')
-        completed.push('healthy_profile')
-        if (websiteUrl.trim().length > 0) completed.push('website_social')
-        if (trafficRange) completed.push('traffic')
-        if (Object.values(salesChannels).some(v => v)) completed.push('sales_channels')
+        // At least one industry interest is required
+        if (selectedIndustries.length > 0) completed.push('industry_interests')
+        // Activity type is required
+        if (activityType) completed.push('activity_type')
+        // How you work: at least one earning preference OR one sales channel
+        const hasHowYouWork = Object.values(earningPreferences).some(v => v) || Object.values(salesChannels).some(v => v)
+        if (hasHowYouWork) completed.push('how_you_work')
         return completed
-    }, [fullName, aboutYou, earningPreferences, websiteUrl, trafficRange, salesChannels])
+    }, [country, websiteUrl, youtubeUrl, twitterUrl, linkedinUrl, instagramUrl, tiktokUrl, aboutYou, selectedIndustries, activityType, earningPreferences, salesChannels])
 
     const toggleIndustry = (industry: string) => {
         setSelectedIndustries(prev =>
@@ -340,7 +351,7 @@ export default function SettingsPage() {
                         }`}
                     >
                         <User className="w-4 h-4" />
-                        Profil
+                        Profile
                     </button>
                     <button
                         onClick={() => setActiveTab('account')}
@@ -351,7 +362,7 @@ export default function SettingsPage() {
                         }`}
                     >
                         <Settings className="w-4 h-4" />
-                        Compte
+                        Account
                     </button>
                 </div>
 
@@ -437,7 +448,7 @@ export default function SettingsPage() {
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
                             <h2 className="text-base font-semibold mb-1">Profile details</h2>
                             <p className="text-sm text-gray-500 mb-6">
-                                Basic information qui composent votre profil.
+                                Basic information that makes up your profile.
                             </p>
 
                             <div className="space-y-6">
@@ -478,24 +489,24 @@ export default function SettingsPage() {
                                             </label>
                                         </div>
                                         <div className="flex-1">
-                                            <label className="block text-sm font-medium mb-1">Photo de profil</label>
+                                            <label className="block text-sm font-medium mb-1">Profile photo</label>
                                             <p className="text-xs text-gray-500">Recommended: 400x400. Formats: JPG, PNG, WebP. Max 5MB.</p>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4 mb-4">
                                         <div>
-                                            <label className="block text-sm font-medium mb-2">Nom complet</label>
+                                            <label className="block text-sm font-medium mb-2">Full name</label>
                                             <input
                                                 type="text"
                                                 value={fullName}
                                                 onChange={(e) => setFullName(e.target.value)}
-                                                placeholder="Votre nom complet"
+                                                placeholder="Your full name"
                                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-sm"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium mb-2">Pays</label>
+                                            <label className="block text-sm font-medium mb-2">Country <span className="text-red-500">*</span></label>
                                             <select
                                                 value={country}
                                                 onChange={(e) => setCountry(e.target.value)}
@@ -510,7 +521,7 @@ export default function SettingsPage() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">Type de profil</label>
+                                        <label className="block text-sm font-medium mb-2">Profile type</label>
                                         <div className="grid grid-cols-2 gap-3">
                                             <button
                                                 type="button"
@@ -521,7 +532,7 @@ export default function SettingsPage() {
                                                         : 'border-gray-200 hover:border-gray-300'
                                                 }`}
                                             >
-                                                Individuel
+                                                Individual
                                             </button>
                                             <button
                                                 type="button"
@@ -532,7 +543,7 @@ export default function SettingsPage() {
                                                         : 'border-gray-200 hover:border-gray-300'
                                                 }`}
                                             >
-                                                Entreprise
+                                                Company
                                             </button>
                                         </div>
                                     </div>
@@ -542,9 +553,9 @@ export default function SettingsPage() {
 
                         {/* Website and socials */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h3 className="text-sm font-medium mb-2">Website and social media</h3>
+                            <h3 className="text-sm font-medium mb-2">Website and social media <span className="text-red-500">*</span></h3>
                             <p className="text-xs text-gray-500 mb-4">
-                                Ajoutez votre site et vos comptes sociaux que vous utilisez pour partager des liens.
+                                Add your website and social accounts you use to share links. At least one is required.
                             </p>
 
                             <div className="space-y-3">
@@ -554,7 +565,7 @@ export default function SettingsPage() {
                                     </div>
                                     <input
                                         type="url"
-                                        placeholder="https://votre-site.com"
+                                        placeholder="https://your-website.com"
                                         value={websiteUrl}
                                         onChange={(e) => setWebsiteUrl(e.target.value)}
                                         className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-sm"
@@ -566,7 +577,7 @@ export default function SettingsPage() {
                                     </div>
                                     <input
                                         type="text"
-                                        placeholder="@votre-chaine"
+                                        placeholder="@your-channel"
                                         value={youtubeUrl}
                                         onChange={(e) => setYoutubeUrl(e.target.value)}
                                         className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-sm"
@@ -633,14 +644,14 @@ export default function SettingsPage() {
 
                         {/* About you */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h3 className="text-sm font-medium mb-2">À propos de vous</h3>
+                            <h3 className="text-sm font-medium mb-2">About you <span className="text-red-500">*</span></h3>
                             <p className="text-xs text-gray-500 mb-4">
                                 Help programs know you, your background and what makes you a good partner.
                             </p>
 
                             <div className="mb-1">
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="text-sm font-medium">Description</label>
+                                    <label className="text-sm font-medium">Description <span className="text-red-500">*</span></label>
                                     <span className="text-xs text-gray-400">{aboutYou.length}/1000</span>
                                 </div>
                                 <textarea
@@ -656,9 +667,9 @@ export default function SettingsPage() {
 
                         {/* Industry interests */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h3 className="text-sm font-medium mb-2">Industry interests</h3>
+                            <h3 className="text-sm font-medium mb-2">Industry interests <span className="text-red-500">*</span></h3>
                             <p className="text-xs text-gray-500 mb-4">
-                                Select the industries you are passionate about.
+                                Select at least one industry you are passionate about.
                             </p>
 
                             <div className="flex flex-wrap gap-2">
@@ -679,7 +690,7 @@ export default function SettingsPage() {
 
                         {/* Traffic */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h3 className="text-sm font-medium mb-2">Estimated monthly traffic</h3>
+                            <h3 className="text-sm font-medium mb-2">Estimated monthly traffic <span className="text-gray-400 text-xs font-normal">(Optional)</span></h3>
                             <p className="text-xs text-gray-500 mb-4">
                                 Estimate the traffic of your websites, newsletters and social media.
                             </p>
@@ -702,7 +713,7 @@ export default function SettingsPage() {
 
                         {/* Activity Type */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h3 className="text-sm font-medium mb-2">Activity type</h3>
+                            <h3 className="text-sm font-medium mb-2">Activity type <span className="text-red-500">*</span></h3>
                             <p className="text-xs text-gray-500 mb-4">
                                 Select your main activity.
                             </p>
@@ -714,21 +725,21 @@ export default function SettingsPage() {
                             >
                                 <option value="">Select...</option>
                                 <option value="CONTENT_CREATOR">Content creator</option>
-                                <option value="SALES_REP">Commercial</option>
-                                <option value="INFLUENCER">Influenceur</option>
-                                <option value="MARKETER">Marketeur</option>
-                                <option value="BLOGGER">Blogueur</option>
+                                <option value="SALES_REP">Sales representative</option>
+                                <option value="INFLUENCER">Influencer</option>
+                                <option value="MARKETER">Marketer</option>
+                                <option value="BLOGGER">Blogger</option>
                                 <option value="DEVELOPER">Developer</option>
                                 <option value="CONSULTANT">Consultant</option>
-                                <option value="OTHER">Autre</option>
+                                <option value="OTHER">Other</option>
                             </select>
                         </div>
 
                         {/* How you work */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h3 className="text-sm font-medium mb-2">Comment vous travaillez</h3>
+                            <h3 className="text-sm font-medium mb-2">How you work <span className="text-red-500">*</span></h3>
                             <p className="text-xs text-gray-500 mb-4">
-                                Choose how you like to be paid and promote products.
+                                Choose how you like to be paid and promote products. Select at least one option.
                             </p>
 
                             <div className="mb-6">
@@ -741,7 +752,7 @@ export default function SettingsPage() {
                                             onChange={(e) => setEarningPreferences(prev => ({ ...prev, revShare: e.target.checked }))}
                                             className="w-4 h-4 rounded border-gray-300 text-violet-600"
                                         />
-                                        <span className="text-sm">Rev-share (% des ventes)</span>
+                                        <span className="text-sm">Rev-share (% of sales)</span>
                                     </label>
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
@@ -750,7 +761,7 @@ export default function SettingsPage() {
                                             onChange={(e) => setEarningPreferences(prev => ({ ...prev, cpc: e.target.checked }))}
                                             className="w-4 h-4 rounded border-gray-300 text-violet-600"
                                         />
-                                        <span className="text-sm">Par clic (CPC)</span>
+                                        <span className="text-sm">Per click (CPC)</span>
                                     </label>
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
@@ -759,7 +770,7 @@ export default function SettingsPage() {
                                             onChange={(e) => setEarningPreferences(prev => ({ ...prev, cpl: e.target.checked }))}
                                             className="w-4 h-4 rounded border-gray-300 text-violet-600"
                                         />
-                                        <span className="text-sm">Par lead (CPL)</span>
+                                        <span className="text-sm">Per lead (CPL)</span>
                                     </label>
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
@@ -768,7 +779,7 @@ export default function SettingsPage() {
                                             onChange={(e) => setEarningPreferences(prev => ({ ...prev, oneTime: e.target.checked }))}
                                             className="w-4 h-4 rounded border-gray-300 text-violet-600"
                                         />
-                                        <span className="text-sm">Paiement unique</span>
+                                        <span className="text-sm">One-time payment</span>
                                     </label>
                                 </div>
                             </div>
@@ -827,18 +838,18 @@ export default function SettingsPage() {
 
                         {/* Portfolio & CV */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                            <h3 className="text-sm font-medium mb-2">Portfolio & CV</h3>
+                            <h3 className="text-sm font-medium mb-2">Portfolio & CV <span className="text-gray-400 text-xs font-normal">(Optional)</span></h3>
                             <p className="text-xs text-gray-500 mb-4">
                                 Share your portfolio and resume to help startups understand your experience.
                             </p>
 
                             <div className="mb-6">
-                                <label className="block text-sm font-medium mb-2">Lien portfolio</label>
+                                <label className="block text-sm font-medium mb-2">Portfolio link</label>
                                 <input
                                     type="url"
                                     value={portfolioUrl}
                                     onChange={(e) => setPortfolioUrl(e.target.value)}
-                                    placeholder="https://votreportfolio.com"
+                                    placeholder="https://yourportfolio.com"
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
                                 />
                             </div>
@@ -865,7 +876,7 @@ export default function SettingsPage() {
                                                 rel="noopener noreferrer"
                                                 className="text-sm text-violet-600 hover:text-violet-700"
                                             >
-                                                Voir
+                                                View
                                             </a>
                                             <button
                                                 onClick={() => setCvUrl(null)}
@@ -896,7 +907,7 @@ export default function SettingsPage() {
                                             <>
                                                 <Upload className="w-8 h-8 text-gray-400 mb-2" />
                                                 <p className="text-sm text-gray-600 mb-1">Click to upload</p>
-                                                <p className="text-xs text-gray-500">PDF uniquement. Max 10MB.</p>
+                                                <p className="text-xs text-gray-500">PDF only. Max 10MB.</p>
                                             </>
                                         )}
                                     </label>

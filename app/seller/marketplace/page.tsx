@@ -68,7 +68,7 @@ function hasMultipleCommissions(mission: Mission): boolean {
 // Must match exactly the INDUSTRIES from startup profile creation
 // Main categories shown by default
 const MAIN_CATEGORIES = [
-    { id: 'all', label: 'Tous' },
+    { id: 'all', label: 'All' },
     { id: 'SaaS', label: 'SaaS' },
     { id: 'E-commerce', label: 'E-commerce' },
     { id: 'FinTech', label: 'FinTech' },
@@ -79,13 +79,13 @@ const MAIN_CATEGORIES = [
 // Secondary categories shown when expanded
 const MORE_CATEGORIES = [
     { id: 'HealthTech', label: 'Health' },
-    { id: 'EdTech', label: 'Éducation' },
+    { id: 'EdTech', label: 'Education' },
     { id: 'Cybersecurity', label: 'Cyber' },
     { id: 'CleanTech', label: 'CleanTech' },
     { id: 'FoodTech', label: 'Food' },
-    { id: 'PropTech', label: 'Immo' },
+    { id: 'PropTech', label: 'Real Estate' },
     { id: 'LegalTech', label: 'Legal' },
-    { id: 'HRTech', label: 'RH' },
+    { id: 'HRTech', label: 'HR' },
     { id: 'Gaming', label: 'Gaming' },
     { id: 'Media', label: 'Media' },
     { id: 'Marketplace', label: 'Marketplace' },
@@ -158,7 +158,7 @@ function ProgramRow({ mission, index }: { mission: Mission; index: number }) {
                             {mission.sale_enabled && mission.sale_reward_amount && (
                                 <div className="text-center px-3 py-1.5 bg-emerald-50 rounded-lg">
                                     <p className="text-sm font-semibold text-emerald-900">{formatRewardAmount(mission.sale_reward_amount, mission.sale_reward_structure)}</p>
-                                    <p className="text-[10px] text-emerald-600">vente</p>
+                                    <p className="text-[10px] text-emerald-600">sale</p>
                                 </div>
                             )}
                             {mission.recurring_enabled && mission.recurring_reward_amount && (
@@ -171,7 +171,7 @@ function ProgramRow({ mission, index }: { mission: Mission; index: number }) {
                     ) : (
                         <div className="text-right">
                             <p className="text-base font-semibold text-gray-900">{mission.reward}</p>
-                            <p className="text-[10px] text-gray-400">par conversion</p>
+                            <p className="text-[10px] text-gray-400">per conversion</p>
                         </div>
                     )}
                 </div>
@@ -186,7 +186,7 @@ function ProgramRow({ mission, index }: { mission: Mission; index: number }) {
                     <p className="text-xs text-gray-400">
                         {mission.partners_count}
                     </p>
-                    <p className="text-[10px] text-gray-300">partenaires</p>
+                    <p className="text-[10px] text-gray-300">partners</p>
                 </div>
 
                 {/* Arrow */}
@@ -270,10 +270,10 @@ export default function SellerMarketplacePage() {
                 {/* Header - Minimal */}
                 <header className="text-center mb-12">
                     <h1 className="text-3xl font-semibold text-gray-900 tracking-tight mb-3">
-                        Programmes
+                        Programs
                     </h1>
                     <p className="text-gray-500 text-[15px]">
-                        Trouvez le programme qui vous correspond
+                        Find the program that suits you
                     </p>
                 </header>
 
@@ -304,7 +304,7 @@ export default function SellerMarketplacePage() {
                                 onChange={(e) => setSearch(e.target.value)}
                                 onFocus={() => setSearchFocused(true)}
                                 onBlur={() => setSearchFocused(false)}
-                                placeholder="Rechercher..."
+                                placeholder="Search..."
                                 className="w-full pl-14 pr-20 py-4 bg-transparent text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none rounded-2xl"
                             />
                             <kbd className="absolute right-4 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-2 py-1 text-[11px] text-gray-400 bg-gray-50 rounded-lg font-medium">
@@ -362,7 +362,7 @@ export default function SellerMarketplacePage() {
                             }
                         `}
                     >
-                        {showAllCategories ? 'Moins' : 'Plus'}
+                        {showAllCategories ? 'Less' : 'More'}
                         <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showAllCategories ? 'rotate-180' : ''}`} />
                     </button>
                 </nav>
@@ -385,7 +385,7 @@ export default function SellerMarketplacePage() {
                             <div className="text-center py-32">
                                 <p className="text-gray-400 text-[15px] mb-2">
                                     {missions.length > 0 && availableMissions.length === 0
-                                        ? 'Vous avez rejoint tous les programmes disponibles'
+                                        ? 'You have joined all available programs'
                                         : 'No programs found'
                                     }
                                 </p>
@@ -408,7 +408,7 @@ export default function SellerMarketplacePage() {
                         <>
                             {/* Results count - Very subtle */}
                             <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-6 text-center">
-                                {availableMissions.length} programme{availableMissions.length !== 1 ? 's' : ''} disponible{availableMissions.length !== 1 ? 's' : ''}
+                                {availableMissions.length} program{availableMissions.length !== 1 ? 's' : ''} available
                             </p>
 
                             {/* List */}

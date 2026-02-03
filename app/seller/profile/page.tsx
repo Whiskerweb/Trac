@@ -26,56 +26,67 @@ interface ProfileData {
     salesChannels: { blogs: boolean; newsletters: boolean; socialMedia: boolean; events: boolean; companyReferrals: boolean } | null
 }
 
-// Calculate if profile is complete (7 tasks)
+// Calculate if profile is complete (6 tasks)
 function isProfileComplete(profile: ProfileData): boolean {
-    const hasBasicInfo = !!profile.name?.trim()
+    // Country is required
+    const hasCountry = !!profile.country?.trim()
+    // At least one social media is required
+    const hasSocialMedia = !!profile.websiteUrl?.trim() ||
+        !!profile.youtubeUrl?.trim() ||
+        !!profile.twitterUrl?.trim() ||
+        !!profile.linkedinUrl?.trim() ||
+        !!profile.instagramUrl?.trim() ||
+        !!profile.tiktokUrl?.trim()
+    // Description is required (min 10 chars)
     const hasDescription = !!profile.bio && profile.bio.trim().length > 10
-    const hasEarningStructure = !!(profile.earningPreferences && Object.values(profile.earningPreferences).some(v => v))
-    const hasHealthyProfile = true // Always true
-    const hasWebsiteSocial = !!profile.websiteUrl?.trim()
-    const hasTraffic = !!profile.monthlyTraffic
-    const hasSalesChannels = !!(profile.salesChannels && Object.values(profile.salesChannels).some(v => v))
+    // At least one industry interest is required
+    const hasIndustryInterests = profile.industryInterests && profile.industryInterests.length > 0
+    // Activity type is required
+    const hasActivityType = !!profile.activityType
+    // How you work: at least one earning preference OR one sales channel
+    const hasHowYouWork = !!(profile.earningPreferences && Object.values(profile.earningPreferences).some(v => v)) ||
+        !!(profile.salesChannels && Object.values(profile.salesChannels).some(v => v))
 
-    return hasBasicInfo && hasDescription && hasEarningStructure && hasHealthyProfile && hasWebsiteSocial && hasTraffic && hasSalesChannels
+    return hasCountry && hasSocialMedia && hasDescription && hasIndustryInterests && hasActivityType && hasHowYouWork
 }
 
 const ACTIVITY_LABELS: Record<string, string> = {
     'CONTENT_CREATOR': 'Content creator',
-    'SALES_REP': 'Commercial',
-    'INFLUENCER': 'Influenceur',
-    'MARKETER': 'Marketeur',
-    'BLOGGER': 'Blogueur',
+    'SALES_REP': 'Sales representative',
+    'INFLUENCER': 'Influencer',
+    'MARKETER': 'Marketer',
+    'BLOGGER': 'Blogger',
     'DEVELOPER': 'Developer',
     'CONSULTANT': 'Consultant',
-    'OTHER': 'Autre'
+    'OTHER': 'Other'
 }
 
 // Country code to name mapping
 const COUNTRY_NAMES: Record<string, string> = {
     'FR': 'France',
-    'US': 'États-Unis',
-    'GB': 'Royaume-Uni',
-    'DE': 'Allemagne',
-    'ES': 'Espagne',
-    'IT': 'Italie',
+    'US': 'United States',
+    'GB': 'United Kingdom',
+    'DE': 'Germany',
+    'ES': 'Spain',
+    'IT': 'Italy',
     'CA': 'Canada',
-    'NL': 'Pays-Bas',
-    'BE': 'Belgique',
-    'CH': 'Suisse',
+    'NL': 'Netherlands',
+    'BE': 'Belgium',
+    'CH': 'Switzerland',
     'PT': 'Portugal',
-    'AT': 'Autriche',
-    'PL': 'Pologne',
+    'AT': 'Austria',
+    'PL': 'Poland',
     'SE': 'Sweden',
     'NO': 'Norway',
-    'DK': 'Danemark',
-    'FI': 'Finlande',
-    'IE': 'Irlande',
-    'AU': 'Australie',
-    'JP': 'Japon',
+    'DK': 'Denmark',
+    'FI': 'Finland',
+    'IE': 'Ireland',
+    'AU': 'Australia',
+    'JP': 'Japan',
     'BR': 'Brazil',
-    'MX': 'Mexique',
-    'IN': 'Inde',
-    'SG': 'Singapour',
+    'MX': 'Mexico',
+    'IN': 'India',
+    'SG': 'Singapore',
 }
 
 export default function ProfilePage() {
@@ -171,7 +182,7 @@ export default function ProfilePage() {
                             <div className="flex items-start justify-between gap-4">
                                 <div>
                                     <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">
-                                        {profile.name || 'Sans nom'}
+                                        {profile.name || 'No name'}
                                     </h1>
                                     <p className="text-gray-500 text-sm mt-1">
                                         {profile.email}
@@ -202,13 +213,13 @@ export default function ProfilePage() {
                                 {profile.profileType && (
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
                                         <Users className="w-3 h-3" />
-                                        {profile.profileType === 'INDIVIDUAL' ? 'Individuel' : 'Entreprise'}
+                                        {profile.profileType === 'INDIVIDUAL' ? 'Individual' : 'Company'}
                                     </span>
                                 )}
                                 {profile.monthlyTraffic && (
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">
                                         <TrendingUp className="w-3 h-3" />
-                                        {profile.monthlyTraffic} visiteurs/mois
+                                        {profile.monthlyTraffic} visitors/month
                                     </span>
                                 )}
                             </div>
@@ -251,7 +262,7 @@ export default function ProfilePage() {
                                     // Progress state
                                     <>
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-sm font-medium text-gray-700">Progression du profil</span>
+                                            <span className="text-sm font-medium text-gray-700">Profile progress</span>
                                             <span className="text-sm font-semibold text-gray-900">{profile.profileScore || 0}%</span>
                                         </div>
                                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -264,7 +275,7 @@ export default function ProfilePage() {
                                             <Link href="/seller/settings" className="text-violet-600 hover:text-violet-700">
                                                 Complete your profile
                                             </Link>
-                                            {' '}pour valider votre compte
+                                            {' '}to validate your account
                                         </p>
                                     </>
                                 )}
@@ -293,7 +304,7 @@ export default function ProfilePage() {
                 {/* Social media */}
                 {hasSocials && (
                     <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                        <h2 className="text-sm font-semibold text-gray-900 mb-4">Liens</h2>
+                        <h2 className="text-sm font-semibold text-gray-900 mb-4">Links</h2>
                         <div className="space-y-3">
                             {profile.websiteUrl && (
                                 <a

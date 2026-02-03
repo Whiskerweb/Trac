@@ -82,9 +82,9 @@ export default function PayoutsPage() {
 
     const getStatusInfo = (status: Commission['status']) => {
         const info = {
-            PENDING: { label: 'En maturation', color: 'bg-amber-400' },
-            PROCEED: { label: 'Disponible', color: 'bg-emerald-500' },
-            COMPLETE: { label: 'Verse', color: 'bg-neutral-300' }
+            PENDING: { label: 'Maturing', color: 'bg-amber-400' },
+            PROCEED: { label: 'Available', color: 'bg-emerald-500' },
+            COMPLETE: { label: 'Paid out', color: 'bg-neutral-300' }
         }
         return info[status]
     }
@@ -127,7 +127,7 @@ export default function PayoutsPage() {
                 className="text-center mb-16"
             >
                 <p className="text-xs uppercase tracking-[0.2em] text-neutral-400 mb-4">
-                    Total gagne
+                    Total earned
                 </p>
                 <div className="flex items-baseline justify-center gap-1">
                     <span className="text-6xl md:text-7xl font-extralight tracking-tight text-neutral-900">
@@ -145,7 +145,7 @@ export default function PayoutsPage() {
                         className="inline-flex items-center gap-1.5 mt-6 px-3 py-1.5 bg-neutral-900 text-white text-xs rounded-full"
                     >
                         <Zap className="w-3 h-3" />
-                        <span>Versements automatiques</span>
+                        <span>Automatic payouts</span>
                     </motion.div>
                 )}
             </motion.div>
@@ -161,19 +161,19 @@ export default function PayoutsPage() {
                     <p className="text-2xl font-light text-neutral-900 tabular-nums">
                         {formatCurrency(wallet.pending)}
                     </p>
-                    <p className="text-xs text-neutral-400 mt-1">En attente</p>
+                    <p className="text-xs text-neutral-400 mt-1">Pending</p>
                 </div>
                 <div className="bg-white p-6 text-center">
                     <p className="text-2xl font-light text-emerald-600 tabular-nums">
                         {formatCurrency(wallet.due)}
                     </p>
-                    <p className="text-xs text-neutral-400 mt-1">Disponible</p>
+                    <p className="text-xs text-neutral-400 mt-1">Available</p>
                 </div>
                 <div className="bg-white p-6 text-center">
                     <p className="text-2xl font-light text-neutral-900 tabular-nums">
                         {formatCurrency(wallet.paid_total)}
                     </p>
-                    <p className="text-xs text-neutral-400 mt-1">Verse</p>
+                    <p className="text-xs text-neutral-400 mt-1">Paid out</p>
                 </div>
             </motion.div>
 
@@ -187,17 +187,17 @@ export default function PayoutsPage() {
                 <div className="flex items-center justify-center gap-3 text-xs text-neutral-400">
                     <span className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        {pendingCount} en attente
+                        {pendingCount} pending
                     </span>
                     <ArrowRight className="w-3 h-3" />
                     <span className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        {proceedCount} disponible
+                        {proceedCount} available
                     </span>
                     <ArrowRight className="w-3 h-3" />
                     <span className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
-                        {completeCount} verse
+                        {completeCount} paid out
                     </span>
                 </div>
             </motion.div>
@@ -212,22 +212,22 @@ export default function PayoutsPage() {
                 {isStripeMode ? (
                     <div className="text-center">
                         <p className="text-sm text-neutral-700 mb-2">
-                            Vos gains sont transferes automatiquement sur votre compte bancaire.
+                            Your earnings are automatically transferred to your bank account.
                         </p>
                         <p className="text-xs text-neutral-400">
-                            Delai de 2-3 jours ouvrables apres le paiement de la startup.
+                            2-3 business days after the startup's payment.
                         </p>
                     </div>
                 ) : (
                     <div className="text-center">
                         <p className="text-sm text-neutral-700 mb-3">
-                            Vos gains disponibles sont credites sur votre Wallet Traaaction.
+                            Your available earnings are credited to your Traaaction Wallet.
                         </p>
                         <Link
                             href="/seller/wallet"
                             className="inline-flex items-center gap-2 text-xs text-neutral-500 hover:text-neutral-900 transition-colors"
                         >
-                            Voir mon Wallet
+                            View my Wallet
                             <ArrowRight className="w-3 h-3" />
                         </Link>
                     </div>
@@ -242,7 +242,7 @@ export default function PayoutsPage() {
             >
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xs uppercase tracking-[0.15em] text-neutral-400">
-                        Historique
+                        History
                     </h2>
                     <span className="text-xs text-neutral-300">
                         {wallet.commissions.length} commissions
@@ -251,9 +251,9 @@ export default function PayoutsPage() {
 
                 {wallet.commissions.length === 0 ? (
                     <div className="text-center py-16">
-                        <p className="text-neutral-400 text-sm">Aucune commission</p>
+                        <p className="text-neutral-400 text-sm">No commissions</p>
                         <p className="text-neutral-300 text-xs mt-1">
-                            Les ventes attribuees a vos liens apparaitront ici
+                            Sales attributed to your links will appear here
                         </p>
                     </div>
                 ) : (
@@ -278,7 +278,7 @@ export default function PayoutsPage() {
                                                     {statusInfo.label}
                                                     {daysLeft !== null && daysLeft > 0 && (
                                                         <span className="text-neutral-400 ml-2">
-                                                            {daysLeft}j restants
+                                                            {daysLeft}d remaining
                                                         </span>
                                                     )}
                                                 </p>
@@ -307,22 +307,22 @@ export default function PayoutsPage() {
             >
                 <summary className="text-xs uppercase tracking-[0.15em] text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors list-none flex items-center gap-2">
                     <span className="w-4 h-px bg-neutral-200 group-open:rotate-90 transition-transform origin-left" />
-                    Comment ca fonctionne
+                    How it works
                 </summary>
                 <div className="mt-6 pl-6 space-y-4 text-sm text-neutral-500 border-l border-neutral-100">
                     <p>
                         <span className="text-neutral-400">1.</span>{' '}
-                        Vos commissions restent en attente pendant 30 jours
+                        Your commissions remain pending for 30 days
                     </p>
                     <p>
                         <span className="text-neutral-400">2.</span>{' '}
-                        La startup valide et effectue le paiement
+                        The startup validates and makes the payment
                     </p>
                     <p>
                         <span className="text-neutral-400">3.</span>{' '}
                         {isStripeMode
-                            ? 'Transfert automatique vers votre compte bancaire'
-                            : 'Montant credite sur votre Wallet Traaaction'}
+                            ? 'Automatic transfer to your bank account'
+                            : 'Amount credited to your Traaaction Wallet'}
                     </p>
                 </div>
             </motion.details>
@@ -339,7 +339,7 @@ export default function PayoutsPage() {
                         href="/seller/settings"
                         className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
                     >
-                        Connecter Stripe pour des versements directs
+                        Connect Stripe for direct payouts
                     </Link>
                 </motion.div>
             )}

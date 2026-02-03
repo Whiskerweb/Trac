@@ -216,7 +216,7 @@ export default function SellerProgramDetailPage() {
                     className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 text-sm font-medium mb-8 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    Mes programmes
+                    My programs
                 </Link>
 
                 {/* Header - Startup + Mission */}
@@ -260,7 +260,7 @@ export default function SellerProgramDetailPage() {
                             )}
                             {mission.sale_enabled && mission.sale_reward_amount && (
                                 <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">
-                                    {formatRewardAmount(mission.sale_reward_amount, mission.sale_reward_structure)} / vente
+                                    {formatRewardAmount(mission.sale_reward_amount, mission.sale_reward_structure)} / sale
                                 </span>
                             )}
                             {mission.recurring_enabled && mission.recurring_reward_amount && (
@@ -310,7 +310,7 @@ export default function SellerProgramDetailPage() {
                 {enrollment.link_url && (
                     <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-8">
                         <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-2">
-                            Votre lien d'affiliation
+                            Your affiliate link
                         </p>
                         <div className="flex items-center gap-3">
                             <code className="flex-1 text-sm text-gray-700 bg-gray-50 px-4 py-2.5 rounded-xl font-mono truncate">
@@ -332,7 +332,7 @@ export default function SellerProgramDetailPage() {
                                 ) : (
                                     <span className="flex items-center gap-1.5">
                                         <Copy className="w-4 h-4" />
-                                        Copier
+                                        Copy
                                     </span>
                                 )}
                             </button>
@@ -356,10 +356,10 @@ export default function SellerProgramDetailPage() {
                     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6">
                         <div className="px-6 py-4 border-b border-gray-100">
                             <h2 className="text-sm font-semibold text-gray-900">
-                                Ressources {startup.name}
+                                {startup.name} Resources
                             </h2>
                             <p className="text-xs text-gray-400 mt-0.5">
-                                Documents publics de la startup
+                                Public documents from the startup
                             </p>
                         </div>
                         <div className="divide-y divide-gray-50">
@@ -378,7 +378,7 @@ export default function SellerProgramDetailPage() {
                                             Pitch Deck
                                         </p>
                                         <p className="text-xs text-gray-400">
-                                            Presentation de {startup.name}
+                                            Presentation of {startup.name}
                                         </p>
                                     </div>
                                     <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-violet-400 transition-colors flex-shrink-0" />
@@ -399,7 +399,7 @@ export default function SellerProgramDetailPage() {
                                             Documentation
                                         </p>
                                         <p className="text-xs text-gray-400">
-                                            Document complementaire
+                                            Additional documentation
                                         </p>
                                     </div>
                                     <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-violet-400 transition-colors flex-shrink-0" />
@@ -414,10 +414,10 @@ export default function SellerProgramDetailPage() {
                     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
                         <div className="px-6 py-4 border-b border-gray-100">
                             <h2 className="text-sm font-semibold text-gray-900">
-                                Ressources du programme
+                                Program resources
                             </h2>
                             <p className="text-xs text-gray-400 mt-0.5">
-                                Outils specifiques a cette mission
+                                Tools specific to this mission
                             </p>
                         </div>
                         <div className="divide-y divide-gray-50">
@@ -459,7 +459,7 @@ export default function SellerProgramDetailPage() {
                             <FileText className="w-5 h-5 text-gray-400" />
                         </div>
                         <p className="text-sm text-gray-500">
-                            Aucune ressource disponible pour ce programme
+                            No resources available for this program
                         </p>
                     </div>
                 )}

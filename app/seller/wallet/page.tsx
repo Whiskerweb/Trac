@@ -73,9 +73,9 @@ export default function SellerWalletPage() {
 
     const getStatusLabel = (status: Commission['status']) => {
         const labels = {
-            PENDING: 'En cours',
-            PROCEED: 'Disponible',
-            COMPLETE: 'Verse'
+            PENDING: 'Maturing',
+            PROCEED: 'Available',
+            COMPLETE: 'Paid out'
         }
         return labels[status]
     }
@@ -123,7 +123,7 @@ export default function SellerWalletPage() {
                 className="text-center mb-16"
             >
                 <p className="text-xs uppercase tracking-[0.2em] text-neutral-400 mb-4">
-                    {isStripeMode ? 'Prochain versement' : 'Solde disponible'}
+                    {isStripeMode ? 'Next payout' : 'Available balance'}
                 </p>
                 <div className="flex items-baseline justify-center gap-1">
                     <span className="text-6xl md:text-7xl font-extralight tracking-tight text-neutral-900">
@@ -140,7 +140,7 @@ export default function SellerWalletPage() {
                         transition={{ delay: 0.3 }}
                         className="mt-4 text-sm text-neutral-400"
                     >
-                        +{formatCurrency(wallet.pending)} EUR en maturation
+                        +{formatCurrency(wallet.pending)} EUR maturing
                     </motion.p>
                 )}
 
@@ -153,7 +153,7 @@ export default function SellerWalletPage() {
                         className="inline-flex items-center gap-1.5 mt-6 px-3 py-1.5 bg-neutral-900 text-white text-xs rounded-full"
                     >
                         <Zap className="w-3 h-3" />
-                        <span>Versement automatique</span>
+                        <span>Automatic payout</span>
                     </motion.div>
                 )}
             </motion.div>
@@ -176,7 +176,7 @@ export default function SellerWalletPage() {
                                     <Gift className="w-5 h-5 text-white" />
                                 </div>
                                 <div>
-                                    <h3 className="font-medium text-neutral-900">Cartes cadeaux</h3>
+                                    <h3 className="font-medium text-neutral-900">Gift cards</h3>
                                     <p className="text-sm text-neutral-500">Amazon, Netflix, Spotify...</p>
                                 </div>
                             </div>
@@ -195,15 +195,15 @@ export default function SellerWalletPage() {
             >
                 <div className="bg-white p-6 text-center">
                     <p className="text-2xl font-light text-neutral-900">{formatCurrency(totalEarned)}</p>
-                    <p className="text-xs text-neutral-400 mt-1">Total gagne</p>
+                    <p className="text-xs text-neutral-400 mt-1">Total earned</p>
                 </div>
                 <div className="bg-white p-6 text-center">
                     <p className="text-2xl font-light text-neutral-900">{formatCurrency(wallet.pending)}</p>
-                    <p className="text-xs text-neutral-400 mt-1">En attente</p>
+                    <p className="text-xs text-neutral-400 mt-1">Pending</p>
                 </div>
                 <div className="bg-white p-6 text-center">
                     <p className="text-2xl font-light text-neutral-900">{formatCurrency(wallet.paid_total)}</p>
-                    <p className="text-xs text-neutral-400 mt-1">Verse</p>
+                    <p className="text-xs text-neutral-400 mt-1">Paid out</p>
                 </div>
             </motion.div>
 
@@ -214,14 +214,14 @@ export default function SellerWalletPage() {
                 transition={{ delay: 0.4 }}
             >
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xs uppercase tracking-[0.15em] text-neutral-400">Historique</h2>
+                    <h2 className="text-xs uppercase tracking-[0.15em] text-neutral-400">History</h2>
                     <span className="text-xs text-neutral-300">{wallet.commissions.length} transactions</span>
                 </div>
 
                 {wallet.commissions.length === 0 ? (
                     <div className="text-center py-16">
-                        <p className="text-neutral-400 text-sm">Aucune commission</p>
-                        <p className="text-neutral-300 text-xs mt-1">Partagez vos liens pour commencer</p>
+                        <p className="text-neutral-400 text-sm">No commissions</p>
+                        <p className="text-neutral-300 text-xs mt-1">Share your links to get started</p>
                     </div>
                 ) : (
                     <div className="space-y-1">
@@ -247,7 +247,7 @@ export default function SellerWalletPage() {
                                                     {getStatusLabel(commission.status)}
                                                     {daysLeft !== null && daysLeft > 0 && (
                                                         <span className="text-neutral-400 ml-2">
-                                                            {daysLeft}j
+                                                            {daysLeft}d
                                                         </span>
                                                     )}
                                                 </p>
@@ -276,12 +276,12 @@ export default function SellerWalletPage() {
             >
                 <summary className="text-xs uppercase tracking-[0.15em] text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors list-none flex items-center gap-2">
                     <span className="w-4 h-px bg-neutral-200 group-open:rotate-90 transition-transform" />
-                    Comment ca fonctionne
+                    How it works
                 </summary>
                 <div className="mt-6 pl-6 space-y-4 text-sm text-neutral-500 border-l border-neutral-100">
-                    <p><span className="text-neutral-400">1.</span> Les commissions sont en attente 30 jours</p>
-                    <p><span className="text-neutral-400">2.</span> La startup paie apres validation</p>
-                    <p><span className="text-neutral-400">3.</span> {isStripeMode ? 'Transfert automatique sous 2-3 jours' : 'Echangez contre des cartes cadeaux'}</p>
+                    <p><span className="text-neutral-400">1.</span> Commissions are pending for 30 days</p>
+                    <p><span className="text-neutral-400">2.</span> The startup pays after validation</p>
+                    <p><span className="text-neutral-400">3.</span> {isStripeMode ? 'Automatic transfer within 2-3 days' : 'Exchange for gift cards'}</p>
                 </div>
             </motion.details>
 
@@ -297,7 +297,7 @@ export default function SellerWalletPage() {
                         href="/seller/settings"
                         className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
                     >
-                        Connecter Stripe pour des retraits en cash
+                        Connect Stripe for cash withdrawals
                     </Link>
                 </motion.div>
             )}

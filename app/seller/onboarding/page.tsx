@@ -13,10 +13,10 @@ import {
 } from '@/app/actions/seller-onboarding'
 
 const STEPS = [
-    { number: 1, label: 'Profil' },
-    { number: 2, label: 'Reseaux' },
-    { number: 3, label: 'Paiement' },
-    { number: 4, label: 'Termine' },
+    { number: 1, label: 'Profile' },
+    { number: 2, label: 'Networks' },
+    { number: 3, label: 'Payment' },
+    { number: 4, label: 'Done' },
 ]
 
 export default function SellerOnboardingPage() {
@@ -243,14 +243,14 @@ export default function SellerOnboardingPage() {
                                     Welcome
                                 </h1>
                                 <p className="text-neutral-400">
-                                    Presentez-vous en quelques mots
+                                    Tell us a bit about yourself
                                 </p>
                             </div>
 
                             <div className="space-y-6">
                                 <div>
                                     <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-3">
-                                        Nom ou pseudo
+                                        Name or username
                                     </label>
                                     <input
                                         type="text"
@@ -258,21 +258,21 @@ export default function SellerOnboardingPage() {
                                         onChange={(e) => setName(e.target.value)}
                                         required
                                         className="w-full px-0 py-3 bg-transparent border-0 border-b border-neutral-200 text-neutral-900 text-lg focus:outline-none focus:border-neutral-900 transition-colors placeholder:text-neutral-300"
-                                        placeholder="Comment souhaitez-vous etre appele ?"
+                                        placeholder="What would you like to be called?"
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-3">
                                         Bio
-                                        <span className="normal-case tracking-normal ml-2 text-neutral-300">optionnel</span>
+                                        <span className="normal-case tracking-normal ml-2 text-neutral-300">optional</span>
                                     </label>
                                     <textarea
                                         value={bio}
                                         onChange={(e) => setBio(e.target.value)}
                                         rows={3}
                                         className="w-full px-0 py-3 bg-transparent border-0 border-b border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900 transition-colors placeholder:text-neutral-300 resize-none"
-                                        placeholder="Votre audience, votre niche..."
+                                        placeholder="Your audience, your niche..."
                                     />
                                 </div>
                             </div>
@@ -286,7 +286,7 @@ export default function SellerOnboardingPage() {
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
                                     <>
-                                        Continuer
+                                        Continue
                                         <ArrowRight className="w-4 h-4" />
                                     </>
                                 )}
@@ -307,10 +307,10 @@ export default function SellerOnboardingPage() {
                         >
                             <div className="text-center mb-12">
                                 <h1 className="text-3xl font-light text-neutral-900 mb-3">
-                                    Vos reseaux
+                                    Your networks
                                 </h1>
                                 <p className="text-neutral-400">
-                                    Aidez les startups a vous connaitre
+                                    Help startups get to know you
                                 </p>
                             </div>
 
@@ -320,7 +320,7 @@ export default function SellerOnboardingPage() {
                                     { label: 'Instagram', value: instagram, setter: setInstagram, placeholder: 'instagram.com/...' },
                                     { label: 'X / Twitter', value: twitter, setter: setTwitter, placeholder: 'x.com/...' },
                                     { label: 'YouTube', value: youtube, setter: setYoutube, placeholder: 'youtube.com/@...' },
-                                    { label: 'Site web', value: website, setter: setWebsite, placeholder: 'votre-site.com' },
+                                    { label: 'Website', value: website, setter: setWebsite, placeholder: 'your-website.com' },
                                 ].map((field) => (
                                     <div key={field.label}>
                                         <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-2">
@@ -338,7 +338,7 @@ export default function SellerOnboardingPage() {
                             </div>
 
                             <p className="text-xs text-neutral-400 text-center mt-8">
-                                Vous pouvez passer cette etape et completer plus tard
+                                You can skip this step and complete later
                             </p>
 
                             <button
@@ -350,7 +350,7 @@ export default function SellerOnboardingPage() {
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
                                     <>
-                                        Continuer
+                                        Continue
                                         <ArrowRight className="w-4 h-4" />
                                     </>
                                 )}
@@ -370,10 +370,10 @@ export default function SellerOnboardingPage() {
                         >
                             <div className="text-center mb-12">
                                 <h1 className="text-3xl font-light text-neutral-900 mb-3">
-                                    Vos gains
+                                    Your earnings
                                 </h1>
                                 <p className="text-neutral-400">
-                                    Choisissez comment recevoir vos commissions
+                                    Choose how to receive your commissions
                                 </p>
                             </div>
 
@@ -391,20 +391,20 @@ export default function SellerOnboardingPage() {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-2">
                                                 <h3 className="font-medium text-neutral-900">
-                                                    Virement bancaire
+                                                    Bank transfer
                                                 </h3>
                                                 <span className="text-[10px] uppercase tracking-wider text-neutral-400 px-2 py-0.5 bg-neutral-100 rounded">
-                                                    Recommande
+                                                    Recommended
                                                 </span>
                                             </div>
                                             <p className="text-sm text-neutral-500 mb-4">
-                                                Recevez automatiquement vos gains sur votre compte
+                                                Receive your earnings automatically to your account
                                             </p>
                                             <ul className="space-y-2">
                                                 {[
-                                                    'Transferts automatiques',
-                                                    'Delai 2-3 jours',
-                                                    'Verification KYC securisee'
+                                                    'Automatic transfers',
+                                                    '2-3 days delay',
+                                                    'Secure KYC verification'
                                                 ].map((item) => (
                                                     <li key={item} className="flex items-center gap-2 text-xs text-neutral-600">
                                                         <span className="w-1 h-1 rounded-full bg-neutral-400" />
@@ -437,16 +437,16 @@ export default function SellerOnboardingPage() {
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                             <h3 className="font-medium text-neutral-900 mb-2">
-                                                Wallet Traaaction
+                                                Traaaction Wallet
                                             </h3>
                                             <p className="text-sm text-neutral-500 mb-4">
-                                                Accumulez et echangez contre des cartes cadeaux
+                                                Accumulate and exchange for gift cards
                                             </p>
                                             <ul className="space-y-2">
                                                 {[
                                                     'Amazon, Netflix, Spotify...',
-                                                    'Pas de verification requise',
-                                                    'Connectez Stripe plus tard'
+                                                    'No verification required',
+                                                    'Connect Stripe later'
                                                 ].map((item) => (
                                                     <li key={item} className="flex items-center gap-2 text-xs text-neutral-600">
                                                         <span className="w-1 h-1 rounded-full bg-neutral-400" />
@@ -477,12 +477,12 @@ export default function SellerOnboardingPage() {
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : payoutChoice === 'stripe' ? (
                                     <>
-                                        Configurer Stripe
+                                        Setup Stripe
                                         <ExternalLink className="w-4 h-4" />
                                     </>
                                 ) : (
                                     <>
-                                        Continuer
+                                        Continue
                                         <ArrowRight className="w-4 h-4" />
                                     </>
                                 )}
@@ -523,10 +523,10 @@ export default function SellerOnboardingPage() {
                                 transition={{ delay: 0.5 }}
                             >
                                 <h1 className="text-3xl font-light text-neutral-900 mb-3">
-                                    Tout est pret
+                                    All set
                                 </h1>
                                 <p className="text-neutral-400 mb-12">
-                                    Votre compte est configure. Decouvrez les programmes et commencez a gagner.
+                                    Your account is set up. Discover programs and start earning.
                                 </p>
 
                                 <button
@@ -538,7 +538,7 @@ export default function SellerOnboardingPage() {
                                         <Loader2 className="w-4 h-4 animate-spin" />
                                     ) : (
                                         <>
-                                            Acceder au dashboard
+                                            Go to dashboard
                                             <ArrowRight className="w-4 h-4" />
                                         </>
                                     )}
