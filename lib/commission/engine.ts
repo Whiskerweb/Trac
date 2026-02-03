@@ -108,7 +108,7 @@ export async function createCommission(params: {
         subscriptionId = null,
         recurringMonth = null,
         recurringMax = null,
-        holdDays = 7,
+        holdDays = 30,  // Default 30 days for SALE/RECURRING (refund protection)
         commissionSource = 'SALE'
     } = params
 

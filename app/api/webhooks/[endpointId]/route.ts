@@ -613,8 +613,8 @@ export async function POST(
                                             // Subscription tracking if applicable
                                             subscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
                                             recurringMonth: 1,
-                                            holdDays: 7,
-                                            commissionSource: CommissionSource.SALE  // ✅ NEW: Track commission source
+                                            holdDays: 30,  // 30 days hold for refund protection
+                                            commissionSource: CommissionSource.SALE
                                         })
                                         console.log(`[Webhook] 💰 Commission created for seller ${partnerId} on mission "${missionConfig.missionName}" with SALE reward ${missionConfig.saleReward}`)
                                     } else {
@@ -861,8 +861,8 @@ export async function POST(
                                                 currency,
                                                 subscriptionId: typeof (invoice as any).subscription === 'string' ? (invoice as any).subscription : null,
                                                 recurringMonth,
-                                                holdDays: 7,
-                                                commissionSource: CommissionSource.RECURRING  // ✅ NEW: Track commission source
+                                                holdDays: 30,  // 30 days hold for refund protection
+                                                commissionSource: CommissionSource.RECURRING
                                             })
                                             console.log(`[Webhook] 💰 Recurring commission created for partner ${partnerId} on mission "${missionConfig.missionName}" (month ${recurringMonth}) with RECURRING reward ${missionConfig.recurringReward}`)
                                         }
