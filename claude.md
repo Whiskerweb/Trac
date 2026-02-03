@@ -121,7 +121,7 @@ TRAC_CLIENT_TOKEN, CRON_SECRET
 │   │   ├── page.tsx              # Programmes rejoints
 │   │   ├── marketplace/          # Browse missions ([missionId])
 │   │   ├── payouts/page.tsx      # Historique gains
-│   │   ├── wallet/page.tsx       # Solde et gift cards
+│   │   ├── wallet/page.tsx       # Solde, gift cards, Stripe Connect
 │   │   ├── profile/page.tsx      # Profil seller
 │   │   ├── members/page.tsx      # Membres equipe
 │   │   ├── account/page.tsx      # Parametres compte
@@ -543,6 +543,10 @@ Webhook /api/webhooks/startup-payments :
   - Amazon (min 10EUR), iTunes (min 15EUR), Steam (min 20EUR), PayPal Gift (min 10EUR)
 - Flow : Seller demande → GiftCardRedemption (PENDING) → Admin fulfills (DELIVERED)
 - Fichier : `lib/payout-service.ts` (fonction `requestGiftCard`)
+- **Stripe Connect depuis Wallet** : Les sellers peuvent connecter Stripe directement depuis `/seller/wallet`
+  - Modal disclaimer : le solde actuel reste sur le wallet (gift cards uniquement)
+  - Seuls les gains futurs iront vers Stripe
+  - API : `POST /api/seller/connect`
 
 ### 8.5 Stripe Connect Setup
 - Type : **Express** (onboarding simplifie)
@@ -709,6 +713,7 @@ Securise par header `CRON_SECRET`.
 | **Minimum payout IBAN** | 25EUR |
 | **Minimum platform** | 0EUR (pas de minimum) |
 | **Wallet sans Stripe** | Argent sur wallet = uniquement gift cards |
+| **Wallet → Stripe** | Solde existant NON transferable vers Stripe, seuls les gains futurs |
 | **Cookie tracking** | 90 jours de duree |
 | **Idempotence webhooks** | Table ProcessedEvent (event_id unique) |
 | **Multi-tenant webhooks** | Secret Stripe par workspace (pas en env var) |
@@ -747,6 +752,14 @@ const DS = {
 - Shimmer loading (`.animate-shimmer`)
 - Smooth scrolling global
 - Framer Motion pour transitions
+
+### Profile Completion Bar (Seller Settings)
+Design moderne glass-morphic avec :
+- Ambient glow gradient (violet → fuchsia → amber)
+- Circular SVG progress ring avec stroke gradient
+- Expandable task cards avec états visuels
+- 6 champs requis : Country, Social media, Description, Industry interests, Activity type, How you work
+- CV et Portfolio sont optionnels
 
 ---
 
@@ -809,12 +822,76 @@ NAVIGATION SELLER:
 | `/seller/marketplace` | Browse missions disponibles | ✅ Fonctionnel |
 | `/seller/marketplace/[id]` | Details mission + resources | ✅ Fonctionnel |
 | `/seller/payouts` | Historique gains et withdrawals | ✅ Fonctionnel |
-| `/seller/wallet` | Solde et gift cards | ✅ Fonctionnel |
+| `/seller/wallet` | Solde, gift cards, Stripe Connect | ✅ Fonctionnel |
 | `/seller/messages` | Messagerie avec startups | ✅ Fonctionnel |
 | `/seller/profile` | Profil seller public | ✅ Fonctionnel |
 | `/seller/members` | Gestion equipe seller | ✅ Fonctionnel |
 | `/seller/account` | Parametres compte | ✅ Fonctionnel |
 | `/seller/onboarding` | Onboarding 4 etapes | ✅ Fonctionnel |
+
+### ✅ Traduction Seller Dashboard en Anglais (100%)
+
+**Date de completion** : Février 2026
+
+Toutes les pages du dashboard seller ont été traduites du français vers l'anglais :
+
+#### Pages traduites
+- `app/seller/onboarding/page.tsx` - Onboarding 4 étapes
+- `app/seller/payouts/page.tsx` - Historique des paiements
+- `app/seller/marketplace/page.tsx` - Browse missions
+- `app/seller/marketplace/[missionId]/page.tsx` - Détails mission
+- `app/seller/wallet/page.tsx` - Wallet et gift cards
+- `app/seller/gift-cards/page.tsx` - Catalogue gift cards
+- `app/seller/page.tsx` - Dashboard principal
+- `app/seller/programs/[missionId]/page.tsx` - Détails programme rejoint
+- `app/seller/settings/page.tsx` - Paramètres profil
+
+### ✅ Redesign Profile Completion Bar (100%)
+
+**Date de completion** : Février 2026
+
+Refonte complète de la barre de complétion de profil dans `app/seller/settings/page.tsx` :
+
+#### Nouveau design
+- **Ambient glow effect** : Halo gradient violet → fuchsia → amber qui s'intensifie au hover
+- **Glass-morphic dark card** : Background slate gradient avec bordure white/10
+- **Top accent gradient line** : Ligne 2px en haut (violet → fuchsia → amber)
+- **Circular SVG progress ring** : Indicateur de progression avec stroke gradient et pourcentage
+- **Dynamic messaging** : "Almost there!" avec nombre exact d'étapes restantes
+- **Expandable task cards** : Chaque tâche a sa propre carte avec état emerald pour les complétées
+- **Helper text** : Rappel que CV et Portfolio sont optionnels
+
+#### Champs requis (6 total)
+```typescript
+const PROFILE_TASKS = [
+    { id: 'country', label: 'Country' },
+    { id: 'social_media', label: 'At least one social media' },
+    { id: 'description', label: 'Profile description' },
+    { id: 'industry_interests', label: 'Industry interests' },
+    { id: 'activity_type', label: 'Activity type' },
+    { id: 'how_you_work', label: 'How you work' },
+]
+```
+
+**Note** : CV et Portfolio ne sont PAS obligatoires pour la validation du profil.
+
+### ✅ Stripe Connect depuis Wallet (100%)
+
+**Date de completion** : Février 2026
+
+Ajout de la possibilité de connecter Stripe directement depuis la page Wallet :
+
+#### Fonctionnalités
+- **Carte "Connect Stripe"** : Carte sombre visible en bas de page (quand pas connecté)
+- **Modal disclaimer** : S'affiche au clic avec avertissement important
+- **Avertissement funds** : Le solde actuel du wallet ne peut pas être transféré vers Stripe
+- **Explication** : Seuls les gains futurs iront vers Stripe
+- **Avantages listés** : Paiements auto, virement direct, pas de minimum
+- **Flow** : Clic → Modal → Confirmation → Redirect vers Stripe Onboarding
+
+#### Fichiers modifiés
+- `app/seller/wallet/page.tsx` : Ajout modal + bouton Connect Stripe
+- `app/seller/layout.tsx` : Suppression du WalletButton dans le header payouts
 
 ### ✅ Activity Feed avec Attribution Seller COMPLETE (100%)
 
@@ -878,6 +955,18 @@ Enrichissement en 3 etapes avec gestion correcte des sellers :
 - Events enrichis avec metadata (montant vente, nom event lead)
 - Performance optimale avec cache Redis/Tinybird
 
+### Fichiers récemment modifiés (commités)
+- `app/seller/settings/page.tsx` - Redesign profile completion bar (glass-morphic + progress ring)
+- `app/seller/wallet/page.tsx` - Ajout Stripe Connect avec modal disclaimer
+- `app/seller/layout.tsx` - Suppression WalletButton du header
+- `app/seller/onboarding/page.tsx` - Traduction EN
+- `app/seller/payouts/page.tsx` - Traduction EN
+- `app/seller/marketplace/page.tsx` - Traduction EN
+- `app/seller/marketplace/[missionId]/page.tsx` - Traduction EN
+- `app/seller/gift-cards/page.tsx` - Traduction EN
+- `app/seller/page.tsx` - Traduction EN
+- `app/seller/programs/[missionId]/page.tsx` - Traduction EN
+
 ### Fichiers modifies en cours (non commites)
 - `app/actions/commissions.ts` - Refactoring stats commissions
 - `app/actions/sellers.ts` - Gestion sellers
@@ -890,7 +979,6 @@ Enrichissement en 3 etapes avec gestion correcte des sellers :
 - `components/dashboard/ActivityFeed.tsx` - Nouveau composant feed activite
 - `app/dashboard/page.tsx` - Layout 50/50 globe + activity feed
 - `app/api/stats/activity/route.ts` - Enrichissement seller avec fix Prisma
-- Tous les fichiers seller mentionnes ci-dessus
 
 ### Nouveau (non track)
 - `app/api/webhooks/startup-payments/` - Webhook paiement startup (nouveau flux)
@@ -909,6 +997,11 @@ Le developpement est concentre sur plusieurs axes :
    - Activity Feed en temps reel avec attribution seller
    - Enrichissement des events (clicks, leads, sales) avec informations seller
    - Interface compacte et performante avec auto-refresh
+
+3. **UX Seller Dashboard** (✅ COMPLETE) :
+   - Traduction complète en anglais
+   - Redesign profile completion bar
+   - Stripe Connect accessible depuis Wallet avec disclaimer
 
 ### Notes importantes post-migration
 - **Dashboard startup** : Le dossier `/dashboard/sellers/*` gere les sellers du point de vue startup
