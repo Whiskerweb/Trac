@@ -68,6 +68,8 @@ export async function GET(request: Request) {
         // NEW USER HANDLING (Google OAuth)
         // =============================================
         if (!roles.hasWorkspace && !roles.hasSeller) {
+            console.log('[Auth Callback] New user detected, roleIntent:', roleIntent)
+
             // New user from Google OAuth - check role intent
             if (roleIntent === 'seller') {
                 try {
@@ -79,8 +81,9 @@ export async function GET(request: Request) {
                     })
 
                     if (result.success) {
-                        console.log('[Auth Callback] ✅ Auto-created Global Seller for Google user')
-                        return NextResponse.redirect(`${origin}/seller`)
+                        console.log('[Auth Callback] ✅ Auto-created Global Seller for Google user, redirecting to onboarding')
+                        // Redirect to seller onboarding to complete setup (Stripe Connect, etc.)
+                        return NextResponse.redirect(`${origin}/seller/onboarding`)
                     } else {
                         console.error('[Auth Callback] ❌ Failed to create seller:', result.error)
                         // Continue to onboarding as fallback
@@ -92,6 +95,7 @@ export async function GET(request: Request) {
             }
 
             // Startup flow → onboarding to create workspace
+            console.log('[Auth Callback] Redirecting to startup onboarding')
             return NextResponse.redirect(`${origin}/onboarding`)
         }
 
