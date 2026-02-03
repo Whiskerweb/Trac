@@ -191,6 +191,7 @@ TRAC_CLIENT_TOKEN, CRON_SECRET
 │   ├── payout-service.ts         # Orchestration payouts multi-methode (388 lignes)
 │   ├── api-keys.ts               # Generation/validation API keys
 │   ├── api-middleware.ts          # Middleware auth API (scopes)
+│   ├── sql-sanitize.ts            # Sanitization SQL pour Tinybird (protection injection)
 │   ├── workspace-context.ts      # Gestion contexte workspace (300 lignes)
 │   ├── stats.ts                  # Calculs statistiques
 │   ├── commission/
@@ -440,7 +441,7 @@ Platform fee (TOUJOURS) :
 
 ### 7.3 Lifecycle des commissions
 ```
-                    7 jours (hold)           Batch payout
+                    hold_days                Batch payout
     PENDING ──────────────────→ PROCEED ──────────────→ COMPLETE
        │                           │
        │ (refund)                  │ (refund)
@@ -448,9 +449,16 @@ Platform fee (TOUJOURS) :
     DELETE                     DELETE + negative balance
 ```
 
+**Periodes de maturation par type :**
+| Type | hold_days | Raison |
+|------|-----------|--------|
+| **LEAD** | 3 jours | Pas de risque de remboursement |
+| **SALE** | 30 jours | Protection contre remboursements/chargebacks |
+| **RECURRING** | 30 jours | Protection contre annulations |
+
 | Etat | Signification | Action |
 |------|---------------|--------|
-| **PENDING** | Commission creee, en attente de maturation | Hold 7 jours min |
+| **PENDING** | Commission creee, en attente de maturation | Hold selon type (3j LEAD, 30j SALE/RECURRING) |
 | **PROCEED** | Maturee, prete pour payout | Visible dans "due" du seller |
 | **COMPLETE** | Payee au seller | Ajoutee au `paid_total` |
 
@@ -462,7 +470,7 @@ gross_amount       : montant brut du client
 net_amount         : montant net (gross - stripe_fee - tax)
 stripe_fee         : frais Stripe
 tax_amount         : taxes
-hold_days          : jours avant maturation (default 7)
+hold_days          : jours avant maturation (3 pour LEAD, 30 pour SALE/RECURRING)
 subscription_id    : pour recurring
 recurring_month    : numero du mois de renouvellement
 startup_payment_status : UNPAID | PAID (la startup a-t-elle paye?)
@@ -704,8 +712,9 @@ Securise par header `CRON_SECRET`.
 | Regle | Detail |
 |-------|--------|
 | **Platform fee** | 15% du net (apres Stripe fees + taxes), sur CHAQUE vente |
-| **Hold period** | 7 jours minimum avant maturation commission |
-| **Maturation** | PENDING → PROCEED apres 30 jours (ou hold_days) |
+| **Hold period LEAD** | 3 jours avant maturation (pas de risque remboursement) |
+| **Hold period SALE/RECURRING** | 30 jours avant maturation (protection chargebacks) |
+| **Maturation** | PENDING → PROCEED apres hold_days (3j LEAD, 30j SALE/RECURRING) |
 | **First-click attribution** | Une fois set sur Customer, jamais ecrase par clicks ulterieurs |
 | **Refund PENDING/PROCEED** | Commission supprimee |
 | **Refund COMPLETE** | Balance negative creee + commission supprimee |
@@ -956,6 +965,12 @@ Enrichissement en 3 etapes avec gestion correcte des sellers :
 - Performance optimale avec cache Redis/Tinybird
 
 ### Fichiers récemment modifiés (commités)
+- `lib/sql-sanitize.ts` - **NOUVEAU** Bibliotheque de sanitization SQL pour Tinybird
+- `lib/commission/engine.ts` - Hold days default 30j pour SALE/RECURRING
+- `app/api/track/lead/route.ts` - SQL injection fix + holdDays LEAD 3j
+- `app/api/webhooks/[endpointId]/route.ts` - SQL injection fix + holdDays 30j
+- `app/actions/customers.ts` - SQL injection fix
+- `app/api/stats/check-installation/route.ts` - SQL injection fix
 - `app/seller/settings/page.tsx` - Redesign profile completion bar (glass-morphic + progress ring)
 - `app/seller/wallet/page.tsx` - Ajout Stripe Connect avec modal disclaimer
 - `app/seller/layout.tsx` - Suppression WalletButton du header
@@ -1002,6 +1017,53 @@ Le developpement est concentre sur plusieurs axes :
    - Traduction complète en anglais
    - Redesign profile completion bar
    - Stripe Connect accessible depuis Wallet avec disclaimer
+
+### ✅ Securite SQL Injection Fix (100%)
+
+**Date de completion** : Février 2026
+
+Correction des vulnerabilites d'injection SQL dans les requetes Tinybird.
+
+#### Probleme
+Les requetes Tinybird utilisaient l'interpolation directe de variables utilisateur :
+```javascript
+// AVANT (vulnerable)
+WHERE click_id = '${clickId}'  // clickId vient du body HTTP
+```
+
+#### Solution
+Creation d'une bibliotheque de sanitization `lib/sql-sanitize.ts` :
+- `sanitizeClickId()` : Valide format `clk_{timestamp}_{hex}` ou `clk_{alphanum}`
+- `sanitizeUUID()` : Valide format UUID standard
+- `sanitizeLinkId()` : Valide UUID, CUID, NanoID
+- `sanitizeExternalId()` : Valide ou echappe les IDs externes
+
+#### Fichiers corriges
+- `app/api/track/lead/route.ts` - clickId du body
+- `app/api/webhooks/[endpointId]/route.ts` - clickId et workspaceId
+- `app/actions/customers.ts` - tous les IDs dans les requetes Tinybird
+- `app/api/stats/check-installation/route.ts` - workspaceId
+
+#### Comportement
+- IDs valides : passent sans modification
+- IDs invalides : rejetes avec log warning, requete Tinybird ignoree
+- Tracking continue de fonctionner normalement
+
+### ✅ Hold Days Commissions Update (100%)
+
+**Date de completion** : Février 2026
+
+Mise a jour des periodes de maturation des commissions :
+
+| Type | Avant | Apres | Raison |
+|------|-------|-------|--------|
+| LEAD | 3 jours | 3 jours | Inchange (pas de remboursement) |
+| SALE | 7 jours | 30 jours | Protection chargebacks Stripe |
+| RECURRING | 7 jours | 30 jours | Protection annulations |
+
+#### Fichiers modifies
+- `lib/commission/engine.ts` - Default holdDays: 7 → 30
+- `app/api/webhooks/[endpointId]/route.ts` - SALE et RECURRING: 7 → 30
 
 ### Notes importantes post-migration
 - **Dashboard startup** : Le dossier `/dashboard/sellers/*` gere les sellers du point de vue startup
@@ -1054,6 +1116,7 @@ npm run lint          # ESLint
 | **CSRF** | Protection native Server Actions Next.js |
 | **Domain** | Verification DNS, cache 1h, blocage routes auth |
 | **Multi-tenant** | Workspace isolation sur toutes les queries |
+| **SQL Injection** | Sanitization des inputs Tinybird via `lib/sql-sanitize.ts` |
 
 ---
 
