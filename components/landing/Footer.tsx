@@ -3,11 +3,31 @@
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 
-const footerLinks = {
-    Product: ['Features', 'Integrations', 'Pricing', 'Changelog'],
-    Company: ['About', 'Blog', 'Careers', 'Contact'],
-    Resources: ['Documentation', 'Help Center', 'API Reference', 'Status'],
-    Legal: ['Privacy', 'Terms', 'Security'],
+// Links with their actual URLs
+const footerLinks: Record<string, Array<{ label: string; href: string }>> = {
+    Product: [
+        { label: 'Features', href: '#' },
+        { label: 'Integrations', href: '#' },
+        { label: 'Pricing', href: '#' },
+        { label: 'Changelog', href: '#' },
+    ],
+    Company: [
+        { label: 'About', href: '#' },
+        { label: 'Blog', href: '#' },
+        { label: 'Careers', href: '#' },
+        { label: 'Contact', href: '#' },
+    ],
+    Resources: [
+        { label: 'Documentation', href: '#' },
+        { label: 'Help Center', href: '#' },
+        { label: 'API Reference', href: '#' },
+        { label: 'Status', href: '#' },
+    ],
+    Legal: [
+        { label: 'Privacy', href: '/privacy' },
+        { label: 'Terms', href: '/terms' },
+        { label: 'Security', href: '#' },
+    ],
 };
 
 export function Footer() {
@@ -38,9 +58,9 @@ export function Footer() {
                             <h3 className="font-semibold text-slate-900 text-sm mb-4">{category}</h3>
                             <ul className="space-y-3">
                                 {links.map((link) => (
-                                    <li key={link}>
-                                        <Link href="#" className="text-gray-500 hover:text-black text-sm transition-colors flex items-center gap-1 group">
-                                            {link}
+                                    <li key={link.label}>
+                                        <Link href={link.href} className="text-gray-500 hover:text-black text-sm transition-colors flex items-center gap-1 group">
+                                            {link.label}
                                             <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity -translate-y-1 group-hover:translate-y-0" />
                                         </Link>
                                     </li>
