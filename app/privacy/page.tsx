@@ -1,413 +1,557 @@
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+'use client'
 
-export const metadata = {
-    title: 'Privacy Policy - Traaaction',
-    description: 'Learn how Traaaction collects, uses, and protects your personal data.',
-}
+import Link from 'next/link'
+import { ArrowLeft, Shield, Database, Cookie, Scale, Globe, Clock, UserCheck, Users, Lock, Baby, RefreshCw, Mail, ChevronRight } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+
+const sections = [
+    { id: 'controller', title: 'Data Controller', icon: Shield },
+    { id: 'collection', title: 'Information We Collect', icon: Database },
+    { id: 'cookies', title: 'Cookies & Tracking', icon: Cookie },
+    { id: 'usage', title: 'How We Use Your Data', icon: Scale },
+    { id: 'legal-basis', title: 'Legal Basis (GDPR)', icon: Scale },
+    { id: 'sharing', title: 'Data Sharing', icon: Users },
+    { id: 'transfers', title: 'International Transfers', icon: Globe },
+    { id: 'retention', title: 'Data Retention', icon: Clock },
+    { id: 'rights', title: 'Your GDPR Rights', icon: UserCheck },
+    { id: 'roles', title: 'Controller vs Processor', icon: Users },
+    { id: 'security', title: 'Security', icon: Lock },
+    { id: 'children', title: "Children's Privacy", icon: Baby },
+    { id: 'changes', title: 'Policy Changes', icon: RefreshCw },
+    { id: 'contact', title: 'Contact Us', icon: Mail },
+]
 
 export default function PrivacyPolicyPage() {
+    const [activeSection, setActiveSection] = useState('controller')
+    const [scrollProgress, setScrollProgress] = useState(0)
+    const contentRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const scrollTop = window.scrollY
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight
+            setScrollProgress((scrollTop / docHeight) * 100)
+
+            // Find active section
+            const sectionElements = sections.map(s => document.getElementById(s.id))
+            const scrollPosition = scrollTop + 200
+
+            for (let i = sectionElements.length - 1; i >= 0; i--) {
+                const el = sectionElements[i]
+                if (el && el.offsetTop <= scrollPosition) {
+                    setActiveSection(sections[i].id)
+                    break
+                }
+            }
+        }
+
+        window.addEventListener('scroll', handleScroll)
+        return () => window.removeEventListener('scroll', handleScroll)
+    }, [])
+
+    const scrollToSection = (id: string) => {
+        const el = document.getElementById(id)
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+    }
+
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-[#FAFAFA] text-slate-900 selection:bg-violet-500/20">
+            {/* Subtle background pattern */}
+            <div className="fixed inset-0 pointer-events-none opacity-40">
+                <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-bl from-violet-100/50 to-transparent rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-blue-100/50 to-transparent rounded-full blur-3xl" />
+            </div>
+
+            {/* Progress bar */}
+            <div className="fixed top-0 left-0 right-0 h-[3px] bg-slate-200/50 z-50">
+                <div
+                    className="h-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-violet-500 transition-all duration-150"
+                    style={{ width: `${scrollProgress}%` }}
+                />
+            </div>
+
             {/* Header */}
-            <header className="border-b border-gray-100">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <header className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/50">
+                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <Link
                         href="/"
-                        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                        className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors group"
                     >
-                        <ArrowLeft className="w-4 h-4" />
-                        Back to home
+                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        <span>Back to Traaaction</span>
                     </Link>
+                    <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-slate-900 rounded-md flex items-center justify-center text-white font-bold text-xs">
+                            T
+                        </div>
+                        <span className="text-sm font-medium text-slate-500">Legal</span>
+                    </div>
                 </div>
             </header>
 
-            {/* Content */}
-            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div className="mb-12">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-4">Privacy Policy</h1>
-                    <p className="text-gray-500">Last updated: February 3, 2026</p>
-                </div>
+            {/* Main layout */}
+            <div className="pt-20 flex">
+                {/* Left sidebar - Navigation spine */}
+                <aside className="hidden lg:block fixed left-0 top-20 bottom-0 w-72 bg-white/50 backdrop-blur-sm border-r border-slate-200/50 overflow-y-auto">
+                    <div className="p-6 pt-12">
+                        <div className="text-xs uppercase tracking-widest text-slate-400 mb-6 font-medium">
+                            Table of Contents
+                        </div>
+                        <nav className="space-y-1">
+                            {sections.map((section, index) => {
+                                const isActive = activeSection === section.id
+                                return (
+                                    <button
+                                        key={section.id}
+                                        onClick={() => scrollToSection(section.id)}
+                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 group ${
+                                            isActive
+                                                ? 'bg-violet-50 text-violet-900'
+                                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'
+                                        }`}
+                                    >
+                                        <span className={`flex items-center justify-center w-6 h-6 rounded-md text-xs font-mono transition-colors ${
+                                            isActive ? 'bg-violet-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:text-slate-500'
+                                        }`}>
+                                            {String(index + 1).padStart(2, '0')}
+                                        </span>
+                                        <span className="text-sm truncate">{section.title}</span>
+                                        {isActive && <ChevronRight className="w-3 h-3 ml-auto text-violet-500" />}
+                                    </button>
+                                )
+                            })}
+                        </nav>
+                    </div>
+                </aside>
 
-                <div className="prose prose-gray max-w-none">
-                    {/* Introduction */}
-                    <p className="text-lg text-gray-600 leading-relaxed">
-                        Welcome to Traaaction (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;). Traaaction provides a platform
-                        for managing affiliate and partner marketing programs, enabling startups to create missions
-                        and sellers to earn commissions through tracked referrals.
-                    </p>
-                    <p className="text-gray-600">
-                        We are committed to protecting your privacy and personal data. This Privacy Policy explains
-                        how we collect, use, store, and protect your information when you use our platform at
-                        traaaction.com (the &quot;Service&quot;).
-                    </p>
-                    <p className="text-gray-600">
-                        By using our Service, you agree to the collection and use of information as described in
-                        this policy. Our <Link href="/terms" className="text-violet-600 hover:text-violet-700">Terms of Service</Link> govern
-                        all use of our Service and, together with this Privacy Policy, constitute your agreement with us.
-                    </p>
+                {/* Main content */}
+                <main className="flex-1 lg:ml-72" ref={contentRef}>
+                    {/* Hero section */}
+                    <div className="px-6 lg:px-16 pt-16 pb-20 bg-white border-b border-slate-200/50">
+                        <div className="max-w-3xl">
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium mb-8">
+                                <Shield className="w-3 h-3" />
+                                GDPR Compliant
+                            </div>
+                            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
+                                Privacy
+                                <span className="block text-slate-300">Policy</span>
+                            </h1>
+                            <p className="text-lg text-slate-500 leading-relaxed max-w-xl mb-8">
+                                Your privacy matters. This policy explains how Traaaction collects, uses, and protects your data with full GDPR compliance.
+                            </p>
+                            <div className="flex items-center gap-4 text-sm text-slate-400">
+                                <span>Last updated</span>
+                                <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                <span className="text-slate-600 font-medium">February 3, 2026</span>
+                            </div>
+                        </div>
+                    </div>
 
-                    {/* Section 1 */}
-                    <Section number={1} title="Data Controller">
-                        <p>
-                            The data controller responsible for your personal data is:
-                        </p>
-                        <div className="bg-gray-50 rounded-lg p-4 not-prose">
-                            <p className="font-semibold text-gray-900">Traaaction</p>
-                            <p className="text-gray-600">60 rue Amiral Romain-Desfossés</p>
-                            <p className="text-gray-600">29200 Brest, France</p>
-                            <p className="text-gray-600 mt-2">
-                                Email: <a href="mailto:contact@traaaction.com" className="text-violet-600 hover:text-violet-700">contact@traaaction.com</a>
+                    {/* Content sections */}
+                    <div className="px-6 lg:px-16 py-16 space-y-24">
+                        {/* Introduction */}
+                        <div className="max-w-3xl">
+                            <p className="text-lg text-slate-600 leading-relaxed">
+                                Welcome to Traaaction. We provide a platform for managing affiliate and partner marketing programs,
+                                enabling startups to create missions and sellers to earn commissions through tracked referrals.
+                            </p>
+                            <p className="text-slate-500 leading-relaxed mt-4">
+                                We are committed to protecting your privacy and personal data. By using our Service, you agree to
+                                the collection and use of information as described in this policy.
                             </p>
                         </div>
-                    </Section>
 
-                    {/* Section 2 */}
-                    <Section number={2} title="Information We Collect">
-                        <p>
-                            We collect different types of information depending on how you interact with our Service:
-                        </p>
+                        {/* Section 1 - Data Controller */}
+                        <Section id="controller" number={1} title="Data Controller">
+                            <p>The data controller responsible for your personal data is:</p>
+                            <InfoCard>
+                                <div className="font-semibold text-slate-900 text-lg mb-2">Traaaction</div>
+                                <div className="text-slate-500 space-y-1">
+                                    <p>60 rue Amiral Romain-Desfossés</p>
+                                    <p>29200 Brest, France</p>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-slate-100">
+                                    <a href="mailto:contact@traaaction.com" className="text-violet-600 hover:text-violet-700 transition-colors">
+                                        contact@traaaction.com
+                                    </a>
+                                </div>
+                            </InfoCard>
+                        </Section>
 
-                        <h4 className="font-semibold text-gray-900 mt-6">For Startups (Program Owners)</h4>
-                        <ul>
-                            <li>Account information: name, email address, company name</li>
-                            <li>Workspace settings and preferences</li>
-                            <li>Payment information processed through Stripe (we do not store full card details)</li>
-                            <li>Mission and program configurations</li>
-                        </ul>
+                        {/* Section 2 - Information We Collect */}
+                        <Section id="collection" number={2} title="Information We Collect">
+                            <p>We collect different types of information depending on how you interact with our Service:</p>
 
-                        <h4 className="font-semibold text-gray-900 mt-6">For Sellers (Affiliates)</h4>
-                        <ul>
-                            <li>Account information: name, email address</li>
-                            <li>Profile information: bio, social media links, profile picture</li>
-                            <li>Payout information: Stripe Connect details, PayPal email, or IBAN</li>
-                            <li>Performance data: clicks, leads, sales, and commissions</li>
-                        </ul>
+                            <SubSection title="For Startups (Program Owners)">
+                                <DataList items={[
+                                    'Account information: name, email address, company name',
+                                    'Workspace settings and preferences',
+                                    'Payment information processed through Stripe',
+                                    'Mission and program configurations',
+                                ]} />
+                            </SubSection>
 
-                        <h4 className="font-semibold text-gray-900 mt-6">For End Users (Visitors on Client Websites)</h4>
-                        <p>
-                            When you click on a tracking link or visit a website using our tracking SDK, we may collect:
-                        </p>
-                        <ul>
-                            <li>Click identifiers for attribution purposes</li>
-                            <li>IP address (used for geolocation, not stored long-term for EU users)</li>
-                            <li>Device type and browser information</li>
-                            <li>Country and city (derived from IP)</li>
-                            <li>Referrer URL</li>
-                            <li>Timestamp of the visit</li>
-                        </ul>
+                            <SubSection title="For Sellers (Affiliates)">
+                                <DataList items={[
+                                    'Account information: name, email address',
+                                    'Profile information: bio, social media links, profile picture',
+                                    'Payout information: Stripe Connect, PayPal, or IBAN',
+                                    'Performance data: clicks, leads, sales, commissions',
+                                ]} />
+                            </SubSection>
 
-                        <h4 className="font-semibold text-gray-900 mt-6">Automatically Collected Data</h4>
-                        <p>
-                            When you use our Service, we automatically collect:
-                        </p>
-                        <ul>
-                            <li>Log data (IP address, browser type, pages visited)</li>
-                            <li>Usage analytics to improve our Service</li>
-                            <li>Performance and error data</li>
-                        </ul>
-                    </Section>
+                            <SubSection title="For End Users (Visitors)">
+                                <p className="text-slate-500 mb-4">When you click on a tracking link, we may collect:</p>
+                                <DataList items={[
+                                    'Click identifiers for attribution',
+                                    'IP address (geolocation only, not stored for EU)',
+                                    'Device type and browser information',
+                                    'Country and city (derived from IP)',
+                                    'Referrer URL and timestamp',
+                                ]} />
+                            </SubSection>
+                        </Section>
 
-                    {/* Section 3 */}
-                    <Section number={3} title="Cookies and Tracking Technologies">
-                        <p>
-                            We use cookies and similar technologies to operate our Service and provide attribution tracking.
-                        </p>
+                        {/* Section 3 - Cookies */}
+                        <Section id="cookies" number={3} title="Cookies & Tracking Technologies">
+                            <p>We use cookies and similar technologies to operate our Service and provide attribution tracking.</p>
 
-                        <h4 className="font-semibold text-gray-900 mt-6">Cookies We Use</h4>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full not-prose text-sm">
-                                <thead>
-                                    <tr className="border-b border-gray-200">
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Cookie</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Purpose</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Duration</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    <tr>
-                                        <td className="py-3 px-4 font-mono text-xs text-gray-600">trac_id</td>
-                                        <td className="py-3 px-4 text-gray-600">Attribution tracking (click ID)</td>
-                                        <td className="py-3 px-4 text-gray-600">90 days</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-3 px-4 font-mono text-xs text-gray-600">trac_active_ws</td>
-                                        <td className="py-3 px-4 text-gray-600">Active workspace session</td>
-                                        <td className="py-3 px-4 text-gray-600">Session</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-3 px-4 font-mono text-xs text-gray-600">sb-*</td>
-                                        <td className="py-3 px-4 text-gray-600">Authentication (Supabase)</td>
-                                        <td className="py-3 px-4 text-gray-600">Session</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <p className="mt-4">
-                            We do not use third-party advertising cookies. Our tracking cookies are strictly first-party
-                            and used solely for affiliate attribution.
-                        </p>
-                    </Section>
+                            <div className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="bg-slate-50">
+                                            <th className="text-left py-4 px-5 font-medium text-slate-700">Cookie</th>
+                                            <th className="text-left py-4 px-5 font-medium text-slate-700">Purpose</th>
+                                            <th className="text-left py-4 px-5 font-medium text-slate-700">Duration</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        <tr className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="py-4 px-5 font-mono text-xs text-violet-600">trac_id</td>
+                                            <td className="py-4 px-5 text-slate-500">Attribution tracking</td>
+                                            <td className="py-4 px-5 text-slate-500">90 days</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="py-4 px-5 font-mono text-xs text-violet-600">trac_active_ws</td>
+                                            <td className="py-4 px-5 text-slate-500">Active workspace session</td>
+                                            <td className="py-4 px-5 text-slate-500">Session</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="py-4 px-5 font-mono text-xs text-violet-600">sb-*</td>
+                                            <td className="py-4 px-5 text-slate-500">Authentication (Supabase)</td>
+                                            <td className="py-4 px-5 text-slate-500">Session</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
 
-                    {/* Section 4 */}
-                    <Section number={4} title="How We Use Your Information">
-                        <p>We use the collected information for the following purposes:</p>
-                        <ul>
-                            <li><strong>Service delivery:</strong> To provide, operate, and maintain our platform</li>
-                            <li><strong>Attribution:</strong> To track and attribute clicks, leads, and sales to the correct sellers</li>
-                            <li><strong>Payments:</strong> To process commissions and payouts to sellers</li>
-                            <li><strong>Analytics:</strong> To provide startups with insights about their affiliate programs</li>
-                            <li><strong>Communication:</strong> To send transactional emails, notifications, and support responses</li>
-                            <li><strong>Security:</strong> To detect fraud, prevent abuse, and protect our users</li>
-                            <li><strong>Improvement:</strong> To analyze usage patterns and improve our Service</li>
-                            <li><strong>Legal compliance:</strong> To comply with applicable laws and regulations</li>
-                        </ul>
-                    </Section>
+                            <InfoCard variant="subtle" className="mt-6">
+                                <p className="text-slate-500 text-sm">
+                                    <span className="text-slate-700 font-medium">No advertising cookies.</span> Our tracking cookies are strictly first-party and used solely for affiliate attribution.
+                                </p>
+                            </InfoCard>
+                        </Section>
 
-                    {/* Section 5 */}
-                    <Section number={5} title="Legal Basis for Processing (GDPR)">
-                        <p>
-                            Under the General Data Protection Regulation (GDPR), we process your personal data based on
-                            the following legal grounds:
-                        </p>
-                        <ul>
-                            <li>
-                                <strong>Contract performance:</strong> Processing necessary to provide our Service to you
-                                (account management, payment processing, attribution tracking)
-                            </li>
-                            <li>
-                                <strong>Legitimate interests:</strong> Processing for fraud prevention, security,
-                                and service improvement, where our interests do not override your rights
-                            </li>
-                            <li>
-                                <strong>Legal obligation:</strong> Processing required to comply with applicable laws
-                                (tax records, anti-money laundering)
-                            </li>
-                            <li>
-                                <strong>Consent:</strong> Where required, we will obtain your explicit consent
-                                (marketing communications)
-                            </li>
-                        </ul>
-                    </Section>
+                        {/* Section 4 - How We Use Your Data */}
+                        <Section id="usage" number={4} title="How We Use Your Information">
+                            <p>We use the collected information for the following purposes:</p>
+                            <div className="grid md:grid-cols-2 gap-4 mt-8">
+                                {[
+                                    { title: 'Service Delivery', desc: 'To provide, operate, and maintain our platform' },
+                                    { title: 'Attribution', desc: 'To track clicks, leads, and sales to correct sellers' },
+                                    { title: 'Payments', desc: 'To process commissions and payouts' },
+                                    { title: 'Analytics', desc: 'To provide insights about affiliate programs' },
+                                    { title: 'Communication', desc: 'Transactional emails and support responses' },
+                                    { title: 'Security', desc: 'Fraud detection and abuse prevention' },
+                                    { title: 'Improvement', desc: 'Analyze usage patterns to improve Service' },
+                                    { title: 'Legal', desc: 'Comply with applicable laws and regulations' },
+                                ].map((item) => (
+                                    <div key={item.title} className="p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all">
+                                        <div className="font-medium text-slate-800 mb-1">{item.title}</div>
+                                        <div className="text-sm text-slate-500">{item.desc}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </Section>
 
-                    {/* Section 6 */}
-                    <Section number={6} title="Data Sharing and Third Parties">
-                        <p>
-                            We share your data with trusted third-party service providers who help us operate our platform.
-                            These providers are contractually obligated to protect your data and use it only as instructed.
-                        </p>
+                        {/* Section 5 - Legal Basis */}
+                        <Section id="legal-basis" number={5} title="Legal Basis for Processing (GDPR)">
+                            <p>Under the General Data Protection Regulation (GDPR), we process your personal data based on:</p>
+                            <div className="space-y-4 mt-8">
+                                {[
+                                    { basis: 'Contract Performance', desc: 'Processing necessary to provide our Service (account management, payments, tracking)' },
+                                    { basis: 'Legitimate Interests', desc: 'Fraud prevention, security, and service improvement' },
+                                    { basis: 'Legal Obligation', desc: 'Tax records, anti-money laundering compliance' },
+                                    { basis: 'Consent', desc: 'Where required (e.g., marketing communications)' },
+                                ].map((item, i) => (
+                                    <div key={item.basis} className="flex gap-4 p-5 rounded-xl bg-white border-l-4 border-violet-500 shadow-sm">
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center text-violet-600 font-mono text-sm font-bold">
+                                            {i + 1}
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-slate-800 mb-1">{item.basis}</div>
+                                            <div className="text-sm text-slate-500">{item.desc}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </Section>
 
-                        <h4 className="font-semibold text-gray-900 mt-6">Service Providers (Subprocessors)</h4>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full not-prose text-sm">
-                                <thead>
-                                    <tr className="border-b border-gray-200">
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Provider</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Purpose</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Location</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    <tr>
-                                        <td className="py-3 px-4 text-gray-900">Stripe</td>
-                                        <td className="py-3 px-4 text-gray-600">Payment processing, Stripe Connect</td>
-                                        <td className="py-3 px-4 text-gray-600">US (EU data center available)</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-3 px-4 text-gray-900">Supabase</td>
-                                        <td className="py-3 px-4 text-gray-600">Authentication, database</td>
-                                        <td className="py-3 px-4 text-gray-600">EU (Frankfurt)</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-3 px-4 text-gray-900">Vercel</td>
-                                        <td className="py-3 px-4 text-gray-600">Hosting, edge functions</td>
-                                        <td className="py-3 px-4 text-gray-600">Global (EU edge nodes)</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-3 px-4 text-gray-900">Tinybird</td>
-                                        <td className="py-3 px-4 text-gray-600">Real-time analytics</td>
-                                        <td className="py-3 px-4 text-gray-600">EU (GCP Europe-West)</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-3 px-4 text-gray-900">Upstash</td>
-                                        <td className="py-3 px-4 text-gray-600">Redis cache, rate limiting</td>
-                                        <td className="py-3 px-4 text-gray-600">EU (Frankfurt)</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                        {/* Section 6 - Data Sharing */}
+                        <Section id="sharing" number={6} title="Data Sharing and Third Parties">
+                            <p>We share your data with trusted service providers who help us operate our platform:</p>
 
-                        <h4 className="font-semibold text-gray-900 mt-6">Other Disclosures</h4>
-                        <p>We may also disclose your information:</p>
-                        <ul>
-                            <li>To comply with legal obligations or respond to lawful requests</li>
-                            <li>To protect our rights, privacy, safety, or property</li>
-                            <li>In connection with a merger, acquisition, or sale of assets (with prior notice)</li>
-                            <li>With your consent for any other purpose</li>
-                        </ul>
-                    </Section>
+                            <SubSection title="Service Providers (Subprocessors)">
+                                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm mt-4">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="bg-slate-50">
+                                                <th className="text-left py-4 px-5 font-medium text-slate-700">Provider</th>
+                                                <th className="text-left py-4 px-5 font-medium text-slate-700">Purpose</th>
+                                                <th className="text-left py-4 px-5 font-medium text-slate-700">Location</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {[
+                                                { name: 'Stripe', purpose: 'Payment processing', location: 'US (EU available)' },
+                                                { name: 'Supabase', purpose: 'Authentication, database', location: 'EU (Frankfurt)' },
+                                                { name: 'Vercel', purpose: 'Hosting, edge functions', location: 'Global (EU edge)' },
+                                                { name: 'Tinybird', purpose: 'Real-time analytics', location: 'EU (GCP Europe)' },
+                                                { name: 'Upstash', purpose: 'Redis cache, rate limiting', location: 'EU (Frankfurt)' },
+                                            ].map((provider) => (
+                                                <tr key={provider.name} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="py-4 px-5 text-slate-800 font-medium">{provider.name}</td>
+                                                    <td className="py-4 px-5 text-slate-500">{provider.purpose}</td>
+                                                    <td className="py-4 px-5 text-slate-500">{provider.location}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </SubSection>
 
-                    {/* Section 7 */}
-                    <Section number={7} title="International Data Transfers">
-                        <p>
-                            Your data may be transferred to and processed in countries outside the European Economic
-                            Area (EEA). When we transfer data outside the EEA, we ensure appropriate safeguards are
-                            in place, including:
-                        </p>
-                        <ul>
-                            <li>Standard Contractual Clauses (SCCs) approved by the European Commission</li>
-                            <li>Adequacy decisions where applicable</li>
-                            <li>Data Processing Agreements with all subprocessors</li>
-                        </ul>
-                    </Section>
+                            <SubSection title="Other Disclosures">
+                                <DataList items={[
+                                    'To comply with legal obligations or lawful requests',
+                                    'To protect our rights, privacy, safety, or property',
+                                    'In connection with a merger or acquisition (with prior notice)',
+                                    'With your consent for any other purpose',
+                                ]} />
+                            </SubSection>
+                        </Section>
 
-                    {/* Section 8 */}
-                    <Section number={8} title="Data Retention">
-                        <p>We retain your personal data only as long as necessary for the purposes outlined in this policy:</p>
-                        <ul>
-                            <li><strong>Account data:</strong> Until you delete your account, plus a reasonable period for backup</li>
-                            <li><strong>Transaction data:</strong> 7 years (legal requirement for financial records)</li>
-                            <li><strong>Analytics data:</strong> 24 months for detailed data, aggregated data may be kept longer</li>
-                            <li><strong>Tracking data:</strong> 90 days for attribution purposes</li>
-                            <li><strong>Log data:</strong> 30 days for security and debugging</li>
-                        </ul>
-                    </Section>
+                        {/* Section 7 - International Transfers */}
+                        <Section id="transfers" number={7} title="International Data Transfers">
+                            <p>Your data may be transferred to countries outside the EEA. We ensure appropriate safeguards:</p>
+                            <DataList items={[
+                                'Standard Contractual Clauses (SCCs) approved by the European Commission',
+                                'Adequacy decisions where applicable',
+                                'Data Processing Agreements with all subprocessors',
+                            ]} className="mt-6" />
+                        </Section>
 
-                    {/* Section 9 */}
-                    <Section number={9} title="Your Rights Under GDPR">
-                        <p>
-                            If you are located in the European Union or European Economic Area, you have the following
-                            rights regarding your personal data:
-                        </p>
-                        <ul>
-                            <li><strong>Right of access:</strong> Request a copy of the personal data we hold about you</li>
-                            <li><strong>Right to rectification:</strong> Request correction of inaccurate or incomplete data</li>
-                            <li><strong>Right to erasure:</strong> Request deletion of your personal data (&quot;right to be forgotten&quot;)</li>
-                            <li><strong>Right to restriction:</strong> Request limitation of processing in certain circumstances</li>
-                            <li><strong>Right to data portability:</strong> Receive your data in a structured, machine-readable format</li>
-                            <li><strong>Right to object:</strong> Object to processing based on legitimate interests</li>
-                            <li><strong>Right to withdraw consent:</strong> Withdraw consent at any time (where processing is based on consent)</li>
-                        </ul>
-                        <p>
-                            To exercise any of these rights, please contact us at{' '}
-                            <a href="mailto:contact@traaaction.com" className="text-violet-600 hover:text-violet-700">
-                                contact@traaaction.com
-                            </a>. We will respond within 30 days.
-                        </p>
-                        <p>
-                            You also have the right to lodge a complaint with your local Data Protection Authority
-                            if you believe we are not handling your data in compliance with GDPR.
-                        </p>
-                    </Section>
+                        {/* Section 8 - Data Retention */}
+                        <Section id="retention" number={8} title="Data Retention">
+                            <p>We retain your personal data only as long as necessary:</p>
+                            <div className="grid gap-3 mt-8">
+                                {[
+                                    { type: 'Account data', period: 'Until deletion + backup period' },
+                                    { type: 'Transaction data', period: '7 years (legal requirement)' },
+                                    { type: 'Analytics data', period: '24 months detailed, aggregated longer' },
+                                    { type: 'Tracking data', period: '90 days for attribution' },
+                                    { type: 'Log data', period: '30 days for security/debugging' },
+                                ].map((item) => (
+                                    <div key={item.type} className="flex items-center justify-between p-4 rounded-xl bg-white border border-slate-200">
+                                        <span className="text-slate-600">{item.type}</span>
+                                        <span className="text-sm font-mono text-violet-600 bg-violet-50 px-3 py-1 rounded-full">{item.period}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </Section>
 
-                    {/* Section 10 */}
-                    <Section number={10} title="Data Controller vs Data Processor">
-                        <p>
-                            When you use Traaaction&apos;s tracking features on your website (as a Startup), the following
-                            roles apply:
-                        </p>
-                        <ul>
-                            <li>
-                                <strong>You (the Startup)</strong> act as the <em>Data Controller</em> for your end users&apos; data.
-                                You are responsible for obtaining appropriate consent, informing users about data collection,
-                                and responding to their privacy requests.
-                            </li>
-                            <li>
-                                <strong>Traaaction</strong> acts as a <em>Data Processor</em>, processing data on your behalf
-                                according to your instructions and our Data Processing Agreement.
-                            </li>
-                        </ul>
-                        <p>
-                            As a Startup using our Service, you should ensure your own privacy policy adequately
-                            informs your users about the use of Traaaction for affiliate tracking.
-                        </p>
-                    </Section>
+                        {/* Section 9 - Your Rights */}
+                        <Section id="rights" number={9} title="Your Rights Under GDPR">
+                            <p>If you are in the EU/EEA, you have the following rights:</p>
+                            <div className="grid md:grid-cols-2 gap-4 mt-8">
+                                {[
+                                    { right: 'Access', desc: 'Request a copy of your personal data' },
+                                    { right: 'Rectification', desc: 'Request correction of inaccurate data' },
+                                    { right: 'Erasure', desc: 'Request deletion ("right to be forgotten")' },
+                                    { right: 'Restriction', desc: 'Limit processing in certain cases' },
+                                    { right: 'Portability', desc: 'Receive data in machine-readable format' },
+                                    { right: 'Object', desc: 'Object to legitimate interest processing' },
+                                ].map((item) => (
+                                    <div key={item.right} className="p-5 rounded-xl bg-gradient-to-br from-violet-50 to-white border border-violet-100">
+                                        <div className="text-lg font-medium text-slate-800 mb-2">Right to {item.right}</div>
+                                        <div className="text-sm text-slate-500">{item.desc}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <InfoCard className="mt-8">
+                                <p className="text-slate-500">
+                                    To exercise these rights, contact us at{' '}
+                                    <a href="mailto:contact@traaaction.com" className="text-violet-600 hover:text-violet-700">
+                                        contact@traaaction.com
+                                    </a>
+                                    . We will respond within 30 days. You may also lodge a complaint with your local Data Protection Authority.
+                                </p>
+                            </InfoCard>
+                        </Section>
 
-                    {/* Section 11 */}
-                    <Section number={11} title="Security">
-                        <p>
-                            We implement appropriate technical and organizational measures to protect your personal data:
-                        </p>
-                        <ul>
-                            <li>Encryption in transit (TLS/HTTPS) and at rest</li>
-                            <li>Secure authentication with Supabase Auth</li>
-                            <li>Regular security assessments and monitoring</li>
-                            <li>Access controls and audit logging</li>
-                            <li>Input validation and SQL injection protection</li>
-                            <li>Rate limiting to prevent abuse</li>
-                        </ul>
-                        <p>
-                            While we strive to protect your data, no method of transmission over the Internet
-                            is 100% secure. We cannot guarantee absolute security.
-                        </p>
-                    </Section>
+                        {/* Section 10 - Controller vs Processor */}
+                        <Section id="roles" number={10} title="Data Controller vs Processor">
+                            <p>When you use our tracking features on your website:</p>
+                            <div className="grid md:grid-cols-2 gap-6 mt-8">
+                                <div className="p-6 rounded-xl bg-gradient-to-br from-blue-50 to-white border border-blue-200">
+                                    <div className="text-xs uppercase tracking-widest text-blue-600 mb-3 font-medium">You (Startup)</div>
+                                    <div className="text-xl font-bold text-slate-800 mb-2">Data Controller</div>
+                                    <p className="text-sm text-slate-500">
+                                        Responsible for obtaining consent, informing users, and responding to privacy requests.
+                                    </p>
+                                </div>
+                                <div className="p-6 rounded-xl bg-gradient-to-br from-violet-50 to-white border border-violet-200">
+                                    <div className="text-xs uppercase tracking-widest text-violet-600 mb-3 font-medium">Traaaction</div>
+                                    <div className="text-xl font-bold text-slate-800 mb-2">Data Processor</div>
+                                    <p className="text-sm text-slate-500">
+                                        Processes data on your behalf according to our Data Processing Agreement.
+                                    </p>
+                                </div>
+                            </div>
+                        </Section>
 
-                    {/* Section 12 */}
-                    <Section number={12} title="Children's Privacy">
-                        <p>
-                            Our Service is not intended for individuals under the age of 18. We do not knowingly
-                            collect personal data from children. If you become aware that a child has provided us
-                            with personal data, please contact us, and we will take steps to delete such information.
-                        </p>
-                    </Section>
-
-                    {/* Section 13 */}
-                    <Section number={13} title="Changes to This Policy">
-                        <p>
-                            We may update this Privacy Policy from time to time. When we make significant changes,
-                            we will notify you by:
-                        </p>
-                        <ul>
-                            <li>Posting the updated policy on this page with a new &quot;Last updated&quot; date</li>
-                            <li>Sending an email notification to registered users (for material changes)</li>
-                        </ul>
-                        <p>
-                            We encourage you to review this policy periodically. Your continued use of the Service
-                            after changes constitutes acceptance of the updated policy.
-                        </p>
-                    </Section>
-
-                    {/* Section 14 */}
-                    <Section number={14} title="Contact Us">
-                        <p>
-                            If you have any questions about this Privacy Policy or our data practices, please contact us:
-                        </p>
-                        <div className="bg-gray-50 rounded-lg p-4 not-prose">
-                            <p className="font-semibold text-gray-900">Traaaction</p>
-                            <p className="text-gray-600">60 rue Amiral Romain-Desfossés</p>
-                            <p className="text-gray-600">29200 Brest, France</p>
-                            <p className="text-gray-600 mt-2">
-                                Email: <a href="mailto:contact@traaaction.com" className="text-violet-600 hover:text-violet-700">contact@traaaction.com</a>
+                        {/* Section 11 - Security */}
+                        <Section id="security" number={11} title="Security">
+                            <p>We implement appropriate technical and organizational measures:</p>
+                            <div className="grid md:grid-cols-3 gap-4 mt-8">
+                                {[
+                                    'Encryption (TLS/HTTPS)',
+                                    'Secure authentication',
+                                    'Regular security audits',
+                                    'Access controls',
+                                    'Input validation',
+                                    'Rate limiting',
+                                ].map((item) => (
+                                    <div key={item} className="flex items-center gap-3 p-4 rounded-xl bg-white border border-slate-200">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                        <span className="text-sm text-slate-600">{item}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-slate-400 text-sm mt-6">
+                                While we strive to protect your data, no method of transmission over the Internet is 100% secure.
                             </p>
-                        </div>
-                    </Section>
-                </div>
-            </main>
+                        </Section>
 
-            {/* Footer */}
-            <footer className="border-t border-gray-100 py-8">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <p className="text-center text-sm text-gray-400">
-                        © {new Date().getFullYear()} Traaaction. All rights reserved.
-                    </p>
-                </div>
-            </footer>
+                        {/* Section 12 - Children */}
+                        <Section id="children" number={12} title="Children's Privacy">
+                            <p>
+                                Our Service is not intended for individuals under 18. We do not knowingly collect data from children.
+                                If you become aware that a child has provided us with personal data, please contact us.
+                            </p>
+                        </Section>
+
+                        {/* Section 13 - Changes */}
+                        <Section id="changes" number={13} title="Changes to This Policy">
+                            <p>We may update this Privacy Policy from time to time. When we make significant changes:</p>
+                            <DataList items={[
+                                'We will post the updated policy with a new "Last updated" date',
+                                'We will send email notification to registered users for material changes',
+                            ]} className="mt-6" />
+                            <p className="text-slate-400 mt-4">
+                                Continued use of the Service after changes constitutes acceptance of the updated policy.
+                            </p>
+                        </Section>
+
+                        {/* Section 14 - Contact */}
+                        <Section id="contact" number={14} title="Contact Us">
+                            <p>If you have any questions about this Privacy Policy:</p>
+                            <InfoCard className="mt-6">
+                                <div className="font-semibold text-slate-800 text-lg mb-3">Traaaction</div>
+                                <div className="text-slate-500 space-y-1 mb-4">
+                                    <p>60 rue Amiral Romain-Desfossés</p>
+                                    <p>29200 Brest, France</p>
+                                </div>
+                                <a
+                                    href="mailto:contact@traaaction.com"
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors"
+                                >
+                                    <Mail className="w-4 h-4" />
+                                    contact@traaaction.com
+                                </a>
+                            </InfoCard>
+                        </Section>
+                    </div>
+
+                    {/* Footer */}
+                    <footer className="border-t border-slate-200 bg-white px-6 lg:px-16 py-12">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                            <p className="text-sm text-slate-400">
+                                © {new Date().getFullYear()} Traaaction. All rights reserved.
+                            </p>
+                            <div className="flex items-center gap-6">
+                                <Link href="/terms" className="text-sm text-slate-500 hover:text-slate-800 transition-colors">
+                                    Terms of Service
+                                </Link>
+                                <Link href="/" className="text-sm text-slate-500 hover:text-slate-800 transition-colors">
+                                    Home
+                                </Link>
+                            </div>
+                        </div>
+                    </footer>
+                </main>
+            </div>
         </div>
     )
 }
 
-function Section({ number, title, children }: { number: number; title: string; children: React.ReactNode }) {
+function Section({ id, number, title, children }: { id: string; number: number; title: string; children: React.ReactNode }) {
     return (
-        <section className="mt-12 first:mt-0">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                <span className="flex-shrink-0 w-8 h-8 bg-violet-100 text-violet-700 rounded-full flex items-center justify-center text-sm font-bold">
-                    {number}
+        <section id={id} className="scroll-mt-24 max-w-3xl">
+            <div className="flex items-center gap-4 mb-6">
+                <span className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 shadow-lg shadow-violet-500/25 flex items-center justify-center text-white font-mono text-sm font-bold">
+                    {String(number).padStart(2, '0')}
                 </span>
-                {title}
-            </h2>
-            <div className="text-gray-600 space-y-4">
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{title}</h2>
+            </div>
+            <div className="text-slate-600 leading-relaxed space-y-4">
                 {children}
             </div>
         </section>
+    )
+}
+
+function SubSection({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+        <div className="mt-8">
+            <h3 className="text-lg font-semibold text-slate-700 mb-4">{title}</h3>
+            {children}
+        </div>
+    )
+}
+
+function InfoCard({ children, variant = 'default', className = '' }: { children: React.ReactNode; variant?: 'default' | 'subtle'; className?: string }) {
+    const baseClasses = variant === 'subtle'
+        ? 'p-4 rounded-xl bg-slate-50 border border-slate-100'
+        : 'p-6 rounded-xl bg-white border border-slate-200 shadow-sm'
+    return (
+        <div className={`${baseClasses} ${className}`}>
+            {children}
+        </div>
+    )
+}
+
+function DataList({ items, className = '' }: { items: string[]; className?: string }) {
+    return (
+        <ul className={`space-y-2 ${className}`}>
+            {items.map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-500 mt-2" />
+                    <span className="text-slate-500">{item}</span>
+                </li>
+            ))}
+        </ul>
     )
 }
