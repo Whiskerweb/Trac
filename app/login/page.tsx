@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { login, signup, resendConfirmationEmail } from './actions'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Building2, Users, Loader2, Eye, EyeOff, Mail, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
@@ -192,9 +193,13 @@ export default function LoginPage() {
                                 exit={{ opacity: 0 }}
                             >
                                 <Link href="/" className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                                        T
-                                    </div>
+                                    <Image
+                                        src="/Logotrac/Logo5.png"
+                                        alt="Traaaction"
+                                        width={32}
+                                        height={32}
+                                        className="rounded-lg"
+                                    />
                                     <span className="font-semibold text-neutral-900 tracking-tight">Traaaction</span>
                                 </Link>
                             </motion.div>

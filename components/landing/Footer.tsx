@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowUpRight } from 'lucide-react';
 
 // Links with their actual URLs
@@ -37,9 +38,13 @@ export function Footer() {
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
                     <div className="col-span-2 lg:col-span-2">
                         <Link href="/" className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold shadow-sm">
-                                T
-                            </div>
+                            <Image
+                                src="/Logotrac/Logo5.png"
+                                alt="Traaaction"
+                                width={32}
+                                height={32}
+                                className="rounded-lg"
+                            />
                             <span className="font-bold text-xl tracking-tight text-slate-900">Traaaction</span>
                         </Link>
                         <p className="text-gray-500 text-sm max-w-sm mb-6 leading-relaxed">

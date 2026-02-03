@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowLeft, Shield, Database, Cookie, Scale, Globe, Clock, UserCheck, Users, Lock, Baby, RefreshCw, Mail, ChevronRight } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 
@@ -83,9 +84,13 @@ export default function PrivacyPolicyPage() {
                         <span>Back to Traaaction</span>
                     </Link>
                     <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-slate-900 rounded-md flex items-center justify-center text-white font-bold text-xs">
-                            T
-                        </div>
+                        <Image
+                            src="/Logotrac/Logo5.png"
+                            alt="Traaaction"
+                            width={24}
+                            height={24}
+                            className="rounded-md"
+                        />
                         <span className="text-sm font-medium text-slate-500">Legal</span>
                     </div>
                 </div>

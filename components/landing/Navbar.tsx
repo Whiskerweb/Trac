@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, LayoutDashboard } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useEffect, useState } from 'react';
@@ -23,13 +24,16 @@ export function Navbar() {
             <div className="w-full max-w-5xl rounded-2xl bg-white/90 backdrop-blur-md border border-gray-200/50 shadow-xl flex items-center justify-between px-6 py-3 transition-all duration-300">
 
                 {/* Logo */}
-                <div className="flex-shrink-0 flex items-center gap-3">
-                    {/* Logo Icon */}
-                    <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold shadow-sm">
-                        T
-                    </div>
+                <Link href="/" className="flex-shrink-0 flex items-center gap-3">
+                    <Image
+                        src="/Logotrac/Logo5.png"
+                        alt="Traaaction"
+                        width={32}
+                        height={32}
+                        className="rounded-lg"
+                    />
                     <span className="font-bold text-lg tracking-tight text-slate-900">Traaaction</span>
-                </div>
+                </Link>
 
                 {/* Links */}
                 <div className="hidden md:flex items-center space-x-6">

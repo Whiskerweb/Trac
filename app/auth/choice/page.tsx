@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Building2, Users, Loader2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 
 interface UserRoles {
@@ -95,9 +96,13 @@ export default function AuthChoicePage() {
             <header className="fixed top-0 left-0 right-0 z-50 px-6 py-5">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                            T
-                        </div>
+                        <Image
+                            src="/Logotrac/Logo5.png"
+                            alt="Traaaction"
+                            width={32}
+                            height={32}
+                            className="rounded-lg"
+                        />
                         <span className="font-semibold text-neutral-900 tracking-tight">Traaaction</span>
                     </Link>
                 </div>
