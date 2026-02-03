@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import {
     Loader2, Save, Upload, X, ChevronLeft,
     Globe, Building2, MapPin, Calendar, Users,
-    FileText, ExternalLink, Image as ImageIcon, Check
+    FileText, ExternalLink, Image as ImageIcon, Check, LogOut
 } from 'lucide-react'
 import { getStartupProfile, updateStartupProfile } from '@/app/actions/startup-profile'
+import { logout } from '@/app/login/actions'
 
 // =============================================
 // CONSTANTS
@@ -570,6 +571,25 @@ export default function StartupProfilePage() {
                         {saving ? 'Saving...' : saved ? 'Saved!' : 'Save changes'}
                     </button>
                 </div>
+
+                {/* Account Section */}
+                <SectionCard title="Account" icon={<LogOut className="w-4 h-4" />}>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-slate-600">Sign out of your account</p>
+                            <p className="text-xs text-slate-400 mt-1">You will be redirected to the login page</p>
+                        </div>
+                        <form action={logout}>
+                            <button
+                                type="submit"
+                                className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-black transition-colors"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Sign out
+                            </button>
+                        </form>
+                    </div>
+                </SectionCard>
             </div>
         </div>
     )
