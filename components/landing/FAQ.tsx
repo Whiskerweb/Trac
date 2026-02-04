@@ -3,36 +3,20 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ChevronDown } from "lucide-react";
+import { useTranslations } from 'next-intl';
 
-const faqs = [
-    {
-        question: "What is traaaction.com?",
-        answer: "Traaaction connects growing startups with salespeople, influencers, and UGC creators. Startups choose who they want to work with, and sellers are paid on commission for every sale they generate. Simple as that."
-    },
-    {
-        question: "Who is traaaction.com for?",
-        answer: "We cater to B2B and B2C startups in growth phase needing fast results, as well as independent sellers, students, and business finders wishing to generate extra income or build a career in sales."
-    },
-    {
-        question: "Is traaaction.com free?",
-        answer: "Yes, traaaction.com offers no paid features. We are remunerated solely on commission, at a rate of 15% per sale generated."
-    },
-    {
-        question: "Can I use my own domain name?",
-        answer: "Absolutely. Credibility is key in sales. You can connect your own domain name so that all your tracking links and sales pages perfectly reflect your brand or personal identity."
-    },
-    {
-        question: "Can I view my link performance?",
-        answer: "Yes, our 'Certified Analytics' dashboard offers you a detailed, real-time view of every click, lead, and sale generated. This data is certified and can even serve as proof of skill for your CV."
-    },
-    {
-        question: "How can I contact you if I have a question?",
-        answer: "Our support team is available directly via the platform chat or by email. We also have an active community of sellers and founders ready to help and share best practices."
-    }
-];
+const faqKeys = [
+    'whatIs',
+    'whoFor',
+    'isFree',
+    'customDomain',
+    'linkPerformance',
+    'contact'
+] as const;
 
 export const FAQ = () => {
     const [openIndex, setOpenIndex] = useState<number | null>(null);
+    const t = useTranslations('landing.faq');
 
     return (
         <section className="relative bg-[#FAFAF9] py-20 md:py-32 overflow-hidden">
@@ -54,7 +38,7 @@ export const FAQ = () => {
                         transition={{ duration: 0.5 }}
                         className="text-sm font-medium tracking-[0.2em] uppercase text-slate-400 mb-4"
                     >
-                        FAQ
+                        {t('label')}
                     </motion.p>
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
@@ -63,20 +47,21 @@ export const FAQ = () => {
                         transition={{ duration: 0.6, delay: 0.1 }}
                         className="text-[clamp(2rem,5vw,3rem)] font-semibold text-slate-900 tracking-[-0.02em] leading-[1.1]"
                     >
-                        Everything you need to know
+                        {t('title')}
                     </motion.h2>
                 </div>
 
                 {/* FAQ Items */}
                 <div className="space-y-0">
-                    {faqs.map((faq, index) => (
+                    {faqKeys.map((key, index) => (
                         <FAQItem
-                            key={index}
-                            faq={faq}
+                            key={key}
+                            question={t(`questions.${key}.question`)}
+                            answer={t(`questions.${key}.answer`)}
                             index={index}
                             isOpen={openIndex === index}
                             onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                            totalItems={faqs.length}
+                            totalItems={faqKeys.length}
                         />
                     ))}
                 </div>
@@ -95,7 +80,7 @@ export const FAQ = () => {
                         rel="noopener noreferrer"
                         className="inline-flex items-center justify-center h-12 px-8 rounded-lg border border-slate-200 bg-white text-slate-900 font-medium hover:bg-slate-50 transition-colors"
                     >
-                        Join us
+                        {t('joinUs')}
                         <ArrowRight className="ml-2 h-4 w-4" />
                     </a>
                 </motion.div>
@@ -105,13 +90,15 @@ export const FAQ = () => {
 };
 
 const FAQItem = ({
-    faq,
+    question,
+    answer,
     index,
     isOpen,
     onClick,
     totalItems
 }: {
-    faq: { question: string; answer: string };
+    question: string;
+    answer: string;
     index: number;
     isOpen: boolean;
     onClick: () => void;
@@ -135,7 +122,7 @@ const FAQItem = ({
                 <h3 className={`text-base md:text-lg font-medium tracking-[-0.01em] transition-colors duration-300 ${
                     isOpen ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'
                 }`}>
-                    {faq.question}
+                    {question}
                 </h3>
 
                 <motion.div
@@ -175,7 +162,7 @@ const FAQItem = ({
                     >
                         <div className="pb-6 md:pb-8 pr-12">
                             <p className="text-[15px] md:text-base text-slate-500 leading-[1.7]">
-                                {faq.answer}
+                                {answer}
                             </p>
                         </div>
                     </motion.div>

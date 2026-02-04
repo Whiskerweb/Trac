@@ -1,0 +1,628 @@
+{
+    "common": {
+        "loading": "Loading...",
+        "error": "An error occurred",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "create": "Create",
+        "search": "Search",
+        "filter": "Filter",
+        "export": "Export",
+        "import": "Import",
+        "back": "Back",
+        "next": "Next",
+        "previous": "Previous",
+        "submit": "Submit",
+        "confirm": "Confirm",
+        "close": "Close",
+        "view": "View",
+        "viewAll": "View all",
+        "learnMore": "Learn more",
+        "getStarted": "Get started",
+        "signIn": "Sign in",
+        "signUp": "Sign up",
+        "signOut": "Sign out",
+        "email": "Email",
+        "password": "Password",
+        "name": "Name",
+        "status": "Status",
+        "date": "Date",
+        "amount": "Amount",
+        "total": "Total",
+        "actions": "Actions",
+        "settings": "Settings",
+        "profile": "Profile",
+        "notifications": "Notifications",
+        "messages": "Messages",
+        "help": "Help",
+        "support": "Support",
+        "yes": "Yes",
+        "no": "No",
+        "or": "or",
+        "and": "and",
+        "all": "All",
+        "none": "None",
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "active": "Active",
+        "inactive": "Inactive",
+        "completed": "Completed",
+        "success": "Success",
+        "failed": "Failed"
+    },
+    "nav": {
+        "home": "Home",
+        "features": "Features",
+        "pricing": "Pricing",
+        "about": "About",
+        "contact": "Contact",
+        "blog": "Blog",
+        "docs": "Documentation",
+        "bookDemo": "Book a Demo",
+        "startFree": "Start Tracking Free",
+        "dashboard": "Dashboard",
+        "marketplace": "Marketplace"
+    },
+    "landing": {
+        "hero": {
+            "badge": "New: Automated Commission Payouts",
+            "titleLine1": "Connect Startups & Sellers",
+            "titleLine2": "to create",
+            "titleLine3": "Traaaction",
+            "subtitle": "Stop guessing where your revenue comes from. Traaaction gives you precision attribution, automated payouts, and real-time fraud prevention.",
+            "ctaPrimary": "Start Tracking Free",
+            "ctaSecondary": "Book a Demo"
+        },
+        "logos": {
+            "trustedBy": "Trusted by innovative companies"
+        },
+        "features": {
+            "title": "Everything you need to scale",
+            "subtitle": "Powerful tools for startups and sellers",
+            "analytics": {
+                "title": "Detailed Analytics",
+                "description": "Stop flying blind. Access powerful, actionable insights to guide your growth."
+            },
+            "madeForYou": {
+                "title": "Made for you",
+                "description": "Generate tracked links for e-stores, launch referral programs, or use pay-per-lead."
+            },
+            "chooseSellers": {
+                "title": "Choose your Sellers",
+                "description": "Public, private, or invite-only: You decide exactly who represents your brand."
+            }
+        },
+        "b2b": {
+            "title": "Cut through the noise",
+            "subtitle": "Our platform gives partner startups a complete dashboard to track and truly control their Traaaction.",
+            "connectionDomains": {
+                "title": "Connection domains",
+                "description": "Bypass ad-blockers and ensure every click is counted with our advanced link infrastructure."
+            },
+            "crossBorder": {
+                "title": "Cross-border Expansion",
+                "description": "Scale across Europe. Select and manage local experts in France, Germany, or Spain directly."
+            },
+            "globalPayouts": {
+                "title": "Global Payouts",
+                "description": "Pay all your partners instantly and simultaneously, anywhere in the world."
+            }
+        },
+        "sellers": {
+            "title": "Built for Sellers",
+            "subtitle": "Everything you need to monetize your network",
+            "certifiedAnalytics": {
+                "title": "Certified Analytics",
+                "description": "Your sales performance is tracked, verified, and can serve as proof of skill for your CV."
+            },
+            "networking": {
+                "title": "Direct Networking",
+                "description": "Connect directly with startups looking for sales talent like you."
+            }
+        },
+        "testimonial": {
+            "lucas": {
+                "quote": "In the era of AI, we believe skills will be valued through experience rather than degrees or certifications. Traaaction aims to become a truly reliable source for our sellers' skills, which will eventually be rightfully recognized on a professional CV.",
+                "name": "Lucas Roncey",
+                "role": "Co-founder Traaaction"
+            },
+            "kate": {
+                "quote": "Traaaction is solving a major painpoint in Europe and in the rest of the world: start-ups need sales traction to raise money. Young professionals are keen to work on sales missions to kick-off their careers and generate revenue. Traaaction is there to connect start-ups and young professionals for the best!",
+                "name": "Kate B. Masson",
+                "role": "Co-founder Traaaction"
+            }
+        },
+        "faq": {
+            "title": "Everything you need to know",
+            "label": "FAQ",
+            "joinUs": "Join us",
+            "questions": {
+                "whatIs": {
+                    "question": "What is traaaction.com?",
+                    "answer": "Traaaction connects growing startups with salespeople, influencers, and UGC creators. Startups choose who they want to work with, and sellers are paid on commission for every sale they generate. Simple as that."
+                },
+                "whoFor": {
+                    "question": "Who is traaaction.com for?",
+                    "answer": "We cater to B2B and B2C startups in growth phase needing fast results, as well as independent sellers, students, and business finders wishing to generate extra income or build a career in sales."
+                },
+                "isFree": {
+                    "question": "Is traaaction.com free?",
+                    "answer": "Yes, traaaction.com offers no paid features. We are remunerated solely on commission, at a rate of 15% per sale generated."
+                },
+                "customDomain": {
+                    "question": "Can I use my own domain name?",
+                    "answer": "Absolutely. Credibility is key in sales. You can connect your own domain name so that all your tracking links and sales pages perfectly reflect your brand or personal identity."
+                },
+                "linkPerformance": {
+                    "question": "Can I view my link performance?",
+                    "answer": "Yes, our 'Certified Analytics' dashboard offers you a detailed, real-time view of every click, lead, and sale generated. This data is certified and can even serve as proof of skill for your CV."
+                },
+                "contact": {
+                    "question": "How can I contact you if I have a question?",
+                    "answer": "Our support team is available directly via the platform chat or by email. We also have an active community of sellers and founders ready to help and share best practices."
+                }
+            }
+        },
+        "footer": {
+            "description": "The platform connecting startups with sales talent.",
+            "product": "Product",
+            "company": "Company",
+            "legal": "Legal",
+            "features": "Features",
+            "pricing": "Pricing",
+            "integrations": "Integrations",
+            "aboutUs": "About Us",
+            "careers": "Careers",
+            "privacy": "Privacy Policy",
+            "terms": "Terms of Service",
+            "cookies": "Cookie Policy",
+            "copyright": "© {year} Traaaction. All rights reserved."
+        }
+    },
+    "auth": {
+        "welcome": "Welcome to Traaaction",
+        "chooseSpace": "Choose your space to continue",
+        "startup": {
+            "title": "Startup",
+            "description": "Create and manage your affiliate programs. Track conversions and pay your sellers.",
+            "dashboard": "Dashboard Startup"
+        },
+        "seller": {
+            "title": "Seller",
+            "description": "Join programs and earn commissions. Track your earnings in real-time.",
+            "dashboard": "Dashboard Seller"
+        },
+        "login": {
+            "title": "Sign in",
+            "subtitle": "Access your {type} dashboard",
+            "noAccount": "Don't have an account?",
+            "forgotPassword": "Forgot password?"
+        },
+        "signup": {
+            "title": "Create account",
+            "subtitle": "Join Traaaction as a {type}",
+            "hasAccount": "Already have an account?",
+            "fullName": "Full name",
+            "minChars": "Minimum {count} characters"
+        },
+        "google": "Continue with Google",
+        "orEmail": "or continue with email",
+        "legal": "By continuing, you agree to the {terms} and {privacy}",
+        "termsOfService": "Terms of Service",
+        "privacyPolicy": "Privacy Policy",
+        "emailConfirmation": {
+            "title": "Check your email",
+            "sentTo": "We sent a confirmation link to",
+            "instructions": "Click the link in your email to verify your account and complete your registration.",
+            "resend": "Resend confirmation email",
+            "didntReceive": "Did not receive the email? Check your spam folder or try another email address.",
+            "useDifferent": "Use a different email",
+            "sent": "Confirmation email sent! Please check your inbox."
+        },
+        "errors": {
+            "invalidCredentials": "Invalid email or password",
+            "emailNotConfirmed": "Please confirm your email before signing in",
+            "emailExists": "This email address is already in use",
+            "passwordTooShort": "Password must be at least 6 characters",
+            "unexpected": "An unexpected error occurred",
+            "linkExpired": "The confirmation link has expired. Please request a new one.",
+            "noCode": "Invalid authentication link. Please try again."
+        }
+    },
+    "onboarding": {
+        "startup": {
+            "title": "Create your workspace",
+            "subtitle": "Set up your startup profile to get started",
+            "companyName": "Company name",
+            "companyNamePlaceholder": "Acme Inc.",
+            "website": "Website",
+            "websitePlaceholder": "https://example.com",
+            "industry": "Industry",
+            "selectIndustry": "Select your industry",
+            "complete": "Create workspace"
+        },
+        "seller": {
+            "title": "Complete your profile",
+            "subtitle": "Tell us about yourself to get started",
+            "step1": {
+                "title": "Basic Info",
+                "country": "Country",
+                "selectCountry": "Select your country",
+                "phone": "Phone number"
+            },
+            "step2": {
+                "title": "Social Media",
+                "linkedin": "LinkedIn URL",
+                "twitter": "Twitter URL",
+                "instagram": "Instagram URL",
+                "tiktok": "TikTok URL",
+                "youtube": "YouTube URL"
+            },
+            "step3": {
+                "title": "About You",
+                "bio": "Bio",
+                "bioPlaceholder": "Tell startups about your experience and skills...",
+                "industries": "Industries of interest",
+                "activityType": "Activity type",
+                "howYouWork": "How you work"
+            },
+            "step4": {
+                "title": "Get Paid",
+                "stripeConnect": "Connect with Stripe",
+                "stripeDescription": "Connect your Stripe account to receive payments directly to your bank account.",
+                "skip": "Skip for now",
+                "skipDescription": "You can connect Stripe later from your wallet settings."
+            },
+            "complete": "Complete setup"
+        }
+    },
+    "dashboard": {
+        "title": "Dashboard",
+        "welcome": "Welcome back",
+        "overview": "Overview",
+        "analytics": "Analytics",
+        "recentActivity": "Recent Activity",
+        "quickActions": "Quick Actions",
+        "kpi": {
+            "clicks": "Clicks",
+            "leads": "Leads",
+            "sales": "Sales",
+            "revenue": "Revenue",
+            "commissions": "Commissions",
+            "conversionRate": "Conversion Rate",
+            "avgOrderValue": "Avg. Order Value"
+        },
+        "sidebar": {
+            "overview": "Overview",
+            "missions": "Missions",
+            "sellers": "Sellers",
+            "commissions": "Commissions",
+            "payouts": "Payouts",
+            "customers": "Customers",
+            "links": "Links",
+            "domains": "Domains",
+            "messages": "Messages",
+            "settings": "Settings",
+            "integration": "Integration",
+            "marketplace": "Marketplace",
+            "campaigns": "Campaigns",
+            "bounties": "Bounties",
+            "fraud": "Fraud Detection"
+        },
+        "missions": {
+            "title": "Missions",
+            "create": "Create Mission",
+            "active": "Active",
+            "draft": "Draft",
+            "archived": "Archived",
+            "noMissions": "No missions yet",
+            "createFirst": "Create your first mission to start attracting sellers.",
+            "details": {
+                "title": "Mission Details",
+                "targetUrl": "Target URL",
+                "rewardType": "Reward Type",
+                "rewardAmount": "Reward Amount",
+                "visibility": "Visibility",
+                "public": "Public",
+                "private": "Private",
+                "inviteOnly": "Invite Only",
+                "status": "Status",
+                "enrolledSellers": "Enrolled Sellers",
+                "totalClicks": "Total Clicks",
+                "totalSales": "Total Sales",
+                "totalRevenue": "Total Revenue"
+            },
+            "form": {
+                "title": "Mission Title",
+                "titlePlaceholder": "e.g., Promote our SaaS product",
+                "description": "Description",
+                "descriptionPlaceholder": "Describe what sellers need to do...",
+                "targetUrl": "Target URL",
+                "targetUrlPlaceholder": "https://yoursite.com/landing",
+                "rewardType": "Reward Type",
+                "sale": "Per Sale",
+                "lead": "Per Lead",
+                "rewardStructure": "Reward Structure",
+                "flat": "Flat Amount",
+                "percentage": "Percentage",
+                "rewardAmount": "Reward Amount",
+                "visibility": "Who can join?",
+                "publicDesc": "Anyone can join this mission",
+                "privateDesc": "Only approved sellers can join",
+                "inviteOnlyDesc": "Only invited sellers can join"
+            }
+        },
+        "sellers": {
+            "title": "Sellers",
+            "all": "All Sellers",
+            "applications": "Applications",
+            "requests": "Requests",
+            "groups": "Groups",
+            "noSellers": "No sellers yet",
+            "inviteSellers": "Invite sellers to join your missions.",
+            "approve": "Approve",
+            "reject": "Reject",
+            "ban": "Ban",
+            "unban": "Unban",
+            "viewProfile": "View Profile",
+            "sendMessage": "Send Message",
+            "stats": {
+                "totalSales": "Total Sales",
+                "totalRevenue": "Revenue Generated",
+                "conversionRate": "Conversion Rate",
+                "avgOrderValue": "Avg. Order"
+            }
+        },
+        "commissions": {
+            "title": "Commissions",
+            "pending": "Pending",
+            "proceed": "Ready to Pay",
+            "completed": "Completed",
+            "noCommissions": "No commissions yet",
+            "details": {
+                "seller": "Seller",
+                "mission": "Mission",
+                "amount": "Commission",
+                "grossAmount": "Gross Amount",
+                "netAmount": "Net Amount",
+                "platformFee": "Platform Fee",
+                "status": "Status",
+                "createdAt": "Created",
+                "maturesAt": "Matures"
+            }
+        },
+        "payouts": {
+            "title": "Payouts",
+            "unpaid": "Unpaid Commissions",
+            "history": "Payment History",
+            "paySelected": "Pay Selected",
+            "payAll": "Pay All",
+            "totalUnpaid": "Total Unpaid",
+            "sellerTotal": "Seller Total",
+            "platformFee": "Platform Fee (15%)",
+            "noPending": "No pending payouts",
+            "allPaid": "All commissions have been paid."
+        },
+        "links": {
+            "title": "Links",
+            "create": "Create Link",
+            "noLinks": "No links yet",
+            "createFirst": "Create your first tracking link.",
+            "slug": "Slug",
+            "destination": "Destination",
+            "clicks": "Clicks",
+            "conversions": "Conversions"
+        },
+        "domains": {
+            "title": "Custom Domains",
+            "add": "Add Domain",
+            "noDomains": "No custom domains",
+            "addFirst": "Add a custom domain for branded tracking links.",
+            "verify": "Verify",
+            "verified": "Verified",
+            "pending": "Pending Verification",
+            "instructions": "Add a CNAME record pointing to cname.traaaction.com"
+        },
+        "integration": {
+            "title": "Integration",
+            "subtitle": "Connect Traaaction to your website",
+            "scriptTag": "Script Tag",
+            "scriptDescription": "Add this script to your website's <head> tag.",
+            "apiKeys": "API Keys",
+            "publicKey": "Public Key",
+            "secretKey": "Secret Key",
+            "generateNew": "Generate New Key",
+            "documentation": "Documentation",
+            "viewDocs": "View full documentation"
+        },
+        "settings": {
+            "title": "Settings",
+            "workspace": "Workspace",
+            "billing": "Billing",
+            "team": "Team",
+            "notifications": "Notifications",
+            "api": "API",
+            "danger": "Danger Zone",
+            "workspaceName": "Workspace Name",
+            "workspaceSlug": "Workspace Slug",
+            "deleteWorkspace": "Delete Workspace",
+            "deleteWarning": "This action cannot be undone."
+        }
+    },
+    "seller": {
+        "title": "Seller Dashboard",
+        "welcome": "Welcome back",
+        "sidebar": {
+            "programs": "Programs",
+            "marketplace": "Marketplace",
+            "invitations": "Invitations",
+            "payouts": "Payouts",
+            "wallet": "Wallet",
+            "messages": "Messages",
+            "profile": "Profile",
+            "members": "Members",
+            "account": "Account",
+            "notifications": "Notifications",
+            "analytics": "Analytics"
+        },
+        "programs": {
+            "title": "My Programs",
+            "noPrograms": "No programs yet",
+            "joinFirst": "Browse the marketplace to find programs to join.",
+            "browseMarketplace": "Browse Marketplace",
+            "enrolled": "Enrolled",
+            "pending": "Pending Approval",
+            "viewDetails": "View Details",
+            "copyLink": "Copy Link",
+            "linkCopied": "Link copied!",
+            "stats": {
+                "clicks": "Clicks",
+                "leads": "Leads",
+                "sales": "Sales",
+                "earnings": "Earnings"
+            }
+        },
+        "marketplace": {
+            "title": "Marketplace",
+            "subtitle": "Discover programs and start earning",
+            "search": "Search programs...",
+            "filters": {
+                "all": "All",
+                "sale": "Per Sale",
+                "lead": "Per Lead",
+                "recurring": "Recurring"
+            },
+            "noResults": "No programs found",
+            "tryDifferent": "Try different search terms or filters.",
+            "join": "Join Program",
+            "applied": "Applied",
+            "viewDetails": "View Details",
+            "commission": "Commission",
+            "perSale": "per sale",
+            "perLead": "per lead",
+            "resources": "Resources",
+            "noResources": "No resources available"
+        },
+        "payouts": {
+            "title": "Payouts",
+            "earnings": "Earnings",
+            "balance": "Available Balance",
+            "pending": "Pending",
+            "paid": "Total Paid",
+            "history": "Payment History",
+            "noPayouts": "No payouts yet",
+            "earnMore": "Complete sales to earn commissions.",
+            "withdraw": "Withdraw",
+            "method": "Payout Method",
+            "stripeConnect": "Stripe Connect",
+            "paypal": "PayPal",
+            "iban": "Bank Transfer (IBAN)",
+            "platform": "Platform Balance"
+        },
+        "wallet": {
+            "title": "Wallet",
+            "balance": "Current Balance",
+            "giftCards": "Gift Cards",
+            "redeemGiftCard": "Redeem Gift Card",
+            "connectStripe": "Connect Stripe",
+            "stripeConnected": "Stripe Connected",
+            "stripeDescription": "Receive payments directly to your bank account.",
+            "giftCardDescription": "Exchange your balance for gift cards.",
+            "minAmount": "Minimum: {amount}",
+            "available": "Available gift cards",
+            "amazon": "Amazon",
+            "itunes": "iTunes",
+            "steam": "Steam",
+            "paypalGift": "PayPal Gift Card"
+        },
+        "profile": {
+            "title": "Profile",
+            "completion": "Profile Completion",
+            "almostThere": "Almost there!",
+            "stepsRemaining": "{count} steps remaining",
+            "complete": "Profile complete!",
+            "editProfile": "Edit Profile",
+            "publicProfile": "Public Profile",
+            "bio": "Bio",
+            "socialMedia": "Social Media",
+            "industries": "Industries",
+            "skills": "Skills",
+            "portfolio": "Portfolio",
+            "cv": "CV / Resume",
+            "uploadCv": "Upload CV",
+            "uploadPortfolio": "Upload Portfolio",
+            "optional": "Optional",
+            "required": "Required",
+            "tasks": {
+                "country": "Country",
+                "socialMedia": "At least one social media",
+                "description": "Profile description",
+                "industryInterests": "Industry interests",
+                "activityType": "Activity type",
+                "howYouWork": "How you work"
+            }
+        },
+        "account": {
+            "title": "Account Settings",
+            "email": "Email Address",
+            "password": "Password",
+            "changePassword": "Change Password",
+            "deleteAccount": "Delete Account",
+            "deleteWarning": "This action cannot be undone. All your data will be permanently deleted.",
+            "language": "Language",
+            "timezone": "Timezone",
+            "currency": "Preferred Currency"
+        },
+        "onboarding": {
+            "welcome": "Welcome to Traaaction!",
+            "letsGetStarted": "Let's get your profile set up so you can start earning.",
+            "step": "Step {current} of {total}",
+            "continue": "Continue",
+            "back": "Back",
+            "skip": "Skip for now",
+            "complete": "Complete Setup"
+        }
+    },
+    "messages": {
+        "title": "Messages",
+        "noMessages": "No messages yet",
+        "startConversation": "Start a conversation with a startup or seller.",
+        "typeMessage": "Type a message...",
+        "send": "Send",
+        "newMessage": "New Message",
+        "searchConversations": "Search conversations..."
+    },
+    "notifications": {
+        "title": "Notifications",
+        "noNotifications": "No notifications",
+        "markAllRead": "Mark all as read",
+        "types": {
+            "newSale": "New sale",
+            "commissionPaid": "Commission paid",
+            "applicationApproved": "Application approved",
+            "applicationRejected": "Application rejected",
+            "newMessage": "New message",
+            "payoutProcessed": "Payout processed"
+        }
+    },
+    "errors": {
+        "404": {
+            "title": "Page not found",
+            "description": "The page you're looking for doesn't exist.",
+            "goHome": "Go home"
+        },
+        "500": {
+            "title": "Something went wrong",
+            "description": "An unexpected error occurred. Please try again later.",
+            "retry": "Try again"
+        },
+        "unauthorized": {
+            "title": "Unauthorized",
+            "description": "You don't have permission to access this page.",
+            "signIn": "Sign in"
+        }
+    }
+}

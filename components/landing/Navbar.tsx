@@ -6,10 +6,13 @@ import { ArrowRight, LayoutDashboard } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
+import { useTranslations } from 'next-intl';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 export function Navbar() {
     const [user, setUser] = useState<User | null>(null);
     const supabase = createClient();
+    const t = useTranslations();
 
     useEffect(() => {
         const getUser = async () => {
@@ -41,13 +44,13 @@ export function Navbar() {
                         href="#startups"
                         className="text-sm font-medium text-gray-500 hover:text-black transition-colors"
                     >
-                        For Startups
+                        {t('auth.startup.title')}
                     </Link>
                     <Link
                         href="#sellers"
                         className="text-sm font-medium text-gray-500 hover:text-black transition-colors"
                     >
-                        For Sellers
+                        {t('auth.seller.title')}
                     </Link>
                     <Link
                         href="#"
@@ -58,14 +61,17 @@ export function Navbar() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                    {/* Language Selector */}
+                    <LanguageSelector variant="minimal" />
+
                     {user ? (
                         <Link
                             href="/dashboard"
                             className="inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-white bg-gradient-to-b from-neutral-700 to-neutral-900 border border-neutral-700 rounded-xl hover:from-neutral-600 hover:to-neutral-800 transition-all shadow-[0px_2px_4px_rgba(0,0,0,0.2),0px_1px_0px_rgba(255,255,255,0.1)_inset] hover:shadow-[0px_4px_8px_rgba(0,0,0,0.3),0px_1px_0px_rgba(255,255,255,0.1)_inset] group"
                         >
                             <LayoutDashboard className="mr-2 w-4 h-4 text-neutral-300 group-hover:text-white transition-colors" />
-                            Dashboard
+                            {t('nav.dashboard')}
                         </Link>
                     ) : (
                         <>
@@ -73,13 +79,13 @@ export function Navbar() {
                                 href="/login"
                                 className="text-sm font-medium text-gray-600 hover:text-black transition-colors hidden sm:block"
                             >
-                                Log in
+                                {t('common.signIn')}
                             </Link>
                             <Link
                                 href="/dashboard"
                                 className="inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-white bg-gradient-to-b from-neutral-700 to-neutral-900 border border-neutral-700 rounded-xl hover:from-neutral-600 hover:to-neutral-800 transition-all shadow-[0px_2px_4px_rgba(0,0,0,0.2),0px_1px_0px_rgba(255,255,255,0.1)_inset] hover:shadow-[0px_4px_8px_rgba(0,0,0,0.3),0px_1px_0px_rgba(255,255,255,0.1)_inset]"
                             >
-                                Get Started <ArrowRight className="ml-2 w-4 h-4 text-neutral-300" />
+                                {t('common.getStarted')} <ArrowRight className="ml-2 w-4 h-4 text-neutral-300" />
                             </Link>
                         </>
                     )}

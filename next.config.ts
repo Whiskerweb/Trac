@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 // Tinybird API URL with fallback for robustness
 const TINYBIRD_HOST = process.env.NEXT_PUBLIC_TINYBIRD_HOST || 'https://api.tinybird.co';
@@ -62,5 +65,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
-// Force rebuild
+export default withNextIntl(nextConfig);
