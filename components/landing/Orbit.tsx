@@ -113,11 +113,11 @@ export const Orbit = ({ className }: { className?: string }) => {
             {/* Container for the rotating system */}
             <div className="relative flex items-center justify-center">
 
-                {/* --- Outer Circle (Large): Mix of Startups & Sellers --- */}
+                {/* --- Outer Circle (Large): 3 elements at 120° intervals --- */}
                 <div className="absolute rounded-full border-2 border-slate-300/50 dark:border-white/20 w-[800px] h-[800px] md:w-[1200px] md:h-[1200px] animate-[spin_60s_linear_infinite]">
 
-                    {/* 1. STARTUP: Traaaction (Top Left) */}
-                    <div className="absolute top-[18%] left-[18%] -translate-x-1/2 -translate-y-1/2 animate-[spin_60s_linear_infinite_reverse]">
+                    {/* 1. STARTUP: Traaaction - Position: Top (12 o'clock) */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-[spin_60s_linear_infinite_reverse]">
                         <StartupCard
                             name="Traaaction"
                             logoSrc="/Logotrac/NoirPlein.png"
@@ -127,8 +127,8 @@ export const Orbit = ({ className }: { className?: string }) => {
                         />
                     </div>
 
-                    {/* 2. SELLER: Thomas (Bottom Right) */}
-                    <div className="absolute top-[82%] left-[82%] -translate-x-1/2 -translate-y-1/2 animate-[spin_60s_linear_infinite_reverse]">
+                    {/* 2. SELLER: Thomas - Position: Bottom-right (4 o'clock) */}
+                    <div className="absolute top-[75%] left-[93%] -translate-x-1/2 -translate-y-1/2 animate-[spin_60s_linear_infinite_reverse]">
                         <SellerCard
                             name="Thomas Müller"
                             flag="🇩🇪"
@@ -140,8 +140,8 @@ export const Orbit = ({ className }: { className?: string }) => {
                         />
                     </div>
 
-                    {/* 3. SELLER: Marie (Top Right-ish area) */}
-                    <div className="absolute top-[20%] right-[20%] translate-x-1/2 -translate-y-1/2 animate-[spin_60s_linear_infinite_reverse]">
+                    {/* 3. SELLER: Marie - Position: Bottom-left (8 o'clock) */}
+                    <div className="absolute top-[75%] left-[7%] -translate-x-1/2 -translate-y-1/2 animate-[spin_60s_linear_infinite_reverse]">
                         <SellerCard
                             name="Marie Laurent"
                             flag="🇫🇷"
@@ -154,11 +154,11 @@ export const Orbit = ({ className }: { className?: string }) => {
                     </div>
                 </div>
 
-                {/* --- Inner Circle (Medium): More mix --- */}
+                {/* --- Inner Circle (Medium): 2 elements at 180° intervals --- */}
                 <div className="absolute rounded-full border-2 border-slate-300/50 dark:border-white/20 w-[500px] h-[500px] md:w-[800px] md:h-[800px] animate-[spin_40s_linear_infinite_reverse]">
 
-                    {/* 4. STARTUP: Beo Healthcare (Right) */}
-                    <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 animate-[spin_40s_linear_infinite]">
+                    {/* 4. STARTUP: Beo Healthcare - Position: Right (3 o'clock) */}
+                    <div className="absolute top-1/2 left-full -translate-x-1/2 -translate-y-1/2 animate-[spin_40s_linear_infinite]">
                         <StartupCard
                             name="Beo Healthcare"
                             logoSrc="/Logotrac/logo4.jpg"
@@ -168,8 +168,8 @@ export const Orbit = ({ className }: { className?: string }) => {
                         />
                     </div>
 
-                    {/* 5. SELLER: Lucía (Bottom Left) */}
-                    <div className="absolute bottom-0 left-[20%] -translate-x-1/2 translate-y-1/2 animate-[spin_40s_linear_infinite]">
+                    {/* 5. SELLER: Lucía - Position: Left (9 o'clock) */}
+                    <div className="absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 animate-[spin_40s_linear_infinite]">
                         <SellerCard
                             name="Lucía Garcia"
                             flag="🇪🇸"
