@@ -48,7 +48,7 @@ export const FAQ = () => {
                         <p className="text-lg text-slate-500 font-medium mb-2">
                             Didn't find what you were looking for?
                         </p>
-                        <a href="#" className="inline-flex items-center gap-1 text-lg font-bold text-violet-600 hover:text-violet-700 hover:gap-2 transition-all">
+                        <a href="https://calendly.com/contact-traaaction/30min" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-lg font-bold text-violet-600 hover:text-violet-700 hover:gap-2 transition-all">
                             Book a demo <ArrowRight className="w-5 h-5" />
                         </a>
                     </div>

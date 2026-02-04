@@ -49,12 +49,14 @@ export function Hero() {
                         Start Tracking Free
                         <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
-                    <Link
-                        href="/contact"
+                    <a
+                        href="https://calendly.com/contact-traaaction/30min"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="w-full sm:w-auto inline-flex items-center justify-center h-12 px-8 rounded-lg border border-slate-200 bg-white text-slate-900 font-medium hover:bg-slate-50 transition-colors"
                     >
                         Book a Demo
-                    </Link>
+                    </a>
                 </div>
 
 
