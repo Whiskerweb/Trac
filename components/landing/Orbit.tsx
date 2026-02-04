@@ -1,5 +1,4 @@
 import React from "react";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 // --- Components ---
@@ -77,13 +76,11 @@ const StartupCard = ({
     // Compact padding and width
     <div className="bg-white p-3 rounded-[1.5rem] shadow-lg border border-slate-100 flex items-center gap-3 select-none hover:scale-105 transition-transform min-w-[260px] z-20">
         {/* Large Logo */}
-        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden relative shadow-sm", logoBg || "bg-white")}>
-            <Image
+        <div className={cn("w-12 h-12 rounded-xl shrink-0 overflow-hidden shadow-sm", logoBg || "bg-white")}>
+            <img
                 src={logoSrc}
                 alt={name}
-                fill
-                className="object-contain p-1.5"
-                sizes="48px"
+                className="w-full h-full object-contain p-1.5"
             />
         </div>
 
