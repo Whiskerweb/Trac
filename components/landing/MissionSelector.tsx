@@ -5,7 +5,6 @@ import { ArrowRight, Bitcoin, Rocket, Check, Store, Users, TrendingUp } from "lu
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 export const MissionSelector = () => {
     const [activeTab, setActiveTab] = useState<"startup" | "seller">("startup");
@@ -186,12 +185,11 @@ export const MissionSelector = () => {
                                             {/* Startups see a Seller Profile (Target Audience) */}
                                             <div className="bg-white p-2.5 rounded-xl shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-100 flex flex-col gap-2.5 select-none hover:rotate-0 transition-transform duration-300">
                                                 <div className="flex items-center gap-2.5">
-                                                    <div className="w-10 h-10 rounded-lg overflow-hidden relative bg-indigo-500 shrink-0 shadow-sm">
-                                                        <Image
+                                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-indigo-500 shrink-0 shadow-sm">
+                                                        <img
                                                             src="/Logotrac/launding/femme1.png"
                                                             alt="Seller"
-                                                            fill
-                                                            className="object-cover"
+                                                            className="w-full h-full object-cover"
                                                         />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -257,12 +255,11 @@ export const MissionSelector = () => {
                                             {/* Sellers see a Startup Card (Target Opportunity) - Traaaction */}
                                             <div className="bg-white p-3 rounded-[1.25rem] shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-100 flex flex-col gap-2.5 select-none hover:rotate-0 transition-transform duration-300">
                                                 <div className="flex items-center gap-2.5">
-                                                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center relative overflow-hidden p-0.5 shadow-sm shrink-0">
-                                                        <Image
+                                                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 overflow-hidden p-1 shadow-sm shrink-0">
+                                                        <img
                                                             src="/Logotrac/NoirPlein.png"
                                                             alt="Traaaction"
-                                                            fill
-                                                            className="object-contain p-1"
+                                                            className="w-full h-full object-contain"
                                                         />
                                                     </div>
                                                     <div>
