@@ -7,7 +7,7 @@ const logos = [
     { name: 'Beo', src: '/partn/beo.png', width: 100, height: 40 },
     { name: 'KeepCalls', src: '/partn/keepcalls.png', width: 120, height: 40 },
     { name: 'MyWai', src: '/partn/mywai.png', width: 100, height: 40 },
-    { name: 'Reevy', src: '/partn/reevy.png', width: 100, height: 40 },
+    { name: 'Reevy', src: '/partn/Reevy.png', width: 100, height: 40 },
 ];
 
 export function Logos() {
