@@ -25,14 +25,12 @@ const SellerCard = ({
     // Compact padding and width
     <div className="bg-white p-2.5 rounded-xl shadow-lg border border-slate-100 w-[210px] flex items-center gap-2.5 select-none hover:scale-105 transition-transform z-10">
         {/* Avatar */}
-        <div className={cn("w-10 h-10 rounded-lg shrink-0 overflow-hidden relative", color)}>
+        <div className={cn("w-10 h-10 rounded-lg shrink-0 overflow-hidden", color)}>
             {imageSrc ? (
-                <Image
+                <img
                     src={imageSrc}
                     alt={name}
-                    width={40}
-                    height={40}
-                    className="object-cover w-full h-full"
+                    className="w-full h-full object-cover"
                 />
             ) : (
                 <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
