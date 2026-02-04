@@ -19,6 +19,7 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
         seller_id?: string
         partner_name: string | null
         partner_email: string
+        partner_avatar?: string | null
         workspace_name: string
         workspace_id?: string
         workspace_logo?: string | null
@@ -46,7 +47,14 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
                 where: { workspace_id: workspace.workspaceId },
                 include: {
                     Seller: {
-                        select: { id: true, name: true, email: true }
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            Profile: {
+                                select: { avatar_url: true }
+                            }
+                        }
                     },
                     Workspace: {
                         select: { name: true }
@@ -62,6 +70,7 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
                     seller_id: c.Seller.id,
                     partner_name: c.Seller.name,
                     partner_email: c.Seller.email,
+                    partner_avatar: c.Seller.Profile?.avatar_url || null,
                     workspace_name: c.Workspace.name,
                     last_message: c.last_message,
                     last_at: c.last_at,

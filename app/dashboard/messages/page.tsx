@@ -2,29 +2,16 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { MessageSquare, Send, User, CheckCheck, Gift, ExternalLink, Loader2 } from 'lucide-react'
+import { getConversations, getMessages, sendMessage, markAsRead } from '@/app/actions/messaging'
 import Link from 'next/link'
-import {
-    MessageSquare,
-    Send,
-    Loader2,
-    User,
-    ArrowLeft,
-    Gift
-} from 'lucide-react'
-import {
-    getConversations,
-    getMessages,
-    sendMessage as sendMsgAction,
-    markAsRead
-} from '@/app/actions/messaging'
-import { formatDistanceToNow } from 'date-fns'
-import { fr } from 'date-fns/locale'
 
 interface Conversation {
     id: string
     seller_id?: string
     partner_name: string | null
     partner_email: string
+    partner_avatar?: string | null
     workspace_name: string
     last_message: string | null
     last_at: Date
@@ -40,283 +27,303 @@ interface Message {
     read_at: Date | null
 }
 
-function ConversationItem({
-    conversation,
-    isActive,
-    onClick
-}: {
-    conversation: Conversation
-    isActive: boolean
-    onClick: () => void
-}) {
-    const displayName = conversation.partner_name || conversation.partner_email.split('@')[0]
-
+// Loading fallback for Suspense
+function MessagesLoading() {
     return (
-        <button
-            onClick={onClick}
-            className={`w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors ${isActive ? 'bg-gray-50' : ''
-                }`}
-        >
-            <div className="flex items-center gap-3">
-                {conversation.seller_id ? (
-                    <Link
-                        href={`/dashboard/sellers/${conversation.seller_id}/profile`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 hover:ring-2 hover:ring-gray-300 transition-all"
-                    >
-                        <User className="w-5 h-5 text-gray-500" />
-                    </Link>
-                ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        <User className="w-5 h-5 text-gray-500" />
-                    </div>
-                )}
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-900 truncate">{displayName}</span>
-                        {conversation.unread_count > 0 && (
-                            <span className="bg-black text-white text-xs font-medium px-1.5 py-0.5 rounded-full">
-                                {conversation.unread_count}
-                            </span>
-                        )}
-                    </div>
-                    {conversation.last_message && (
-                        <p className="text-sm text-gray-500 truncate">{conversation.last_message}</p>
-                    )}
-                    <p className="text-xs text-gray-400 mt-1">
-                        {formatDistanceToNow(new Date(conversation.last_at), { addSuffix: true, locale: fr })}
-                    </p>
-                </div>
-            </div>
-        </button>
-    )
-}
-
-function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean }) {
-    return (
-        <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[70%] rounded-2xl px-4 py-3 ${message.is_invitation
-                    ? 'bg-amber-50 border border-amber-200'
-                    : isOwn
-                        ? 'bg-black text-white'
-                        : 'bg-gray-100 text-gray-900'
-                }`}>
-                {message.is_invitation && (
-                    <div className="flex items-center gap-1.5 text-amber-600 text-xs font-medium mb-2">
-                        <Gift className="w-3.5 h-3.5" />
-                        Invitation
-                    </div>
-                )}
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                <p className={`text-xs mt-1 ${isOwn ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {formatDistanceToNow(new Date(message.created_at), { addSuffix: true, locale: fr })}
-                </p>
-            </div>
+        <div className="h-[calc(100vh-4rem)] bg-[#FAFAFA] flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
         </div>
     )
 }
 
+// Main page wrapper with Suspense
 export default function MessagesPage() {
     return (
-        <Suspense fallback={<div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
-            <MessagesPageContent />
+        <Suspense fallback={<MessagesLoading />}>
+            <MessagesContent />
         </Suspense>
     )
 }
 
-function MessagesPageContent() {
+function MessagesContent() {
     const searchParams = useSearchParams()
     const conversationParam = searchParams.get('conversation')
+
     const [conversations, setConversations] = useState<Conversation[]>([])
-    const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
+    const [selectedConversation, setSelectedConversation] = useState<string | null>(conversationParam)
     const [messages, setMessages] = useState<Message[]>([])
     const [newMessage, setNewMessage] = useState('')
     const [loading, setLoading] = useState(true)
-    const [sendingMessage, setSendingMessage] = useState(false)
+    const [sending, setSending] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
-    const autoSelectedRef = useRef(false)
 
-    const loadConversations = async () => {
+    // Load conversations
+    useEffect(() => {
+        loadConversations()
+    }, [])
+
+    // Handle conversation param from URL
+    useEffect(() => {
+        if (conversationParam && conversationParam !== selectedConversation) {
+            setSelectedConversation(conversationParam)
+        }
+    }, [conversationParam])
+
+    // Load messages when conversation changes
+    useEffect(() => {
+        if (selectedConversation) {
+            loadMessages(selectedConversation)
+            // Mark as read
+            markAsRead(selectedConversation, 'startup')
+        }
+    }, [selectedConversation])
+
+    // Scroll to bottom on new messages
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, [messages])
+
+    async function loadConversations() {
         const result = await getConversations('startup')
         if (result.success && result.conversations) {
             setConversations(result.conversations)
+            // Auto-select first conversation only if no conversation is already selected
+            if (result.conversations.length > 0 && !selectedConversation && !conversationParam) {
+                setSelectedConversation(result.conversations[0].id)
+            }
         }
         setLoading(false)
     }
 
-    const loadMessages = async (conversationId: string) => {
+    async function loadMessages(conversationId: string) {
         const result = await getMessages(conversationId)
         if (result.success && result.messages) {
             setMessages(result.messages)
         }
     }
 
-    useEffect(() => {
-        loadConversations()
-    }, [])
+    async function handleSendMessage() {
+        if (!newMessage.trim() || !selectedConversation) return
 
-    // Auto-select conversation from URL param
-    useEffect(() => {
-        if (conversationParam && conversations.length > 0 && !autoSelectedRef.current) {
-            const target = conversations.find(c => c.id === conversationParam)
-            if (target) {
-                autoSelectedRef.current = true
-                handleSelectConversation(target)
-            }
-        }
-    }, [conversations, conversationParam])
+        setSending(true)
+        const result = await sendMessage(selectedConversation, newMessage.trim(), 'STARTUP')
 
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, [messages])
-
-    const handleSelectConversation = async (conversation: Conversation) => {
-        setActiveConversation(conversation)
-        await loadMessages(conversation.id)
-        if (conversation.unread_count > 0) {
-            await markAsRead(conversation.id, 'startup')
-            setConversations(prev => prev.map(c =>
-                c.id === conversation.id ? { ...c, unread_count: 0 } : c
-            ))
-        }
-    }
-
-    const handleSendMessage = async () => {
-        if (!activeConversation || !newMessage.trim()) return
-
-        setSendingMessage(true)
-        const result = await sendMsgAction(activeConversation.id, newMessage, 'STARTUP')
         if (result.success) {
             setNewMessage('')
-            await loadMessages(activeConversation.id)
-            await loadConversations()
+            await loadMessages(selectedConversation)
+            await loadConversations() // Refresh to update last_message
         }
-        setSendingMessage(false)
+        setSending(false)
     }
+
+    const selectedConvo = conversations.find(c => c.id === selectedConversation)
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-24">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <div className="h-[calc(100vh-4rem)] bg-[#FAFAFA] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
         )
     }
 
     return (
-        <div className="h-[calc(100vh-8rem)] flex flex-col">
-            {/* Header */}
-            <div className="mb-4">
-                <h1 className="text-2xl font-bold text-black tracking-tight">Messages</h1>
-                <p className="text-gray-500 text-sm mt-1">Communiquez avec vos partenaires.</p>
+        <div className="h-[calc(100vh-4rem)] bg-[#FAFAFA] flex rounded-xl overflow-hidden border border-gray-200">
+            {/* Conversations List (Left) */}
+            <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+                <div className="p-4 border-b border-gray-100">
+                    <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
+                </div>
+
+                {conversations.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center flex-1 px-8 text-center">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <MessageSquare className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+                        </div>
+                        <h3 className="text-base font-medium text-gray-900 mb-2">
+                            No messages yet
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                            Start a conversation by inviting sellers to your missions.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="flex-1 overflow-y-auto">
+                        {conversations.map((convo) => {
+                            const displayName = convo.partner_name || convo.partner_email.split('@')[0]
+                            return (
+                                <button
+                                    key={convo.id}
+                                    onClick={() => setSelectedConversation(convo.id)}
+                                    className={`w-full p-4 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 ${
+                                        selectedConversation === convo.id ? 'bg-violet-50 border-l-2 border-l-violet-500' : ''
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        {convo.partner_avatar ? (
+                                            <img
+                                                src={convo.partner_avatar}
+                                                alt={displayName}
+                                                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                                            />
+                                        ) : (
+                                            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                                <User className="w-5 h-5 text-white" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <p className="font-medium text-gray-900 truncate">{displayName}</p>
+                                                {convo.unread_count > 0 && (
+                                                    <span className="bg-violet-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                                                        {convo.unread_count}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-gray-500 truncate mt-0.5">
+                                                {convo.last_message || 'New conversation'}
+                                            </p>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                {new Date(convo.last_at).toLocaleDateString('en-US')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </button>
+                            )
+                        })}
+                    </div>
+                )}
             </div>
 
-            {/* Chat Layout */}
-            <div className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden flex">
-                {/* Conversations Sidebar */}
-                <div className={`w-80 border-r border-gray-200 flex-shrink-0 ${activeConversation ? 'hidden md:block' : ''}`}>
-                    <div className="p-4 border-b border-gray-100">
-                        <h2 className="font-semibold text-gray-900">Conversations</h2>
-                    </div>
-                    <div className="overflow-y-auto h-full">
-                        {conversations.length === 0 ? (
-                            <div className="p-8 text-center text-gray-500">
-                                <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                                <p className="text-sm">Aucune conversation</p>
-                            </div>
-                        ) : (
-                            conversations.map(conv => (
-                                <ConversationItem
-                                    key={conv.id}
-                                    conversation={conv}
-                                    isActive={activeConversation?.id === conv.id}
-                                    onClick={() => handleSelectConversation(conv)}
-                                />
-                            ))
-                        )}
-                    </div>
-                </div>
-
-                {/* Chat Area */}
-                <div className={`flex-1 flex flex-col ${!activeConversation ? 'hidden md:flex' : ''}`}>
-                    {activeConversation ? (
-                        <>
-                            {/* Chat Header */}
-                            <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-                                <button
-                                    onClick={() => setActiveConversation(null)}
-                                    className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
-                                >
-                                    <ArrowLeft className="w-5 h-5" />
-                                </button>
-                                {activeConversation.seller_id ? (
+            {/* Messages View (Right) */}
+            <div className="flex-1 flex flex-col bg-[#FAFAFA]">
+                {selectedConvo ? (
+                    <>
+                        {/* Header */}
+                        <div className="p-4 bg-white border-b border-gray-200">
+                            <div className="flex items-center gap-3">
+                                {selectedConvo.seller_id ? (
                                     <Link
-                                        href={`/dashboard/sellers/${activeConversation.seller_id}/profile`}
-                                        className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:ring-2 hover:ring-gray-300 transition-all"
+                                        href={`/dashboard/sellers/${selectedConvo.seller_id}/profile`}
+                                        className="hover:ring-2 hover:ring-violet-300 transition-all rounded-full"
                                     >
-                                        <User className="w-5 h-5 text-gray-500" />
+                                        {selectedConvo.partner_avatar ? (
+                                            <img
+                                                src={selectedConvo.partner_avatar}
+                                                alt={selectedConvo.partner_name || 'Seller'}
+                                                className="w-10 h-10 rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center">
+                                                <User className="w-5 h-5 text-white" />
+                                            </div>
+                                        )}
                                     </Link>
+                                ) : selectedConvo.partner_avatar ? (
+                                    <img
+                                        src={selectedConvo.partner_avatar}
+                                        alt={selectedConvo.partner_name || 'Seller'}
+                                        className="w-10 h-10 rounded-full object-cover"
+                                    />
                                 ) : (
-                                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                                        <User className="w-5 h-5 text-gray-500" />
+                                    <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center">
+                                        <User className="w-5 h-5 text-white" />
                                     </div>
                                 )}
-                                <div>
-                                    <h3 className="font-medium text-gray-900">
-                                        {activeConversation.partner_name || activeConversation.partner_email}
+                                <div className="flex-1">
+                                    <h3 className="font-semibold text-gray-900">
+                                        {selectedConvo.partner_name || selectedConvo.partner_email}
                                     </h3>
-                                    <p className="text-xs text-gray-500">{activeConversation.partner_email}</p>
+                                    <p className="text-sm text-gray-500">{selectedConvo.partner_email}</p>
                                 </div>
-                            </div>
-
-                            {/* Messages */}
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                                {messages.map(msg => (
-                                    <MessageBubble
-                                        key={msg.id}
-                                        message={msg}
-                                        isOwn={msg.sender_type === 'STARTUP'}
-                                    />
-                                ))}
-                                <div ref={messagesEndRef} />
-                            </div>
-
-                            {/* Input */}
-                            <div className="p-4 border-t border-gray-100">
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                                        placeholder="Écrivez votre message..."
-                                        className="flex-1 px-4 py-2.5 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
-                                    />
-                                    <button
-                                        onClick={handleSendMessage}
-                                        disabled={sendingMessage || !newMessage.trim()}
-                                        className="p-2.5 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+                                {selectedConvo.seller_id && (
+                                    <Link
+                                        href={`/dashboard/sellers/${selectedConvo.seller_id}/profile`}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors"
                                     >
-                                        {sendingMessage ? (
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                        ) : (
-                                            <Send className="w-5 h-5" />
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="flex-1 flex items-center justify-center text-gray-500">
-                            <div className="text-center">
-                                <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                                <p className="font-medium">Select a conversation</p>
-                                <p className="text-sm text-gray-400 mt-1">
-                                    Choose a partner to start chatting
-                                </p>
+                                        View Profile
+                                        <ExternalLink className="w-3 h-3" />
+                                    </Link>
+                                )}
                             </div>
                         </div>
-                    )}
-                </div>
+
+                        {/* Messages */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {messages.map((msg) => (
+                                <div
+                                    key={msg.id}
+                                    className={`flex ${msg.sender_type === 'STARTUP' ? 'justify-end' : 'justify-start'}`}
+                                >
+                                    <div
+                                        className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                                            msg.is_invitation
+                                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+                                                : msg.sender_type === 'STARTUP'
+                                                    ? 'bg-violet-500 text-white'
+                                                    : 'bg-white border border-gray-200 text-gray-900'
+                                        }`}
+                                    >
+                                        {msg.is_invitation && (
+                                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/30">
+                                                <Gift className="w-4 h-4" />
+                                                <span className="text-sm font-medium">Mission Invitation</span>
+                                            </div>
+                                        )}
+                                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                        <div className={`flex items-center gap-1 mt-1 ${
+                                            msg.sender_type === 'STARTUP' || msg.is_invitation ? 'text-white/70' : 'text-gray-400'
+                                        }`}>
+                                            <span className="text-xs">
+                                                {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                            {msg.sender_type === 'STARTUP' && msg.read_at && (
+                                                <CheckCheck className="w-3 h-3" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Input */}
+                        <div className="p-4 bg-white border-t border-gray-200">
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="text"
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                                    placeholder="Write a message..."
+                                    className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                    disabled={sending}
+                                />
+                                <button
+                                    onClick={handleSendMessage}
+                                    disabled={!newMessage.trim() || sending}
+                                    className="w-10 h-10 bg-violet-500 hover:bg-violet-600 disabled:bg-gray-300 rounded-full flex items-center justify-center transition-colors"
+                                >
+                                    <Send className="w-4 h-4 text-white" />
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="text-center px-8">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <MessageSquare className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+                            </div>
+                            <h3 className="text-base font-medium text-gray-900 mb-2">
+                                Select a conversation
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                                Choose a conversation on the left to view messages.
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )
