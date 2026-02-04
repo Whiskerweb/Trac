@@ -166,6 +166,23 @@
                 }
             }
         },
+        "missionSelector": {
+            "title": "Una plataforma, dos formas de crecer.",
+            "startup": {
+                "tab": "Startup",
+                "title": "¿Startup? ¡Empieza a vender ya!",
+                "description": "Impulsa tus ventas hoy—¡gratis para siempre! Lanza tu programa en segundos.",
+                "placeholder": "misión",
+                "button": "Empezar"
+            },
+            "seller": {
+                "tab": "Vendedor",
+                "title": "¿Vendedor? ¡Empieza a ganar ya!",
+                "description": "Monetiza tu red al instante. Únete a campañas y rastrea tus ganancias en tiempo real.",
+                "placeholder": "usuario",
+                "button": "Empezar"
+            }
+        },
         "footer": {
             "description": "La plataforma que conecta startups con talento comercial.",
             "product": "Producto",

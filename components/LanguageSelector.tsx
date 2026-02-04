@@ -13,7 +13,7 @@ const languages = [
 
 type LanguageCode = typeof languages[number]['code'];
 
-export function LanguageSelector({ variant = 'default' }: { variant?: 'default' | 'minimal' }) {
+export function LanguageSelector({ variant = 'default', openDirection = 'down' }: { variant?: 'default' | 'minimal'; openDirection?: 'up' | 'down' }) {
     const locale = useLocale() as LanguageCode;
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -53,11 +53,13 @@ export function LanguageSelector({ variant = 'default' }: { variant?: 'default' 
                 <AnimatePresence>
                     {isOpen && (
                         <motion.div
-                            initial={{ opacity: 0, y: -5 }}
+                            initial={{ opacity: 0, y: openDirection === 'up' ? 5 : -5 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -5 }}
+                            exit={{ opacity: 0, y: openDirection === 'up' ? 5 : -5 }}
                             transition={{ duration: 0.15 }}
-                            className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-slate-200 py-1 min-w-[140px] z-50"
+                            className={`absolute right-0 bg-white rounded-lg shadow-lg border border-slate-200 py-1 min-w-[140px] z-50 ${
+                                openDirection === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
+                            }`}
                         >
                             {languages.map((lang) => (
                                 <button

@@ -5,12 +5,14 @@ import { ArrowRight, Bitcoin, Rocket, Check, Store, Users, TrendingUp } from "lu
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useTranslations } from 'next-intl';
 
 export const MissionSelector = () => {
     const [activeTab, setActiveTab] = useState<"startup" | "seller">("startup");
     const [missionName, setMissionName] = useState("");
     const [sellerName, setSellerName] = useState("");
     const router = useRouter();
+    const t = useTranslations('landing.missionSelector');
 
     const handleStart = () => {
         const params = new URLSearchParams();
@@ -32,7 +34,7 @@ export const MissionSelector = () => {
 
                 <div className="text-center mb-6">
                     <h2 className="text-4xl md:text-6xl font-medium tracking-tight text-slate-900 mb-3">
-                        One platform, two ways to grow.
+                        {t('title')}
                     </h2>
 
                     {/* Compact Toggle */}
@@ -54,7 +56,7 @@ export const MissionSelector = () => {
                                 activeTab === "startup" ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
                             )}
                         >
-                            Startup <Rocket className="w-3.5 h-3.5" />
+                            {t('startup.tab')} <Rocket className="w-3.5 h-3.5" />
                         </button>
                         <button
                             onClick={() => setActiveTab("seller")}
@@ -63,7 +65,7 @@ export const MissionSelector = () => {
                                 activeTab === "seller" ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
                             )}
                         >
-                            Seller <Bitcoin className="w-3.5 h-3.5" />
+                            {t('seller.tab')} <Bitcoin className="w-3.5 h-3.5" />
                         </button>
                     </div>
                 </div>
@@ -87,10 +89,10 @@ export const MissionSelector = () => {
                                         className="space-y-4"
                                     >
                                         <h3 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">
-                                            Startup? Start selling now!
+                                            {t('startup.title')}
                                         </h3>
                                         <p className="text-slate-500 text-sm md:text-base leading-relaxed max-w-md">
-                                            Boost your sales today—free for life! Launch your program in seconds.
+                                            {t('startup.description')}
                                         </p>
 
                                         <div className="pt-0">
@@ -102,14 +104,14 @@ export const MissionSelector = () => {
                                                     type="text"
                                                     value={missionName}
                                                     onChange={(e) => setMissionName(e.target.value)}
-                                                    placeholder="mission"
+                                                    placeholder={t('startup.placeholder')}
                                                     className="flex-1 bg-transparent border-none text-sm font-semibold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-0 p-1 min-w-0"
                                                 />
                                                 <button
                                                     onClick={handleStart}
                                                     className="bg-slate-900 text-white px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-slate-800 transition-all whitespace-nowrap shadow-sm"
                                                 >
-                                                    Start Now
+                                                    {t('startup.button')}
                                                 </button>
                                             </div>
                                         </div>
@@ -124,10 +126,10 @@ export const MissionSelector = () => {
                                         className="space-y-4"
                                     >
                                         <h3 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">
-                                            Seller? Start earning now!
+                                            {t('seller.title')}
                                         </h3>
                                         <p className="text-slate-500 text-sm md:text-base leading-relaxed max-w-md">
-                                            Monetize your network instantly. Join campaigns and track earnings in real-time.
+                                            {t('seller.description')}
                                         </p>
 
                                         <div className="pt-0">
@@ -139,14 +141,14 @@ export const MissionSelector = () => {
                                                     type="text"
                                                     value={sellerName}
                                                     onChange={(e) => setSellerName(e.target.value)}
-                                                    placeholder="username"
+                                                    placeholder={t('seller.placeholder')}
                                                     className="flex-1 bg-transparent border-none text-sm font-semibold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-0 p-1 min-w-0"
                                                 />
                                                 <button
                                                     onClick={handleStart}
                                                     className="bg-slate-900 text-white px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-slate-800 transition-all whitespace-nowrap shadow-sm"
                                                 >
-                                                    Start Now
+                                                    {t('seller.button')}
                                                 </button>
                                             </div>
                                         </div>

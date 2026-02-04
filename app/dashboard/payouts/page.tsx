@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense, useCallback } from 'react'
-import { Info, Loader2, Check, Clock, Settings, AlertTriangle, User, ChevronRight } from 'lucide-react'
+import { Info, Loader2, Check, Clock, AlertTriangle, User, ChevronRight } from 'lucide-react'
 import { getPayoutHistory, getUnpaidCommissions, createPaymentSession, checkPaymentStatus, PayoutItem, SellerPayoutSummary } from '@/app/actions/payouts'
 import { useSearchParams } from 'next/navigation'
 import { CommissionDetailModal } from '@/components/dashboard/CommissionDetailModal'
@@ -297,18 +297,12 @@ function PayoutsContent() {
                     <h1 className="text-xl font-semibold text-gray-900">Payouts</h1>
                     <Info className="w-4 h-4 text-gray-400" />
                 </div>
-                <div className="flex items-center gap-3">
-                    <a
-                        href="/dashboard/commissions"
-                        className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-                    >
-                        Voir l'historique →
-                    </a>
-                    <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                        <Settings className="w-4 h-4" />
-                        Settings
-                    </button>
-                </div>
+                <a
+                    href="/dashboard/commissions"
+                    className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                >
+                    Voir l'historique →
+                </a>
             </div>
 
             {/* Error Message */}

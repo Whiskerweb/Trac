@@ -12,7 +12,6 @@ import {
     FileText,
     Globe,
     Users,
-    Repeat,
     ShoppingCart,
     Search,
     ChevronDown,
@@ -928,7 +927,8 @@ function Step2CommissionSetup({
                     </div>
                 </CommissionCard>
 
-                {/* Recurring Commission */}
+                {/* Recurring Commission - Temporarily hidden */}
+                {/* TODO: Re-enable when subscription feature is ready
                 <CommissionCard
                     icon={Repeat}
                     title="Recurring Commission"
@@ -936,97 +936,9 @@ function Step2CommissionSetup({
                     enabled={data.recurring.enabled}
                     onToggle={(enabled) => onChange({ recurring: { ...data.recurring, enabled } })}
                 >
-                    <div className="space-y-4">
-                        {/* Structure */}
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                                Commission type
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => onChange({ recurring: { ...data.recurring, structure: 'FLAT' } })}
-                                    className={`
-                                        px-4 py-2.5 rounded-xl text-sm font-medium transition-all
-                                        ${data.recurring.structure === 'FLAT'
-                                            ? 'bg-gray-900 text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }
-                                    `}
-                                >
-                                    Fixed amount
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onChange({ recurring: { ...data.recurring, structure: 'PERCENTAGE' } })}
-                                    className={`
-                                        px-4 py-2.5 rounded-xl text-sm font-medium transition-all
-                                        ${data.recurring.structure === 'PERCENTAGE'
-                                            ? 'bg-gray-900 text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }
-                                    `}
-                                >
-                                    Percentage
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Amount */}
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                                {data.recurring.structure === 'FLAT' ? 'Amount per renewal' : 'Percentage of renewal'}
-                            </label>
-                            <div className="relative">
-                                {data.recurring.structure === 'FLAT' && (
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">€</span>
-                                )}
-                                <input
-                                    type="number"
-                                    value={data.recurring.amount || ''}
-                                    onChange={(e) => onChange({
-                                        recurring: { ...data.recurring, amount: parseFloat(e.target.value) || 0 }
-                                    })}
-                                    placeholder={data.recurring.structure === 'FLAT' ? '10' : '5'}
-                                    className={`
-                                        w-full py-3 border border-gray-200 rounded-xl
-                                        focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5
-                                        ${data.recurring.structure === 'FLAT' ? 'pl-9 pr-16' : 'pl-4 pr-12'}
-                                    `}
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                                    {data.recurring.structure === 'FLAT' ? 'per renewal' : '%'}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Duration */}
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                                Commission duration
-                            </label>
-                            <select
-                                value={data.recurring.duration ?? 0}
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value)
-                                    onChange({
-                                        recurring: { ...data.recurring, duration: val === 0 ? null : val }
-                                    })
-                                }}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white
-                                    focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5
-                                    appearance-none cursor-pointer"
-                                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', backgroundSize: '20px' }}
-                            >
-                                {DURATION_OPTIONS.map(opt => (
-                                    <option key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
+                    ...
                 </CommissionCard>
+                */}
             </div>
         </div>
     )

@@ -1,6 +1,10 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
+
 export const Testimonial = () => {
+    const t = useTranslations('landing.testimonial.lucas');
+
     return (
         <div className="border-t border-slate-200 bg-white relative overflow-hidden">
             {/* Dot Grid Background */}
@@ -20,20 +24,20 @@ export const Testimonial = () => {
                         >
                             <img
                                 src="/Logotrac/lucasroncey.png"
-                                alt="Lucas Roncey"
+                                alt={t('name')}
                                 className="w-full h-full object-cover"
                             />
                         </a>
 
                         <div className="text-center md:text-left">
-                            <div className="font-bold text-slate-900 text-lg">Lucas Roncey</div>
-                            <div className="text-sm text-slate-500 font-medium">Co-founder Traaaction</div>
+                            <div className="font-bold text-slate-900 text-lg">{t('name')}</div>
+                            <div className="text-sm text-slate-500 font-medium">{t('role')}</div>
                         </div>
                     </div>
 
                     {/* Right: Quote */}
                     <blockquote className="flex-1 text-xl md:text-2xl font-medium text-slate-900 leading-tight tracking-tight text-center md:text-right order-1 md:order-2">
-                        &quot;In the era of AI, we believe skills will be valued through experience rather than degrees or certifications. Traaaction aims to become a truly reliable source for our sellers&apos; skills, which will eventually be rightfully recognized on a professional CV.&quot;
+                        &quot;{t('quote')}&quot;
                     </blockquote>
 
                 </div>

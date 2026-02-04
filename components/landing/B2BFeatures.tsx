@@ -7,12 +7,39 @@ import EuropeMap from "../ui/EuropeMap";
 import ConnectionVisual from "../ui/ConnectionVisual";
 import PayoutsVisual from "../ui/PayoutsVisual";
 import DetailedAnalyticsChart from "../ui/DetailedAnalyticsChart";
-// ... (skipping other lines for brevity in thought, but tool needs exact target)
 import MissionSelectorVisual from "../ui/MissionSelectorVisual";
 import SellerCardsVisual from "../ui/SellerCardsVisual";
 import { AdvancedFeatures, Tab } from "./AdvancedFeatures";
+import { useTranslations } from 'next-intl';
 
 export const B2BFeatures = () => {
+    const t = useTranslations('landing');
+    const tCommon = useTranslations('common');
+
+    const managementTabs: Tab[] = [
+        {
+            id: 0,
+            title: t('b2b.connectionDomains.title'),
+            desc: t('b2b.connectionDomains.description'),
+            color: "emerald",
+            visual: ConnectionVisual
+        },
+        {
+            id: 1,
+            title: t('b2b.crossBorder.title'),
+            desc: t('b2b.crossBorder.description'),
+            color: "blue",
+            visual: EuropeMap
+        },
+        {
+            id: 2,
+            title: t('b2b.globalPayouts.title'),
+            desc: t('b2b.globalPayouts.description'),
+            color: "violet",
+            visual: PayoutsVisual
+        }
+    ];
+
     return (
         <section id="startups" className="bg-white border-y border-slate-200">
             <div className="container mx-auto px-4 max-w-5xl pt-16">
@@ -20,10 +47,10 @@ export const B2BFeatures = () => {
                 {/* Header - Centered per reference */}
                 <div className="text-center max-w-2xl mx-auto mb-12 space-y-3">
                     <h2 className="text-4xl md:text-6xl font-medium tracking-tight text-slate-900">
-                        Cut through the noise
+                        {t('b2b.title')}
                     </h2>
                     <p className="text-lg text-slate-500 leading-relaxed font-medium">
-                        Our platform gives partner startups a complete dashboard to track and truly control their <span className="text-slate-900">Traaaction</span>.
+                        {t('b2b.subtitle')}
                     </p>
                 </div>
 
@@ -32,9 +59,9 @@ export const B2BFeatures = () => {
 
                     {/* Column 1 */}
                     <FeatureColumn
-                        title="Detailed Analytics"
-                        description="Stop flying blind. Access powerful, actionable insights to guide your growth."
-                        buttonText="Learn more"
+                        title={t('features.analytics.title')}
+                        description={t('features.analytics.description')}
+                        buttonText={tCommon('learnMore')}
                         delay={0}
                     >
                         <DetailedAnalyticsChart />
@@ -42,9 +69,9 @@ export const B2BFeatures = () => {
 
                     {/* Column 2 */}
                     <FeatureColumn
-                        title="Made for you"
-                        description="Generate tracked links for e-stores, launch referral programs, or use pay-per-lead."
-                        buttonText="Learn more"
+                        title={t('features.madeForYou.title')}
+                        description={t('features.madeForYou.description')}
+                        buttonText={tCommon('learnMore')}
                         delay={0.1}
                     >
                         <MissionSelectorVisual />
@@ -52,9 +79,9 @@ export const B2BFeatures = () => {
 
                     {/* Column 3 */}
                     <FeatureColumn
-                        title="Choose your Sellers"
-                        description="Public, private, or invite-only: You decide exactly who represents your brand."
-                        buttonText="Learn more"
+                        title={t('features.chooseSellers.title')}
+                        description={t('features.chooseSellers.description')}
+                        buttonText={tCommon('learnMore')}
                         delay={0.2}
                     >
                         <SellerCardsVisual />
@@ -65,7 +92,6 @@ export const B2BFeatures = () => {
 
 
             {/* Testimonial Section - Kate B. Masson */}
-            {/* Testimonial Section - Kate B. Masson */}
             <div className="border-t border-slate-200 bg-white relative overflow-hidden">
                 {/* Dot Grid Background */}
                 <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px] opacity-60" />
@@ -75,14 +101,14 @@ export const B2BFeatures = () => {
 
                         {/* Left: Quote */}
                         <blockquote className="flex-1 text-xl md:text-2xl font-medium text-slate-900 leading-tight tracking-tight text-center md:text-left">
-                            &quot;Traaaction is solving a major painpoint in Europe and in the rest of the world: start-ups need sales traction to raise money. Young professionals are keen to work on sales missions to kick-off their careers and generate revenue. Traaaction is there to connect start-ups and young professionals for the best!&quot;
+                            &quot;{t('testimonial.kate.quote')}&quot;
                         </blockquote>
 
                         {/* Right: Profile Stack */}
                         <div className="flex flex-col items-center md:items-end gap-6 shrink-0">
                             <div className="text-center md:text-right">
-                                <div className="font-bold text-slate-900 text-lg">Kate B. Masson</div>
-                                <div className="text-sm text-slate-500 font-medium">Co-founder Traaaction</div>
+                                <div className="font-bold text-slate-900 text-lg">{t('testimonial.kate.name')}</div>
+                                <div className="text-sm text-slate-500 font-medium">{t('testimonial.kate.role')}</div>
                             </div>
 
                             {/* Avatar at bottom right like reference */}
@@ -94,7 +120,7 @@ export const B2BFeatures = () => {
                             >
                                 <img
                                     src="/Logotrac/katemasson.png"
-                                    alt="Kate B. Masson"
+                                    alt={t('testimonial.kate.name')}
                                     className="w-full h-full object-cover"
                                 />
                             </a>
@@ -113,30 +139,6 @@ export const B2BFeatures = () => {
         </section >
     );
 };
-
-const managementTabs: Tab[] = [
-    {
-        id: 0,
-        title: "Connection domains",
-        desc: "Bypass ad-blockers and ensure every click is counted with our advanced link infrastructure.",
-        color: "emerald",
-        visual: ConnectionVisual
-    },
-    {
-        id: 1,
-        title: "Cross-border Expansion",
-        desc: "Scale across Europe. Select and manage local experts in France, Germany, or Spain directly.",
-        color: "blue",
-        visual: EuropeMap
-    },
-    {
-        id: 2,
-        title: "Global Payouts",
-        desc: "Pay all your partners instantly and simultaneously, anywhere in the world.",
-        color: "violet",
-        visual: PayoutsVisual
-    }
-];
 
 
 // --- Sub-components ---

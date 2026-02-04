@@ -166,6 +166,23 @@
                 }
             }
         },
+        "missionSelector": {
+            "title": "Une plateforme, deux façons de grandir.",
+            "startup": {
+                "tab": "Startup",
+                "title": "Startup ? Vendez maintenant !",
+                "description": "Boostez vos ventes dès aujourd'hui—gratuit à vie ! Lancez votre programme en quelques secondes.",
+                "placeholder": "mission",
+                "button": "Commencer"
+            },
+            "seller": {
+                "tab": "Vendeur",
+                "title": "Vendeur ? Gagnez maintenant !",
+                "description": "Monétisez votre réseau instantanément. Rejoignez des campagnes et suivez vos gains en temps réel.",
+                "placeholder": "pseudo",
+                "button": "Commencer"
+            }
+        },
         "footer": {
             "description": "La plateforme qui connecte les startups aux talents commerciaux.",
             "product": "Produit",

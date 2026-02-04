@@ -7,7 +7,6 @@ import { createClient } from '@/utils/supabase/client';
 import { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useTranslations } from 'next-intl';
-import { LanguageSelector } from '@/components/LanguageSelector';
 
 export function Navbar() {
     const [user, setUser] = useState<User | null>(null);
@@ -61,10 +60,7 @@ export function Navbar() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-3">
-                    {/* Language Selector */}
-                    <LanguageSelector variant="minimal" />
-
+                <div className="flex items-center gap-4">
                     {user ? (
                         <Link
                             href="/dashboard"

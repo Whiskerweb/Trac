@@ -166,6 +166,23 @@
                 }
             }
         },
+        "missionSelector": {
+            "title": "One platform, two ways to grow.",
+            "startup": {
+                "tab": "Startup",
+                "title": "Startup? Start selling now!",
+                "description": "Boost your sales today—free for life! Launch your program in seconds.",
+                "placeholder": "mission",
+                "button": "Start Now"
+            },
+            "seller": {
+                "tab": "Seller",
+                "title": "Seller? Start earning now!",
+                "description": "Monetize your network instantly. Join campaigns and track earnings in real-time.",
+                "placeholder": "username",
+                "button": "Start Now"
+            }
+        },
         "footer": {
             "description": "The platform connecting startups with sales talent.",
             "product": "Product",

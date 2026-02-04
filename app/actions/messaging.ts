@@ -16,6 +16,7 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
     success: boolean
     conversations?: Array<{
         id: string
+        seller_id?: string
         partner_name: string | null
         partner_email: string
         workspace_name: string
@@ -45,7 +46,7 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
                 where: { workspace_id: workspace.workspaceId },
                 include: {
                     Seller: {
-                        select: { name: true, email: true }
+                        select: { id: true, name: true, email: true }
                     },
                     Workspace: {
                         select: { name: true }
@@ -58,6 +59,7 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
                 success: true,
                 conversations: conversations.map(c => ({
                     id: c.id,
+                    seller_id: c.Seller.id,
                     partner_name: c.Seller.name,
                     partner_email: c.Seller.email,
                     workspace_name: c.Workspace.name,

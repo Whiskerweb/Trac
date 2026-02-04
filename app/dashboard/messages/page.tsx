@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import {
     MessageSquare,
     Send,
@@ -21,6 +22,7 @@ import { fr } from 'date-fns/locale'
 
 interface Conversation {
     id: string
+    seller_id?: string
     partner_name: string | null
     partner_email: string
     workspace_name: string
@@ -56,9 +58,19 @@ function ConversationItem({
                 }`}
         >
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <User className="w-5 h-5 text-gray-500" />
-                </div>
+                {conversation.seller_id ? (
+                    <Link
+                        href={`/dashboard/sellers/${conversation.seller_id}/profile`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 hover:ring-2 hover:ring-gray-300 transition-all"
+                    >
+                        <User className="w-5 h-5 text-gray-500" />
+                    </Link>
+                ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 text-gray-500" />
+                    </div>
+                )}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                         <span className="font-medium text-gray-900 truncate">{displayName}</span>
@@ -236,9 +248,18 @@ function MessagesPageContent() {
                                 >
                                     <ArrowLeft className="w-5 h-5" />
                                 </button>
-                                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                                    <User className="w-5 h-5 text-gray-500" />
-                                </div>
+                                {activeConversation.seller_id ? (
+                                    <Link
+                                        href={`/dashboard/sellers/${activeConversation.seller_id}/profile`}
+                                        className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:ring-2 hover:ring-gray-300 transition-all"
+                                    >
+                                        <User className="w-5 h-5 text-gray-500" />
+                                    </Link>
+                                ) : (
+                                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                                        <User className="w-5 h-5 text-gray-500" />
+                                    </div>
+                                )}
                                 <div>
                                     <h3 className="font-medium text-gray-900">
                                         {activeConversation.partner_name || activeConversation.partner_email}
