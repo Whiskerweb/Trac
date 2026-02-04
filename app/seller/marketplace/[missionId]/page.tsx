@@ -197,7 +197,7 @@ export default function MissionDetailPage() {
 
     return (
         <div className="min-h-screen bg-[#FAFAFA]">
-            <div className="max-w-4xl mx-auto px-6 py-12">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
 
                 {/* Back button */}
                 <Link
@@ -210,16 +210,16 @@ export default function MissionDetailPage() {
 
                 {/* Header section */}
                 <header className="mb-12">
-                    <div className="flex items-start gap-6">
+                    <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                         {/* Startup Logo */}
                         {startup.logo_url ? (
                             <img
                                 src={startup.logo_url}
                                 alt={startup.name}
-                                className="w-20 h-20 rounded-2xl object-cover shadow-sm"
+                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl object-cover shadow-sm"
                             />
                         ) : (
-                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
                                 <span className="text-2xl font-semibold text-white">
                                     {startup.name.charAt(0)}
                                 </span>
@@ -235,7 +235,7 @@ export default function MissionDetailPage() {
                             )}
 
                             {/* Startup name */}
-                            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight mb-1">
+                            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight mb-1">
                                 {startup.name}
                             </h1>
 
@@ -256,14 +256,14 @@ export default function MissionDetailPage() {
                 </header>
 
                 {/* Main content grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
 
                     {/* Left column - Main content */}
                     <div className="lg:col-span-2 space-y-8">
 
                         {/* Startup description */}
                         {startup.description && (
-                            <section className="bg-white rounded-2xl p-6 border border-gray-100">
+                            <section className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100">
                                 <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
                                     About {startup.name}
                                 </h2>
@@ -272,7 +272,7 @@ export default function MissionDetailPage() {
                                 </p>
 
                                 {/* Startup meta */}
-                                <div className="flex flex-wrap gap-4 mt-6 pt-5 border-t border-gray-50">
+                                <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 mt-6 pt-5 border-t border-gray-50">
                                     {startup.website_url && (
                                         <a
                                             href={startup.website_url}
@@ -307,7 +307,7 @@ export default function MissionDetailPage() {
                         )}
 
                         {/* Mission description */}
-                        <section className="bg-white rounded-2xl p-6 border border-gray-100">
+                        <section className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100">
                             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
                                 The mission
                             </h2>
@@ -330,7 +330,7 @@ export default function MissionDetailPage() {
                         </section>
 
                         {/* Resources section */}
-                        <section className="bg-white rounded-2xl p-6 border border-gray-100">
+                        <section className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100">
                             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
                                 Resources
                             </h2>
@@ -384,10 +384,10 @@ export default function MissionDetailPage() {
 
                     {/* Right column - Sticky CTA */}
                     <div className="lg:col-span-1">
-                        <div className="sticky top-8 space-y-6">
+                        <div className="lg:sticky lg:top-8 space-y-6">
 
                             {/* Commission card */}
-                            <div className="bg-white rounded-2xl p-6 border border-gray-100">
+                            <div className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100">
                                 <div className="mb-6">
                                     <p className="text-xs text-gray-400 uppercase tracking-wider mb-4 text-center">
                                         {hasMultipleCommissions(mission) ? 'Commissions' : 'Commission'}
@@ -551,7 +551,7 @@ export default function MissionDetailPage() {
                             </div>
 
                             {/* Quick links */}
-                            <div className="bg-white rounded-2xl p-5 border border-gray-100">
+                            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100">
                                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                                     Quick links
                                 </p>

@@ -266,10 +266,10 @@ export default function SellerMarketplacePage() {
                 }
             `}</style>
 
-            <div className="max-w-5xl mx-auto px-6 py-16">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
                 {/* Header - Minimal */}
                 <header className="text-center mb-12">
-                    <h1 className="text-3xl font-semibold text-gray-900 tracking-tight mb-3">
+                    <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight mb-3">
                         Programs
                     </h1>
                     <p className="text-gray-500 text-[15px]">
@@ -322,7 +322,7 @@ export default function SellerMarketplacePage() {
                             key={cat.id}
                             onClick={() => setSelectedCategory(cat.id)}
                             className={`
-                                px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-200
+                                px-3 py-1.5 rounded-full text-xs sm:text-[13px] font-medium transition-all duration-200
                                 ${selectedCategory === cat.id
                                     ? 'bg-gray-900 text-white'
                                     : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
@@ -339,7 +339,7 @@ export default function SellerMarketplacePage() {
                             key={cat.id}
                             onClick={() => setSelectedCategory(cat.id)}
                             className={`
-                                px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-200
+                                px-3 py-1.5 rounded-full text-xs sm:text-[13px] font-medium transition-all duration-200
                                 ${selectedCategory === cat.id
                                     ? 'bg-gray-900 text-white'
                                     : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
@@ -354,7 +354,7 @@ export default function SellerMarketplacePage() {
                     <button
                         onClick={() => setShowAllCategories(!showAllCategories)}
                         className={`
-                            px-3 py-2 rounded-full text-[13px] font-medium transition-all duration-200
+                            px-3 py-1.5 rounded-full text-xs sm:text-[13px] font-medium transition-all duration-200
                             flex items-center gap-1
                             ${showAllCategories
                                 ? 'text-violet-600 bg-violet-50'

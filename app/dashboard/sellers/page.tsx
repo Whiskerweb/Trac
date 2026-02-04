@@ -230,9 +230,9 @@ export default function AllSellersPage() {
                 </div>
 
                 {/* Search & Filters */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     {/* Search */}
-                    <div className="relative flex-1 max-w-xs">
+                    <div className="relative flex-1 sm:max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                         <input
                             type="text"
@@ -244,40 +244,42 @@ export default function AllSellersPage() {
                     </div>
 
                     {/* Filters */}
-                    <FilterDropdown
-                        label={t('country')}
-                        options={COUNTRIES}
-                        selected={selectedCountries}
-                        onChange={setSelectedCountries}
-                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                        <FilterDropdown
+                            label={t('country')}
+                            options={COUNTRIES}
+                            selected={selectedCountries}
+                            onChange={setSelectedCountries}
+                        />
 
-                    <FilterDropdown
-                        label={t('industries')}
-                        options={INDUSTRIES}
-                        selected={selectedIndustries}
-                        onChange={setSelectedIndustries}
-                    />
+                        <FilterDropdown
+                            label={t('industries')}
+                            options={INDUSTRIES}
+                            selected={selectedIndustries}
+                            onChange={setSelectedIndustries}
+                        />
 
-                    <FilterDropdown
-                        label={t('activityType')}
-                        options={ACTIVITY_TYPES}
-                        selected={selectedActivityTypes}
-                        onChange={setSelectedActivityTypes}
-                    />
+                        <FilterDropdown
+                            label={t('activityType')}
+                            options={ACTIVITY_TYPES}
+                            selected={selectedActivityTypes}
+                            onChange={setSelectedActivityTypes}
+                        />
 
-                    {/* Clear filters */}
-                    {(selectedCountries.length > 0 || selectedIndustries.length > 0 || selectedActivityTypes.length > 0) && (
-                        <button
-                            onClick={() => {
-                                setSelectedCountries([])
-                                setSelectedIndustries([])
-                                setSelectedActivityTypes([])
-                            }}
-                            className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
-                        >
-                            {t('reset')}
-                        </button>
-                    )}
+                        {/* Clear filters */}
+                        {(selectedCountries.length > 0 || selectedIndustries.length > 0 || selectedActivityTypes.length > 0) && (
+                            <button
+                                onClick={() => {
+                                    setSelectedCountries([])
+                                    setSelectedIndustries([])
+                                    setSelectedActivityTypes([])
+                                }}
+                                className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                            >
+                                {t('reset')}
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Table */}
@@ -299,68 +301,121 @@ export default function AllSellersPage() {
                     </div>
                 ) : (
                     <div className="border border-slate-200 rounded-xl bg-white overflow-hidden">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-slate-50/50 border-b border-slate-200">
-                                    <th className="text-left px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                        {t('seller')}
-                                    </th>
-                                    <th className="text-center px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                        {tCommon('clicks')}
-                                    </th>
-                                    <th className="text-right px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                        {t('revenue')}
-                                    </th>
-                                    <th className="text-right px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                        {t('payout')}
-                                    </th>
-                                    <th className="w-12"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {filteredSellers.map((seller) => (
-                                    <tr
-                                        key={seller.id}
-                                        onClick={() => router.push(`/dashboard/sellers/${seller.id}`)}
-                                        className="hover:bg-slate-50 cursor-pointer transition-colors group"
-                                    >
-                                        <td className="px-6 py-3">
-                                            <div className="flex items-center gap-3">
-                                                <Avatar initials={seller.avatar} imageUrl={seller.avatarUrl || undefined} />
-                                                <div className="min-w-0">
-                                                    <div className="font-semibold text-slate-900 truncate text-xs">
-                                                        {seller.name}
-                                                    </div>
-                                                    <div className="text-[11px] text-slate-400 truncate">
-                                                        {seller.activityType}
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-slate-50/50 border-b border-slate-200">
+                                        <th className="text-left px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                            {t('seller')}
+                                        </th>
+                                        <th className="text-center px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                            {tCommon('clicks')}
+                                        </th>
+                                        <th className="text-right px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                            {t('revenue')}
+                                        </th>
+                                        <th className="text-right px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                            {t('payout')}
+                                        </th>
+                                        <th className="w-12"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {filteredSellers.map((seller) => (
+                                        <tr
+                                            key={seller.id}
+                                            onClick={() => router.push(`/dashboard/sellers/${seller.id}`)}
+                                            className="hover:bg-slate-50 cursor-pointer transition-colors group"
+                                        >
+                                            <td className="px-6 py-3">
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar initials={seller.avatar} imageUrl={seller.avatarUrl || undefined} />
+                                                    <div className="min-w-0">
+                                                        <div className="font-semibold text-slate-900 truncate text-xs">
+                                                            {seller.name}
+                                                        </div>
+                                                        <div className="text-[11px] text-slate-400 truncate">
+                                                            {seller.activityType}
+                                                        </div>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <span className="text-xs font-semibold text-slate-900">
+                                                    {formatNumber(seller.globalStats.totalClicks)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <span className="text-xs font-bold text-slate-900">
+                                                    {formatCurrency(seller.globalStats.totalEarnings / 100)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <span className="text-xs font-bold text-green-600">
+                                                    {formatCurrency(seller.globalStats.totalPayout / 100)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <div className="inline-flex items-center justify-center w-7 h-7 border border-slate-200 rounded-lg group-hover:border-slate-900 group-hover:bg-slate-900 transition-all">
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile Cards */}
+                        <div className="md:hidden divide-y divide-slate-100">
+                            {filteredSellers.map((seller) => (
+                                <div
+                                    key={seller.id}
+                                    onClick={() => router.push(`/dashboard/sellers/${seller.id}`)}
+                                    className="p-4 hover:bg-slate-50 cursor-pointer transition-colors"
+                                >
+                                    <div className="flex items-start gap-3 mb-3">
+                                        <Avatar initials={seller.avatar} imageUrl={seller.avatarUrl || undefined} />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-semibold text-slate-900 text-sm">
+                                                {seller.name}
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className="text-xs font-semibold text-slate-900">
+                                            <div className="text-xs text-slate-400">
+                                                {seller.activityType}
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-slate-300 flex-shrink-0" />
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div>
+                                            <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">
+                                                {tCommon('clicks')}
+                                            </div>
+                                            <div className="text-sm font-semibold text-slate-900">
                                                 {formatNumber(seller.globalStats.totalClicks)}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <span className="text-xs font-bold text-slate-900">
-                                                {formatCurrency(seller.globalStats.totalEarnings / 100)}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <span className="text-xs font-bold text-green-600">
-                                                {formatCurrency(seller.globalStats.totalPayout / 100)}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className="inline-flex items-center justify-center w-7 h-7 border border-slate-200 rounded-lg group-hover:border-slate-900 group-hover:bg-slate-900 transition-all">
-                                                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
                                             </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">
+                                                {t('revenue')}
+                                            </div>
+                                            <div className="text-sm font-bold text-slate-900">
+                                                {formatCurrency(seller.globalStats.totalEarnings / 100)}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">
+                                                {t('payout')}
+                                            </div>
+                                            <div className="text-sm font-bold text-green-600">
+                                                {formatCurrency(seller.globalStats.totalPayout / 100)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

@@ -36,8 +36,8 @@ function CodeBlock({ code, filename }: { code: string; filename?: string }) {
     return (
         <div className="rounded-lg bg-neutral-950 overflow-hidden">
             {filename && (
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-800">
-                    <span className="text-xs text-neutral-500 font-mono">{filename}</span>
+                <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-neutral-800">
+                    <span className="text-xs text-neutral-500 font-mono truncate mr-2">{filename}</span>
                     <CopyButton text={code} small />
                 </div>
             )}
@@ -46,7 +46,7 @@ function CodeBlock({ code, filename }: { code: string; filename?: string }) {
                     <CopyButton text={code} small />
                 </div>
             )}
-            <pre className="p-4 text-[13px] leading-relaxed font-mono text-neutral-300 overflow-x-auto">
+            <pre className="p-3 sm:p-4 text-xs sm:text-[13px] leading-relaxed font-mono text-neutral-300 overflow-x-auto">
                 <code>{code}</code>
             </pre>
         </div>
@@ -72,16 +72,16 @@ function Section({
         <div id={id} className="border-b border-neutral-200 last:border-0">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center gap-4 py-5 text-left group"
+                className="w-full flex items-center gap-3 sm:gap-4 py-4 sm:py-5 text-left group"
             >
-                <span className="text-sm text-neutral-400 font-mono w-6">{String(number).padStart(2, '0')}</span>
-                <span className="flex-1 text-base font-medium text-neutral-900 group-hover:text-neutral-600 transition-colors">
+                <span className="text-xs sm:text-sm text-neutral-400 font-mono w-5 sm:w-6 flex-shrink-0">{String(number).padStart(2, '0')}</span>
+                <span className="flex-1 text-sm sm:text-base font-medium text-neutral-900 group-hover:text-neutral-600 transition-colors">
                     {title}
                 </span>
-                <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
-            <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-[3000px] opacity-100 pb-8' : 'max-h-0 opacity-0'}`}>
-                <div className="pl-10">
+            <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-[3000px] opacity-100 pb-6 sm:pb-8' : 'max-h-0 opacity-0'}`}>
+                <div className="pl-8 sm:pl-10">
                     {children}
                 </div>
             </div>
@@ -273,10 +273,10 @@ Add webhook in Traaaction dashboard for Stripe events:
     }
 
     return (
-        <div className="max-w-2xl mx-auto px-6 py-12">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
             {/* Header */}
-            <header className="mb-12">
-                <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight mb-2">
+            <header className="mb-8 sm:mb-12">
+                <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900 tracking-tight mb-2">
                     {t('title')}
                 </h1>
                 <p className="text-neutral-500 text-sm leading-relaxed">
@@ -286,7 +286,7 @@ Add webhook in Traaaction dashboard for Stripe events:
 
             {/* Domain Status */}
             {!customDomain && (
-                <div className="mb-10 pb-10 border-b border-neutral-200">
+                <div className="mb-6 sm:mb-10 pb-6 sm:pb-10 border-b border-neutral-200">
                     <p className="text-sm text-neutral-500">
                         <Link href="/dashboard/domains" className="text-neutral-900 hover:underline">
                             {t('addCustomDomain')}
@@ -297,10 +297,10 @@ Add webhook in Traaaction dashboard for Stripe events:
             )}
 
             {/* AI Export Link */}
-            <div className="mb-10 pb-10 border-b border-neutral-200">
+            <div className="mb-6 sm:mb-10 pb-6 sm:pb-10 border-b border-neutral-200">
                 <button
                     onClick={handleCopyAI}
-                    className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
+                    className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors min-h-[44px] flex items-center"
                 >
                     {aiCopied ? (
                         <span className="flex items-center gap-1.5">
@@ -317,39 +317,39 @@ Add webhook in Traaaction dashboard for Stripe events:
             </div>
 
             {/* Steps */}
-            <div className="mb-12">
+            <div className="mb-8 sm:mb-12">
                 <Section id="step-1" number={1} title={t('step1.title')} defaultOpen>
-                    <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
+                    <p className="text-sm text-neutral-600 mb-4 sm:mb-6 leading-relaxed">
                         {t('step1.description')}
                     </p>
 
                     <CodeBlock code={rewritesConfig} filename="next.config.js" />
 
-                    <p className="text-xs text-neutral-400 mt-4">
+                    <p className="text-xs text-neutral-400 mt-3 sm:mt-4">
                         {t('step1.otherFrameworks')}
                     </p>
                 </Section>
 
                 <Section id="step-2" number={2} title={t('step2.title')}>
-                    <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
+                    <p className="text-sm text-neutral-600 mb-4 sm:mb-6 leading-relaxed">
                         {t('step2.description')}
                     </p>
 
                     <CodeBlock code={scriptTag} filename="app/layout.tsx" />
 
-                    <p className="text-xs text-neutral-400 mt-4">
+                    <p className="text-xs text-neutral-400 mt-3 sm:mt-4">
                         {t('step2.avoidBlocked')}
                     </p>
                 </Section>
 
                 <Section id="step-3" number={3} title={t('step3.title')}>
-                    <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
+                    <p className="text-sm text-neutral-600 mb-4 sm:mb-6 leading-relaxed">
                         {t('step3.description')}
                     </p>
 
                     <CodeBlock code={trackSignup} filename="signup handler" />
 
-                    <div className="mt-6 space-y-3 text-xs text-neutral-500">
+                    <div className="mt-4 sm:mt-6 space-y-3 text-xs text-neutral-500">
                         <p>
                             <span className="text-neutral-700 font-medium">{t('step3.publishableKey')}</span> {t('step3.publishableKeyDesc')}
                         </p>
@@ -360,44 +360,44 @@ Add webhook in Traaaction dashboard for Stripe events:
                 </Section>
 
                 <Section id="step-4" number={4} title={t('step4.title')}>
-                    <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
+                    <p className="text-sm text-neutral-600 mb-4 sm:mb-6 leading-relaxed">
                         {t('step4.description')}
                     </p>
 
                     <CodeBlock code={stripeMetadata} filename="checkout handler" />
 
-                    <p className="text-xs text-neutral-400 mt-4">
+                    <p className="text-xs text-neutral-400 mt-3 sm:mt-4">
                         {t('step4.sameCustomerId')}
                     </p>
                 </Section>
 
                 <Section id="step-5" number={5} title={t('step5.title')}>
-                    <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
+                    <p className="text-sm text-neutral-600 mb-4 sm:mb-6 leading-relaxed">
                         {t('step5.description')}
                     </p>
 
-                    <div className="mt-4">
+                    <div className="mt-3 sm:mt-4">
                         <WebhookManager onStatusChange={() => { }} />
                     </div>
                 </Section>
             </div>
 
             {/* API Keys */}
-            <div className="pt-8 border-t border-neutral-200">
+            <div className="pt-6 sm:pt-8 border-t border-neutral-200">
                 <details className="group">
-                    <summary className="flex items-center justify-between cursor-pointer py-2 list-none">
+                    <summary className="flex items-center justify-between cursor-pointer py-2 list-none min-h-[44px]">
                         <span className="text-sm font-medium text-neutral-900">{t('apiKeys.title')}</span>
-                        <ChevronDown className="w-4 h-4 text-neutral-400 group-open:rotate-180 transition-transform" />
+                        <ChevronDown className="w-4 h-4 text-neutral-400 group-open:rotate-180 transition-transform flex-shrink-0" />
                     </summary>
 
-                    <div className="mt-6 space-y-6">
+                    <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
                         {/* Public Key */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs text-neutral-500 uppercase tracking-wide">{t('apiKeys.publicKey')}</span>
                                 <CopyButton text={publicKey || ''} small />
                             </div>
-                            <code className="text-sm font-mono text-neutral-900 break-all">{publicKey}</code>
+                            <code className="text-xs sm:text-sm font-mono text-neutral-900 break-all block">{publicKey}</code>
                             <p className="text-xs text-neutral-400 mt-1.5">{t('apiKeys.publicKeyDesc')}</p>
                         </div>
 
@@ -410,9 +410,9 @@ Add webhook in Traaaction dashboard for Stripe events:
                                         <>
                                             <button
                                                 onClick={() => setShowSecret(!showSecret)}
-                                                className="w-7 h-7 rounded-md flex items-center justify-center text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+                                                className="w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
                                             >
-                                                {showSecret ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                                {showSecret ? <EyeOff className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> : <Eye className="w-4 h-4 sm:w-3.5 sm:h-3.5" />}
                                             </button>
                                             <CopyButton text={secretKey} small />
                                         </>
@@ -420,12 +420,12 @@ Add webhook in Traaaction dashboard for Stripe events:
                                 </div>
                             </div>
                             {secretKey ? (
-                                <code className="text-sm font-mono text-neutral-900 break-all">
+                                <code className="text-xs sm:text-sm font-mono text-neutral-900 break-all block">
                                     {showSecret ? secretKey : 'sk_live_' + '•'.repeat(32)}
                                 </code>
                             ) : (
-                                <div className="flex items-center gap-3">
-                                    <code className="text-sm font-mono text-neutral-400">sk_live_{'•'.repeat(32)}</code>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                    <code className="text-xs sm:text-sm font-mono text-neutral-400">sk_live_{'•'.repeat(32)}</code>
                                     <button
                                         onClick={async () => {
                                             if (confirm(t('apiKeys.regenerateConfirm'))) {
@@ -437,9 +437,9 @@ Add webhook in Traaaction dashboard for Stripe events:
                                                 }
                                             }
                                         }}
-                                        className="text-xs text-neutral-500 hover:text-neutral-900 flex items-center gap-1 transition-colors"
+                                        className="text-xs text-neutral-500 hover:text-neutral-900 flex items-center gap-1 transition-colors min-h-[44px] sm:min-h-0"
                                     >
-                                        <RefreshCw className="w-3 h-3" /> {t('apiKeys.regenerate')}
+                                        <RefreshCw className="w-3.5 h-3.5 sm:w-3 sm:h-3" /> {t('apiKeys.regenerate')}
                                     </button>
                                 </div>
                             )}
@@ -450,7 +450,7 @@ Add webhook in Traaaction dashboard for Stripe events:
             </div>
 
             {/* Support */}
-            <div className="mt-12 pt-8 border-t border-neutral-200">
+            <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-neutral-200">
                 <p className="text-sm text-neutral-500">
                     {t('support.needHelp')}{' '}
                     <a href="mailto:support@traaaction.com" className="text-neutral-900 hover:underline">

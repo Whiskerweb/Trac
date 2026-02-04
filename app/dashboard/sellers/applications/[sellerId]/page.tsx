@@ -176,7 +176,7 @@ export default function SellerProfilePage() {
             </button>
 
             {/* Header */}
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <Avatar initials={seller.avatar} size="lg" />
                     <div>
@@ -190,38 +190,35 @@ export default function SellerProfilePage() {
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button className="px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50">
                         Message
                     </button>
                 </div>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Global Performance */}
                 <div className="bg-white border border-gray-200 rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <Globe className="w-4 h-4 text-gray-400" />
                         <h3 className="text-sm font-medium text-gray-500">Global Performance</h3>
                     </div>
-                    <div className="flex gap-6">
-                        <div className="flex-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div>
                             <p className="text-2xl font-semibold text-gray-900">{formatNumber(seller.globalStats.totalClicks)}</p>
                             <p className="text-xs text-gray-500">Clicks</p>
                         </div>
-                        <div className="w-px bg-gray-200" />
-                        <div className="flex-1">
+                        <div>
                             <p className="text-2xl font-semibold text-gray-900">{formatNumber(seller.globalStats.totalSales)}</p>
                             <p className="text-xs text-gray-500">Sales</p>
                         </div>
-                        <div className="w-px bg-gray-200" />
-                        <div className="flex-1">
+                        <div>
                             <p className="text-2xl font-semibold text-green-600">{formatCurrency(seller.globalStats.totalEarnings)}</p>
                             <p className="text-xs text-gray-500">Earned</p>
                         </div>
-                        <div className="w-px bg-gray-200" />
-                        <div className="flex-1">
+                        <div>
                             <p className="text-2xl font-semibold text-gray-900">{seller.globalStats.conversionRate}%</p>
                             <p className="text-xs text-gray-500">CVR</p>
                         </div>
@@ -234,23 +231,20 @@ export default function SellerProfilePage() {
                         <Award className="w-4 h-4 text-blue-500" />
                         <h3 className="text-sm font-medium text-gray-500">With Your Startup</h3>
                     </div>
-                    <div className="flex gap-6">
-                        <div className="flex-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div>
                             <p className="text-2xl font-semibold text-gray-900">{formatNumber(seller.ourStats.totalClicks)}</p>
                             <p className="text-xs text-gray-500">Clicks</p>
                         </div>
-                        <div className="w-px bg-gray-200" />
-                        <div className="flex-1">
+                        <div>
                             <p className="text-2xl font-semibold text-gray-900">{seller.ourStats.totalSales}</p>
                             <p className="text-xs text-gray-500">Sales</p>
                         </div>
-                        <div className="w-px bg-gray-200" />
-                        <div className="flex-1">
+                        <div>
                             <p className="text-2xl font-semibold text-green-600">{formatCurrency(seller.ourStats.totalEarnings)}</p>
                             <p className="text-xs text-gray-500">Earned</p>
                         </div>
-                        <div className="w-px bg-gray-200" />
-                        <div className="flex-1">
+                        <div>
                             <p className="text-2xl font-semibold text-gray-900">{seller.ourStats.conversionRate}%</p>
                             <p className="text-xs text-gray-500">CVR</p>
                         </div>
@@ -259,9 +253,9 @@ export default function SellerProfilePage() {
             </div>
 
             {/* Main Content */}
-            <div className="flex gap-6">
+            <div className="flex flex-col lg:flex-row gap-6">
                 {/* Left Column - Missions */}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                         <div className="px-5 py-4 border-b border-gray-100">
                             <h2 className="text-sm font-semibold text-gray-900">Missions ({seller.missions?.length || 0})</h2>
@@ -286,7 +280,7 @@ export default function SellerProfilePage() {
                 </div>
 
                 {/* Right Column - Profile Info */}
-                <div className="w-80 shrink-0 space-y-4">
+                <div className="lg:w-80 lg:shrink-0 space-y-4">
                     {/* About */}
                     {seller.bio && (
                         <div className="bg-white border border-gray-200 rounded-xl p-5">

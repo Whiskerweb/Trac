@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation'
 import {
     Loader2, Save, Upload, X, ChevronLeft,
     Globe, Building2, MapPin, Calendar, Users,
-    FileText, ExternalLink, Image as ImageIcon, Check, LogOut
+    FileText, ExternalLink, Image as ImageIcon, Check
 } from 'lucide-react'
 import { getStartupProfile, updateStartupProfile } from '@/app/actions/startup-profile'
-import { logout } from '@/app/login/actions'
 
 // =============================================
 // CONSTANTS
@@ -151,14 +150,22 @@ function FileUpload({ label, currentUrl, accept, type, onUpload, onRemove }: {
                             className="w-16 h-16 rounded-xl object-cover border-2 border-slate-200"
                         />
                     ) : (
-                        <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl flex-1">
-                            <FileText className="w-4 h-4 text-slate-400" />
-                            <span className="text-sm text-slate-600 truncate">{currentUrl.split('/').pop()}</span>
+                        <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl flex-1 min-w-0">
+                            <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            <span
+                                className="text-sm text-slate-600 cursor-help flex-1 min-w-0"
+                                title={currentUrl.split('/').pop()}
+                            >
+                                {(() => {
+                                    const fileName = currentUrl.split('/').pop() || '';
+                                    return fileName.length > 10 ? fileName.slice(0, 10) + '...' : fileName;
+                                })()}
+                            </span>
                             <a
                                 href={currentUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="ml-auto"
+                                className="flex-shrink-0"
                             >
                                 <ExternalLink className="w-3.5 h-3.5 text-slate-400 hover:text-slate-900" />
                             </a>
@@ -234,28 +241,51 @@ export default function StartupProfilePage() {
     const [pitchDeckUrl, setPitchDeckUrl] = useState<string | null>(null)
     const [docUrl, setDocUrl] = useState<string | null>(null)
 
+    // Track original values for change detection
+    const [originalValues, setOriginalValues] = useState<any>(null)
+    const [hasChanges, setHasChanges] = useState(false)
+
     useEffect(() => {
         async function load() {
             try {
                 const result = await getStartupProfile()
                 if (result.success && result.profile) {
                     const p = result.profile
-                    setName(p.name || '')
-                    setDescription(p.description || '')
-                    setLogoUrl(p.logoUrl)
-                    setWebsiteUrl(p.websiteUrl || '')
-                    setIndustry(p.industry || '')
-                    setCompanySize(p.companySize || '')
-                    setFoundedYear(p.foundedYear || '')
-                    setHeadquarters(p.headquarters || '')
-                    setTwitterUrl(p.twitterUrl || '')
-                    setLinkedinUrl(p.linkedinUrl || '')
-                    setInstagramUrl(p.instagramUrl || '')
-                    setYoutubeUrl(p.youtubeUrl || '')
-                    setTiktokUrl(p.tiktokUrl || '')
-                    setGithubUrl(p.githubUrl || '')
-                    setPitchDeckUrl(p.pitchDeckUrl)
-                    setDocUrl(p.docUrl)
+                    const values = {
+                        name: p.name || '',
+                        description: p.description || '',
+                        logoUrl: p.logoUrl,
+                        websiteUrl: p.websiteUrl || '',
+                        industry: p.industry || '',
+                        companySize: p.companySize || '',
+                        foundedYear: p.foundedYear || '',
+                        headquarters: p.headquarters || '',
+                        twitterUrl: p.twitterUrl || '',
+                        linkedinUrl: p.linkedinUrl || '',
+                        instagramUrl: p.instagramUrl || '',
+                        youtubeUrl: p.youtubeUrl || '',
+                        tiktokUrl: p.tiktokUrl || '',
+                        githubUrl: p.githubUrl || '',
+                        pitchDeckUrl: p.pitchDeckUrl,
+                        docUrl: p.docUrl
+                    }
+                    setName(values.name)
+                    setDescription(values.description)
+                    setLogoUrl(values.logoUrl)
+                    setWebsiteUrl(values.websiteUrl)
+                    setIndustry(values.industry)
+                    setCompanySize(values.companySize)
+                    setFoundedYear(values.foundedYear)
+                    setHeadquarters(values.headquarters)
+                    setTwitterUrl(values.twitterUrl)
+                    setLinkedinUrl(values.linkedinUrl)
+                    setInstagramUrl(values.instagramUrl)
+                    setYoutubeUrl(values.youtubeUrl)
+                    setTiktokUrl(values.tiktokUrl)
+                    setGithubUrl(values.githubUrl)
+                    setPitchDeckUrl(values.pitchDeckUrl)
+                    setDocUrl(values.docUrl)
+                    setOriginalValues(values)
                 } else if (result.error) {
                     setError(result.error)
                 }
@@ -269,11 +299,28 @@ export default function StartupProfilePage() {
         load()
     }, [])
 
+    // Detect changes
+    useEffect(() => {
+        if (!originalValues) return
+
+        const currentValues = {
+            name, description, logoUrl, websiteUrl, industry, companySize,
+            foundedYear, headquarters, twitterUrl, linkedinUrl, instagramUrl,
+            youtubeUrl, tiktokUrl, githubUrl, pitchDeckUrl, docUrl
+        }
+
+        const changed = JSON.stringify(currentValues) !== JSON.stringify(originalValues)
+        setHasChanges(changed)
+    }, [name, description, logoUrl, websiteUrl, industry, companySize, foundedYear,
+        headquarters, twitterUrl, linkedinUrl, instagramUrl, youtubeUrl, tiktokUrl,
+        githubUrl, pitchDeckUrl, docUrl, originalValues])
+
     async function handleSave() {
         console.log('=== handleSave called ===')
         setSaving(true)
         setSaved(false)
         setError(null)
+        setHasChanges(false)
 
         const payload = {
             name: name.trim() || undefined,
@@ -302,13 +349,21 @@ export default function StartupProfilePage() {
 
             if (result.success) {
                 setSaved(true)
+                // Update original values after successful save
+                setOriginalValues({
+                    name, description, logoUrl, websiteUrl, industry, companySize,
+                    foundedYear, headquarters, twitterUrl, linkedinUrl, instagramUrl,
+                    youtubeUrl, tiktokUrl, githubUrl, pitchDeckUrl, docUrl
+                })
                 setTimeout(() => setSaved(false), 3000)
             } else {
                 setError(result.error || 'Failed to save profile')
+                setHasChanges(true) // Restore hasChanges if save failed
             }
         } catch (err) {
             console.error('Error saving profile:', err)
             setError('An unexpected error occurred while saving')
+            setHasChanges(true) // Restore hasChanges on error
         } finally {
             setSaving(false)
         }
@@ -328,42 +383,22 @@ export default function StartupProfilePage() {
 
             <div className="relative space-y-8 pb-20 max-w-4xl">
                 {/* Back + Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <button
-                            onClick={() => router.push('/dashboard')}
-                            className="group flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-slate-900 transition-all duration-300 mb-4"
-                        >
-                            <div className="w-6 h-6 border border-slate-200 rounded-md flex items-center justify-center group-hover:border-slate-900 group-hover:bg-slate-900 transition-all duration-300">
-                                <ChevronLeft className="w-3.5 h-3.5 group-hover:text-white transition-colors" />
-                            </div>
-                            <span className="tracking-tight">Dashboard</span>
-                        </button>
-                        <h1 className="text-3xl font-black tracking-tighter text-slate-900">
-                            Startup Profile
-                        </h1>
-                        <p className="text-sm text-slate-400 mt-1">
-                            Configure your startup's public profile
-                        </p>
-                    </div>
+                <div>
                     <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
-                            saved
-                                ? 'bg-green-600 text-white'
-                                : 'bg-slate-900 text-white hover:bg-black'
-                        } disabled:opacity-50`}
+                        onClick={() => router.push('/dashboard')}
+                        className="group flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-slate-900 transition-all duration-300 mb-4"
                     >
-                        {saving ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : saved ? (
-                            <Check className="w-4 h-4" />
-                        ) : (
-                            <Save className="w-4 h-4" />
-                        )}
-                        {saving ? 'Saving...' : saved ? 'Saved!' : 'Save'}
+                        <div className="w-6 h-6 border border-slate-200 rounded-md flex items-center justify-center group-hover:border-slate-900 group-hover:bg-slate-900 transition-all duration-300">
+                            <ChevronLeft className="w-3.5 h-3.5 group-hover:text-white transition-colors" />
+                        </div>
+                        <span className="tracking-tight">Dashboard</span>
                     </button>
+                    <h1 className="text-3xl font-black tracking-tighter text-slate-900">
+                        Startup Profile
+                    </h1>
+                    <p className="text-sm text-slate-400 mt-1">
+                        Configure your startup's public profile
+                    </p>
                 </div>
 
                 {/* Error / Success messages */}
@@ -550,46 +585,34 @@ export default function StartupProfilePage() {
                     </div>
                 </div>
 
-                {/* Bottom Save Button (for long pages) */}
-                <div className="flex justify-end pt-4">
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
-                            saved
-                                ? 'bg-green-600 text-white'
-                                : 'bg-slate-900 text-white hover:bg-black'
-                        } disabled:opacity-50`}
-                    >
-                        {saving ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : saved ? (
-                            <Check className="w-4 h-4" />
-                        ) : (
-                            <Save className="w-4 h-4" />
-                        )}
-                        {saving ? 'Saving...' : saved ? 'Saved!' : 'Save changes'}
-                    </button>
-                </div>
+            </div>
 
-                {/* Account Section */}
-                <SectionCard title="Account" icon={<LogOut className="w-4 h-4" />}>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-slate-600">Sign out of your account</p>
-                            <p className="text-xs text-slate-400 mt-1">You will be redirected to the login page</p>
-                        </div>
-                        <form action={logout}>
-                            <button
-                                type="submit"
-                                className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-black transition-colors"
-                            >
-                                <LogOut className="w-4 h-4" />
-                                Sign out
-                            </button>
-                        </form>
-                    </div>
-                </SectionCard>
+            {/* Floating Save Button - appears on changes */}
+            <div
+                className={`fixed bottom-8 right-8 z-50 transition-all duration-300 ease-out ${
+                    hasChanges || saving || saved
+                        ? 'translate-y-0 opacity-100'
+                        : 'translate-y-20 opacity-0 pointer-events-none'
+                }`}
+            >
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transition-all duration-300 ${
+                        saved
+                            ? 'bg-green-600 text-white scale-105'
+                            : 'bg-slate-900 text-white hover:bg-black hover:scale-105'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                    {saving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : saved ? (
+                        <Check className="w-4 h-4" />
+                    ) : (
+                        <Save className="w-4 h-4" />
+                    )}
+                    {saving ? 'Saving...' : saved ? 'Saved!' : 'Save changes'}
+                </button>
             </div>
         </div>
     )

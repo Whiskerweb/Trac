@@ -110,11 +110,11 @@ export default function CustomersPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-4 sm:px-0">
                 <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-semibold text-gray-900">{t('title')}</h1>
+                    <h1 className="text-lg sm:text-xl font-semibold text-gray-900">{t('title')}</h1>
                     <div className="group relative">
                         <Info className="w-4 h-4 text-gray-400 cursor-help" />
                         <div className="absolute left-0 top-6 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-2 w-64 z-10">
@@ -125,33 +125,30 @@ export default function CustomersPage() {
             </div>
 
             {/* Stats */}
-            <div className="flex gap-6 p-5 bg-white border border-gray-200 rounded-xl">
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">{t('totalCustomers')}</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4 sm:p-5 bg-white border border-gray-200 rounded-xl">
+                <div>
+                    <p className="text-xs sm:text-sm text-gray-500">{t('totalCustomers')}</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-gray-900">{stats.total}</p>
                 </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">{t('withReferrer')}</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.withReferrer}</p>
+                <div>
+                    <p className="text-xs sm:text-sm text-gray-500">{t('withReferrer')}</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-gray-900">{stats.withReferrer}</p>
                 </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">{t('totalLeads')}</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.totalLeads}</p>
+                <div>
+                    <p className="text-xs sm:text-sm text-gray-500">{t('totalLeads')}</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-gray-900">{stats.totalLeads}</p>
                 </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">{t('attributionRate')}</p>
-                    <p className="text-2xl font-semibold text-gray-900">
+                <div>
+                    <p className="text-xs sm:text-sm text-gray-500">{t('attributionRate')}</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-gray-900">
                         {stats.total > 0 ? Math.round((stats.withReferrer / stats.total) * 100) : 0}%
                     </p>
                 </div>
             </div>
 
             {/* Search and Filters */}
-            <div className="flex items-center gap-3">
-                <div className="relative flex-1 max-w-sm">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-4 sm:px-0">
+                <div className="relative flex-1 sm:max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
@@ -166,7 +163,7 @@ export default function CustomersPage() {
                         <button
                             key={filter}
                             onClick={() => setFilterReferrer(filter)}
-                            className={`px-3 py-2 text-sm font-medium transition-colors ${
+                            className={`flex-1 sm:flex-none px-3 py-2 text-sm font-medium transition-colors ${
                                 filterReferrer === filter
                                     ? 'bg-gray-900 text-white'
                                     : 'bg-white text-gray-600 hover:bg-gray-50'
@@ -178,9 +175,10 @@ export default function CustomersPage() {
                 </div>
             </div>
 
-            {/* Table */}
+            {/* Table/Cards */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* Desktop Table Header */}
+                <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="col-span-4">{t('customer')}</div>
                     <div className="col-span-2">{t('referrer')}</div>
                     <div className="col-span-2">{t('leads')}</div>
@@ -189,7 +187,7 @@ export default function CustomersPage() {
                 </div>
 
                 {filteredCustomers.length === 0 ? (
-                    <div className="px-6 py-12 text-center">
+                    <div className="px-4 sm:px-6 py-12 text-center">
                         <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-900 font-medium">
                             {customers.length === 0 ? t('noCustomers') : t('noResults')}
@@ -209,74 +207,153 @@ export default function CustomersPage() {
                                 <div
                                     key={customer.id}
                                     onClick={() => router.push(`/dashboard/customers/${customer.id}`)}
-                                    className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
+                                    className="hover:bg-gray-50 cursor-pointer transition-colors group"
                                 >
-                                    {/* Customer info */}
-                                    <div className="col-span-4 flex items-center gap-3">
-                                        <Avatar name={customer.name} avatar={customer.avatar} />
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-2">
+                                    {/* Desktop Table Row */}
+                                    <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 items-center">
+                                        {/* Customer info */}
+                                        <div className="col-span-4 flex items-center gap-3">
+                                            <Avatar name={customer.name} avatar={customer.avatar} />
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                                        {customer.name || customer.email || customer.externalId}
+                                                    </p>
+                                                </div>
+                                                {customer.email && customer.name && (
+                                                    <p className="text-xs text-gray-500 truncate">{customer.email}</p>
+                                                )}
+                                                {!customer.name && !customer.email && (
+                                                    <p className="text-xs text-gray-400">ID: {customer.externalId}</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Referrer */}
+                                        <div className="col-span-2">
+                                            {customer.referrerName ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar name={customer.referrerName} avatar={customer.referrerAvatar} size="sm" />
+                                                    <span className="text-sm text-gray-700 truncate">{customer.referrerName}</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-sm text-gray-400">—</span>
+                                            )}
+                                        </div>
+
+                                        {/* Lead count */}
+                                        <div className="col-span-2">
+                                            {customer.leadCount > 0 ? (
+                                                <div className="flex items-center gap-1.5">
+                                                    <UserPlus className="w-4 h-4 text-blue-500" />
+                                                    <span className="text-sm font-medium text-gray-900">{customer.leadCount}</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-sm text-gray-400">—</span>
+                                            )}
+                                        </div>
+
+                                        {/* Last Activity */}
+                                        <div className="col-span-2">
+                                            <div className="flex items-center gap-1.5">
+                                                {lastActivity.type === 'lead' ? (
+                                                    <Activity className="w-3.5 h-3.5 text-green-500" />
+                                                ) : (
+                                                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                                )}
+                                                <span className={`text-sm ${lastActivity.type === 'lead' ? 'text-gray-900' : 'text-gray-500'}`}>
+                                                    {formatRelativeDate(lastActivity.date, t)}
+                                                </span>
+                                            </div>
+                                            {lastActivity.type === 'lead' && customer.leadEvents[0] && (
+                                                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                                                    {customer.leadEvents[0].eventName}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Created at */}
+                                        <div className="col-span-2 text-right">
+                                            <div className="flex items-center justify-end gap-1.5 text-sm text-gray-500">
+                                                <Calendar className="w-3.5 h-3.5" />
+                                                <span>{formatRelativeDate(customer.createdAt, t)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Mobile Card */}
+                                    <div className="md:hidden p-4 space-y-3">
+                                        {/* Customer header */}
+                                        <div className="flex items-center gap-3">
+                                            <Avatar name={customer.name} avatar={customer.avatar} />
+                                            <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-medium text-gray-900 truncate">
                                                     {customer.name || customer.email || customer.externalId}
                                                 </p>
+                                                {customer.email && customer.name && (
+                                                    <p className="text-xs text-gray-500 truncate">{customer.email}</p>
+                                                )}
+                                                {!customer.name && !customer.email && (
+                                                    <p className="text-xs text-gray-400">ID: {customer.externalId}</p>
+                                                )}
                                             </div>
-                                            {customer.email && customer.name && (
-                                                <p className="text-xs text-gray-500 truncate">{customer.email}</p>
-                                            )}
-                                            {!customer.name && !customer.email && (
-                                                <p className="text-xs text-gray-400">ID: {customer.externalId}</p>
-                                            )}
                                         </div>
-                                    </div>
 
-                                    {/* Referrer */}
-                                    <div className="col-span-2">
-                                        {customer.referrerName ? (
+                                        {/* Mobile info grid */}
+                                        <div className="space-y-2">
+                                            {/* Referrer */}
+                                            {customer.referrerName && (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-gray-500 min-w-[70px]">{t('referrer')}:</span>
+                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                        <Avatar name={customer.referrerName} avatar={customer.referrerAvatar} size="sm" />
+                                                        <span className="text-sm text-gray-700 truncate">{customer.referrerName}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Lead count */}
+                                            {customer.leadCount > 0 && (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-gray-500 min-w-[70px]">{t('leads')}:</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <UserPlus className="w-3.5 h-3.5 text-blue-500" />
+                                                        <span className="text-sm font-medium text-gray-900">{customer.leadCount}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Last Activity */}
                                             <div className="flex items-center gap-2">
-                                                <Avatar name={customer.referrerName} avatar={customer.referrerAvatar} size="sm" />
-                                                <span className="text-sm text-gray-700 truncate">{customer.referrerName}</span>
+                                                <span className="text-xs text-gray-500 min-w-[70px]">{t('lastActivity')}:</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    {lastActivity.type === 'lead' ? (
+                                                        <Activity className="w-3.5 h-3.5 text-green-500" />
+                                                    ) : (
+                                                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                                    )}
+                                                    <span className={`text-sm ${lastActivity.type === 'lead' ? 'text-gray-900' : 'text-gray-500'}`}>
+                                                        {formatRelativeDate(lastActivity.date, t)}
+                                                    </span>
+                                                </div>
                                             </div>
-                                        ) : (
-                                            <span className="text-sm text-gray-400">—</span>
-                                        )}
-                                    </div>
-
-                                    {/* Lead count */}
-                                    <div className="col-span-2">
-                                        {customer.leadCount > 0 ? (
-                                            <div className="flex items-center gap-1.5">
-                                                <UserPlus className="w-4 h-4 text-blue-500" />
-                                                <span className="text-sm font-medium text-gray-900">{customer.leadCount}</span>
-                                            </div>
-                                        ) : (
-                                            <span className="text-sm text-gray-400">—</span>
-                                        )}
-                                    </div>
-
-                                    {/* Last Activity */}
-                                    <div className="col-span-2">
-                                        <div className="flex items-center gap-1.5">
-                                            {lastActivity.type === 'lead' ? (
-                                                <Activity className="w-3.5 h-3.5 text-green-500" />
-                                            ) : (
-                                                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                            {lastActivity.type === 'lead' && customer.leadEvents[0] && (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-gray-500 min-w-[70px]"></span>
+                                                    <p className="text-xs text-gray-400 truncate">
+                                                        {customer.leadEvents[0].eventName}
+                                                    </p>
+                                                </div>
                                             )}
-                                            <span className={`text-sm ${lastActivity.type === 'lead' ? 'text-gray-900' : 'text-gray-500'}`}>
-                                                {formatRelativeDate(lastActivity.date, t)}
-                                            </span>
-                                        </div>
-                                        {lastActivity.type === 'lead' && customer.leadEvents[0] && (
-                                            <p className="text-xs text-gray-400 mt-0.5 truncate">
-                                                {customer.leadEvents[0].eventName}
-                                            </p>
-                                        )}
-                                    </div>
 
-                                    {/* Created at */}
-                                    <div className="col-span-2 text-right">
-                                        <div className="flex items-center justify-end gap-1.5 text-sm text-gray-500">
-                                            <Calendar className="w-3.5 h-3.5" />
-                                            <span>{formatRelativeDate(customer.createdAt, t)}</span>
+                                            {/* Signed up */}
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-gray-500 min-w-[70px]">{t('signedUp')}:</span>
+                                                <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                                                    <Calendar className="w-3.5 h-3.5" />
+                                                    <span>{formatRelativeDate(customer.createdAt, t)}</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -288,7 +365,7 @@ export default function CustomersPage() {
 
             {/* Footer info */}
             {filteredCustomers.length > 0 && (
-                <p className="text-xs text-gray-500 text-center">
+                <p className="text-xs text-gray-500 text-center px-4 sm:px-0">
                     {filteredCustomers.length === 1 ? t('displayed', { count: filteredCustomers.length }) : t('displayedPlural', { count: filteredCustomers.length })}
                 </p>
             )}

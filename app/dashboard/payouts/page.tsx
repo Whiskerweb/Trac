@@ -57,67 +57,74 @@ function SellerPayoutRow({
 }) {
     return (
         <div
-            className={`flex items-center gap-4 px-6 py-4 transition-colors cursor-pointer ${
+            className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-colors cursor-pointer ${
                 seller.meetsMinimum
                     ? 'hover:bg-gray-50'
                     : 'bg-amber-50/50'
             }`}
             onClick={onClick}
         >
-            {/* Checkbox (only for eligible sellers) */}
-            <div className="flex-shrink-0">
-                {seller.meetsMinimum ? (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onToggleSelection()
-                        }}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                            isSelected
-                                ? 'bg-violet-600 border-violet-600 text-white'
-                                : 'border-gray-300 hover:border-violet-400'
-                        }`}
-                    >
-                        {isSelected && <Check className="w-3 h-3" />}
-                    </button>
-                ) : (
-                    <div className="w-5 h-5 rounded border-2 border-amber-300 bg-amber-100 flex items-center justify-center">
-                        <AlertTriangle className="w-3 h-3 text-amber-500" />
-                    </div>
-                )}
-            </div>
+            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                {/* Checkbox (only for eligible sellers) */}
+                <div className="flex-shrink-0">
+                    {seller.meetsMinimum ? (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                onToggleSelection()
+                            }}
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                isSelected
+                                    ? 'bg-violet-600 border-violet-600 text-white'
+                                    : 'border-gray-300 hover:border-violet-400'
+                            }`}
+                        >
+                            {isSelected && <Check className="w-3 h-3" />}
+                        </button>
+                    ) : (
+                        <div className="w-5 h-5 rounded border-2 border-amber-300 bg-amber-100 flex items-center justify-center">
+                            <AlertTriangle className="w-3 h-3 text-amber-500" />
+                        </div>
+                    )}
+                </div>
 
-            {/* Seller Info */}
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-                <Avatar name={seller.sellerName} avatar={seller.sellerAvatar} />
-                <div className="min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{seller.sellerName}</p>
-                    <p className="text-xs text-gray-500 truncate">{seller.sellerEmail}</p>
+                {/* Seller Info */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Avatar name={seller.sellerName} avatar={seller.sellerAvatar} />
+                    <div className="min-w-0 flex-1">
+                        <p className="font-medium text-gray-900 truncate">{seller.sellerName}</p>
+                        <p className="text-xs text-gray-500 truncate">{seller.sellerEmail}</p>
+                    </div>
                 </div>
             </div>
 
-            {/* Commission Count */}
-            <div className="text-center w-20">
-                <p className="text-sm font-medium text-gray-900">{seller.commissionCount}</p>
-                <p className="text-xs text-gray-500">{seller.commissionCount === 1 ? translations.sale : translations.sales}</p>
-            </div>
+            {/* Stats - Horizontal on mobile, separate columns on desktop */}
+            <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 pl-8 sm:pl-0">
+                {/* Commission Count - Hidden on small screens */}
+                <div className="hidden sm:flex text-center sm:w-20">
+                    <div>
+                        <p className="text-sm font-medium text-gray-900">{seller.commissionCount}</p>
+                        <p className="text-xs text-gray-500">{seller.commissionCount === 1 ? translations.sale : translations.sales}</p>
+                    </div>
+                </div>
 
-            {/* Commission Amount */}
-            <div className="text-right w-28">
-                <p className="text-sm font-semibold text-gray-900">{formatCurrency(seller.totalCommission)}</p>
-                {!seller.meetsMinimum && (
-                    <p className="text-xs text-amber-600">{translations.minAmount}</p>
-                )}
-            </div>
+                {/* Commission Amount */}
+                <div className="text-left sm:text-right sm:w-28">
+                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(seller.totalCommission)}</p>
+                    {!seller.meetsMinimum && (
+                        <p className="text-xs text-amber-600">{translations.minAmount}</p>
+                    )}
+                </div>
 
-            {/* Platform Fee */}
-            <div className="text-right w-24">
-                <p className="text-sm text-gray-500">+{formatCurrency(seller.totalPlatformFee)}</p>
-                <p className="text-xs text-gray-400">{translations.fees}</p>
-            </div>
+                {/* Platform Fee - Hidden on mobile */}
+                <div className="hidden md:block text-right md:w-24">
+                    <p className="text-sm text-gray-500">+{formatCurrency(seller.totalPlatformFee)}</p>
+                    <p className="text-xs text-gray-400">{translations.fees}</p>
+                </div>
 
-            {/* Arrow */}
-            <ChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
+                {/* Arrow */}
+                <ChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
+            </div>
         </div>
     )
 }
@@ -309,14 +316,14 @@ function PayoutsContent() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <h1 className="text-xl font-semibold text-gray-900">{t('title')}</h1>
                     <Info className="w-4 h-4 text-gray-400" />
                 </div>
                 <a
                     href="/dashboard/commissions"
-                    className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                    className="text-sm text-gray-500 hover:text-gray-900 transition-colors self-start sm:self-auto"
                 >
                     {t('viewHistory')}
                 </a>
@@ -330,7 +337,7 @@ function PayoutsContent() {
             )}
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* À payer */}
                 <div className="bg-white border border-gray-200 rounded-xl p-5">
                     <div className="flex items-center justify-between mb-1">
@@ -371,8 +378,8 @@ function PayoutsContent() {
             {/* Sellers List */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 {/* List Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                         <h2 className="font-medium text-gray-900">{t('sellersToPay')}</h2>
                         {eligibleSellers.length > 0 && (
                             <div className="flex items-center gap-2">
@@ -420,9 +427,9 @@ function PayoutsContent() {
 
                         {/* Separator if both sections have items */}
                         {eligibleSellers.length > 0 && ineligibleSellers.length > 0 && (
-                            <div className="px-6 py-3 bg-amber-50 border-y border-amber-200">
+                            <div className="px-4 sm:px-6 py-3 bg-amber-50 border-y border-amber-200">
                                 <div className="flex items-center gap-2 text-sm text-amber-700">
-                                    <AlertTriangle className="w-4 h-4" />
+                                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                                     <span className="font-medium">{t('belowMinThreshold')}</span>
                                 </div>
                             </div>
@@ -444,8 +451,8 @@ function PayoutsContent() {
 
                 {/* Payment Action Bar */}
                 {selectedSellerIds.size > 0 && (
-                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                        <div>
+                    <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex-1">
                             <p className="text-sm text-gray-600">
                                 <span className="font-semibold text-gray-900">{selectedSellerIds.size}</span> {t('sellersSelected')}
                                 ({selectedSellers.reduce((sum, s) => sum + s.commissionCount, 0)} {t('commissions')})
@@ -457,7 +464,7 @@ function PayoutsContent() {
                         <button
                             onClick={handleConfirmPayouts}
                             disabled={paying || selectedCommissionIds.length === 0}
-                            className="px-6 py-2.5 text-sm font-medium text-white bg-violet-600 rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                            className="w-full sm:w-auto px-6 py-2.5 text-sm font-medium text-white bg-violet-600 rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
                         >
                             {paying ? (
                                 <>

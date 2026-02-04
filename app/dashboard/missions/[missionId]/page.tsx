@@ -355,7 +355,7 @@ export default function MissionDetailPage({
     const totalRevenue = mission.enrollments.reduce((sum, e) => sum + (e.stats?.revenue || 0), 0)
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
             {/* Back Button */}
             <button
                 onClick={() => router.push('/dashboard/missions')}
@@ -366,14 +366,14 @@ export default function MissionDetailPage({
             </button>
 
             {/* Header */}
-            <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center">
-                        <Target className="w-6 h-6 text-gray-600" />
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:justify-between">
+                <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                        <Target className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-xl font-semibold text-gray-900">{mission.title}</h1>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="text-lg sm:text-xl font-semibold text-gray-900">{mission.title}</h1>
                             <StatusBadge status={mission.status} />
                             <VisibilityBadge visibility={mission.visibility} />
                         </div>
@@ -382,8 +382,8 @@ export default function MissionDetailPage({
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className="px-3 py-1.5 bg-green-50 text-green-700 font-semibold rounded-lg text-sm">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <span className="px-3 py-1.5 bg-green-50 text-green-700 font-semibold rounded-lg text-sm flex-1 sm:flex-initial text-center">
                         {mission.reward}
                     </span>
                     <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
@@ -394,10 +394,10 @@ export default function MissionDetailPage({
 
             {/* Invite Link Card - Only for INVITE_ONLY missions */}
             {mission.visibility === 'INVITE_ONLY' && mission.invite_url && (
-                <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100 rounded-xl p-5">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
+                <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100 rounded-xl p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
+                        <div className="flex items-start sm:items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
                                 <LinkIcon className="w-5 h-5 text-violet-600" />
                             </div>
                             <div>
@@ -407,13 +407,13 @@ export default function MissionDetailPage({
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <code className="px-3 py-2 bg-white border border-violet-200 rounded-lg text-sm text-gray-700 font-mono">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                            <code className="px-3 py-2 bg-white border border-violet-200 rounded-lg text-xs sm:text-sm text-gray-700 font-mono truncate max-w-full sm:max-w-xs">
                                 {mission.invite_url}
                             </code>
                             <button
                                 onClick={() => handleCopyLink(mission.invite_url!)}
-                                className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium"
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium w-full sm:w-auto"
                             >
                                 {copied ? (
                                     <>
@@ -433,30 +433,26 @@ export default function MissionDetailPage({
             )}
 
             {/* Stats Bar */}
-            <div className="flex gap-6 p-5 bg-white border border-gray-200 rounded-xl">
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">{t('participants')}</p>
-                    <p className="text-2xl font-semibold text-gray-900">{totalParticipants}</p>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 p-4 sm:p-5 bg-white border border-gray-200 rounded-xl">
+                <div className="flex flex-col">
+                    <p className="text-xs sm:text-sm text-gray-500">{t('participants')}</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{totalParticipants}</p>
                 </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">{t('active')}</p>
-                    <p className="text-2xl font-semibold text-green-600">{activeParticipants}</p>
+                <div className="flex flex-col">
+                    <p className="text-xs sm:text-sm text-gray-500">{t('active')}</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-green-600 mt-1">{activeParticipants}</p>
                 </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">{t('clicks')}</p>
-                    <p className="text-2xl font-semibold text-gray-900">{formatNumber(totalClicks)}</p>
+                <div className="flex flex-col">
+                    <p className="text-xs sm:text-sm text-gray-500">{t('clicks')}</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{formatNumber(totalClicks)}</p>
                 </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">{t('sales')}</p>
-                    <p className="text-2xl font-semibold text-gray-900">{totalSales}</p>
+                <div className="flex flex-col">
+                    <p className="text-xs sm:text-sm text-gray-500">{t('sales')}</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{totalSales}</p>
                 </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
-                    <p className="text-sm text-gray-500">{t('revenue')}</p>
-                    <p className="text-2xl font-semibold text-green-600">€{(totalRevenue / 100).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                <div className="flex flex-col col-span-2 lg:col-span-1">
+                    <p className="text-xs sm:text-sm text-gray-500">{t('revenue')}</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-green-600 mt-1">€{(totalRevenue / 100).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                 </div>
             </div>
 
@@ -464,8 +460,8 @@ export default function MissionDetailPage({
             {mission.visibility === 'PRIVATE' && pendingRequests.length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                     {/* Header with search and bulk actions */}
-                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
+                    <div className="px-3 sm:px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
                             <div className="flex items-center gap-2">
                                 <Clock className="w-4 h-4 text-amber-500" />
                                 <span className="text-sm font-medium text-gray-900">
@@ -473,7 +469,7 @@ export default function MissionDetailPage({
                                 </span>
                             </div>
                             {/* Search */}
-                            <div className="relative">
+                            <div className="relative w-full sm:w-auto">
                                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                                 <input
                                     type="text"
@@ -483,25 +479,25 @@ export default function MissionDetailPage({
                                         setRequestsSearch(e.target.value)
                                         setRequestsPage(1)
                                     }}
-                                    className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg w-48 focus:outline-none focus:border-gray-300"
+                                    className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg w-full sm:w-48 focus:outline-none focus:border-gray-300"
                                 />
                             </div>
                         </div>
                         {/* Bulk actions */}
                         {selectedRequests.size > 0 && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <span className="text-xs text-gray-500">{selectedRequests.size} {t('selected')}</span>
                                 <button
                                     onClick={handleBulkApprove}
                                     disabled={processingRequest !== null}
-                                    className="px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors disabled:opacity-50"
+                                    className="px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors disabled:opacity-50 flex-1 sm:flex-initial"
                                 >
                                     {t('approveAll')}
                                 </button>
                                 <button
                                     onClick={handleBulkReject}
                                     disabled={processingRequest !== null}
-                                    className="px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors disabled:opacity-50"
+                                    className="px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors disabled:opacity-50 flex-1 sm:flex-initial"
                                 >
                                     {t('rejectAll')}
                                 </button>
@@ -509,8 +505,8 @@ export default function MissionDetailPage({
                         )}
                     </div>
 
-                    {/* Table Header */}
-                    <div className="grid grid-cols-[32px_1fr_100px_80px_80px_140px] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                    {/* Table Header - Hidden on mobile */}
+                    <div className="hidden lg:grid grid-cols-[32px_1fr_100px_80px_80px_140px] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-medium text-gray-500 uppercase tracking-wide">
                         <div className="flex items-center justify-center">
                             <input
                                 type="checkbox"
@@ -530,8 +526,8 @@ export default function MissionDetailPage({
                     <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto">
                         {paginatedRequests.map((request) => (
                             <div key={request.id}>
-                                {/* Main Row */}
-                                <div className="grid grid-cols-[32px_1fr_100px_80px_80px_140px] gap-2 px-4 py-2.5 items-center hover:bg-gray-50 transition-colors">
+                                {/* Desktop Row */}
+                                <div className="hidden lg:grid grid-cols-[32px_1fr_100px_80px_80px_140px] gap-2 px-4 py-2.5 items-center hover:bg-gray-50 transition-colors">
                                     {/* Checkbox */}
                                     <div className="flex items-center justify-center">
                                         <input
@@ -621,9 +617,97 @@ export default function MissionDetailPage({
                                     </div>
                                 </div>
 
+                                {/* Mobile Card */}
+                                <div className="lg:hidden p-3 hover:bg-gray-50 transition-colors">
+                                    <div className="flex items-start gap-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedRequests.has(request.id)}
+                                            onChange={() => toggleSelection(request.id)}
+                                            className="w-4 h-4 mt-1 rounded border-gray-300 text-gray-900 focus:ring-gray-500 shrink-0"
+                                        />
+                                        {request.seller_avatar ? (
+                                            <img
+                                                src={request.seller_avatar}
+                                                alt=""
+                                                className="w-10 h-10 rounded-full object-cover shrink-0"
+                                            />
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-sm font-medium shrink-0">
+                                                {(request.seller_name || request.seller_email).charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-medium text-gray-900 text-sm truncate">
+                                                {request.seller_name || request.seller_email.split('@')[0]}
+                                            </div>
+                                            <div className="text-xs text-gray-400 truncate">{request.seller_email}</div>
+                                            <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
+                                                <div>
+                                                    <div className="text-gray-500">Revenue</div>
+                                                    <div className="font-medium text-gray-900">€{(request.stats.total_revenue / 100).toFixed(0)}</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-gray-500">Sales</div>
+                                                    <div className="font-medium text-gray-900">{request.stats.total_sales}</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-gray-500">Clicks</div>
+                                                    <div className="font-medium text-gray-900">{formatNumber(request.stats.total_clicks)}</div>
+                                                </div>
+                                            </div>
+                                            {(request.message || request.seller_bio) && (
+                                                <button
+                                                    onClick={() => setExpandedRequest(expandedRequest === request.id ? null : request.id)}
+                                                    className="flex items-center gap-1 text-xs text-gray-500 mt-2"
+                                                >
+                                                    {expandedRequest === request.id ? 'Hide details' : 'Show details'}
+                                                    <ChevronDown className={`w-3 h-3 transition-transform ${expandedRequest === request.id ? 'rotate-180' : ''}`} />
+                                                </button>
+                                            )}
+                                            <div className="flex items-center gap-1.5 mt-3">
+                                                <button
+                                                    onClick={() => handleApprove(request.id)}
+                                                    disabled={processingRequest === request.id}
+                                                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors disabled:opacity-50"
+                                                >
+                                                    {processingRequest === request.id ? (
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    ) : (
+                                                        <>
+                                                            <CheckCircle className="w-3.5 h-3.5" />
+                                                            Approve
+                                                        </>
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleReject(request.id)}
+                                                    disabled={processingRequest === request.id}
+                                                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors disabled:opacity-50"
+                                                >
+                                                    <XCircle className="w-3.5 h-3.5" />
+                                                    Reject
+                                                </button>
+                                                <Link
+                                                    href={`/dashboard/sellers/${request.seller_id}`}
+                                                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                                >
+                                                    <User className="w-4 h-4" />
+                                                </Link>
+                                                <Link
+                                                    href={`/dashboard/messages?seller=${request.seller_id}`}
+                                                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                                >
+                                                    <MessageSquare className="w-4 h-4" />
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Expanded Details */}
                                 {expandedRequest === request.id && (request.message || request.seller_bio) && (
-                                    <div className="px-4 pb-3 pl-14 space-y-2 bg-gray-50/50">
+                                    <div className="px-3 lg:px-4 pb-3 lg:pl-14 space-y-2 bg-gray-50/50">
                                         {request.message && (
                                             <div className="text-xs">
                                                 <span className="text-gray-400">Message : </span>
@@ -695,18 +779,18 @@ export default function MissionDetailPage({
             )}
 
             {/* Main Content */}
-            <div className="flex gap-6">
+            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
                 {/* Left - Participants Table */}
                 <div className="flex-1">
                     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 flex items-center justify-between">
                             <h2 className="text-sm font-semibold text-gray-900">
                                 Participants ({totalParticipants})
                             </h2>
                         </div>
 
                         {mission.enrollments.length === 0 ? (
-                            <div className="px-6 py-12 text-center">
+                            <div className="px-4 sm:px-6 py-12 text-center">
                                 <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                                 <p className="text-gray-900 font-medium">{t('noParticipants')}</p>
                                 <p className="text-gray-500 text-sm mt-1">
@@ -715,8 +799,8 @@ export default function MissionDetailPage({
                             </div>
                         ) : (
                             <>
-                                {/* Table Header */}
-                                <div className="flex items-center px-5 py-2.5 bg-gray-50/80 border-b border-gray-100 text-xs font-medium text-gray-500">
+                                {/* Table Header - Desktop Only */}
+                                <div className="hidden lg:flex items-center px-5 py-2.5 bg-gray-50/80 border-b border-gray-100 text-xs font-medium text-gray-500">
                                     <div className="flex-1 min-w-0">{t('seller')}</div>
                                     <button onClick={() => toggleSort('revenue')} className="w-20 flex items-center justify-end gap-1 hover:text-gray-900">
                                         {t('sortRevenue')}
@@ -733,8 +817,8 @@ export default function MissionDetailPage({
                                     <div className="w-24 text-right">{t('status')}</div>
                                 </div>
 
-                                {/* Table Rows */}
-                                <div className="divide-y divide-gray-50">
+                                {/* Table Rows - Desktop */}
+                                <div className="hidden lg:block divide-y divide-gray-50">
                                     {sortedEnrollments.map((enrollment, index) => (
                                         <div key={enrollment.id} className="flex items-center px-5 py-2.5 hover:bg-gray-50/50 transition-colors">
                                             {/* Seller */}
@@ -786,15 +870,75 @@ export default function MissionDetailPage({
                                         </div>
                                     ))}
                                 </div>
+
+                                {/* Mobile Cards */}
+                                <div className="lg:hidden divide-y divide-gray-50">
+                                    {sortedEnrollments.map((enrollment, index) => (
+                                        <div key={enrollment.id} className="p-4 hover:bg-gray-50/50 transition-colors">
+                                            <div className="flex items-start gap-3">
+                                                <div className="relative shrink-0">
+                                                    {enrollment.seller?.avatar ? (
+                                                        <img src={enrollment.seller.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-sm font-medium">
+                                                            {(enrollment.seller?.name || enrollment.seller?.email || '?').charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-white flex items-center justify-center text-[9px] font-semibold text-gray-500 border border-gray-200">
+                                                        {index + 1}
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium text-gray-900 text-sm truncate">
+                                                        {enrollment.seller?.name || enrollment.seller?.email?.split('@')[0] || 'Unknown'}
+                                                    </div>
+                                                    <div className="text-xs text-gray-400 truncate">{enrollment.seller?.email}</div>
+                                                    <div className="flex items-center gap-2 mt-1.5">
+                                                        <ParticipantStatusBadge status={enrollment.status} />
+                                                        {enrollment.link && (
+                                                            <button onClick={() => handleCopyLink(enrollment.link!.full_url)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded text-xs">
+                                                                {copied ? (
+                                                                    <Check className="w-3 h-3 text-green-500" />
+                                                                ) : (
+                                                                    <Copy className="w-3 h-3" />
+                                                                )}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+                                                        <div>
+                                                            <div className="text-gray-500">Revenue</div>
+                                                            <div className={`font-medium ${enrollment.stats.revenue > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                                                €{(enrollment.stats.revenue / 100).toFixed(0)}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-gray-500">Sales</div>
+                                                            <div className={`font-medium ${enrollment.stats.sales > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                                                                {enrollment.stats.sales}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-gray-500">Clicks</div>
+                                                            <div className={`font-medium ${enrollment.stats.clicks > 0 ? 'text-gray-600' : 'text-gray-400'}`}>
+                                                                {formatNumber(enrollment.stats.clicks)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </>
                         )}
                     </div>
                 </div>
 
                 {/* Right - Details */}
-                <div className="w-72 shrink-0 space-y-4">
+                <div className="lg:w-72 w-full shrink-0 space-y-4">
                     {/* Mission Details */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-5">
+                    <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
                         <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('details')}</h3>
                         <div className="space-y-3">
                             <div>
@@ -806,7 +950,7 @@ export default function MissionDetailPage({
                                     className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 truncate"
                                 >
                                     {mission.target_url.slice(0, 30)}...
-                                    <ExternalLink className="w-3 h-3" />
+                                    <ExternalLink className="w-3 h-3 shrink-0" />
                                 </a>
                             </div>
                             <div>
@@ -825,7 +969,7 @@ export default function MissionDetailPage({
                     </div>
 
                     {/* Actions */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-5">
+                    <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
                         <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('actionsSection')}</h3>
                         <div className="space-y-2">
                             <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">

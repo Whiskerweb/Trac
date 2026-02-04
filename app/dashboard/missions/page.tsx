@@ -184,14 +184,14 @@ function MissionRow({
             )}
 
             {/* Main Content */}
-            <div className="p-5">
+            <div className="p-4 sm:p-5">
                 {/* Header Row */}
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between gap-2 mb-4">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-1.5">
                             <Link
                                 href={`/dashboard/missions/${mission.id}`}
-                                className="text-lg font-medium text-neutral-900 hover:text-neutral-600 transition-colors truncate"
+                                className="text-base sm:text-lg font-medium text-neutral-900 hover:text-neutral-600 transition-colors truncate"
                             >
                                 {mission.title}
                             </Link>
@@ -206,7 +206,7 @@ function MissionRow({
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                         {mission.visibility === 'INVITE_ONLY' && mission.invite_code && (
                             <button
                                 onClick={handleCopyInviteLink}
@@ -258,7 +258,7 @@ function MissionRow({
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6">
                     <StatBlock
                         value={mission.stats.activeSellers}
                         label={t('stats.sellers')}
@@ -520,7 +520,7 @@ function GlobalStatsBar({ stats }: {
 }) {
     const t = useTranslations('dashboard.missions')
     return (
-        <div className="grid grid-cols-4 gap-6 p-6 bg-white border border-neutral-200 rounded-xl">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 p-4 sm:p-6 bg-white border border-neutral-200 rounded-xl">
             <div>
                 <p className="text-3xl font-light text-neutral-900 tracking-tight tabular-nums">
                     {stats.activeMissions}
@@ -625,27 +625,27 @@ function MissionsContent() {
     return (
         <div className="space-y-8">
             {/* Header */}
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-light text-neutral-900 tracking-tight">
+                    <h1 className="text-2xl sm:text-3xl font-light text-neutral-900 tracking-tight">
                         {t('title')}
                     </h1>
                     <p className="text-neutral-500 mt-2">
                         {t('managePrograms')}
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                     <MissionSlots used={activeMissions.length} total={MAX_MISSIONS} />
                     {canCreateMore ? (
                         <Link
                             href="/dashboard/missions/create"
-                            className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-medium text-sm hover:bg-neutral-800 transition-colors"
+                            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-medium text-sm hover:bg-neutral-800 transition-colors"
                         >
                             <Plus className="w-4 h-4" />
                             {t('newMission')}
                         </Link>
                     ) : (
-                        <div className="flex items-center gap-2 px-5 py-2.5 bg-neutral-100 text-neutral-400 rounded-xl font-medium text-sm cursor-not-allowed">
+                        <div className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-100 text-neutral-400 rounded-xl font-medium text-sm cursor-not-allowed">
                             <AlertCircle className="w-4 h-4" />
                             {t('limitReached')}
                         </div>
@@ -659,9 +659,9 @@ function MissionsContent() {
             )}
 
             {/* Two Column Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
                 {/* Missions List (2/3) */}
-                <div className="lg:col-span-2 space-y-4">
+                <div className="lg:col-span-2 space-y-3 sm:space-y-4">
                     {missions.length === 0 ? (
                         <EmptyState />
                     ) : (

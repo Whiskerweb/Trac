@@ -308,7 +308,7 @@ function CommissionCard({
     return (
         <div
             className={`
-                relative rounded-2xl border-2 transition-all duration-300 overflow-hidden
+                relative rounded-xl sm:rounded-2xl border-2 transition-all duration-300 overflow-hidden
                 ${enabled
                     ? 'border-gray-900 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_4px_24px_rgba(0,0,0,0.08)]'
                     : 'border-gray-100 bg-gray-50/50 hover:border-gray-200'
@@ -316,16 +316,16 @@ function CommissionCard({
             `}
         >
             {/* Header */}
-            <div className="p-5 flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4">
+            <div className="p-4 sm:p-5 flex items-start justify-between gap-3 sm:gap-4">
+                <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
                     <div className={`
                         w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors
                         ${enabled ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-400'}
                     `}>
                         <Icon className="w-5 h-5" />
                     </div>
-                    <div>
-                        <h3 className="font-semibold text-gray-900">{title}</h3>
+                    <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{title}</h3>
                         <p className="text-sm text-gray-500 mt-0.5">{description}</p>
                     </div>
                 </div>
@@ -340,7 +340,7 @@ function CommissionCard({
                 `}
             >
                 <div className="overflow-hidden">
-                    <div className="px-5 pb-5 pt-2 border-t border-gray-100">
+                    <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-2 border-t border-gray-100">
                         {children}
                     </div>
                 </div>
@@ -412,13 +412,13 @@ function CountrySelector({
                     {selectedCountries.map(country => (
                         <span
                             key={country.code}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm font-medium"
+                            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs sm:text-sm font-medium"
                         >
                             <span>{getFlagEmoji(country.code)}</span>
-                            {country.name}
+                            <span className="truncate max-w-[120px] sm:max-w-none">{country.name}</span>
                             <button
                                 onClick={() => removeCountry(country.code)}
-                                className="ml-1 text-gray-400 hover:text-white transition-colors"
+                                className="ml-1 text-gray-400 hover:text-white transition-colors shrink-0"
                             >
                                 <X className="w-3.5 h-3.5" />
                             </button>
@@ -429,14 +429,14 @@ function CountrySelector({
 
             {/* Search input */}
             <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                     ref={searchInputRef}
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search for a country..."
-                    className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl text-base
+                    className="w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-3 border border-gray-200 rounded-xl text-base
                         focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5
                         placeholder:text-gray-400 transition-all"
                 />
@@ -491,12 +491,13 @@ function CountrySelector({
                             <button
                                 key={country.code}
                                 onClick={() => toggleCountry(country.code)}
-                                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100
-                                    rounded-xl text-sm font-medium text-gray-700 transition-colors border border-gray-100"
+                                className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 bg-gray-50 hover:bg-gray-100
+                                    rounded-xl text-xs sm:text-sm font-medium text-gray-700 transition-colors border border-gray-100"
                             >
                                 <span>{getFlagEmoji(country.code)}</span>
-                                {country.name}
-                                <Plus className="w-3.5 h-3.5 text-gray-400" />
+                                <span className="hidden xs:inline">{country.name}</span>
+                                <span className="xs:hidden">{country.code}</span>
+                                <Plus className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                             </button>
                         ))}
                     </div>
@@ -528,9 +529,9 @@ function WizardSidebar({
     onStepClick: (step: WizardStep) => void
 }) {
     return (
-        <div className="w-72 bg-white border-r border-gray-100 flex flex-col">
+        <div className="hidden lg:flex lg:w-72 bg-white border-r border-gray-100 flex-col">
             {/* Header */}
-            <div className="p-6 border-b border-gray-100">
+            <div className="p-4 sm:p-6 border-b border-gray-100">
                 <Link
                     href="/dashboard/missions"
                     className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium"
@@ -541,7 +542,7 @@ function WizardSidebar({
             </div>
 
             {/* Steps */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-4 sm:p-6">
                 <div className="space-y-1">
                     {STEPS.map((step, index) => {
                         const isCompleted = completedSteps.includes(step.id)
@@ -554,7 +555,7 @@ function WizardSidebar({
                                 onClick={() => isClickable && onStepClick(step.id as WizardStep)}
                                 disabled={!isClickable}
                                 className={`
-                                    w-full flex items-start gap-4 p-4 rounded-xl text-left transition-all
+                                    w-full flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl text-left transition-all
                                     ${isActive ? 'bg-gray-900 text-white' : ''}
                                     ${!isActive && isClickable ? 'hover:bg-gray-50' : ''}
                                     ${!isClickable ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
@@ -590,7 +591,7 @@ function WizardSidebar({
             </div>
 
             {/* Footer decoration */}
-            <div className="p-6 border-t border-gray-100">
+            <div className="p-4 sm:p-6 border-t border-gray-100">
                 <div className="flex items-center gap-3 text-gray-400">
                     <Sparkles className="w-4 h-4" />
                     <span className="text-sm">Creating your partner program</span>
@@ -641,13 +642,13 @@ function Step1MissionDetails({
     }
 
     return (
-        <div className="space-y-10">
+        <div className="space-y-6 sm:space-y-10">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                     Mission Details
                 </h1>
-                <p className="text-gray-500 mt-2 text-lg">
+                <p className="text-gray-500 mt-2 text-base sm:text-lg">
                     Define what makes your partner program unique.
                 </p>
             </div>
@@ -662,7 +663,7 @@ function Step1MissionDetails({
                     value={data.title}
                     onChange={(e) => onChange({ title: e.target.value })}
                     placeholder="e.g., Growth Partner Program"
-                    className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-base
+                    className="w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-200 rounded-xl text-base
                         focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5
                         placeholder:text-gray-400 transition-all"
                 />
@@ -678,7 +679,7 @@ function Step1MissionDetails({
                     onChange={(e) => onChange({ description: e.target.value })}
                     placeholder="Describe what partners will promote and how they'll succeed..."
                     rows={4}
-                    className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-base resize-none
+                    className="w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-200 rounded-xl text-base resize-none
                         focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5
                         placeholder:text-gray-400 transition-all"
                 />
@@ -704,7 +705,7 @@ function Step1MissionDetails({
 
                     {data.photoUrl ? (
                         <div className="relative group">
-                            <div className="aspect-[3/1] rounded-2xl overflow-hidden bg-gray-100">
+                            <div className="aspect-[3/1] rounded-xl sm:rounded-2xl overflow-hidden bg-gray-100">
                                 <img
                                     src={data.photoUrl}
                                     alt="Mission banner"
@@ -713,8 +714,8 @@ function Step1MissionDetails({
                             </div>
                             <button
                                 onClick={() => onChange({ photoUrl: null })}
-                                className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur rounded-lg
-                                    opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-white"
+                                className="absolute top-2 sm:top-3 right-2 sm:right-3 p-2 bg-white/90 backdrop-blur rounded-lg
+                                    opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg hover:bg-white"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -723,15 +724,15 @@ function Step1MissionDetails({
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             disabled={uploading}
-                            className="w-full aspect-[3/1] rounded-2xl border-2 border-dashed border-gray-200
-                                hover:border-gray-300 hover:bg-gray-50 transition-all flex flex-col items-center justify-center gap-3"
+                            className="w-full aspect-[3/1] rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-200
+                                hover:border-gray-300 hover:bg-gray-50 transition-all flex flex-col items-center justify-center gap-2 sm:gap-3"
                         >
                             {uploading ? (
-                                <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+                                <Loader2 className="w-6 sm:w-8 h-6 sm:h-8 text-gray-400 animate-spin" />
                             ) : (
                                 <>
-                                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                                        <Upload className="w-5 h-5 text-gray-400" />
+                                    <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                                        <Upload className="w-4 sm:w-5 h-4 sm:h-5 text-gray-400" />
                                     </div>
                                     <div className="text-center">
                                         <span className="text-sm font-medium text-gray-900">Click to upload</span>
@@ -754,7 +755,7 @@ function Step1MissionDetails({
                         value={data.photoUrl?.startsWith('data:') ? '' : (data.photoUrl || '')}
                         onChange={(e) => onChange({ photoUrl: e.target.value || null })}
                         placeholder="https://example.com/banner.jpg"
-                        className="mt-3 w-full px-4 py-3 border border-gray-200 rounded-xl text-sm
+                        className="mt-3 w-full px-3 sm:px-4 py-3 border border-gray-200 rounded-xl text-sm
                             focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5
                             placeholder:text-gray-400 transition-all"
                     />
@@ -774,7 +775,7 @@ function Step1MissionDetails({
                     value={data.targetUrl}
                     onChange={(e) => onChange({ targetUrl: e.target.value })}
                     placeholder="https://yourproduct.com"
-                    className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-base
+                    className="w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-200 rounded-xl text-base
                         focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5
                         placeholder:text-gray-400 transition-all"
                 />
@@ -797,20 +798,20 @@ function Step2CommissionSetup({
     const atLeastOneEnabled = data.lead.enabled || data.sale.enabled || data.recurring.enabled
 
     return (
-        <div className="space-y-10">
+        <div className="space-y-6 sm:space-y-10">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                     Commission Setup
                 </h1>
-                <p className="text-gray-500 mt-2 text-lg">
+                <p className="text-gray-500 mt-2 text-base sm:text-lg">
                     Configure how your partners will earn. Enable one or more commission types.
                 </p>
             </div>
 
             {/* Validation warning */}
             {!atLeastOneEnabled && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex items-start gap-3">
+                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 sm:p-4 flex items-start gap-3">
                     <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
                         <span className="text-amber-600 text-sm font-bold">!</span>
                     </div>
@@ -872,7 +873,7 @@ function Step2CommissionSetup({
                                     type="button"
                                     onClick={() => onChange({ sale: { ...data.sale, structure: 'FLAT' } })}
                                     className={`
-                                        px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                                        px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
                                         ${data.sale.structure === 'FLAT'
                                             ? 'bg-gray-900 text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -885,7 +886,7 @@ function Step2CommissionSetup({
                                     type="button"
                                     onClick={() => onChange({ sale: { ...data.sale, structure: 'PERCENTAGE' } })}
                                     className={`
-                                        px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                                        px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
                                         ${data.sale.structure === 'PERCENTAGE'
                                             ? 'bg-gray-900 text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -1025,19 +1026,19 @@ function Step3ResourcesReach({
     }
 
     return (
-        <div className="space-y-10">
+        <div className="space-y-6 sm:space-y-10">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                     Resources & Reach
                 </h1>
-                <p className="text-gray-500 mt-2 text-lg">
+                <p className="text-gray-500 mt-2 text-base sm:text-lg">
                     Help your partners succeed and define your target markets.
                 </p>
             </div>
 
             {/* Support Contact */}
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-900">
                         Support Email
@@ -1048,7 +1049,7 @@ function Step3ResourcesReach({
                         value={data.contactEmail || ''}
                         onChange={(e) => onChange({ contactEmail: e.target.value || null })}
                         placeholder="partners@company.com"
-                        className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-base
+                        className="w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-200 rounded-xl text-base
                             focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5
                             placeholder:text-gray-400 transition-all"
                     />
@@ -1064,7 +1065,7 @@ function Step3ResourcesReach({
                         value={data.helpCenterUrl || ''}
                         onChange={(e) => onChange({ helpCenterUrl: e.target.value || null })}
                         placeholder="https://help.company.com"
-                        className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-base
+                        className="w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-200 rounded-xl text-base
                             focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5
                             placeholder:text-gray-400 transition-all"
                     />
@@ -1098,9 +1099,9 @@ function Step3ResourcesReach({
                         {documents.map((doc, index) => (
                             <div
                                 key={doc.id}
-                                className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl"
+                                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl"
                             >
-                                <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
                                     <FileText className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -1112,11 +1113,11 @@ function Step3ResourcesReach({
                                     </p>
                                 </div>
                                 {doc.uploading ? (
-                                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin shrink-0" />
                                 ) : (
                                     <button
                                         onClick={() => removeDocument(index)}
-                                        className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                                        className="p-2 text-gray-400 hover:text-gray-600 transition-colors shrink-0"
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
@@ -1130,12 +1131,12 @@ function Step3ResourcesReach({
                 {documents.length < 10 && (
                     <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full py-4 border-2 border-dashed border-gray-200 rounded-xl
+                        className="w-full py-3 sm:py-4 border-2 border-dashed border-gray-200 rounded-xl
                             hover:border-gray-300 hover:bg-gray-50 transition-all
                             flex items-center justify-center gap-2 text-gray-600"
                     >
                         <Plus className="w-5 h-5" />
-                        <span className="font-medium">Add document</span>
+                        <span className="font-medium text-sm sm:text-base">Add document</span>
                     </button>
                 )}
 
@@ -1234,13 +1235,13 @@ function Step4AccessControl({
     onChange: (updates: Partial<WizardDataV2>) => void
 }) {
     return (
-        <div className="space-y-10">
+        <div className="space-y-6 sm:space-y-10">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                     Who can join?
                 </h1>
-                <p className="text-gray-500 mt-2 text-lg">
+                <p className="text-gray-500 mt-2 text-base sm:text-lg">
                     Choose how partners discover and access your program.
                 </p>
             </div>
@@ -1252,31 +1253,31 @@ function Step4AccessControl({
                     type="button"
                     onClick={() => onChange({ visibility: 'PUBLIC' })}
                     className={`
-                        w-full text-left p-6 rounded-2xl border-2 transition-all duration-200
+                        w-full text-left p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
                         ${data.visibility === 'PUBLIC'
                             ? 'border-gray-900 bg-gray-50'
                             : 'border-gray-100 bg-white hover:border-gray-200'
                         }
                     `}
                 >
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-3 sm:gap-4">
                         <div className={`
-                            w-12 h-12 rounded-xl flex items-center justify-center shrink-0
+                            w-10 sm:w-12 h-10 sm:h-12 rounded-xl flex items-center justify-center shrink-0
                             ${data.visibility === 'PUBLIC' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}
                         `}>
-                            <Globe className="w-6 h-6" />
+                            <Globe className="w-5 sm:w-6 h-5 sm:h-6" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3">
-                                <h3 className="font-semibold text-gray-900 text-lg">Public</h3>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                                <h3 className="font-semibold text-gray-900 text-base sm:text-lg">Public</h3>
                                 <span className="px-2 py-0.5 bg-gray-900 text-white text-xs font-medium rounded-full">
                                     Recommended
                                 </span>
                             </div>
-                            <p className="text-gray-500 mt-1">
+                            <p className="text-gray-500 mt-1 text-sm sm:text-base">
                                 Your program is visible in the marketplace. Any partner can join instantly and start promoting.
                             </p>
-                            <div className="mt-3 flex items-center gap-4 text-sm text-gray-400">
+                            <div className="mt-3 flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-400">
                                 <span className="flex items-center gap-1.5">
                                     <Check className="w-4 h-4" />
                                     Maximum visibility
@@ -1300,26 +1301,26 @@ function Step4AccessControl({
                     type="button"
                     onClick={() => onChange({ visibility: 'PRIVATE' })}
                     className={`
-                        w-full text-left p-6 rounded-2xl border-2 transition-all duration-200
+                        w-full text-left p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
                         ${data.visibility === 'PRIVATE'
                             ? 'border-gray-900 bg-gray-50'
                             : 'border-gray-100 bg-white hover:border-gray-200'
                         }
                     `}
                 >
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-3 sm:gap-4">
                         <div className={`
-                            w-12 h-12 rounded-xl flex items-center justify-center shrink-0
+                            w-10 sm:w-12 h-10 sm:h-12 rounded-xl flex items-center justify-center shrink-0
                             ${data.visibility === 'PRIVATE' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}
                         `}>
-                            <Lock className="w-6 h-6" />
+                            <Lock className="w-5 sm:w-6 h-5 sm:h-6" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900 text-lg">Private</h3>
-                            <p className="text-gray-500 mt-1">
+                            <h3 className="font-semibold text-gray-900 text-base sm:text-lg">Private</h3>
+                            <p className="text-gray-500 mt-1 text-sm sm:text-base">
                                 Your program is visible in the marketplace, but partners must request access. You approve or reject each request.
                             </p>
-                            <div className="mt-3 flex items-center gap-4 text-sm text-gray-400">
+                            <div className="mt-3 flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-400">
                                 <span className="flex items-center gap-1.5">
                                     <Check className="w-4 h-4" />
                                     Quality control
@@ -1343,26 +1344,26 @@ function Step4AccessControl({
                     type="button"
                     onClick={() => onChange({ visibility: 'INVITE_ONLY' })}
                     className={`
-                        w-full text-left p-6 rounded-2xl border-2 transition-all duration-200
+                        w-full text-left p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
                         ${data.visibility === 'INVITE_ONLY'
                             ? 'border-gray-900 bg-gray-50'
                             : 'border-gray-100 bg-white hover:border-gray-200'
                         }
                     `}
                 >
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-3 sm:gap-4">
                         <div className={`
-                            w-12 h-12 rounded-xl flex items-center justify-center shrink-0
+                            w-10 sm:w-12 h-10 sm:h-12 rounded-xl flex items-center justify-center shrink-0
                             ${data.visibility === 'INVITE_ONLY' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}
                         `}>
-                            <LinkIcon className="w-6 h-6" />
+                            <LinkIcon className="w-5 sm:w-6 h-5 sm:h-6" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900 text-lg">Invite Only</h3>
-                            <p className="text-gray-500 mt-1">
+                            <h3 className="font-semibold text-gray-900 text-base sm:text-lg">Invite Only</h3>
+                            <p className="text-gray-500 mt-1 text-sm sm:text-base">
                                 Your program is hidden from the marketplace. Only partners with your unique invite link can join.
                             </p>
-                            <div className="mt-3 flex items-center gap-4 text-sm text-gray-400">
+                            <div className="mt-3 flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-400">
                                 <span className="flex items-center gap-1.5">
                                     <Check className="w-4 h-4" />
                                     Exclusive access
@@ -1384,23 +1385,23 @@ function Step4AccessControl({
 
             {/* Info box for Invite Only */}
             {data.visibility === 'INVITE_ONLY' && (
-                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
-                    <div className="flex items-start gap-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+                    <div className="flex items-start gap-3 sm:gap-4">
                         <div className="w-10 h-10 rounded-xl bg-gray-900 text-white flex items-center justify-center shrink-0">
                             <Mail className="w-5 h-5" />
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-gray-900">How invite links work</h4>
                             <p className="text-gray-500 mt-1 text-sm leading-relaxed">
                                 After creating your program, you'll get a unique invite link that you can share with partners.
                                 Find it on your mission's detail page under <span className="font-medium text-gray-700">"Invite Partners"</span>.
                             </p>
-                            <div className="mt-4 flex items-center gap-2 text-sm">
-                                <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg">
-                                    <LinkIcon className="w-4 h-4 text-gray-400" />
-                                    <span className="text-gray-500 font-mono text-xs">traaaction.com/invite/abc123</span>
+                            <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 text-sm">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg w-full sm:w-auto">
+                                    <LinkIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                                    <span className="text-gray-500 font-mono text-xs truncate">traaaction.com/invite/abc123</span>
                                 </div>
-                                <span className="text-gray-400">Example link</span>
+                                <span className="text-gray-400 text-xs sm:text-sm">Example link</span>
                             </div>
                         </div>
                     </div>
@@ -1505,8 +1506,40 @@ export default function CreateMissionWizardV2() {
     }
 
     return (
-        <div className="fixed inset-0 bg-[#FAFAFA] flex z-50">
-            {/* Sidebar */}
+        <div className="fixed inset-0 bg-[#FAFAFA] flex flex-col lg:flex-row z-50">
+            {/* Mobile Header - Back button on mobile */}
+            <div className="lg:hidden border-b border-gray-100 bg-white px-4 py-3">
+                <Link
+                    href="/dashboard/missions"
+                    className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Missions
+                </Link>
+            </div>
+
+            {/* Mobile Step Indicator */}
+            <div className="lg:hidden border-b border-gray-100 bg-white px-4 py-3">
+                <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Step {step} of 4</span>
+                    <div className="flex gap-1.5">
+                        {STEPS.map((s) => (
+                            <div
+                                key={s.id}
+                                className={`h-1.5 w-8 rounded-full transition-colors ${
+                                    s.id === step
+                                        ? 'bg-gray-900'
+                                        : s.id < step || completedSteps.includes(s.id)
+                                        ? 'bg-gray-300'
+                                        : 'bg-gray-100'
+                                }`}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Sidebar - Desktop only */}
             <WizardSidebar
                 currentStep={step}
                 completedSteps={completedSteps}
@@ -1517,7 +1550,7 @@ export default function CreateMissionWizardV2() {
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto">
-                    <div className="max-w-2xl mx-auto py-12 px-8">
+                    <div className="max-w-2xl mx-auto py-6 sm:py-12 px-4 sm:px-8">
                         {step === 1 && <Step1MissionDetails data={data} onChange={updateData} />}
                         {step === 2 && <Step2CommissionSetup data={data} onChange={updateData} />}
                         {step === 3 && <Step3ResourcesReach data={data} onChange={updateData} />}
@@ -1527,25 +1560,25 @@ export default function CreateMissionWizardV2() {
 
                 {/* Footer */}
                 <div className="border-t border-gray-100 bg-white">
-                    <div className="max-w-2xl mx-auto px-8 py-6 flex items-center justify-between">
+                    <div className="max-w-2xl mx-auto px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between gap-3">
                         <div>
                             {step > 1 && (
                                 <button
                                     onClick={handleBack}
-                                    className="px-6 py-3 text-gray-600 font-medium rounded-xl hover:bg-gray-100 transition-colors"
+                                    className="px-4 sm:px-6 py-2.5 sm:py-3 text-gray-600 font-medium rounded-xl hover:bg-gray-100 transition-colors text-sm sm:text-base"
                                 >
                                     Back
                                 </button>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
                             {step < 4 ? (
                                 <button
                                     onClick={handleContinue}
                                     disabled={!canContinue()}
                                     className={`
-                                        px-8 py-3 font-semibold rounded-xl transition-all
+                                        px-6 sm:px-8 py-2.5 sm:py-3 font-semibold rounded-xl transition-all text-sm sm:text-base
                                         ${canContinue()
                                             ? 'bg-gray-900 text-white hover:bg-black shadow-lg shadow-gray-900/20'
                                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -1559,7 +1592,7 @@ export default function CreateMissionWizardV2() {
                                     onClick={handleFinish}
                                     disabled={loading || !canContinue()}
                                     className={`
-                                        px-8 py-3 font-semibold rounded-xl transition-all flex items-center gap-2
+                                        px-6 sm:px-8 py-2.5 sm:py-3 font-semibold rounded-xl transition-all flex items-center gap-2 text-sm sm:text-base
                                         ${canContinue() && !loading
                                             ? 'bg-gray-900 text-white hover:bg-black shadow-lg shadow-gray-900/20'
                                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -1569,11 +1602,12 @@ export default function CreateMissionWizardV2() {
                                     {loading ? (
                                         <>
                                             <Loader2 className="w-4 h-4 animate-spin" />
-                                            Creating...
+                                            <span className="hidden sm:inline">Creating...</span>
                                         </>
                                     ) : (
                                         <>
-                                            Launch Program
+                                            <span className="hidden sm:inline">Launch Program</span>
+                                            <span className="sm:hidden">Launch</span>
                                             <Sparkles className="w-4 h-4" />
                                         </>
                                     )}

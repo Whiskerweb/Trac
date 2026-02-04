@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { MessageSquare, Send, User, Building2, CheckCheck, Gift, ExternalLink, Loader2 } from 'lucide-react'
+import { MessageSquare, Send, User, Building2, CheckCheck, Gift, ExternalLink, Loader2, ArrowLeft } from 'lucide-react'
 import { getConversations, getMessages, sendMessage, markAsRead } from '@/app/actions/messaging'
 import Link from 'next/link'
 
@@ -128,9 +128,9 @@ function MessagesContent() {
 
     return (
         <div className="min-h-screen bg-[#FAFAFA] flex">
-            {/* Conversations List (Left) */}
-            <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-                <div className="p-4 border-b border-gray-100">
+            {/* Conversations List (Left) - Full width on mobile, fixed on desktop */}
+            <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} w-full md:w-80 bg-white border-r border-gray-200 flex-col`}>
+                <div className="p-4 sm:p-6 border-b border-gray-100">
                     <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
                     <p className="text-xs text-gray-500 mt-0.5">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
                 </div>
@@ -153,7 +153,7 @@ function MessagesContent() {
                             <button
                                 key={convo.id}
                                 onClick={() => setSelectedConversation(convo.id)}
-                                className={`w-full p-4 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 ${selectedConversation === convo.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
+                                className={`w-full p-4 sm:p-6 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 ${selectedConversation === convo.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
                                     }`}
                             >
                                 <div className="flex items-start gap-3">
@@ -191,13 +191,20 @@ function MessagesContent() {
                 )}
             </div>
 
-            {/* Messages View (Right) */}
-            <div className="flex-1 flex flex-col">
+            {/* Messages View (Right) - Hidden on mobile when no conversation selected */}
+            <div className={`${!selectedConversation ? 'hidden md:flex' : 'flex'} flex-1 flex-col`}>
                 {selectedConvo ? (
                     <>
                         {/* Header */}
-                        <div className="p-4 bg-white border-b border-gray-200">
+                        <div className="p-4 sm:p-6 bg-white border-b border-gray-200">
                             <div className="flex items-center gap-3">
+                                {/* Back button for mobile */}
+                                <button
+                                    onClick={() => setSelectedConversation(null)}
+                                    className="md:hidden w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    <ArrowLeft className="w-5 h-5 text-gray-600" />
+                                </button>
                                 {selectedConvo.workspace_logo ? (
                                     <img
                                         src={selectedConvo.workspace_logo}
@@ -216,7 +223,7 @@ function MessagesContent() {
                                 {selectedConvo.workspace_id && (
                                     <Link
                                         href={`/seller/startup/${selectedConvo.workspace_id}`}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors"
+                                        className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors"
                                     >
                                         View Profile
                                         <ExternalLink className="w-3 h-3" />
@@ -226,7 +233,7 @@ function MessagesContent() {
                         </div>
 
                         {/* Messages */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
                             {messages.map((msg) => (
                                 <div
                                     key={msg.id}
@@ -263,8 +270,8 @@ function MessagesContent() {
                         </div>
 
                         {/* Input */}
-                        <div className="p-4 bg-white border-t border-gray-200">
-                            <div className="flex items-center gap-3">
+                        <div className="p-4 sm:p-6 bg-white border-t border-gray-200">
+                            <div className="flex items-center gap-2 sm:gap-3">
                                 <input
                                     type="text"
                                     value={newMessage}

@@ -239,8 +239,8 @@ export default function SellerProfilePage() {
                         {/* Accent line */}
                         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-slate-900 to-transparent" />
 
-                        <div className="p-10">
-                            <div className="flex items-start gap-8">
+                        <div className="p-6 sm:p-10">
+                            <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-8">
                                 {/* Avatar - Minimalist */}
                                 <div className="relative group">
                                     <div className="absolute -inset-1 bg-gradient-to-b from-slate-200 to-slate-300 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity duration-500" />
@@ -256,9 +256,9 @@ export default function SellerProfilePage() {
 
                                 {/* Info */}
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-baseline gap-4">
-                                            <h1 className="text-4xl font-black tracking-tighter text-slate-900">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900">
                                                 {seller.name}
                                             </h1>
                                             <StatusBadge status={seller.status} />
@@ -266,7 +266,7 @@ export default function SellerProfilePage() {
                                         <button
                                             onClick={handleMessage}
                                             disabled={messagingLoading}
-                                            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-black transition-colors disabled:opacity-50"
+                                            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-black transition-colors disabled:opacity-50 w-full sm:w-auto justify-center"
                                         >
                                             {messagingLoading ? (
                                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -315,7 +315,7 @@ export default function SellerProfilePage() {
                 </div>
 
                 {/* Stats Grid - Data Luxury */}
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard
                         label="Clicks"
                         value={formatNumber(seller.globalStats.totalClicks)}
@@ -429,7 +429,7 @@ export default function SellerProfilePage() {
                     </div>
 
                     {/* Sidebar */}
-                    <div className="space-y-6">
+                    <div className="lg:w-80 lg:shrink-0 space-y-6">
                         {/* Links */}
                         {Object.values(seller.socials).some(v => v) && (
                             <ContentCard title="Connect" icon={<Globe className="w-4 h-4" />}>

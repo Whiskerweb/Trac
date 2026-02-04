@@ -120,7 +120,7 @@ export default function CustomerProfilePage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
             {/* Back Button */}
             <button
                 onClick={() => router.push('/dashboard/customers')}
@@ -131,21 +131,21 @@ export default function CustomerProfilePage() {
             </button>
 
             {/* Main Content */}
-            <div className="flex gap-8">
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
                 {/* Left Column - Sales & Activity */}
-                <div className="flex-1 space-y-6">
+                <div className="flex-1 space-y-4 sm:space-y-6">
                     {/* Customer Header */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                         <Avatar name={customer.name} avatar={customer.avatar} size="lg" />
-                        <div>
-                            <h1 className="text-xl font-semibold text-gray-900">
+                        <div className="min-w-0 flex-1">
+                            <h1 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
                                 {customer.name || customer.email || customer.externalId}
                             </h1>
                             {customer.email && customer.name && (
-                                <p className="text-gray-500">{customer.email}</p>
+                                <p className="text-sm text-gray-500 break-all">{customer.email}</p>
                             )}
                             {customer.referrerName && (
-                                <div className="flex items-center gap-2 mt-1">
+                                <div className="flex flex-wrap items-center gap-2 mt-1">
                                     <span className="text-xs text-gray-400">{t('referredBy')}</span>
                                     <span className="text-sm font-medium text-purple-600">{customer.referrerName}</span>
                                 </div>
@@ -156,27 +156,48 @@ export default function CustomerProfilePage() {
                     {/* Sales Table */}
                     {customer.sales.length > 0 && (
                         <div>
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('sales')}</h2>
+                            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">{t('sales')}</h2>
                             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                                <table className="w-full">
-                                    <thead className="border-b border-gray-100">
-                                        <tr>
-                                            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{t('salesTableDate')}</th>
-                                            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{t('salesTableOrderId')}</th>
-                                            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{t('salesTableAmount')}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {customer.sales.map((sale) => (
-                                            <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(sale.timestamp)}</td>
-                                                <td className="px-4 py-3 text-sm font-mono text-gray-500">{sale.orderId.slice(0, 20)}...</td>
-                                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatCurrency(sale.amount)}</td>
+                                {/* Desktop Table */}
+                                <div className="hidden sm:block overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="border-b border-gray-100">
+                                            <tr>
+                                                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{t('salesTableDate')}</th>
+                                                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{t('salesTableOrderId')}</th>
+                                                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{t('salesTableAmount')}</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {customer.sales.map((sale) => (
+                                                <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(sale.timestamp)}</td>
+                                                    <td className="px-4 py-3 text-sm font-mono text-gray-500">{sale.orderId.slice(0, 20)}...</td>
+                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatCurrency(sale.amount)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {/* Mobile Cards */}
+                                <div className="sm:hidden divide-y divide-gray-50">
+                                    {customer.sales.map((sale) => (
+                                        <div key={sale.id} className="p-4 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-medium text-gray-500 uppercase">{t('salesTableAmount')}</span>
+                                                <span className="text-sm font-semibold text-gray-900">{formatCurrency(sale.amount)}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-medium text-gray-500 uppercase block mb-1">{t('salesTableOrderId')}</span>
+                                                <span className="text-xs font-mono text-gray-500 break-all">{sale.orderId}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-gray-400">{formatDateTime(sale.timestamp)}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="px-4 py-3 border-t border-gray-100 text-xs sm:text-sm text-gray-500">
                                     {customer.sales.length} {customer.sales.length > 1 ? t('salesPlural') : t('sale')}
                                 </div>
                             </div>
@@ -186,16 +207,16 @@ export default function CustomerProfilePage() {
                     {/* Lead Events */}
                     {customer.leadEvents.length > 0 && (
                         <div>
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('leads')}</h2>
+                            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">{t('leads')}</h2>
                             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                                 <div className="divide-y divide-gray-50">
                                     {customer.leadEvents.map((lead) => (
-                                        <div key={lead.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50">
+                                        <div key={lead.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-50">
                                             <div className="flex items-center gap-3">
-                                                <UserPlus className="w-4 h-4 text-blue-500" />
-                                                <span className="text-sm font-medium text-gray-900">{lead.eventName}</span>
+                                                <UserPlus className="w-4 h-4 text-blue-500 shrink-0" />
+                                                <span className="text-sm font-medium text-gray-900 break-words">{lead.eventName}</span>
                                             </div>
-                                            <span className="text-sm text-gray-500">{formatDateTime(lead.createdAt)}</span>
+                                            <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">{formatDateTime(lead.createdAt)}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -205,42 +226,44 @@ export default function CustomerProfilePage() {
 
                     {/* Activity Timeline */}
                     <div>
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('activity')}</h2>
+                        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">{t('activity')}</h2>
                         {customer.activity.length === 0 ? (
                             <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
                                 <Globe className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                                 <p className="text-gray-500 text-sm">{t('noActivityRecorded')}</p>
                             </div>
                         ) : (
-                            <div className="space-y-4">
+                            <div className="space-y-3 sm:space-y-4">
                                 {customer.activity.map((item) => (
-                                    <div key={item.id} className="flex items-start gap-3 group">
-                                        <div className="mt-0.5">
-                                            {getActivityIcon(item.type)}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getActivityBadgeStyles(item.type)}`}>
-                                                    {item.type === 'click' ? t('activityTypeClick') : item.type === 'lead' ? t('activityTypeLead') : t('activityTypeSale')}
-                                                </span>
-                                                <span className="text-sm font-medium text-gray-900">{item.description}</span>
-                                                {item.amount && (
-                                                    <span className="text-sm font-semibold text-green-600">
-                                                        {formatCurrency(item.amount)}
+                                    <div key={item.id} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 group bg-white sm:bg-transparent border sm:border-0 border-gray-100 p-3 sm:p-0 rounded-lg">
+                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                            <div className="mt-0.5 shrink-0">
+                                                {getActivityIcon(item.type)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getActivityBadgeStyles(item.type)}`}>
+                                                        {item.type === 'click' ? t('activityTypeClick') : item.type === 'lead' ? t('activityTypeLead') : t('activityTypeSale')}
                                                     </span>
+                                                    <span className="text-sm font-medium text-gray-900 break-words">{item.description}</span>
+                                                    {item.amount && (
+                                                        <span className="text-sm font-semibold text-green-600">
+                                                            {formatCurrency(item.amount)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {item.metadata && (
+                                                    <div className="flex flex-wrap gap-2 mt-2">
+                                                        {Object.entries(item.metadata).map(([key, value]) => (
+                                                            <span key={key} className="text-xs px-2 py-0.5 bg-gray-100 rounded text-gray-600">
+                                                                {key}: {value}
+                                                            </span>
+                                                        ))}
+                                                    </div>
                                                 )}
                                             </div>
-                                            {item.metadata && (
-                                                <div className="flex flex-wrap gap-2 mt-1">
-                                                    {Object.entries(item.metadata).map(([key, value]) => (
-                                                        <span key={key} className="text-xs px-2 py-0.5 bg-gray-100 rounded text-gray-600">
-                                                            {key}: {value}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
-                                        <span className="text-xs text-gray-400 whitespace-nowrap">{formatDateTime(item.timestamp)}</span>
+                                        <span className="text-xs text-gray-400 whitespace-nowrap sm:mt-0.5 pl-7 sm:pl-0">{formatDateTime(item.timestamp)}</span>
                                     </div>
                                 ))}
                             </div>
@@ -249,9 +272,9 @@ export default function CustomerProfilePage() {
                 </div>
 
                 {/* Right Column - Details */}
-                <div className="w-64 shrink-0">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('details')}</h3>
-                    <div className="space-y-4">
+                <div className="w-full lg:w-64 lg:shrink-0">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3 sm:mb-4">{t('details')}</h3>
+                    <div className="bg-white lg:bg-transparent border lg:border-0 border-gray-100 rounded-xl p-4 lg:p-0 space-y-3 sm:space-y-4">
                         {/* Location */}
                         {(customer.city || customer.country) && (
                             <div className="flex items-center gap-2">
@@ -304,10 +327,10 @@ export default function CustomerProfilePage() {
                         <div>
                             <p className="text-xs font-medium text-gray-500 mb-1">{t('externalId')}</p>
                             <div className="flex items-center gap-2">
-                                <code className="text-sm text-gray-900 font-mono truncate max-w-[150px]">{customer.externalId}</code>
+                                <code className="text-xs sm:text-sm text-gray-900 font-mono truncate flex-1 max-w-[200px] lg:max-w-[150px]">{customer.externalId}</code>
                                 <button
                                     onClick={() => handleCopy(customer.externalId)}
-                                    className="text-gray-400 hover:text-gray-600"
+                                    className="text-gray-400 hover:text-gray-600 shrink-0"
                                 >
                                     {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
                                 </button>

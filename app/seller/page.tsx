@@ -222,11 +222,11 @@ export default function PartnerDashboardPage() {
 
     return (
         <div className="min-h-screen bg-[#FAFAFB]">
-            <div className="max-w-6xl mx-auto px-8 py-10">
+            <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
 
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Analytics</h1>
+                    <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">Analytics</h1>
                     <p className="text-gray-500 mt-1">Overview of your performance</p>
                 </div>
 
@@ -268,7 +268,7 @@ export default function PartnerDashboardPage() {
                         </div>
                     ) : (
                         <div className="px-6 py-16 text-center">
-                            <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-violet-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
                                 <Link2 className="w-5 h-5 text-violet-500" />
                             </div>
                             <p className="text-sm text-gray-500 mb-4">
@@ -276,7 +276,7 @@ export default function PartnerDashboardPage() {
                             </p>
                             <Link
                                 href="/seller/marketplace"
-                                className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black transition-colors"
+                                className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black transition-colors w-full sm:w-auto"
                             >
                                 Discover programs
                             </Link>

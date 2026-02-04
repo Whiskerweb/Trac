@@ -75,6 +75,10 @@ export default function SettingsPage() {
     const [saveSuccess, setSaveSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
+    // Change detection state
+    const [originalValues, setOriginalValues] = useState<any>(null)
+    const [hasChanges, setHasChanges] = useState(false)
+
     // Password change state
     const [showPasswordForm, setShowPasswordForm] = useState(false)
     const [newPassword, setNewPassword] = useState('')
@@ -143,6 +147,22 @@ export default function SettingsPage() {
         }
     }, [])
 
+    // Detect changes
+    useEffect(() => {
+        if (!originalValues) return
+        const currentValues = {
+            fullName, country, profileType, websiteUrl, youtubeUrl, twitterUrl,
+            linkedinUrl, instagramUrl, tiktokUrl, avatarUrl, portfolioUrl, cvUrl,
+            aboutYou, selectedIndustries, trafficRange, activityType,
+            earningPreferences, salesChannels
+        }
+        const changed = JSON.stringify(currentValues) !== JSON.stringify(originalValues)
+        setHasChanges(changed)
+    }, [originalValues, fullName, country, profileType, websiteUrl, youtubeUrl, twitterUrl,
+        linkedinUrl, instagramUrl, tiktokUrl, avatarUrl, portfolioUrl, cvUrl,
+        aboutYou, selectedIndustries, trafficRange, activityType,
+        earningPreferences, salesChannels])
+
     // Load profile data on mount
     useEffect(() => {
         async function loadProfile() {
@@ -177,6 +197,28 @@ export default function SettingsPage() {
                     if (profile.salesChannels) {
                         setSalesChannels(profile.salesChannels)
                     }
+
+                    // Set original values for change detection
+                    setOriginalValues({
+                        fullName: profile.name || '',
+                        country: profile.country || '',
+                        profileType: profile.profileType || '',
+                        websiteUrl: profile.websiteUrl || '',
+                        youtubeUrl: profile.youtubeUrl || '',
+                        twitterUrl: profile.twitterUrl || '',
+                        linkedinUrl: profile.linkedinUrl || '',
+                        instagramUrl: profile.instagramUrl || '',
+                        tiktokUrl: profile.tiktokUrl || '',
+                        avatarUrl: profile.avatarUrl || null,
+                        portfolioUrl: profile.portfolioUrl || '',
+                        cvUrl: profile.cvUrl || null,
+                        aboutYou: profile.bio || '',
+                        selectedIndustries: profile.industryInterests || [],
+                        trafficRange: profile.monthlyTraffic || '',
+                        activityType: profile.activityType || '',
+                        earningPreferences: profile.earningPreferences || { revShare: false, cpc: false, cpl: false, oneTime: false },
+                        salesChannels: profile.salesChannels || { blogs: false, newsletters: false, socialMedia: false, events: false, companyReferrals: false }
+                    })
                 } else {
                     setError(result.error || 'Failed to load')
                 }
@@ -278,6 +320,15 @@ export default function SettingsPage() {
             if (result.success) {
                 setSaveSuccess(true)
                 setTimeout(() => setSaveSuccess(false), 3000)
+
+                // Update original values after successful save
+                const newValues = {
+                    fullName, country, profileType, websiteUrl, youtubeUrl, twitterUrl,
+                    linkedinUrl, instagramUrl, tiktokUrl, avatarUrl, portfolioUrl, cvUrl,
+                    aboutYou, selectedIndustries, trafficRange, activityType,
+                    earningPreferences, salesChannels
+                }
+                setOriginalValues(newValues)
             } else {
                 setError(result.error || 'Failed to save')
             }
@@ -417,11 +468,11 @@ export default function SettingsPage() {
 
     return (
         <div className="min-h-screen bg-[#FAFAFA]">
-            <div className="max-w-3xl mx-auto px-8 py-10">
+            <div className="max-w-3xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
 
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-2xl font-semibold text-gray-900 tracking-tight mb-2">
+                    <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight mb-2">
                         Settings
                     </h1>
                     <p className="text-gray-500">
@@ -430,7 +481,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-8 w-fit">
+                <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-8 w-full sm:w-fit">
                     <button
                         onClick={() => setActiveTab('profile')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -560,7 +611,7 @@ export default function SettingsPage() {
                                         {/* Expandable tasks section */}
                                         {isExpanded && (
                                             <div className="mt-6 pt-5 border-t border-white/10">
-                                                <div className="grid grid-cols-2 gap-3">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                     {PROFILE_TASKS.map((task, index) => {
                                                         const isCompleted = completedTasks.includes(task.id)
                                                         return (
@@ -614,7 +665,7 @@ export default function SettingsPage() {
                                 <div>
                                     <h3 className="text-sm font-medium mb-4">Basic information</h3>
 
-                                    <div className="flex items-start gap-6 mb-6">
+                                    <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 mb-6">
                                         <div className="relative">
                                             {avatarUrl ? (
                                                 <img
@@ -653,7 +704,7 @@ export default function SettingsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                                         <div>
                                             <label className="block text-sm font-medium mb-2">Full name</label>
                                             <input
@@ -681,7 +732,7 @@ export default function SettingsPage() {
 
                                     <div>
                                         <label className="block text-sm font-medium mb-2">Profile type</label>
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <button
                                                 type="button"
                                                 onClick={() => setProfileType('INDIVIDUAL')}
@@ -903,7 +954,7 @@ export default function SettingsPage() {
 
                             <div className="mb-6">
                                 <h4 className="text-sm font-medium mb-3">Preferred earning structure</h4>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
                                             type="checkbox"
@@ -945,7 +996,7 @@ export default function SettingsPage() {
 
                             <div>
                                 <h4 className="text-sm font-medium mb-3">Sales channels</h4>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
                                             type="checkbox"
@@ -1074,17 +1125,6 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
-                        {/* Save button */}
-                        <div className="flex justify-end">
-                            <button
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="px-5 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            >
-                                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                {saving ? 'Saving...' : 'Save'}
-                            </button>
-                        </div>
                     </>
                 )}
 
@@ -1333,6 +1373,37 @@ export default function SettingsPage() {
                             </div>
                         )}
                     </>
+                )}
+
+                {/* Floating Save button */}
+                {activeTab === 'profile' && (
+                    <div className={`fixed bottom-8 right-8 z-50 transition-all duration-300 ${
+                        hasChanges || saving || saveSuccess ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'
+                    }`}>
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium shadow-lg transition-all ${
+                                saveSuccess
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-gray-900 text-white hover:bg-black'
+                            }`}
+                        >
+                            {saving ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : saveSuccess ? (
+                                <>
+                                    <Check className="w-4 h-4" />
+                                    Saved
+                                </>
+                            ) : (
+                                'Save changes'
+                            )}
+                        </button>
+                    </div>
                 )}
             </div>
         </div>

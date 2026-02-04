@@ -117,31 +117,28 @@ export default function ApplicationsPage() {
             </div>
 
             {/* Stats */}
-            <div className="flex gap-6 p-5 bg-white border border-gray-200 rounded-xl">
-                <div className="flex-1">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-5 bg-white border border-gray-200 rounded-xl">
+                <div>
                     <p className="text-sm text-gray-500">{t('totalSellers')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
                 </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
+                <div>
                     <p className="text-sm text-gray-500">{t('active')}</p>
                     <p className="text-2xl font-semibold text-green-600">{stats.active}</p>
                 </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
+                <div>
                     <p className="text-sm text-gray-500">{t('totalClicks')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{formatNumber(stats.totalClicks)}</p>
                 </div>
-                <div className="w-px bg-gray-200" />
-                <div className="flex-1">
+                <div>
                     <p className="text-sm text-gray-500">{t('commissionsPaid')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{formatCurrency(stats.totalCommissions)}</p>
                 </div>
             </div>
 
             {/* Search and Filters */}
-            <div className="flex items-center gap-3">
-                <div className="relative flex-1 max-w-sm">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="relative flex-1 sm:max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
@@ -156,7 +153,7 @@ export default function ApplicationsPage() {
                         <button
                             key={status}
                             onClick={() => setStatusFilter(status)}
-                            className={`px-3 py-2 text-sm font-medium transition-colors ${statusFilter === status
+                            className={`flex-1 sm:flex-none px-3 py-2 text-sm font-medium transition-colors ${statusFilter === status
                                 ? 'bg-gray-900 text-white'
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
                                 }`}
@@ -172,64 +169,123 @@ export default function ApplicationsPage() {
 
             {/* Table */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                <div className="grid grid-cols-7 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="col-span-2">{t('seller')}</div>
-                    <div>{t('status')}</div>
-                    <div>{t('missions')}</div>
-                    <div>{t('clicks')}</div>
-                    <div className="text-right">{t('commissions')}</div>
-                    <div></div>
-                </div>
-
-                {filteredSellers.length === 0 ? (
-                    <div className="px-6 py-12 text-center">
-                        <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-900 font-medium">{t('noSellerFound')}</p>
-                        <p className="text-gray-500 text-sm mt-1">
-                            {t('sellersWillAppear')}
-                        </p>
+                {/* Desktop Table */}
+                <div className="hidden md:block">
+                    <div className="grid grid-cols-7 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div className="col-span-2">{t('seller')}</div>
+                        <div>{t('status')}</div>
+                        <div>{t('missions')}</div>
+                        <div>{t('clicks')}</div>
+                        <div className="text-right">{t('commissions')}</div>
+                        <div></div>
                     </div>
-                ) : (
-                    <div className="divide-y divide-gray-50">
-                        {filteredSellers.map((seller) => (
-                            <div
-                                key={seller.id}
-                                onClick={() => router.push(`/dashboard/sellers/applications/${seller.id}`)}
-                                className="grid grid-cols-7 gap-4 px-6 py-4 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
-                            >
-                                <div className="col-span-2 flex items-center gap-3">
-                                    <Avatar initials={seller.avatar} imageUrl={seller.avatarUrl} />
+
+                    {filteredSellers.length === 0 ? (
+                        <div className="px-6 py-12 text-center">
+                            <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-900 font-medium">{t('noSellerFound')}</p>
+                            <p className="text-gray-500 text-sm mt-1">
+                                {t('sellersWillAppear')}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-gray-50">
+                            {filteredSellers.map((seller) => (
+                                <div
+                                    key={seller.id}
+                                    onClick={() => router.push(`/dashboard/sellers/applications/${seller.id}`)}
+                                    className="grid grid-cols-7 gap-4 px-6 py-4 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
+                                >
+                                    <div className="col-span-2 flex items-center gap-3">
+                                        <Avatar initials={seller.avatar} imageUrl={seller.avatarUrl} />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">{seller.name}</p>
+                                            <p className="text-xs text-gray-500">{seller.activityType}</p>
+                                        </div>
+                                    </div>
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">{seller.name}</p>
-                                        <p className="text-xs text-gray-500">{seller.activityType}</p>
+                                        <StatusBadge status={seller.status} />
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                        {seller.missionsCount}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                        {formatNumber(seller.totalClicks)}
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-sm font-medium text-green-600">
+                                            {formatCurrency(seller.commissionEarned)}
+                                        </span>
+                                        {seller.totalSales > 0 && (
+                                            <span className="block text-xs text-gray-400">
+                                                {seller.totalSales} {seller.totalSales > 1 ? t('sales') : t('sale')}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex justify-end">
+                                        <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-gray-500 transition-colors" />
                                     </div>
                                 </div>
-                                <div>
-                                    <StatusBadge status={seller.status} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden">
+                    {filteredSellers.length === 0 ? (
+                        <div className="px-6 py-12 text-center">
+                            <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-900 font-medium">{t('noSellerFound')}</p>
+                            <p className="text-gray-500 text-sm mt-1">
+                                {t('sellersWillAppear')}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-gray-50">
+                            {filteredSellers.map((seller) => (
+                                <div
+                                    key={seller.id}
+                                    onClick={() => router.push(`/dashboard/sellers/applications/${seller.id}`)}
+                                    className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                                >
+                                    <div className="flex items-start gap-3 mb-3">
+                                        <Avatar initials={seller.avatar} imageUrl={seller.avatarUrl} />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <p className="text-sm font-medium text-gray-900">{seller.name}</p>
+                                                <StatusBadge status={seller.status} />
+                                            </div>
+                                            <p className="text-xs text-gray-500">{seller.activityType}</p>
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <div className="text-xs text-gray-500 mb-0.5">{t('missions')}</div>
+                                            <div className="text-sm text-gray-900">{seller.missionsCount}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-gray-500 mb-0.5">{t('clicks')}</div>
+                                            <div className="text-sm text-gray-900">{formatNumber(seller.totalClicks)}</div>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <div className="text-xs text-gray-500 mb-0.5">{t('commissions')}</div>
+                                            <div className="text-sm font-medium text-green-600">
+                                                {formatCurrency(seller.commissionEarned)}
+                                            </div>
+                                            {seller.totalSales > 0 && (
+                                                <div className="text-xs text-gray-400 mt-0.5">
+                                                    {seller.totalSales} {seller.totalSales > 1 ? t('sales') : t('sale')}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="text-sm text-gray-600">
-                                    {seller.missionsCount}
-                                </div>
-                                <div className="text-sm text-gray-600">
-                                    {formatNumber(seller.totalClicks)}
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-sm font-medium text-green-600">
-                                        {formatCurrency(seller.commissionEarned)}
-                                    </span>
-                                    {seller.totalSales > 0 && (
-                                        <span className="block text-xs text-gray-400">
-                                            {seller.totalSales} {seller.totalSales > 1 ? t('sales') : t('sale')}
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="flex justify-end">
-                                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-gray-500 transition-colors" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     )
