@@ -117,7 +117,7 @@ export const Orbit = ({ className }: { className?: string }) => {
             <div className="relative flex items-center justify-center">
 
                 {/* --- Outer Circle (Large): Mix of Startups & Sellers --- */}
-                <div className="absolute rounded-full border border-slate-400/20 dark:border-white/10 w-[800px] h-[800px] md:w-[1200px] md:h-[1200px] animate-[spin_60s_linear_infinite]">
+                <div className="absolute rounded-full border-2 border-slate-300/50 dark:border-white/20 w-[800px] h-[800px] md:w-[1200px] md:h-[1200px] animate-[spin_60s_linear_infinite]">
 
                     {/* 1. STARTUP: Traaaction (Top Left) */}
                     <div className="absolute top-[18%] left-[18%] -translate-x-1/2 -translate-y-1/2 animate-[spin_60s_linear_infinite_reverse]">
@@ -158,7 +158,7 @@ export const Orbit = ({ className }: { className?: string }) => {
                 </div>
 
                 {/* --- Inner Circle (Medium): More mix --- */}
-                <div className="absolute rounded-full border border-slate-400/20 dark:border-white/10 w-[500px] h-[500px] md:w-[800px] md:h-[800px] animate-[spin_40s_linear_infinite_reverse]">
+                <div className="absolute rounded-full border-2 border-slate-300/50 dark:border-white/20 w-[500px] h-[500px] md:w-[800px] md:h-[800px] animate-[spin_40s_linear_infinite_reverse]">
 
                     {/* 4. STARTUP: Beo Healthcare (Right) */}
                     <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 animate-[spin_40s_linear_infinite]">
