@@ -1,34 +1,58 @@
 'use client';
 
-import Image from 'next/image';
-
 const logos = [
-    { name: 'Alix', src: '/partn/Alix.png', width: 100, height: 40 },
-    { name: 'Beo', src: '/partn/beo.png', width: 100, height: 40 },
-    { name: 'KeepCalls', src: '/partn/keepcalls.png', width: 120, height: 40 },
-    { name: 'MyWai', src: '/partn/mywai.png', width: 100, height: 40 },
-    { name: 'Reevy', src: '/partn/Reevy.png', width: 100, height: 40 },
+    { name: 'Alix', src: '/partn/Alix.png' },
+    { name: 'Beo', src: '/partn/beo.png' },
+    { name: 'KeepCalls', src: '/partn/keepcalls.png' },
+    { name: 'MyWai', src: '/partn/mywai.png' },
+    { name: 'Reevy', src: '/partn/Reevy.png' },
 ];
 
 export function Logos() {
+    // Quadruple logos for seamless infinite scroll on wide screens
+    const duplicatedLogos = [...logos, ...logos, ...logos, ...logos];
+
     return (
-        <section className="pt-4 pb-12 bg-white border-b border-gray-100">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Static Row of 5 Logos */}
-                <div className="flex flex-wrap justify-between items-center gap-8 md:gap-16 opacity-70 grayscale hover:grayscale-0 transition-all duration-500">
-                    {logos.map((logo, idx) => (
-                        <div key={`${logo.name}-${idx}`} className="flex items-center justify-center transition-transform hover:scale-110 duration-300">
+        <section className="py-8 md:py-12 bg-white border-b border-gray-100 overflow-hidden">
+            <div className="relative">
+                {/* Gradient masks for smooth fade edges */}
+                <div className="absolute left-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+
+                {/* Scrolling container */}
+                <div className="flex animate-scroll hover:pause-animation">
+                    {duplicatedLogos.map((logo, idx) => (
+                        <div
+                            key={`${logo.name}-${idx}`}
+                            className="flex items-center justify-center shrink-0 px-6 md:px-12"
+                        >
                             <img
                                 src={logo.src}
                                 alt={`${logo.name} logo`}
-                                // Increased size to 48px, kept brightness(0) for black silhouette
-                                style={{ height: '48px', width: 'auto', filter: 'brightness(0)' }}
-                                className="object-contain"
+                                style={{ height: '36px', width: 'auto', filter: 'brightness(0)' }}
+                                className="object-contain opacity-60 hover:opacity-100 transition-opacity duration-300"
                             />
                         </div>
                     ))}
                 </div>
             </div>
+
+            <style jsx>{`
+                @keyframes scroll {
+                    0% {
+                        transform: translateX(0);
+                    }
+                    100% {
+                        transform: translateX(-25%);
+                    }
+                }
+                .animate-scroll {
+                    animation: scroll 30s linear infinite;
+                }
+                .animate-scroll:hover {
+                    animation-play-state: paused;
+                }
+            `}</style>
         </section>
     );
 }
