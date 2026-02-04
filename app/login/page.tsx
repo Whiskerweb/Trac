@@ -112,15 +112,23 @@ export default function LoginPage() {
 
             if (result?.error) {
                 setError(result.error)
+                setLoading(false)
             } else if (result && 'confirmationRequired' in result && result.confirmationRequired) {
                 // Email confirmation is required - show confirmation pending view
                 setConfirmationEmail(result.email || '')
                 setConfirmationRole(result.role || userType)
                 setViewState('confirmation-pending')
+                setLoading(false)
             }
-        } catch {
+            // If no result returned, redirect is happening - don't update state
+        } catch (err: unknown) {
+            // Check if this is a Next.js redirect (not a real error)
+            const error = err as { digest?: string }
+            if (error?.digest?.startsWith('NEXT_REDIRECT')) {
+                // This is a redirect, not an error - let it happen
+                return
+            }
             setError('An unexpected error occurred')
-        } finally {
             setLoading(false)
         }
     }
