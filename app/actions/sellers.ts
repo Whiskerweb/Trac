@@ -923,6 +923,13 @@ export interface MySellerProfileData {
         events: boolean
         companyReferrals: boolean
     }
+
+    // Stripe Connect status
+    hasStripeConnect: boolean
+    payoutMethod?: 'STRIPE_CONNECT' | 'PAYPAL' | 'IBAN' | 'PLATFORM'
+
+    // Profile score (0-100)
+    profileScore: number
 }
 
 export async function getMySellerProfile(): Promise<{
@@ -992,7 +999,12 @@ export async function getMySellerProfile(): Promise<{
                 monthlyTraffic: seller.Profile?.monthly_traffic || null,
                 activityType: seller.Profile?.activity_type || null,
                 earningPreferences,
-                salesChannels
+                salesChannels,
+                // Stripe Connect status
+                hasStripeConnect: !!seller.stripe_connect_id && !!seller.payouts_enabled_at,
+                payoutMethod: seller.payout_method as 'STRIPE_CONNECT' | 'PAYPAL' | 'IBAN' | 'PLATFORM',
+                // Profile score
+                profileScore: seller.Profile?.profile_score || 0
             }
         }
     } catch (error) {

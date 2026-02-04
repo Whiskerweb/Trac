@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ChevronLeft, MapPin, Monitor, Globe, Smartphone, Calendar, DollarSign, Link2, ExternalLink, Copy, Check, MousePointer, ShoppingCart, UserPlus, Loader2, User } from 'lucide-react'
 import { getCustomerWithActivity, CustomerDetailWithActivity, CustomerActivity } from '@/app/actions/customers'
+import { useTranslations } from 'next-intl'
 
 function Avatar({ name, avatar, size = 'md' }: { name: string | null; avatar: string | null; size?: 'sm' | 'md' | 'lg' }) {
     const initials = name
@@ -69,6 +70,7 @@ function getActivityBadgeStyles(type: CustomerActivity['type']) {
 }
 
 export default function CustomerProfilePage() {
+    const t = useTranslations('dashboard.customers.detail')
     const router = useRouter()
     const params = useParams()
     const [loading, setLoading] = useState(true)
@@ -106,12 +108,12 @@ export default function CustomerProfilePage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px]">
                 <User className="w-12 h-12 text-gray-300 mb-4" />
-                <p className="text-gray-900 font-medium">Customer not found</p>
+                <p className="text-gray-900 font-medium">{t('notFound')}</p>
                 <button
                     onClick={() => router.push('/dashboard/customers')}
                     className="mt-4 text-sm text-blue-600 hover:underline"
                 >
-                    Back to customers
+                    {t('backToList')}
                 </button>
             </div>
         )
@@ -125,7 +127,7 @@ export default function CustomerProfilePage() {
                 className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors"
             >
                 <ChevronLeft className="w-4 h-4" />
-                Customers
+                {t('backToCustomers')}
             </button>
 
             {/* Main Content */}
@@ -144,7 +146,7 @@ export default function CustomerProfilePage() {
                             )}
                             {customer.referrerName && (
                                 <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-xs text-gray-400">Referred by</span>
+                                    <span className="text-xs text-gray-400">{t('referredBy')}</span>
                                     <span className="text-sm font-medium text-purple-600">{customer.referrerName}</span>
                                 </div>
                             )}
@@ -154,14 +156,14 @@ export default function CustomerProfilePage() {
                     {/* Sales Table */}
                     {customer.sales.length > 0 && (
                         <div>
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Ventes</h2>
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('sales')}</h2>
                             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                                 <table className="w-full">
                                     <thead className="border-b border-gray-100">
                                         <tr>
-                                            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Date</th>
-                                            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">ID Commande</th>
-                                            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Montant</th>
+                                            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{t('salesTableDate')}</th>
+                                            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{t('salesTableOrderId')}</th>
+                                            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{t('salesTableAmount')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
@@ -175,7 +177,7 @@ export default function CustomerProfilePage() {
                                     </tbody>
                                 </table>
                                 <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
-                                    {customer.sales.length} vente{customer.sales.length > 1 ? 's' : ''}
+                                    {customer.sales.length} {customer.sales.length > 1 ? t('salesPlural') : t('sale')}
                                 </div>
                             </div>
                         </div>
@@ -184,7 +186,7 @@ export default function CustomerProfilePage() {
                     {/* Lead Events */}
                     {customer.leadEvents.length > 0 && (
                         <div>
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Leads</h2>
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('leads')}</h2>
                             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                                 <div className="divide-y divide-gray-50">
                                     {customer.leadEvents.map((lead) => (
@@ -203,11 +205,11 @@ export default function CustomerProfilePage() {
 
                     {/* Activity Timeline */}
                     <div>
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('activity')}</h2>
                         {customer.activity.length === 0 ? (
                             <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
                                 <Globe className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                                <p className="text-gray-500 text-sm">No activity recorded</p>
+                                <p className="text-gray-500 text-sm">{t('noActivityRecorded')}</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
@@ -219,7 +221,7 @@ export default function CustomerProfilePage() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getActivityBadgeStyles(item.type)}`}>
-                                                    {item.type === 'click' ? 'Click' : item.type === 'lead' ? 'Lead' : 'Vente'}
+                                                    {item.type === 'click' ? t('activityTypeClick') : item.type === 'lead' ? t('activityTypeLead') : t('activityTypeSale')}
                                                 </span>
                                                 <span className="text-sm font-medium text-gray-900">{item.description}</span>
                                                 {item.amount && (
@@ -248,7 +250,7 @@ export default function CustomerProfilePage() {
 
                 {/* Right Column - Details */}
                 <div className="w-64 shrink-0">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Details</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('details')}</h3>
                     <div className="space-y-4">
                         {/* Location */}
                         {(customer.city || customer.country) && (
@@ -288,19 +290,19 @@ export default function CustomerProfilePage() {
 
                         {/* Customer Since */}
                         <div>
-                            <p className="text-xs font-medium text-gray-500 mb-1">Client depuis</p>
+                            <p className="text-xs font-medium text-gray-500 mb-1">{t('customerSince')}</p>
                             <p className="text-sm text-gray-900">{formatDate(customer.createdAt)}</p>
                         </div>
 
                         {/* Lifetime Value */}
                         <div>
-                            <p className="text-xs font-medium text-gray-500 mb-1">Valeur totale</p>
+                            <p className="text-xs font-medium text-gray-500 mb-1">{t('lifetimeValue')}</p>
                             <p className="text-sm font-semibold text-gray-900">{formatCurrency(customer.lifetimeValue)}</p>
                         </div>
 
                         {/* External ID */}
                         <div>
-                            <p className="text-xs font-medium text-gray-500 mb-1">External ID</p>
+                            <p className="text-xs font-medium text-gray-500 mb-1">{t('externalId')}</p>
                             <div className="flex items-center gap-2">
                                 <code className="text-sm text-gray-900 font-mono truncate max-w-[150px]">{customer.externalId}</code>
                                 <button
@@ -315,7 +317,7 @@ export default function CustomerProfilePage() {
                         {/* Referrer Link */}
                         {customer.referrerLinkSlug && (
                             <div>
-                                <p className="text-xs font-medium text-gray-500 mb-1">Lien d'affiliation</p>
+                                <p className="text-xs font-medium text-gray-500 mb-1">{t('affiliateLink')}</p>
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm text-gray-900">/{customer.referrerLinkSlug}</span>
                                     <a
@@ -335,7 +337,7 @@ export default function CustomerProfilePage() {
                             <>
                                 <hr className="border-gray-100" />
                                 <div>
-                                    <p className="text-xs font-medium text-gray-500 mb-2">Referrer</p>
+                                    <p className="text-xs font-medium text-gray-500 mb-2">{t('referrer')}</p>
                                     <div className="flex items-center gap-2">
                                         <Avatar name={customer.referrerName} avatar={customer.referrerAvatar} size="sm" />
                                         <div>

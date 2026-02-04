@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ArrowUpRight, Loader2, Gift, Zap, X, AlertTriangle, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -39,9 +39,19 @@ export default function SellerWalletPage() {
     })
     const [showStripeModal, setShowStripeModal] = useState(false)
     const [connectingStripe, setConnectingStripe] = useState(false)
+    // Force re-render for countdown updates
+    const [, setTick] = useState(0)
 
     useEffect(() => {
         loadWallet()
+    }, [])
+
+    // Update countdown every hour for real-time display
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTick(t => t + 1)
+        }, 3600000) // Update every hour
+        return () => clearInterval(interval)
     }, [])
 
     async function loadWallet() {
@@ -82,14 +92,28 @@ export default function SellerWalletPage() {
         return labels[status]
     }
 
-    const getDaysLeft = (commission: Commission) => {
+    const getTimeUntilAvailable = useCallback((commission: Commission): { days: number; hours: number; text: string } | null => {
         if (commission.status !== 'PENDING') return null
         const holdDays = commission.hold_days || 30
         const createdAt = new Date(commission.created_at)
         const maturesAt = new Date(createdAt.getTime() + holdDays * 24 * 60 * 60 * 1000)
         const now = new Date()
-        return Math.max(0, Math.ceil((maturesAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
-    }
+        const diffMs = maturesAt.getTime() - now.getTime()
+
+        if (diffMs <= 0) return { days: 0, hours: 0, text: 'Ready soon' }
+
+        const days = Math.floor(diffMs / (24 * 60 * 60 * 1000))
+        const hours = Math.floor((diffMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+
+        // Format the display text
+        if (days === 0) {
+            return { days, hours, text: hours <= 1 ? 'Less than 1h' : `${hours}h remaining` }
+        } else if (days === 1) {
+            return { days, hours, text: '1 day remaining' }
+        } else {
+            return { days, hours, text: `${days} days remaining` }
+        }
+    }, [])
 
     const totalEarned = wallet.pending + (wallet.balance || 0) + (wallet.due || 0) + wallet.paid_total
     const isStripeMode = wallet.method === 'STRIPE_CONNECT'
@@ -254,7 +278,7 @@ export default function SellerWalletPage() {
                     <div className="space-y-1">
                         <AnimatePresence>
                             {wallet.commissions.slice(0, 10).map((commission, index) => {
-                                const daysLeft = getDaysLeft(commission)
+                                const timeInfo = getTimeUntilAvailable(commission)
                                 return (
                                     <motion.div
                                         key={commission.id}
@@ -272,9 +296,9 @@ export default function SellerWalletPage() {
                                             <div>
                                                 <p className="text-sm text-neutral-600">
                                                     {getStatusLabel(commission.status)}
-                                                    {daysLeft !== null && daysLeft > 0 && (
-                                                        <span className="text-neutral-400 ml-2">
-                                                            {daysLeft}d
+                                                    {timeInfo && (
+                                                        <span className="text-neutral-400 ml-2 text-xs">
+                                                            {timeInfo.text}
                                                         </span>
                                                     )}
                                                 </p>

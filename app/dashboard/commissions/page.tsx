@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { Loader2, Search, Info, Download, Filter, ChevronRight, ArrowRight, CreditCard } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import {
     getWorkspaceCommissions,
     type CommissionItem
@@ -29,15 +30,16 @@ function formatDate(date: Date): string {
 // =============================================
 
 function StatusBadge({ status }: { status: CommissionItem['status'] }) {
+    const t = useTranslations('dashboard.commissions')
     const styles = {
         PENDING: 'bg-orange-50 text-orange-700',
         PROCEED: 'bg-blue-50 text-blue-700',
         COMPLETE: 'bg-green-50 text-green-700',
     }
     const labels = {
-        PENDING: 'En attente',
-        PROCEED: 'À payer',
-        COMPLETE: 'Paid',
+        PENDING: t('pending'),
+        PROCEED: t('proceed'),
+        COMPLETE: t('completed'),
     }
     return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}>
@@ -47,6 +49,7 @@ function StatusBadge({ status }: { status: CommissionItem['status'] }) {
 }
 
 function TypeBadge({ type }: { type: 'SALE' | 'LEAD' | 'RECURRING' | null }) {
+    const t = useTranslations('dashboard.commissions.type')
     if (!type) return null
     const styles: Record<string, string> = {
         SALE: 'bg-emerald-50 text-emerald-700',
@@ -54,9 +57,9 @@ function TypeBadge({ type }: { type: 'SALE' | 'LEAD' | 'RECURRING' | null }) {
         RECURRING: 'bg-blue-50 text-blue-700',
     }
     const labels: Record<string, string> = {
-        SALE: 'Vente',
-        LEAD: 'Lead',
-        RECURRING: 'Recurring',
+        SALE: t('sale'),
+        LEAD: t('lead'),
+        RECURRING: t('recurring'),
     }
     return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[type] || 'bg-gray-50 text-gray-700'}`}>
@@ -70,6 +73,8 @@ function TypeBadge({ type }: { type: 'SALE' | 'LEAD' | 'RECURRING' | null }) {
 // =============================================
 
 export default function CommissionsPage() {
+    const t = useTranslations('dashboard.commissions')
+    const tCommon = useTranslations('common')
     const [commissions, setCommissions] = useState<CommissionItem[]>([])
     const [stats, setStats] = useState({ total: 0, pending: 0, proceed: 0, complete: 0, platformFees: 0 })
     const [pagination, setPagination] = useState({ total: 0, page: 1, perPage: 50, totalPages: 1 })
@@ -144,13 +149,13 @@ export default function CommissionsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-semibold text-gray-900">Commissions</h1>
+                    <h1 className="text-xl font-semibold text-gray-900">{t('title')}</h1>
                     <Info className="w-4 h-4 text-gray-400" />
                 </div>
                 <div className="flex items-center gap-3">
                     <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50">
                         <Download className="w-4 h-4" />
-                        Export
+                        {t('export')}
                     </button>
                     {proceedCount > 0 && (
                         <Link
@@ -158,7 +163,7 @@ export default function CommissionsPage() {
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800"
                         >
                             <CreditCard className="w-4 h-4" />
-                            Payer ({proceedCount})
+                            {t('payAction', { count: proceedCount })}
                             <ArrowRight className="w-4 h-4" />
                         </Link>
                     )}
@@ -168,12 +173,12 @@ export default function CommissionsPage() {
             {/* Stats Bar */}
             <div className="flex gap-6 p-5 bg-white border border-gray-200 rounded-xl">
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Total commissions</p>
+                    <p className="text-sm text-gray-500">{t('totalCommissions')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{formatCurrency(stats.total)}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">En attente</p>
+                    <p className="text-sm text-gray-500">{t('pending')}</p>
                     <p className="text-2xl font-semibold text-orange-600">{formatCurrency(stats.pending)}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
@@ -181,7 +186,7 @@ export default function CommissionsPage() {
                     href="/dashboard/payouts"
                     className="flex-1 group cursor-pointer hover:bg-gray-50 p-3 -m-3 rounded-lg transition-colors"
                 >
-                    <p className="text-sm text-gray-500">À payer</p>
+                    <p className="text-sm text-gray-500">{t('proceed')}</p>
                     <div className="flex items-center gap-2">
                         <p className="text-2xl font-semibold text-blue-600">{formatCurrency(stats.proceed)}</p>
                         <ArrowRight className="w-4 h-4 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -189,12 +194,12 @@ export default function CommissionsPage() {
                 </Link>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Paids</p>
+                    <p className="text-sm text-gray-500">{t('paidPlural')}</p>
                     <p className="text-2xl font-semibold text-green-600">{formatCurrency(stats.complete)}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Frais plateforme</p>
+                    <p className="text-sm text-gray-500">{t('details.platformFee')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{formatCurrency(stats.platformFees)}</p>
                 </div>
             </div>
@@ -205,7 +210,7 @@ export default function CommissionsPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Rechercher par seller ou mission..."
+                        placeholder={t('searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
@@ -221,10 +226,10 @@ export default function CommissionsPage() {
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
-                            {status === 'all' && 'Tous'}
-                            {status === 'PENDING' && 'En attente'}
-                            {status === 'PROCEED' && 'À payer'}
-                            {status === 'COMPLETE' && 'Paids'}
+                            {status === 'all' && t('all')}
+                            {status === 'PENDING' && t('pending')}
+                            {status === 'PROCEED' && t('proceed')}
+                            {status === 'COMPLETE' && t('paidPlural')}
                         </button>
                     ))}
                 </div>
@@ -233,12 +238,12 @@ export default function CommissionsPage() {
             {/* Table */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="grid grid-cols-7 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="col-span-2">Seller</div>
-                    <div>Mission</div>
-                    <div>Montant HT</div>
-                    <div>Commission</div>
-                    <div>Status</div>
-                    <div className="text-right">Date</div>
+                    <div className="col-span-2">{t('details.seller')}</div>
+                    <div>{t('details.mission')}</div>
+                    <div>{t('netAmountHT')}</div>
+                    <div>{t('details.amount')}</div>
+                    <div>{t('details.status')}</div>
+                    <div className="text-right">{tCommon('date')}</div>
                 </div>
 
                 {filteredCommissions.length === 0 ? (
@@ -246,8 +251,8 @@ export default function CommissionsPage() {
                         <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Filter className="w-6 h-6 text-gray-400" />
                         </div>
-                        <p className="text-gray-900 font-medium">Aucune commission</p>
-                        <p className="text-gray-500 text-sm mt-1">Commissions will appear here when your partners generate sales</p>
+                        <p className="text-gray-900 font-medium">{t('noCommissions')}</p>
+                        <p className="text-gray-500 text-sm mt-1">{t('willAppear')}</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-50">
@@ -305,7 +310,7 @@ export default function CommissionsPage() {
                 {pagination.totalPages > 1 && (
                     <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
                         <span className="text-sm text-gray-500">
-                            Page {pagination.page} sur {pagination.totalPages} ({pagination.total} commissions)
+                            {t('page', { current: pagination.page, total: pagination.totalPages, count: pagination.total })}
                         </span>
                         <div className="flex items-center gap-2">
                             <button
@@ -313,14 +318,14 @@ export default function CommissionsPage() {
                                 disabled={currentPage === 1}
                                 className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Previous
+                                {t('previous')}
                             </button>
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
                                 disabled={currentPage === pagination.totalPages}
                                 className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Next
+                                {t('next')}
                             </button>
                         </div>
                     </div>

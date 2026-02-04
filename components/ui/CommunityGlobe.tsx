@@ -5,6 +5,7 @@ import createGlobe from 'cobe';
 import { motion } from 'framer-motion';
 import useSWR from 'swr';
 import { Link2, MousePointer2, TrendingUp } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 const CITY_COORDINATES = [
     { name: 'Paris', lat: 48.8566, lng: 2.3522 },
@@ -19,6 +20,7 @@ const CITY_COORDINATES = [
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function CommunityGlobe() {
+    const t = useTranslations('landing.globe');
     const { data: stats } = useSWR('/api/stats/platform', fetcher, {
         refreshInterval: 60000,
         revalidateOnFocus: false
@@ -34,31 +36,31 @@ export default function CommunityGlobe() {
                 {/* 1. Centered Header */}
                 <div className="text-center max-w-3xl mb-16 space-y-4">
                     <h2 className="text-4xl md:text-5xl font-medium tracking-tight text-slate-900">
-                        Evolving with you
+                        {t('title')}
                     </h2>
                     <p className="text-lg text-slate-500 leading-relaxed">
-                        We are committed to growing alongside startups and sellers. Our platform is built to <span className="text-violet-600 font-semibold">serve your development</span>, ensuring we evolve together via a transparent, boundless ecosystem.
+                        {t('subtitle')} <span className="text-violet-600 font-semibold">{t('subtitleHighlight')}</span>{t('subtitleEnd')}
                     </p>
                 </div>
 
                 {/* 2. Floating Stats Grid (Glassmorphism) */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl relative z-30 mb-[-50px]">
                     <StatCard
-                        label="LINKS CREATED"
+                        label={t('linksCreated')}
                         value={stats ? formatNumber(stats.links) : "124 064 982"}
                         icon={Link2}
                         delay={0.1}
                     />
                     {/* Center Card Pops Out More */}
                     <StatCard
-                        label="REVENUE TRACKED"
+                        label={t('revenueTracked')}
                         value={stats ? formatCurrency(stats.revenue) : "$466,536,413.64"}
                         icon={TrendingUp}
                         delay={0.2}
                         featured
                     />
                     <StatCard
-                        label="CLICKS TRACKED"
+                        label={t('clicksTracked')}
                         value={stats ? formatNumber(stats.clicks) : "1 814 203 631"}
                         icon={MousePointer2}
                         delay={0.3}

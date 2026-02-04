@@ -1,330 +1,285 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { User, Key, Bell, Shield, Save, Check, Copy, Eye, EyeOff, RefreshCw, Mail, Percent, Tag } from 'lucide-react'
+import { User, Mail, Globe, ChevronDown, Check, Lock, LogOut, Eye, EyeOff } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { setLocale } from '@/app/actions/locale'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
+
+const LANGUAGES = [
+    { code: 'en', name: 'English', flag: '🇬🇧' },
+    { code: 'fr', name: 'Français', flag: '🇫🇷' },
+    { code: 'es', name: 'Español', flag: '🇪🇸' },
+] as const
 
 export default function SettingsPage() {
-    const [activeTab, setActiveTab] = useState<'profile' | 'api' | 'notifications' | 'discount'>('profile')
-    const [saving, setSaving] = useState(false)
-    const [saved, setSaved] = useState(false)
+    const t = useTranslations('dashboard.settings')
+    const tCommon = useTranslations('common')
+    const router = useRouter()
 
     // Profile Data
-    const [name, setName] = useState('')
     const [email, setEmail] = useState('')
-    const [publicKey, setPublicKey] = useState<string | null>(null)
-    const [secretKey, setSecretKey] = useState<string | null>(null)
-    const [showSecret, setShowSecret] = useState(false)
 
-    // Discount Data
-    const [discountEnabled, setDiscountEnabled] = useState(false)
-    const [discountAmount, setDiscountAmount] = useState<number>(20)
-    const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE')
-    const [couponId, setCouponId] = useState('')
-    const [couponTestId, setCouponTestId] = useState('')
+    // Language
+    const [currentLocale, setCurrentLocale] = useState<'en' | 'fr' | 'es'>('en')
+    const [languageOpen, setLanguageOpen] = useState(false)
+
+    // Password
+    const [showPasswordForm, setShowPasswordForm] = useState(false)
+    const [currentPassword, setCurrentPassword] = useState('')
+    const [newPassword, setNewPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
+    const [showNewPassword, setShowNewPassword] = useState(false)
+    const [passwordError, setPasswordError] = useState('')
+    const [passwordSuccess, setPasswordSuccess] = useState(false)
+    const [savingPassword, setSavingPassword] = useState(false)
+
+    // Logout
+    const [loggingOut, setLoggingOut] = useState(false)
 
     useEffect(() => {
         const load = async () => {
-            // Load auth and keys
-            const [auth, keys] = await Promise.all([
-                fetch('/api/auth/me').then(r => r.json()),
-                fetch('/api/auth/keys').then(r => r.json())
-            ])
+            const auth = await fetch('/api/auth/me').then(r => r.json())
             if (auth.user) {
-                setName(auth.user.name || '')
                 setEmail(auth.user.email || '')
             }
-            if (keys.success) {
-                setPublicKey(keys.public_key)
-                setSecretKey(keys.secret_key)
-            }
 
-            // Load discount settings
-            try {
-                const discountRes = await fetch('/api/settings/discount')
-                if (discountRes.ok) {
-                    const discountData = await discountRes.json()
-                    if (discountData.discount) {
-                        setDiscountEnabled(discountData.discount.active)
-                        setDiscountAmount(discountData.discount.amount)
-                        setDiscountType(discountData.discount.type)
-                        setCouponId(discountData.discount.coupon_id || '')
-                        setCouponTestId(discountData.discount.coupon_test_id || '')
-                    }
-                }
-            } catch (e) {
-                // Discount not set yet
+            // Load current locale from cookie
+            const localeCookie = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('NEXT_LOCALE='))
+                ?.split('=')[1] as 'en' | 'fr' | 'es' | undefined
+            if (localeCookie && ['en', 'fr', 'es'].includes(localeCookie)) {
+                setCurrentLocale(localeCookie)
             }
         }
         load()
     }, [])
 
-    async function saveProfile() {
-        setSaving(true)
-        await new Promise(r => setTimeout(r, 600))
-        setSaving(false)
-        setSaved(true)
-        setTimeout(() => setSaved(false), 2000)
+    async function handleLanguageChange(locale: 'en' | 'fr' | 'es') {
+        setCurrentLocale(locale)
+        setLanguageOpen(false)
+        await setLocale(locale)
+        router.refresh()
     }
 
-    async function saveDiscount() {
-        setSaving(true)
+    async function handleChangePassword() {
+        setPasswordError('')
+        setPasswordSuccess(false)
+
+        if (newPassword.length < 6) {
+            setPasswordError(t('passwordTooShort'))
+            return
+        }
+
+        if (newPassword !== confirmPassword) {
+            setPasswordError(t('passwordMismatch'))
+            return
+        }
+
+        setSavingPassword(true)
         try {
-            const res = await fetch('/api/settings/discount', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    amount: discountAmount,
-                    type: discountType,
-                    coupon_id: couponId || null,
-                    coupon_test_id: couponTestId || null,
-                    active: discountEnabled
-                })
+            const supabase = createClient()
+            const { error } = await supabase.auth.updateUser({
+                password: newPassword
             })
-            if (res.ok) {
-                setSaved(true)
-                setTimeout(() => setSaved(false), 2000)
+
+            if (error) {
+                setPasswordError(error.message)
+            } else {
+                setPasswordSuccess(true)
+                setCurrentPassword('')
+                setNewPassword('')
+                setConfirmPassword('')
+                setShowPasswordForm(false)
+                setTimeout(() => setPasswordSuccess(false), 3000)
             }
         } catch (e) {
-            console.error('Failed to save discount:', e)
+            setPasswordError(t('passwordError'))
         }
-        setSaving(false)
+        setSavingPassword(false)
     }
 
-    const tabs = [
-        { id: 'profile', label: 'General' },
-        { id: 'api', label: 'API Keys' },
-        { id: 'discount', label: 'Discount' },
-        { id: 'notifications', label: 'Notifications' },
-    ] as const
+    async function handleLogout() {
+        setLoggingOut(true)
+        try {
+            const supabase = createClient()
+            await supabase.auth.signOut()
+            router.push('/login')
+        } catch (e) {
+            console.error('Logout error:', e)
+            setLoggingOut(false)
+        }
+    }
 
     return (
-        <div className="w-full max-w-4xl mx-auto px-6 py-8">
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight mb-8">Settings</h1>
+        <div className="w-full max-w-2xl mx-auto px-6 py-8">
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight mb-8">{t('title')}</h1>
 
-            {/* Tabs */}
-            <div className="flex border-b border-gray-200 mb-8 overflow-x-auto">
-                {tabs.map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id
-                            ? 'border-black text-black'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            }`}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
+            <div className="space-y-8">
+                {/* Profile Section */}
+                <section className="bg-white border border-gray-200 rounded-xl p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <User className="w-5 h-5 text-gray-500" />
+                        {t('profile')}
+                    </h2>
 
-            {/* Content */}
-            <div className="max-w-xl">
-                {activeTab === 'profile' && (
-                    <div className="space-y-6 animate-in fade-in duration-300">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('emailAddress')}</label>
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black outline-none text-sm transition-all"
+                                type="email"
+                                value={email}
+                                disabled
+                                className="w-full pl-9 pr-3 py-2 border border-gray-200 bg-gray-50 text-gray-500 rounded-lg text-sm cursor-not-allowed"
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                </section>
+
+                {/* Language Section */}
+                <section className="bg-white border border-gray-200 rounded-xl p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <Globe className="w-5 h-5 text-gray-500" />
+                        {t('language')}
+                    </h2>
+
+                    <div className="relative">
+                        <button
+                            onClick={() => setLanguageOpen(!languageOpen)}
+                            className="w-full flex items-center justify-between px-4 py-3 border border-gray-300 rounded-lg bg-white text-sm hover:border-gray-400 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className="text-xl">{LANGUAGES.find(l => l.code === currentLocale)?.flag}</span>
+                                <span className="font-medium">{LANGUAGES.find(l => l.code === currentLocale)?.name}</span>
+                            </div>
+                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${languageOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {languageOpen && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden">
+                                {LANGUAGES.map((lang) => (
+                                    <button
+                                        key={lang.code}
+                                        onClick={() => handleLanguageChange(lang.code)}
+                                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 transition-colors ${
+                                            currentLocale === lang.code ? 'bg-purple-50 text-purple-700' : 'text-gray-700'
+                                        }`}
+                                    >
+                                        <span className="text-xl">{lang.flag}</span>
+                                        <span className="font-medium">{lang.name}</span>
+                                        {currentLocale === lang.code && (
+                                            <Check className="w-4 h-4 ml-auto text-purple-600" />
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">{t('languageHint')}</p>
+                </section>
+
+                {/* Password Section */}
+                <section className="bg-white border border-gray-200 rounded-xl p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <Lock className="w-5 h-5 text-gray-500" />
+                        {t('password')}
+                    </h2>
+
+                    {passwordSuccess && (
+                        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
+                            <Check className="w-4 h-4" />
+                            {t('passwordChanged')}
+                        </div>
+                    )}
+
+                    {!showPasswordForm ? (
+                        <button
+                            onClick={() => setShowPasswordForm(true)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                            {t('changePassword')}
+                        </button>
+                    ) : (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('newPassword')}</label>
+                                <div className="relative">
+                                    <input
+                                        type={showNewPassword ? 'text' : 'password'}
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black outline-none text-sm"
+                                        placeholder="••••••••"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowNewPassword(!showNewPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    >
+                                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">{t('minChars', { count: 6 })}</p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('confirmPassword')}</label>
                                 <input
-                                    type="email"
-                                    value={email}
-                                    disabled
-                                    className="w-full pl-9 pr-3 py-2 border border-gray-200 bg-gray-50 text-gray-500 rounded-lg text-sm cursor-not-allowed"
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black outline-none text-sm"
+                                    placeholder="••••••••"
                                 />
                             </div>
-                        </div>
-                        <div className="pt-4">
-                            <button
-                                onClick={saveProfile}
-                                disabled={saving}
-                                className="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-70 transition-all flex items-center gap-2"
-                            >
-                                {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                                {saved ? 'Saved' : saving ? 'Saving...' : 'Save Changes'}
-                            </button>
-                        </div>
-                    </div>
-                )}
 
-                {activeTab === 'api' && (
-                    <div className="space-y-6 animate-in fade-in duration-300">
-                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex gap-3">
-                            <Shield className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                            <div>
-                                <p className="text-sm font-medium text-gray-900">Security Note</p>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Your secret key grants full access to your account. Never share it client-side.
-                                </p>
-                            </div>
-                        </div>
+                            {passwordError && (
+                                <p className="text-sm text-red-600">{passwordError}</p>
+                            )}
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Public Key</label>
-                            <div className="flex gap-2">
-                                <code className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg font-mono text-sm text-gray-600 truncate">
-                                    {publicKey || 'Loading...'}
-                                </code>
+                            <div className="flex gap-3 pt-2">
                                 <button
-                                    className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500"
-                                    onClick={() => navigator.clipboard.writeText(publicKey || '')}
+                                    onClick={handleChangePassword}
+                                    disabled={savingPassword}
+                                    className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-70 transition-all"
                                 >
-                                    <Copy className="w-4 h-4" />
+                                    {savingPassword ? tCommon('loading') : t('updatePassword')}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowPasswordForm(false)
+                                        setNewPassword('')
+                                        setConfirmPassword('')
+                                        setPasswordError('')
+                                    }}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    {tCommon('cancel')}
                                 </button>
                             </div>
                         </div>
+                    )}
+                </section>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Secret Key</label>
-                            <div className="flex gap-2">
-                                <code className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg font-mono text-sm text-gray-800 truncate">
-                                    {showSecret ? secretKey : 'sk_live_••••••••••••••••••••••••••••'}
-                                </code>
-                                <button
-                                    onClick={() => setShowSecret(!showSecret)}
-                                    className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500"
-                                >
-                                    {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                </button>
-                                <button
-                                    className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500"
-                                    onClick={() => navigator.clipboard.writeText(secretKey || '')}
-                                >
-                                    <Copy className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'discount' && (
-                    <div className="space-y-6 animate-in fade-in duration-300">
-                        <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg flex gap-3">
-                            <Percent className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                            <div>
-                                <p className="text-sm font-medium text-gray-900">Partner Discount</p>
-                                <p className="text-sm text-gray-600 mt-1">
-                                    Configure a discount for users referred by your partners. This creates a dual-sided incentive.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                            <div>
-                                <p className="text-sm font-medium text-gray-900">Enable Discount</p>
-                                <p className="text-xs text-gray-500 mt-0.5">Show discount banner to referred users</p>
-                            </div>
-                            <button
-                                onClick={() => setDiscountEnabled(!discountEnabled)}
-                                className={`h-6 w-11 rounded-full relative transition-colors ${discountEnabled ? 'bg-black' : 'bg-gray-200'}`}
-                            >
-                                <div className={`absolute top-1 h-4 w-4 bg-white rounded-full shadow-sm transition-all ${discountEnabled ? 'right-1' : 'left-1'}`} />
-                            </button>
-                        </div>
-
-                        {discountEnabled && (
-                            <>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount</label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="100"
-                                            value={discountAmount}
-                                            onChange={(e) => setDiscountAmount(parseInt(e.target.value) || 0)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black outline-none text-sm"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Type</label>
-                                        <select
-                                            value={discountType}
-                                            onChange={(e) => setDiscountType(e.target.value as 'PERCENTAGE' | 'FIXED')}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black outline-none text-sm"
-                                        >
-                                            <option value="PERCENTAGE">Percentage (%)</option>
-                                            <option value="FIXED">Fixed Amount (€)</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Stripe Coupon ID (Production)
-                                    </label>
-                                    <div className="relative">
-                                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="e.g., PARTNER20"
-                                            value={couponId}
-                                            onChange={(e) => setCouponId(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black outline-none text-sm"
-                                        />
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-1">Create in Stripe Dashboard → Products → Coupons</p>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Stripe Coupon ID (Test Mode)
-                                    </label>
-                                    <div className="relative">
-                                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="e.g., PARTNER20_TEST"
-                                            value={couponTestId}
-                                            onChange={(e) => setCouponTestId(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black outline-none text-sm"
-                                        />
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
-                        <div className="pt-4">
-                            <button
-                                onClick={saveDiscount}
-                                disabled={saving}
-                                className="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-70 transition-all flex items-center gap-2"
-                            >
-                                {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                                {saved ? 'Saved' : saving ? 'Saving...' : 'Save Discount'}
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'notifications' && (
-                    <div className="space-y-4 animate-in fade-in duration-300">
-                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-gray-100 rounded-full">
-                                    <Bell className="w-4 h-4 text-gray-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-900">Weekly Digest</p>
-                                    <p className="text-xs text-gray-500">Receive a weekly summary of your stats.</p>
-                                </div>
-                            </div>
-                            <div className="h-6 w-11 bg-black rounded-full relative cursor-pointer">
-                                <div className="absolute right-1 top-1 h-4 w-4 bg-white rounded-full shadow-sm" />
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* Logout Section */}
+                <section className="bg-white border border-red-100 rounded-xl p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                        <LogOut className="w-5 h-5 text-gray-500" />
+                        {t('logout')}
+                    </h2>
+                    <p className="text-sm text-gray-500 mb-4">{t('logoutDesc')}</p>
+                    <button
+                        onClick={handleLogout}
+                        disabled={loggingOut}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-70 transition-all flex items-center gap-2"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        {loggingOut ? tCommon('loading') : t('logoutButton')}
+                    </button>
+                </section>
             </div>
         </div>
     )
 }
-

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Search, ChevronRight, Users, Info } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { getMySellers, type MySeller } from '@/app/actions/sellers'
 
 function Avatar({ initials, imageUrl }: { initials: string; imageUrl?: string }) {
@@ -23,19 +24,15 @@ function Avatar({ initials, imageUrl }: { initials: string; imageUrl?: string })
 }
 
 function StatusBadge({ status }: { status: MySeller['status'] }) {
+    const t = useTranslations('dashboard.sellers.applications.statusLabels')
     const styles = {
         active: 'bg-green-50 text-green-700',
         pending: 'bg-orange-50 text-orange-700',
         inactive: 'bg-gray-100 text-gray-500'
     }
-    const labels = {
-        active: 'Actif',
-        pending: 'En attente',
-        inactive: 'Inactif'
-    }
     return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}>
-            {labels[status]}
+            {t(status)}
         </span>
     )
 }
@@ -50,6 +47,7 @@ function formatNumber(num: number): string {
 }
 
 export default function ApplicationsPage() {
+    const t = useTranslations('dashboard.sellers.applications')
     const router = useRouter()
     const [loading, setLoading] = useState(true)
     const [sellers, setSellers] = useState<MySeller[]>([])
@@ -113,7 +111,7 @@ export default function ApplicationsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-semibold text-gray-900">Sellers</h1>
+                    <h1 className="text-xl font-semibold text-gray-900">{t('title')}</h1>
                     <Info className="w-4 h-4 text-gray-400" />
                 </div>
             </div>
@@ -121,22 +119,22 @@ export default function ApplicationsPage() {
             {/* Stats */}
             <div className="flex gap-6 p-5 bg-white border border-gray-200 rounded-xl">
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Total sellers</p>
+                    <p className="text-sm text-gray-500">{t('totalSellers')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Actifs</p>
+                    <p className="text-sm text-gray-500">{t('active')}</p>
                     <p className="text-2xl font-semibold text-green-600">{stats.active}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Total clics</p>
+                    <p className="text-sm text-gray-500">{t('totalClicks')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{formatNumber(stats.totalClicks)}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Commissions paid</p>
+                    <p className="text-sm text-gray-500">{t('commissionsPaid')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{formatCurrency(stats.totalCommissions)}</p>
                 </div>
             </div>
@@ -147,7 +145,7 @@ export default function ApplicationsPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Rechercher un seller..."
+                        placeholder={t('searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
@@ -163,10 +161,10 @@ export default function ApplicationsPage() {
                                 : 'bg-white text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
-                            {status === 'all' && 'Tous'}
-                            {status === 'active' && 'Actifs'}
-                            {status === 'pending' && 'En attente'}
-                            {status === 'inactive' && 'Inactifs'}
+                            {status === 'all' && t('all')}
+                            {status === 'active' && t('actives')}
+                            {status === 'pending' && t('pending')}
+                            {status === 'inactive' && t('inactives')}
                         </button>
                     ))}
                 </div>
@@ -175,20 +173,20 @@ export default function ApplicationsPage() {
             {/* Table */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="grid grid-cols-7 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="col-span-2">Seller</div>
-                    <div>Status</div>
-                    <div>Missions</div>
-                    <div>Clics</div>
-                    <div className="text-right">Commissions</div>
+                    <div className="col-span-2">{t('seller')}</div>
+                    <div>{t('status')}</div>
+                    <div>{t('missions')}</div>
+                    <div>{t('clicks')}</div>
+                    <div className="text-right">{t('commissions')}</div>
                     <div></div>
                 </div>
 
                 {filteredSellers.length === 0 ? (
                     <div className="px-6 py-12 text-center">
                         <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-900 font-medium">No seller found</p>
+                        <p className="text-gray-900 font-medium">{t('noSellerFound')}</p>
                         <p className="text-gray-500 text-sm mt-1">
-                            Sellers will appear here when they join your missions
+                            {t('sellersWillAppear')}
                         </p>
                     </div>
                 ) : (
@@ -221,7 +219,7 @@ export default function ApplicationsPage() {
                                     </span>
                                     {seller.totalSales > 0 && (
                                         <span className="block text-xs text-gray-400">
-                                            {seller.totalSales} vente{seller.totalSales > 1 ? 's' : ''}
+                                            {seller.totalSales} {seller.totalSales > 1 ? t('sales') : t('sale')}
                                         </span>
                                     )}
                                 </div>

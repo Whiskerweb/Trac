@@ -5,6 +5,7 @@ import { Info, Loader2, Check, Clock, AlertTriangle, User, ChevronRight } from '
 import { getPayoutHistory, getUnpaidCommissions, createPaymentSession, checkPaymentStatus, PayoutItem, SellerPayoutSummary } from '@/app/actions/payouts'
 import { useSearchParams } from 'next/navigation'
 import { CommissionDetailModal } from '@/components/dashboard/CommissionDetailModal'
+import { useTranslations } from 'next-intl'
 
 // Format currency in EUR
 const formatCurrency = (cents: number) => {
@@ -40,12 +41,19 @@ function SellerPayoutRow({
     seller,
     isSelected,
     onToggleSelection,
-    onClick
+    onClick,
+    translations
 }: {
     seller: SellerPayoutSummary
     isSelected: boolean
     onToggleSelection: () => void
     onClick: () => void
+    translations: {
+        sale: string
+        sales: string
+        minAmount: string
+        fees: string
+    }
 }) {
     return (
         <div
@@ -91,21 +99,21 @@ function SellerPayoutRow({
             {/* Commission Count */}
             <div className="text-center w-20">
                 <p className="text-sm font-medium text-gray-900">{seller.commissionCount}</p>
-                <p className="text-xs text-gray-500">{seller.commissionCount === 1 ? 'vente' : 'ventes'}</p>
+                <p className="text-xs text-gray-500">{seller.commissionCount === 1 ? translations.sale : translations.sales}</p>
             </div>
 
             {/* Commission Amount */}
             <div className="text-right w-28">
                 <p className="text-sm font-semibold text-gray-900">{formatCurrency(seller.totalCommission)}</p>
                 {!seller.meetsMinimum && (
-                    <p className="text-xs text-amber-600">Min. 10€</p>
+                    <p className="text-xs text-amber-600">{translations.minAmount}</p>
                 )}
             </div>
 
             {/* Platform Fee */}
             <div className="text-right w-24">
                 <p className="text-sm text-gray-500">+{formatCurrency(seller.totalPlatformFee)}</p>
-                <p className="text-xs text-gray-400">frais</p>
+                <p className="text-xs text-gray-400">{translations.fees}</p>
             </div>
 
             {/* Arrow */}
@@ -115,6 +123,7 @@ function SellerPayoutRow({
 }
 
 function PayoutsContent() {
+    const t = useTranslations('dashboard.payouts')
     const [loading, setLoading] = useState(true)
     const [paying, setPaying] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -289,19 +298,27 @@ function PayoutsContent() {
         )
     }
 
+    // Translations object for SellerPayoutRow
+    const rowTranslations = {
+        sale: t('sale'),
+        sales: t('sales'),
+        minAmount: t('minAmount'),
+        fees: t('fees')
+    }
+
     return (
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-semibold text-gray-900">Payouts</h1>
+                    <h1 className="text-xl font-semibold text-gray-900">{t('title')}</h1>
                     <Info className="w-4 h-4 text-gray-400" />
                 </div>
                 <a
                     href="/dashboard/commissions"
                     className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
                 >
-                    Voir l'historique →
+                    {t('viewHistory')}
                 </a>
             </div>
 
@@ -317,37 +334,37 @@ function PayoutsContent() {
                 {/* À payer */}
                 <div className="bg-white border border-gray-200 rounded-xl p-5">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-gray-500">À payer</span>
+                        <span className="text-sm text-gray-500">{t('toPay')}</span>
                         <span className="text-xs text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
-                            {totals.eligibleCount} sellers
+                            {totals.eligibleCount} {t('sellers')}
                         </span>
                     </div>
                     <p className="text-2xl font-semibold text-gray-900">{formatCurrency(totals.sellerTotal)}</p>
-                    <p className="text-xs text-gray-400 mt-1">+{formatCurrency(totals.platformTotal)} frais plateforme</p>
+                    <p className="text-xs text-gray-400 mt-1">+{formatCurrency(totals.platformTotal)} {t('platformFees')}</p>
                 </div>
 
                 {/* En attente < 10€ */}
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-amber-700">En attente (&lt;10€)</span>
+                        <span className="text-sm text-amber-700">{t('pending')}</span>
                         <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
-                            {totals.ineligibleCount} sellers
+                            {totals.ineligibleCount} {t('sellers')}
                         </span>
                     </div>
                     <p className="text-2xl font-semibold text-amber-900">
                         {formatCurrency(ineligibleSellers.reduce((sum, s) => sum + s.totalCommission, 0))}
                     </p>
-                    <p className="text-xs text-amber-600 mt-1">Will be paid once threshold is reached</p>
+                    <p className="text-xs text-amber-600 mt-1">{t('pendingThreshold')}</p>
                 </div>
 
                 {/* Total paid */}
                 <div className="bg-green-50 border border-green-200 rounded-xl p-5">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-green-700">Total paid</span>
+                        <span className="text-sm text-green-700">{t('totalPaid')}</span>
                         <Check className="w-4 h-4 text-green-600" />
                     </div>
                     <p className="text-2xl font-semibold text-green-900">{formatCurrency(paidTotal * 100)}</p>
-                    <p className="text-xs text-green-600 mt-1">Historique complet</p>
+                    <p className="text-xs text-green-600 mt-1">{t('fullHistory')}</p>
                 </div>
             </div>
 
@@ -356,27 +373,27 @@ function PayoutsContent() {
                 {/* List Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-4">
-                        <h2 className="font-medium text-gray-900">Sellers to pay</h2>
+                        <h2 className="font-medium text-gray-900">{t('sellersToPay')}</h2>
                         {eligibleSellers.length > 0 && (
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={selectAllEligible}
                                     className="text-xs text-violet-600 hover:text-violet-800"
                                 >
-                                    Select all
+                                    {t('selectAll')}
                                 </button>
                                 <span className="text-gray-300">|</span>
                                 <button
                                     onClick={deselectAll}
                                     className="text-xs text-gray-500 hover:text-gray-700"
                                 >
-                                    Deselect
+                                    {t('deselect')}
                                 </button>
                             </div>
                         )}
                     </div>
                     <div className="text-sm text-gray-500">
-                        {selectedSellerIds.size} of {eligibleSellers.length} selected
+                        {selectedSellerIds.size} {t('ofSelected', { total: eligibleSellers.length })}
                     </div>
                 </div>
 
@@ -384,8 +401,8 @@ function PayoutsContent() {
                 {eligibleSellers.length === 0 && ineligibleSellers.length === 0 ? (
                     <div className="px-6 py-12 text-center">
                         <Check className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900">Aucun paiement en attente</h3>
-                        <p className="text-gray-500 mt-1">Seller commissions will appear here.</p>
+                        <h3 className="text-lg font-medium text-gray-900">{t('noPendingPayments')}</h3>
+                        <p className="text-gray-500 mt-1">{t('commissionsWillAppear')}</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-50">
@@ -397,6 +414,7 @@ function PayoutsContent() {
                                 isSelected={selectedSellerIds.has(seller.sellerId)}
                                 onToggleSelection={() => toggleSellerSelection(seller.sellerId)}
                                 onClick={() => openModal(seller)}
+                                translations={rowTranslations}
                             />
                         ))}
 
@@ -405,7 +423,7 @@ function PayoutsContent() {
                             <div className="px-6 py-3 bg-amber-50 border-y border-amber-200">
                                 <div className="flex items-center gap-2 text-sm text-amber-700">
                                     <AlertTriangle className="w-4 h-4" />
-                                    <span className="font-medium">En dessous du seuil minimum (10€)</span>
+                                    <span className="font-medium">{t('belowMinThreshold')}</span>
                                 </div>
                             </div>
                         )}
@@ -418,6 +436,7 @@ function PayoutsContent() {
                                 isSelected={false}
                                 onToggleSelection={() => {}}
                                 onClick={() => openModal(seller)}
+                                translations={rowTranslations}
                             />
                         ))}
                     </div>
@@ -428,11 +447,11 @@ function PayoutsContent() {
                     <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">
-                                <span className="font-semibold text-gray-900">{selectedSellerIds.size}</span> sellers selected
-                                ({selectedSellers.reduce((sum, s) => sum + s.commissionCount, 0)} commissions)
+                                <span className="font-semibold text-gray-900">{selectedSellerIds.size}</span> {t('sellersSelected')}
+                                ({selectedSellers.reduce((sum, s) => sum + s.commissionCount, 0)} {t('commissions')})
                             </p>
                             <p className="text-xs text-gray-500 mt-0.5">
-                                {formatCurrency(selectedTotal)} commissions + {formatCurrency(selectedPlatformFee)} frais = <span className="font-semibold">{formatCurrency(selectedTotal + selectedPlatformFee)}</span>
+                                {formatCurrency(selectedTotal)} {t('commissions')} + {formatCurrency(selectedPlatformFee)} {t('fees')} = <span className="font-semibold">{formatCurrency(selectedTotal + selectedPlatformFee)}</span>
                             </p>
                         </div>
                         <button
@@ -443,11 +462,11 @@ function PayoutsContent() {
                             {paying ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                    Traitement...
+                                    {t('processing')}
                                 </>
                             ) : (
                                 <>
-                                    Payer {formatCurrency(selectedTotal + selectedPlatformFee)}
+                                    {t('pay')} {formatCurrency(selectedTotal + selectedPlatformFee)}
                                 </>
                             )}
                         </button>
@@ -473,8 +492,8 @@ function PayoutsContent() {
                 <div className="fixed bottom-4 right-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3 shadow-lg animate-in slide-in-from-bottom-4">
                     <Check className="w-5 h-5 text-green-600" />
                     <div>
-                        <p className="font-medium text-green-800">Payments confirmed!</p>
-                        <p className="text-sm text-green-600">Les transferts sont en cours de traitement.</p>
+                        <p className="font-medium text-green-800">{t('paymentsConfirmed')}</p>
+                        <p className="text-sm text-green-600">{t('transfersProcessing')}</p>
                     </div>
                     <button
                         onClick={() => setSuccess(false)}

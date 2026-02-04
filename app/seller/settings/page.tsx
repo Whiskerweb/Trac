@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Upload, Check, ChevronUp, ChevronDown, CheckCircle2, Circle, Youtube, Globe, Loader2, User, Settings, LogOut } from 'lucide-react'
+import { Upload, Check, ChevronUp, ChevronDown, CheckCircle2, Circle, Youtube, Globe, Loader2, User, Settings, LogOut, Eye, EyeOff, AlertTriangle, X } from 'lucide-react'
 import { getMySellerProfile, updateMySellerProfile, type MySellerProfileData } from '@/app/actions/sellers'
 import { logout } from '@/app/login/actions'
+import { createClient } from '@/utils/supabase/client'
+import { useRouter } from 'next/navigation'
 
 const INDUSTRY_INTERESTS = [
     'AI', 'SaaS', 'Sales', 'E-commerce', 'Developer tools',
@@ -59,6 +61,8 @@ const PROFILE_TASKS = [
 type TabType = 'profile' | 'account'
 
 export default function SettingsPage() {
+    const router = useRouter()
+
     // Tab state
     const [activeTab, setActiveTab] = useState<TabType>('profile')
 
@@ -70,6 +74,22 @@ export default function SettingsPage() {
     const [saving, setSaving] = useState(false)
     const [saveSuccess, setSaveSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
+    // Password change state
+    const [showPasswordForm, setShowPasswordForm] = useState(false)
+    const [newPassword, setNewPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
+    const [showNewPassword, setShowNewPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const [savingPassword, setSavingPassword] = useState(false)
+    const [passwordError, setPasswordError] = useState('')
+    const [passwordSuccess, setPasswordSuccess] = useState(false)
+
+    // Delete account state
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [deleteConfirmText, setDeleteConfirmText] = useState('')
+    const [deleting, setDeleting] = useState(false)
+    const [deleteError, setDeleteError] = useState('')
 
     // Form state - Basic info
     const [fullName, setFullName] = useState('')
@@ -267,6 +287,75 @@ export default function SettingsPage() {
         } finally {
             setSaving(false)
         }
+    }
+
+    // Handle password change
+    async function handleChangePassword() {
+        setPasswordError('')
+        setPasswordSuccess(false)
+
+        if (newPassword.length < 6) {
+            setPasswordError('Password must be at least 6 characters')
+            return
+        }
+
+        if (newPassword !== confirmPassword) {
+            setPasswordError('Passwords do not match')
+            return
+        }
+
+        setSavingPassword(true)
+        try {
+            const supabase = createClient()
+            const { error } = await supabase.auth.updateUser({
+                password: newPassword
+            })
+
+            if (error) {
+                setPasswordError(error.message)
+            } else {
+                setPasswordSuccess(true)
+                setNewPassword('')
+                setConfirmPassword('')
+                setShowPasswordForm(false)
+                setTimeout(() => setPasswordSuccess(false), 3000)
+            }
+        } catch (e) {
+            setPasswordError('Failed to change password')
+        }
+        setSavingPassword(false)
+    }
+
+    // Handle account deletion
+    async function handleDeleteAccount() {
+        if (deleteConfirmText !== 'DELETE') {
+            setDeleteError('Please type DELETE to confirm')
+            return
+        }
+
+        setDeleting(true)
+        setDeleteError('')
+
+        try {
+            // Call API to delete account
+            const response = await fetch('/api/seller/delete-account', {
+                method: 'DELETE'
+            })
+
+            const data = await response.json()
+
+            if (data.success) {
+                // Sign out and redirect
+                const supabase = createClient()
+                await supabase.auth.signOut()
+                router.push('/login?deleted=true')
+            } else {
+                setDeleteError(data.error || 'Failed to delete account')
+            }
+        } catch (e) {
+            setDeleteError('Failed to delete account')
+        }
+        setDeleting(false)
     }
 
     // Calculate completed tasks
@@ -1002,6 +1091,14 @@ export default function SettingsPage() {
                 {/* Account Tab Content */}
                 {activeTab === 'account' && (
                     <>
+                        {/* Success message for password */}
+                        {passwordSuccess && (
+                            <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
+                                <Check className="w-4 h-4" />
+                                Password updated successfully
+                            </div>
+                        )}
+
                         {/* Account Settings */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
                             <h2 className="text-base font-semibold mb-1">Account settings</h2>
@@ -1025,9 +1122,81 @@ export default function SettingsPage() {
 
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Password</label>
-                                    <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
-                                        Change password
-                                    </button>
+                                    {!showPasswordForm ? (
+                                        <button
+                                            onClick={() => setShowPasswordForm(true)}
+                                            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                                        >
+                                            Change password
+                                        </button>
+                                    ) : (
+                                        <div className="space-y-4 max-w-md">
+                                            {passwordError && (
+                                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                                                    {passwordError}
+                                                </div>
+                                            )}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1.5">New password</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type={showNewPassword ? 'text' : 'password'}
+                                                        value={newPassword}
+                                                        onChange={(e) => setNewPassword(e.target.value)}
+                                                        className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none text-sm"
+                                                        placeholder="••••••••"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowNewPassword(!showNewPassword)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                    >
+                                                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm password</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type={showConfirmPassword ? 'text' : 'password'}
+                                                        value={confirmPassword}
+                                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                                        className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none text-sm"
+                                                        placeholder="••••••••"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                    >
+                                                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-3 pt-2">
+                                                <button
+                                                    onClick={handleChangePassword}
+                                                    disabled={savingPassword}
+                                                    className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-black disabled:opacity-70 transition-all flex items-center gap-2"
+                                                >
+                                                    {savingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
+                                                    {savingPassword ? 'Updating...' : 'Update password'}
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setShowPasswordForm(false)
+                                                        setNewPassword('')
+                                                        setConfirmPassword('')
+                                                        setPasswordError('')
+                                                    }}
+                                                    className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
@@ -1066,13 +1235,103 @@ export default function SettingsPage() {
                                 Irreversible actions that affect your account.
                             </p>
 
-                            <button className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+                            <button
+                                onClick={() => setShowDeleteModal(true)}
+                                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                            >
                                 Delete account
                             </button>
                             <p className="text-xs text-gray-500 mt-2">
                                 This will permanently delete your account and all associated data.
                             </p>
                         </div>
+
+                        {/* Delete Account Modal */}
+                        {showDeleteModal && (
+                            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                                <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+                                    {/* Header */}
+                                    <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                                <AlertTriangle className="w-5 h-5 text-red-600" />
+                                            </div>
+                                            <h2 className="text-lg font-semibold text-gray-900">Delete account</h2>
+                                        </div>
+                                        {!deleting && (
+                                            <button
+                                                onClick={() => {
+                                                    setShowDeleteModal(false)
+                                                    setDeleteConfirmText('')
+                                                    setDeleteError('')
+                                                }}
+                                                className="p-2 -mr-2 rounded-lg hover:bg-gray-100 transition-colors"
+                                            >
+                                                <X className="w-5 h-5 text-gray-400" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="p-6">
+                                        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                                            <p className="text-sm text-red-800">
+                                                <strong>Warning:</strong> This action cannot be undone. This will permanently delete your seller account, profile, and remove you from all programs.
+                                            </p>
+                                        </div>
+
+                                        {deleteError && (
+                                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                                                {deleteError}
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Type <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-red-600">DELETE</span> to confirm
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={deleteConfirmText}
+                                                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                                placeholder="DELETE"
+                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-sm"
+                                                disabled={deleting}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3">
+                                        <button
+                                            onClick={() => {
+                                                setShowDeleteModal(false)
+                                                setDeleteConfirmText('')
+                                                setDeleteError('')
+                                            }}
+                                            disabled={deleting}
+                                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleDeleteAccount}
+                                            disabled={deleting || deleteConfirmText !== 'DELETE'}
+                                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        >
+                                            {deleting ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    Deleting...
+                                                </>
+                                            ) : (
+                                                'Delete my account'
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </>
                 )}
             </div>

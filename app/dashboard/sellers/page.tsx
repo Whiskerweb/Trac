@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Loader2, ChevronRight, ChevronDown } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { getAllPlatformSellers } from '@/app/actions/sellers'
 
 // =============================================
@@ -165,6 +166,8 @@ function FilterDropdown({ label, options, selected, onChange }: {
 // =============================================
 
 export default function AllSellersPage() {
+    const t = useTranslations('dashboard.sellers')
+    const tCommon = useTranslations('common')
     const router = useRouter()
     const [loading, setLoading] = useState(true)
     const [sellers, setSellers] = useState<Seller[]>([])
@@ -219,10 +222,10 @@ export default function AllSellersPage() {
                 {/* Header */}
                 <div>
                     <h1 className="text-xl font-black tracking-tight text-slate-900">
-                        All Sellers
+                        {t('allSellers')}
                     </h1>
                     <p className="text-xs text-slate-500 mt-0.5">
-                        Discover all platform sellers, sorted by revenue generated
+                        {t('discover')}
                     </p>
                 </div>
 
@@ -235,28 +238,28 @@ export default function AllSellersPage() {
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Rechercher..."
+                            placeholder={t('searchPlaceholder')}
                             className="w-full pl-9 pr-3 py-1.5 border border-slate-200 bg-white rounded-lg text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 transition-colors"
                         />
                     </div>
 
                     {/* Filters */}
                     <FilterDropdown
-                        label="Pays"
+                        label={t('country')}
                         options={COUNTRIES}
                         selected={selectedCountries}
                         onChange={setSelectedCountries}
                     />
 
                     <FilterDropdown
-                        label="Industries"
+                        label={t('industries')}
                         options={INDUSTRIES}
                         selected={selectedIndustries}
                         onChange={setSelectedIndustries}
                     />
 
                     <FilterDropdown
-                        label="Activity type"
+                        label={t('activityType')}
                         options={ACTIVITY_TYPES}
                         selected={selectedActivityTypes}
                         onChange={setSelectedActivityTypes}
@@ -272,7 +275,7 @@ export default function AllSellersPage() {
                             }}
                             className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
                         >
-                            Reset
+                            {t('reset')}
                         </button>
                     )}
                 </div>
@@ -288,10 +291,10 @@ export default function AllSellersPage() {
                             <Search className="w-5 h-5 text-slate-300" />
                         </div>
                         <h3 className="text-sm font-bold text-slate-900 mb-1 tracking-tight">
-                            No seller found
+                            {t('noSellerFound')}
                         </h3>
                         <p className="text-xs text-slate-400">
-                            Essayez de modifier vos filtres ou votre recherche
+                            {t('tryModifying')}
                         </p>
                     </div>
                 ) : (
@@ -300,16 +303,16 @@ export default function AllSellersPage() {
                             <thead>
                                 <tr className="bg-slate-50/50 border-b border-slate-200">
                                     <th className="text-left px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                        Seller
+                                        {t('seller')}
                                     </th>
                                     <th className="text-center px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                        Clics
+                                        {tCommon('clicks')}
                                     </th>
                                     <th className="text-right px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                        CA
+                                        {t('revenue')}
                                     </th>
                                     <th className="text-right px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                        Payout
+                                        {t('payout')}
                                     </th>
                                     <th className="w-12"></th>
                                 </tr>

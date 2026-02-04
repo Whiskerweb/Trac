@@ -3,48 +3,29 @@
 import { useState, useEffect } from 'react'
 import { Loader2, Globe, Youtube, ExternalLink, MapPin, Briefcase, Users, TrendingUp, CheckCircle2, BadgeCheck } from 'lucide-react'
 import Link from 'next/link'
-import { getMySellerProfile } from '@/app/actions/sellers'
+import { getMySellerProfile, MySellerProfileData } from '@/app/actions/sellers'
 
-interface ProfileData {
-    name: string
-    email: string
-    avatarUrl: string | null
-    bio: string | null
-    country: string | null
-    profileType: 'INDIVIDUAL' | 'COMPANY' | null
-    activityType: string | null
-    websiteUrl: string | null
-    youtubeUrl: string | null
-    twitterUrl: string | null
-    linkedinUrl: string | null
-    instagramUrl: string | null
-    tiktokUrl: string | null
-    industryInterests: string[]
-    monthlyTraffic: string | null
-    profileScore: number
-    earningPreferences: { revShare: boolean; cpc: boolean; cpl: boolean; oneTime: boolean } | null
-    salesChannels: { blogs: boolean; newsletters: boolean; socialMedia: boolean; events: boolean; companyReferrals: boolean } | null
-}
+type ProfileData = MySellerProfileData
 
 // Calculate if profile is complete (6 tasks)
 function isProfileComplete(profile: ProfileData): boolean {
     // Country is required
-    const hasCountry = !!profile.country?.trim()
+    const hasCountry: boolean = !!profile.country?.trim()
     // At least one social media is required
-    const hasSocialMedia = !!profile.websiteUrl?.trim() ||
-        !!profile.youtubeUrl?.trim() ||
-        !!profile.twitterUrl?.trim() ||
-        !!profile.linkedinUrl?.trim() ||
-        !!profile.instagramUrl?.trim() ||
-        !!profile.tiktokUrl?.trim()
+    const hasSocialMedia: boolean = !!(profile.websiteUrl?.trim() ||
+        profile.youtubeUrl?.trim() ||
+        profile.twitterUrl?.trim() ||
+        profile.linkedinUrl?.trim() ||
+        profile.instagramUrl?.trim() ||
+        profile.tiktokUrl?.trim())
     // Description is required (min 10 chars)
-    const hasDescription = !!profile.bio && profile.bio.trim().length > 10
+    const hasDescription: boolean = !!(profile.bio && profile.bio.trim().length > 10)
     // At least one industry interest is required
-    const hasIndustryInterests = profile.industryInterests && profile.industryInterests.length > 0
+    const hasIndustryInterests: boolean = !!(profile.industryInterests && profile.industryInterests.length > 0)
     // Activity type is required
-    const hasActivityType = !!profile.activityType
+    const hasActivityType: boolean = !!profile.activityType
     // How you work: at least one earning preference OR one sales channel
-    const hasHowYouWork = !!(profile.earningPreferences && Object.values(profile.earningPreferences).some(v => v)) ||
+    const hasHowYouWork: boolean = !!(profile.earningPreferences && Object.values(profile.earningPreferences).some(v => v)) ||
         !!(profile.salesChannels && Object.values(profile.salesChannels).some(v => v))
 
     return hasCountry && hasSocialMedia && hasDescription && hasIndustryInterests && hasActivityType && hasHowYouWork

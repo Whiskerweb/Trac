@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Search, Users, Info, UserPlus, Calendar, Activity, Clock } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { getWorkspaceCustomers, CustomerWithDetails } from '@/app/actions/customers'
 
 function Avatar({ name, avatar, size = 'md' }: { name: string | null; avatar: string | null; size?: 'sm' | 'md' }) {
@@ -37,15 +38,15 @@ function formatDate(date: Date): string {
     })
 }
 
-function formatRelativeDate(date: Date): string {
+function formatRelativeDate(date: Date, t: (key: string, values?: any) => string): string {
     const now = new Date()
     const diff = now.getTime() - new Date(date).getTime()
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-    if (days === 0) return "Today"
-    if (days === 1) return 'Yesterday'
-    if (days < 7) return `${days} days ago`
-    if (days < 30) return `${Math.floor(days / 7)} weeks ago`
+    if (days === 0) return t('today')
+    if (days === 1) return t('yesterday')
+    if (days < 7) return t('daysAgo', { count: days })
+    if (days < 30) return t('weeksAgo', { count: Math.floor(days / 7) })
     return formatDate(date)
 }
 
@@ -61,6 +62,8 @@ function getLastActivity(customer: CustomerWithDetails): { date: Date; type: 'le
 }
 
 export default function CustomersPage() {
+    const t = useTranslations('dashboard.customers')
+    const tCommon = useTranslations('common')
     const router = useRouter()
     const [loading, setLoading] = useState(true)
     const [customers, setCustomers] = useState<CustomerWithDetails[]>([])
@@ -111,11 +114,11 @@ export default function CustomersPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-semibold text-gray-900">Customers</h1>
+                    <h1 className="text-xl font-semibold text-gray-900">{t('title')}</h1>
                     <div className="group relative">
                         <Info className="w-4 h-4 text-gray-400 cursor-help" />
                         <div className="absolute left-0 top-6 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-2 w-64 z-10">
-                            Customers are leads tracked through your links. Each signup via an affiliate link creates a customer.
+                            {t('info')}
                         </div>
                     </div>
                 </div>
@@ -124,22 +127,22 @@ export default function CustomersPage() {
             {/* Stats */}
             <div className="flex gap-6 p-5 bg-white border border-gray-200 rounded-xl">
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Total customers</p>
+                    <p className="text-sm text-gray-500">{t('totalCustomers')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">With referrer</p>
+                    <p className="text-sm text-gray-500">{t('withReferrer')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{stats.withReferrer}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Total leads</p>
+                    <p className="text-sm text-gray-500">{t('totalLeads')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{stats.totalLeads}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Attribution rate</p>
+                    <p className="text-sm text-gray-500">{t('attributionRate')}</p>
                     <p className="text-2xl font-semibold text-gray-900">
                         {stats.total > 0 ? Math.round((stats.withReferrer / stats.total) * 100) : 0}%
                     </p>
@@ -152,7 +155,7 @@ export default function CustomersPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Search by name, email..."
+                        placeholder={t('searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
@@ -169,7 +172,7 @@ export default function CustomersPage() {
                                     : 'bg-white text-gray-600 hover:bg-gray-50'
                             }`}
                         >
-                            {filter === 'all' ? 'All' : filter === 'with' ? 'With referrer' : 'Without referrer'}
+                            {filter === 'all' ? t('all') : filter === 'with' ? t('withReferrerFilter') : t('withoutReferrer')}
                         </button>
                     ))}
                 </div>
@@ -178,23 +181,23 @@ export default function CustomersPage() {
             {/* Table */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="col-span-4">Customer</div>
-                    <div className="col-span-2">Referrer</div>
-                    <div className="col-span-2">Leads</div>
-                    <div className="col-span-2">Last Activity</div>
-                    <div className="col-span-2 text-right">Signed up</div>
+                    <div className="col-span-4">{t('customer')}</div>
+                    <div className="col-span-2">{t('referrer')}</div>
+                    <div className="col-span-2">{t('leads')}</div>
+                    <div className="col-span-2">{t('lastActivity')}</div>
+                    <div className="col-span-2 text-right">{t('signedUp')}</div>
                 </div>
 
                 {filteredCustomers.length === 0 ? (
                     <div className="px-6 py-12 text-center">
                         <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-900 font-medium">
-                            {customers.length === 0 ? 'No customers' : 'No results'}
+                            {customers.length === 0 ? t('noCustomers') : t('noResults')}
                         </p>
                         <p className="text-gray-500 text-sm mt-1">
                             {customers.length === 0
-                                ? 'Customers will appear when leads are tracked through your links'
-                                : 'Try modifying your search criteria'
+                                ? t('noCustomersDesc')
+                                : t('tryModifying')
                             }
                         </p>
                     </div>
@@ -259,7 +262,7 @@ export default function CustomersPage() {
                                                 <Clock className="w-3.5 h-3.5 text-gray-400" />
                                             )}
                                             <span className={`text-sm ${lastActivity.type === 'lead' ? 'text-gray-900' : 'text-gray-500'}`}>
-                                                {formatRelativeDate(lastActivity.date)}
+                                                {formatRelativeDate(lastActivity.date, t)}
                                             </span>
                                         </div>
                                         {lastActivity.type === 'lead' && customer.leadEvents[0] && (
@@ -273,7 +276,7 @@ export default function CustomersPage() {
                                     <div className="col-span-2 text-right">
                                         <div className="flex items-center justify-end gap-1.5 text-sm text-gray-500">
                                             <Calendar className="w-3.5 h-3.5" />
-                                            <span>{formatRelativeDate(customer.createdAt)}</span>
+                                            <span>{formatRelativeDate(customer.createdAt, t)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -286,7 +289,7 @@ export default function CustomersPage() {
             {/* Footer info */}
             {filteredCustomers.length > 0 && (
                 <p className="text-xs text-gray-500 text-center">
-                    {filteredCustomers.length} customer{filteredCustomers.length > 1 ? 's' : ''} displayed
+                    {filteredCustomers.length === 1 ? t('displayed', { count: filteredCustomers.length }) : t('displayedPlural', { count: filteredCustomers.length })}
                 </p>
             )}
         </div>

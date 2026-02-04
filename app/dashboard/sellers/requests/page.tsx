@@ -17,6 +17,7 @@ import {
 } from '@/app/actions/marketplace-actions'
 import { formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { useTranslations } from 'next-intl'
 
 interface ProgramRequest {
     id: string
@@ -38,6 +39,7 @@ function RequestCard({
     onReject: () => void
     isProcessing: boolean
 }) {
+    const t = useTranslations('dashboard.sellers.requests')
     const sellerDisplay = request.seller_name || request.seller_email.split('@')[0]
 
     return (
@@ -64,7 +66,7 @@ function RequestCard({
 
             {/* Mission */}
             <div className="mb-4">
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Mission</span>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t('mission')}</span>
                 <p className="text-sm font-medium text-gray-900 mt-1">{request.mission_title}</p>
             </div>
 
@@ -73,7 +75,7 @@ function RequestCard({
                 <div className="mb-4 bg-gray-50 rounded-lg p-3">
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
                         <MessageSquare className="w-3.5 h-3.5" />
-                        Message du seller
+                        {t('sellerMessage')}
                     </div>
                     <p className="text-sm text-gray-700">{request.message}</p>
                 </div>
@@ -91,7 +93,7 @@ function RequestCard({
                     ) : (
                         <>
                             <CheckCircle2 className="w-4 h-4" />
-                            Approuver
+                            {t('approve')}
                         </>
                     )}
                 </button>
@@ -101,7 +103,7 @@ function RequestCard({
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-red-600 text-sm font-medium rounded-lg border border-gray-200 hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50"
                 >
                     <XCircle className="w-4 h-4" />
-                    Refuser
+                    {t('reject')}
                 </button>
             </div>
         </div>
@@ -109,6 +111,7 @@ function RequestCard({
 }
 
 export default function SellerRequestsPage() {
+    const t = useTranslations('dashboard.sellers.requests')
     const [requests, setRequests] = useState<ProgramRequest[]>([])
     const [loading, setLoading] = useState(true)
     const [processingId, setProcessingId] = useState<string | null>(null)
@@ -171,9 +174,9 @@ export default function SellerRequestsPage() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-black tracking-tight">Access requests</h1>
+                <h1 className="text-2xl font-bold text-black tracking-tight">{t('title')}</h1>
                 <p className="text-gray-500 text-sm mt-1">
-                    Manage seller requests for your private missions.
+                    {t('subtitle')}
                 </p>
             </div>
 
@@ -184,10 +187,10 @@ export default function SellerRequestsPage() {
                         <Inbox className="w-8 h-8 text-gray-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        Aucune demande en attente
+                        {t('noPendingRequests')}
                     </h3>
                     <p className="text-gray-500 text-sm max-w-md mx-auto">
-                        Access requests for private missions will appear here when sellers apply.
+                        {t('requestsWillAppear')}
                     </p>
                 </div>
             ) : (

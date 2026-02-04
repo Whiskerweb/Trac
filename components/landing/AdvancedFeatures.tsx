@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useState, createElement } from "react";
+import { useTranslations } from "next-intl";
 import EuropeMap from "../ui/EuropeMap";
 import ConnectionVisual from "../ui/ConnectionVisual";
 import PayoutsVisual from "../ui/PayoutsVisual";
@@ -22,6 +23,7 @@ export const AdvancedFeatures = ({
     tabs: Tab[];
     initialTab?: number
 }) => {
+    const t = useTranslations('landing');
     const [activeTab, setActiveTab] = useState(initialTab);
 
     return (
@@ -69,7 +71,7 @@ export const AdvancedFeatures = ({
                                 {tab.desc}
                             </p>
                             <div className={`text-sm font-semibold flex items-center gap-1 ${isActive ? linkColor : "text-slate-400"} group-hover:${linkColor} transition-colors`}>
-                                Learn more <ArrowRight className="w-3.5 h-3.5" />
+                                {t('learnMore')} <ArrowRight className="w-3.5 h-3.5" />
                             </div>
                         </button>
                     )

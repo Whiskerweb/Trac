@@ -6,6 +6,7 @@ import {
     Loader2, AlertCircle, X, Info, AlertTriangle, ArrowRight, CheckCircle2
 } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { getDomains, addDomain, verifyDomain, removeDomain, updateDomain } from '@/app/actions/domains'
 import { CNAME_TARGET } from '@/lib/config/constants'
 import confetti from 'canvas-confetti'
@@ -35,6 +36,7 @@ interface VerificationRecord {
 // =============================================
 
 function CopyButton({ text }: { text: string }) {
+    const t = useTranslations('dashboard.domains')
     const [copied, setCopied] = useState(false)
 
     const handleCopy = async () => {
@@ -47,7 +49,7 @@ function CopyButton({ text }: { text: string }) {
         <button
             onClick={handleCopy}
             className="p-1.5 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0"
-            title="Copier"
+            title={t('copy')}
         >
             {copied ? (
                 <Check className="w-4 h-4 text-green-500" />
@@ -59,6 +61,8 @@ function CopyButton({ text }: { text: string }) {
 }
 
 function StatusDot({ status }: { status: 'verified' | 'pending' | 'verifying' }) {
+    const t = useTranslations('dashboard.domains')
+
     const styles = {
         verified: 'bg-green-500',
         pending: 'bg-amber-400',
@@ -66,9 +70,9 @@ function StatusDot({ status }: { status: 'verified' | 'pending' | 'verifying' })
     }
 
     const labels = {
-        verified: 'Verified',
-        pending: 'Pending DNS',
-        verifying: 'Verifying...',
+        verified: t('verified'),
+        pending: t('pending'),
+        verifying: t('verifying'),
     }
 
     return (
@@ -124,6 +128,8 @@ function DomainRow({
     isConfirmingDelete: boolean
     onCancelDelete: () => void
 }) {
+    const t = useTranslations('dashboard.domains')
+
     const isSubdomain = domain.name.split('.').length > 2
     const recordName = isSubdomain ? domain.name.split('.')[0] : '@'
 
@@ -143,7 +149,7 @@ function DomainRow({
                             <span
                                 onClick={onEdit}
                                 className={`font-semibold text-base cursor-pointer hover:underline decoration-dotted underline-offset-4 ${domain.verified ? 'text-gray-900' : 'text-gray-700'}`}
-                                title="Click to edit domain"
+                                title={t('clickToEdit')}
                             >
                                 {domain.name}
                             </span>
@@ -151,11 +157,11 @@ function DomainRow({
                         </div>
                         {domain.verified && domain.verifiedAt ? (
                             <p className="text-xs text-gray-500 mt-0.5">
-                                Verified on {new Date(domain.verifiedAt).toLocaleDateString()}
+                                {t('verifiedOn')} {new Date(domain.verifiedAt).toLocaleDateString()}
                             </p>
                         ) : (
                             <p className="text-xs text-amber-600 mt-0.5 font-medium">
-                                Action required
+                                {t('actionRequired')}
                             </p>
                         )}
                     </div>
@@ -168,7 +174,7 @@ function DomainRow({
                                 onClick={onToggleExpand}
                                 className="text-sm text-gray-600 hover:text-gray-900 font-medium px-3 py-1.5 hover:bg-gray-100 rounded-md transition-colors"
                             >
-                                {expanded ? 'Hide Instructions' : 'Configure DNS'}
+                                {expanded ? t('hideInstructions') : t('configureDNS')}
                             </button>
                             <button
                                 onClick={() => onVerify(true)}
@@ -178,12 +184,12 @@ function DomainRow({
                                 {isVerifying ? (
                                     <>
                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        Checking...
+                                        {t('checking')}
                                     </>
                                 ) : (
                                     <>
                                         <RefreshCw className="w-3.5 h-3.5" />
-                                        Verify Now
+                                        {t('verifyNow')}
                                     </>
                                 )}
                             </button>
@@ -191,18 +197,18 @@ function DomainRow({
                     )}
                     {isConfirmingDelete ? (
                         <>
-                            <span className="text-xs text-red-600 font-bold mr-2 animate-in fade-in">Sure?</span>
+                            <span className="text-xs text-red-600 font-bold mr-2 animate-in fade-in">{t('sure')}</span>
                             <button
                                 onClick={onCancelDelete}
                                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                                title="Cancel"
+                                title={t('cancel')}
                             >
                                 <X className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={onDelete}
                                 className="p-2 text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors shadow-sm"
-                                title="Confirm Delete"
+                                title={t('confirmDelete')}
                             >
                                 {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                             </button>
@@ -212,7 +218,7 @@ function DomainRow({
                             onClick={onDelete}
                             disabled={isDeleting}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title="Delete Domain"
+                            title={t('deleteDomain')}
                         >
                             {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                         </button>
@@ -229,9 +235,9 @@ function DomainRow({
                         <div className="flex gap-4">
                             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-sm text-gray-600">1</div>
                             <div>
-                                <h4 className="font-semibold text-gray-900">Log in to your DNS Provider</h4>
+                                <h4 className="font-semibold text-gray-900">{t('step1.title')}</h4>
                                 <p className="text-sm text-gray-500 mt-1">
-                                    Sign in to GoDaddy, Namecheap, Cloudflare, or wherever you bought your domain.
+                                    {t('step1.description')}
                                 </p>
                             </div>
                         </div>
@@ -240,17 +246,17 @@ function DomainRow({
                         <div className="flex gap-4">
                             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-sm text-gray-600">2</div>
                             <div className="w-full max-w-2xl">
-                                <h4 className="font-semibold text-gray-900">Add CNAME Record</h4>
+                                <h4 className="font-semibold text-gray-900">{t('step2.title')}</h4>
                                 <p className="text-sm text-gray-500 mt-1 mb-3">
-                                    This points your subdomain to our servers.
+                                    {t('step2.description')}
                                 </p>
                                 <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
                                     <table className="w-full text-left">
                                         <thead className="bg-gray-100/50 border-b border-gray-200">
                                             <tr className="text-xs uppercase text-gray-500 font-medium">
-                                                <th className="px-4 py-2 w-24">Type</th>
-                                                <th className="px-4 py-2 w-32">Name</th>
-                                                <th className="px-4 py-2">Value</th>
+                                                <th className="px-4 py-2 w-24">{t('table.type')}</th>
+                                                <th className="px-4 py-2 w-32">{t('table.name')}</th>
+                                                <th className="px-4 py-2">{t('table.value')}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -266,17 +272,17 @@ function DomainRow({
                             <div className="flex gap-4">
                                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-sm text-gray-600">3</div>
                                 <div className="w-full max-w-2xl">
-                                    <h4 className="font-semibold text-gray-900">Add TXT Record (SSL Verification)</h4>
+                                    <h4 className="font-semibold text-gray-900">{t('step3.title')}</h4>
                                     <p className="text-sm text-gray-500 mt-1 mb-3">
-                                        Required for issuing your secure SSL certificate.
+                                        {t('step3.description')}
                                     </p>
                                     <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
                                         <table className="w-full text-left">
                                             <thead className="bg-gray-100/50 border-b border-gray-200">
                                                 <tr className="text-xs uppercase text-gray-500 font-medium">
-                                                    <th className="px-4 py-2 w-24">Type</th>
-                                                    <th className="px-4 py-2 w-32">Name</th>
-                                                    <th className="px-4 py-2">Value</th>
+                                                    <th className="px-4 py-2 w-24">{t('table.type')}</th>
+                                                    <th className="px-4 py-2 w-32">{t('table.name')}</th>
+                                                    <th className="px-4 py-2">{t('table.value')}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -296,9 +302,9 @@ function DomainRow({
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3 text-sm text-amber-800">
                             <Info className="w-5 h-5 flex-shrink-0 text-amber-600" />
                             <p>
-                                DNS changes typically take a few minutes to propagate, but can take up to 24 hours.
+                                {t('dnsWarning')}
                                 <br />
-                                <strong>Click "Verify Now" above to check status live.</strong>
+                                <strong>{t('clickVerify')}</strong>
                             </p>
                         </div>
 
@@ -314,6 +320,7 @@ function DomainRow({
 // =============================================
 
 export default function DomainsPage() {
+    const t = useTranslations('dashboard.domains')
     const [domains, setDomains] = useState<DomainData[]>([])
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -444,9 +451,9 @@ export default function DomainsPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Custom Domains</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t('title')}</h1>
                     <p className="text-gray-500 mt-1">
-                        Configure branded domains for your tracking links.
+                        {t('subtitle')}
                     </p>
                 </div>
                 {/* Only show Add button if NO custom domains exist */}
@@ -456,7 +463,7 @@ export default function DomainsPage() {
                         className="flex items-center gap-2 px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md font-medium text-sm transition-all shadow-sm"
                     >
                         <Plus className="w-4 h-4" />
-                        Add Domain
+                        {t('addDomain')}
                     </button>
                 )}
             </div>
@@ -473,7 +480,7 @@ export default function DomainsPage() {
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-500">
                     <Loader2 className="w-6 h-6 animate-spin mb-2" />
-                    <p className="text-sm">Loading domains...</p>
+                    <p className="text-sm">{t('loading')}</p>
                 </div>
             ) : domains.length === 0 ? (
                 <div className="bg-white border border-gray-200 rounded-xl p-16 text-center shadow-sm">
@@ -481,17 +488,17 @@ export default function DomainsPage() {
                         <Globe className="w-6 h-6 text-gray-400" />
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        No custom domains
+                        {t('noDomains')}
                     </h3>
                     <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                        Add a custom domain (e.g. <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm">link.yoursite.com</code>) to brand your short links and bypass ad-blockers.
+                        {t('addFirst')} <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm">link.yoursite.com</code>{t('bypassAdBlockers')}
                     </p>
                     <button
                         onClick={() => setIsModalOpen(true)}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md font-medium text-sm transition-colors shadow-sm"
                     >
                         <Plus className="w-4 h-4" />
-                        Add Domain
+                        {t('addDomain')}
                     </button>
                 </div>
             ) : (
@@ -528,7 +535,7 @@ export default function DomainsPage() {
                 <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-gray-200 overflow-hidden">
                         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-                            <h2 className="text-lg font-bold text-gray-900">{editingId ? 'Edit Custom Domain' : 'Add Custom Domain'}</h2>
+                            <h2 className="text-lg font-bold text-gray-900">{editingId ? t('editDomain') : t('addDomain')}</h2>
                             <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                                 <X className="w-5 h-5" />
                             </button>
@@ -536,19 +543,19 @@ export default function DomainsPage() {
                         <form onSubmit={handleAddDomain} className="p-6">
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Domain Name
+                                    {t('modal.domainName')}
                                 </label>
                                 <input
                                     type="text"
                                     value={newDomainName}
                                     onChange={(e) => setNewDomainName(e.target.value)}
-                                    placeholder="link.yoursite.com"
+                                    placeholder={t('modal.placeholder')}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black outline-none text-sm"
                                     autoFocus
                                     required
                                 />
                                 <p className="text-xs text-gray-500 mt-1.5">
-                                    We recommend using a subdomain like <b>link</b> or <b>go</b> for tracking links.
+                                    {t('modal.recommendation')} <b>link</b> {t('modal.or')} <b>go</b> {t('modal.forTracking')}
                                 </p>
                             </div>
                             <div className="flex items-center justify-between pt-2">
@@ -562,7 +569,7 @@ export default function DomainsPage() {
                                             className="px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md text-sm font-medium flex items-center gap-2 transition-colors"
                                         >
                                             <Trash2 className="w-4 h-4" />
-                                            Delete
+                                            {t('modal.delete')}
                                         </button>
                                     )}
                                 </div>
@@ -571,13 +578,13 @@ export default function DomainsPage() {
                                 <div className="flex gap-3">
                                     {showDeleteConfirm ? (
                                         <>
-                                            <span className="text-sm text-gray-500 self-center mr-2">Are you sure?</span>
+                                            <span className="text-sm text-gray-500 self-center mr-2">{t('modal.areYouSure')}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => setShowDeleteConfirm(false)}
                                                 className="px-3 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium"
                                             >
-                                                Cancel
+                                                {t('modal.cancel')}
                                             </button>
                                             <button
                                                 type="button"
@@ -589,14 +596,14 @@ export default function DomainsPage() {
                                                         setEditingId(null)
                                                         await loadDomains()
                                                     } catch (e) {
-                                                        alert('Failed to delete')
+                                                        alert(t('modal.failedToDelete'))
                                                     }
                                                     setDeletingId(null)
                                                 }}
                                                 className="px-3 py-2 bg-red-600 text-white hover:bg-red-700 rounded-md text-sm font-medium flex items-center gap-2 transition-colors"
                                             >
                                                 {deletingId === editingId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                                Confirm Delete
+                                                {t('modal.confirmDelete')}
                                             </button>
                                         </>
                                     ) : (
@@ -606,7 +613,7 @@ export default function DomainsPage() {
                                                 onClick={() => setIsModalOpen(false)}
                                                 className="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium"
                                             >
-                                                Cancel
+                                                {t('modal.cancel')}
                                             </button>
                                             <button
                                                 type="submit"
@@ -614,7 +621,7 @@ export default function DomainsPage() {
                                                 className="px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md text-sm font-medium disabled:opacity-50 flex items-center gap-2"
                                             >
                                                 {adding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                                                {editingId ? 'Update Domain' : 'Add Domain'}
+                                                {editingId ? t('modal.update') : t('modal.add')}
                                             </button>
                                         </>
                                     )}

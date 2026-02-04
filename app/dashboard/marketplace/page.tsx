@@ -7,6 +7,7 @@ import {
     MousePointer2, ArrowLeft, DollarSign, Coins
 } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { getAllMissions, joinMission } from '@/app/actions/marketplace'
 import { ActivityLog } from '@/components/ActivityLog'
 
@@ -80,6 +81,7 @@ function MissionCard({
     mission: Mission
     onJoin: () => void
 }) {
+    const t = useTranslations('dashboard.marketplace')
     const [joining, setJoining] = useState(false)
     const [copied, setCopied] = useState(false)
     const [linkUrl, setLinkUrl] = useState(mission.enrollment?.link?.full_url || '')
@@ -112,7 +114,7 @@ function MissionCard({
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Target className="w-5 h-5 text-white/80" />
-                        <span className="text-white/80 text-sm">Mission</span>
+                        <span className="text-white/80 text-sm">{t('mission')}</span>
                     </div>
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 backdrop-blur rounded-full">
                         <Gift className="w-4 h-4 text-white" />
@@ -125,7 +127,7 @@ function MissionCard({
             {/* Body */}
             <div className="p-5">
                 <p className="text-slate-600 text-sm mb-4 line-clamp-3">
-                    {mission.description || 'Rejoignez cette mission et gagnez des commissions sur chaque vente.'}
+                    {mission.description || t('defaultDescription')}
                 </p>
 
                 {/* Target URL */}
@@ -147,7 +149,7 @@ function MissionCard({
                         {/* Enrolled Badge */}
                         <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
                             <CheckCircle2 className="w-5 h-5 text-green-600" />
-                            <span className="text-green-700 font-medium">Vous participez</span>
+                            <span className="text-green-700 font-medium">{t('participating')}</span>
                         </div>
 
                         {/* 📊 Stats Mini Dashboard */}
@@ -155,19 +157,19 @@ function MissionCard({
                             <div className="grid grid-cols-3 gap-2">
                                 <StatsBadge
                                     icon={Eye}
-                                    label="Clics"
+                                    label={t('stats.clicks')}
                                     value={stats.clicks}
                                     color="gray"
                                 />
                                 <StatsBadge
                                     icon={TrendingUp}
-                                    label="Ventes"
+                                    label={t('stats.sales')}
                                     value={stats.sales}
                                     color="green"
                                 />
                                 <StatsBadge
                                     icon={Coins}
-                                    label="Gains"
+                                    label={t('stats.earnings')}
                                     value={`€${stats.revenue.toFixed(0)}`}
                                     color="gold"
                                 />
@@ -178,7 +180,7 @@ function MissionCard({
                         {linkUrl && (
                             <div className="space-y-2">
                                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                    Votre lien d&apos;affiliation
+                                    {t('yourAffiliateLink')}
                                 </label>
                                 <div className="relative">
                                     <input
@@ -194,19 +196,19 @@ function MissionCard({
                                         {copied ? (
                                             <>
                                                 <Check className="w-3 h-3" />
-                                                Copied
+                                                {t('copied')}
                                             </>
                                         ) : (
                                             <>
                                                 <Copy className="w-3 h-3" />
-                                                Copier
+                                                {t('copy')}
                                             </>
                                         )}
                                     </button>
                                 </div>
                                 <p className="text-xs text-slate-500 flex items-center gap-1">
                                     <MousePointer2 className="w-3 h-3" />
-                                    Partagez ce lien pour gagner des commissions
+                                    {t('shareToEarn')}
                                 </p>
                             </div>
                         )}
@@ -220,12 +222,12 @@ function MissionCard({
                         {joining ? (
                             <>
                                 <Loader2 className="w-5 h-5 animate-spin" />
-                                Inscription...
+                                {t('joining')}
                             </>
                         ) : (
                             <>
                                 <Rocket className="w-5 h-5" />
-                                Rejoindre le programme
+                                {t('joinProgram')}
                             </>
                         )}
                     </button>
@@ -240,6 +242,7 @@ function MissionCard({
 // =============================================
 
 export default function MarketplacePage() {
+    const t = useTranslations('dashboard.marketplace')
     const [missions, setMissions] = useState<Mission[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -264,20 +267,20 @@ export default function MarketplacePage() {
                     className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 mb-8 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    Back to Dashboard
+                    {t('backToDashboard')}
                 </Link>
 
                 {/* Header */}
                 <div className="text-center mb-12">
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium mb-4">
                         <Gift className="w-4 h-4" />
-                        Programmes d'affiliation
+                        {t('affiliatePrograms')}
                     </div>
                     <h1 className="text-4xl font-bold text-slate-900 mb-3">
-                        Marketplace
+                        {t('title')}
                     </h1>
                     <p className="text-lg text-slate-600 max-w-xl mx-auto">
-                        Rejoignez des programmes et gagnez des commissions en partageant vos liens.
+                        {t('subtitle')}
                     </p>
                 </div>
 
@@ -292,10 +295,10 @@ export default function MarketplacePage() {
                             <Target className="w-10 h-10 text-slate-400" />
                         </div>
                         <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                            Aucune mission disponible
+                            {t('noMissions')}
                         </h3>
                         <p className="text-slate-500">
-                            New opportunities will be available soon.
+                            {t('newOpportunities')}
                         </p>
                     </div>
                 ) : (
@@ -316,22 +319,22 @@ export default function MarketplacePage() {
                         <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-white">
                             <div>
                                 <h3 className="text-2xl font-bold mb-1">
-                                    Ready to earn?
+                                    {t('readyToEarn')}
                                 </h3>
                                 <p className="text-purple-200">
-                                    Join a mission and start sharing.
+                                    {t('joinAndShare')}
                                 </p>
                             </div>
                             <div className="flex items-center gap-8">
                                 <div className="text-center">
                                     <div className="text-3xl font-bold">{missions.length}</div>
-                                    <div className="text-purple-200 text-sm">Missions actives</div>
+                                    <div className="text-purple-200 text-sm">{t('activeMissions')}</div>
                                 </div>
                                 <div className="text-center">
                                     <div className="text-3xl font-bold">
                                         {missions.filter(m => m.enrollment).length}
                                     </div>
-                                    <div className="text-purple-200 text-sm">Vos participations</div>
+                                    <div className="text-purple-200 text-sm">{t('yourParticipations')}</div>
                                 </div>
                             </div>
                         </div>

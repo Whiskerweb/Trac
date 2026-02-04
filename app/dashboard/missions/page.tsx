@@ -8,6 +8,7 @@ import {
     Copy, Activity, Eye, Zap, ArrowUpRight, Circle, Check, ChevronRight
 } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { DNSGatekeeper } from '@/components/dashboard/DNSGatekeeper'
 import {
     getMissionsWithFullStats,
@@ -75,10 +76,11 @@ function formatTimeAgo(date: Date): string {
 // =============================================
 
 function VisibilityDot({ visibility }: { visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY' }) {
+    const t = useTranslations('dashboard.missions.visibility')
     const config = {
-        PUBLIC: { color: 'bg-emerald-500', label: 'Public' },
-        PRIVATE: { color: 'bg-amber-500', label: 'Private' },
-        INVITE_ONLY: { color: 'bg-violet-500', label: 'Sur invitation' },
+        PUBLIC: { color: 'bg-emerald-500', label: t('public') },
+        PRIVATE: { color: 'bg-amber-500', label: t('private') },
+        INVITE_ONLY: { color: 'bg-violet-500', label: t('inviteOnly') },
     }
     const { color, label } = config[visibility] || config.PUBLIC
 
@@ -128,6 +130,7 @@ function MissionRow({
     pendingRequests: number
     onRefresh: () => void
 }) {
+    const t = useTranslations('dashboard.missions')
     const [menuOpen, setMenuOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [copied, setCopied] = useState(false)
@@ -141,7 +144,7 @@ function MissionRow({
     }
 
     async function handleDelete() {
-        if (!confirm('Delete this mission permanently?')) return
+        if (!confirm(t('deleteConfirm'))) return
         setLoading(true)
         await deleteMission(mission.id)
         onRefresh()
@@ -208,7 +211,7 @@ function MissionRow({
                             <button
                                 onClick={handleCopyInviteLink}
                                 className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-colors"
-                                title="Copier le lien d'invitation"
+                                title={t('copyInviteLink')}
                             >
                                 {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                             </button>
@@ -216,7 +219,7 @@ function MissionRow({
                         <Link
                             href={`/dashboard/missions/${mission.id}`}
                             className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-colors"
-                            title="View details"
+                            title={t('viewDetails')}
                         >
                             <Eye className="w-4 h-4" />
                         </Link>
@@ -237,7 +240,7 @@ function MissionRow({
                                             className="w-full px-3 py-2 text-left text-sm text-neutral-600 hover:bg-neutral-50 flex items-center gap-2"
                                         >
                                             <Archive className="w-4 h-4" />
-                                            Archiver
+                                            {t('archive')}
                                         </button>
                                         <button
                                             onClick={handleDelete}
@@ -245,7 +248,7 @@ function MissionRow({
                                             className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                                         >
                                             <Trash2 className="w-4 h-4" />
-                                            Delete
+                                            {t('delete')}
                                         </button>
                                     </div>
                                 </>
@@ -258,19 +261,19 @@ function MissionRow({
                 <div className="grid grid-cols-4 gap-6">
                     <StatBlock
                         value={mission.stats.activeSellers}
-                        label="Sellers"
+                        label={t('stats.sellers')}
                     />
                     <StatBlock
                         value={formatNumber(mission.stats.clicks)}
-                        label="Clicks"
+                        label={t('stats.clicks')}
                     />
                     <StatBlock
                         value={mission.stats.sales}
-                        label="Ventes"
+                        label={t('stats.sales')}
                     />
                     <StatBlock
                         value={formatCurrency(mission.stats.revenue)}
-                        label="CA"
+                        label={t('stats.revenue')}
                     />
                 </div>
 
@@ -280,13 +283,13 @@ function MissionRow({
                         <span className="text-sm font-semibold text-neutral-900">
                             {mission.reward}
                         </span>
-                        <span className="text-xs text-neutral-400">par conversion</span>
+                        <span className="text-xs text-neutral-400">{t('perConversion')}</span>
                     </div>
                     <Link
                         href={`/dashboard/missions/${mission.id}`}
                         className="text-xs font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-1 transition-colors"
                     >
-                        Manage
+                        {t('manage')}
                         <ArrowUpRight className="w-3 h-3" />
                     </Link>
                 </div>
@@ -391,6 +394,7 @@ function ActivitySidebar({
     activities: ActivityItem[]
     requests: ProgramRequest[]
 }) {
+    const t = useTranslations('dashboard.missions')
     const hasRequests = requests.length > 0
     const hasActivity = activities.length > 0
 
@@ -403,7 +407,7 @@ function ActivitySidebar({
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                             <h3 className="text-sm font-semibold text-neutral-900">
-                                Demandes en attente
+                                {t('pendingRequests')}
                             </h3>
                         </div>
                         <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
@@ -423,7 +427,7 @@ function ActivitySidebar({
                 <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
                     <Activity className="w-4 h-4 text-neutral-400" />
                     <h3 className="text-sm font-semibold text-neutral-900">
-                        Recent activity
+                        {t('recentActivity')}
                     </h3>
                 </div>
                 {hasActivity ? (
@@ -436,7 +440,7 @@ function ActivitySidebar({
                     <div className="px-4 py-8 text-center">
                         <Activity className="w-8 h-8 text-neutral-200 mx-auto mb-2" />
                         <p className="text-sm text-neutral-400">
-                            No recent activity
+                            {t('noActivity')}
                         </p>
                     </div>
                 )}
@@ -450,24 +454,24 @@ function ActivitySidebar({
 // =============================================
 
 function EmptyState() {
+    const t = useTranslations('dashboard.missions')
     return (
         <div className="bg-white border border-neutral-200 border-dashed rounded-xl p-16 text-center">
             <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Target className="w-8 h-8 text-neutral-300" />
             </div>
             <h3 className="text-xl font-medium text-neutral-900 mb-2">
-                Create your first mission
+                {t('createFirst')}
             </h3>
             <p className="text-neutral-500 mb-8 max-w-md mx-auto leading-relaxed">
-                A mission is an affiliate program. Define commissions
-                et recrutez des sellers pour promouvoir votre produit.
+                {t('missionDescription')}
             </p>
             <Link
                 href="/dashboard/missions/create"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-medium hover:bg-neutral-800 transition-colors"
             >
                 <Plus className="w-4 h-4" />
-                Nouvelle mission
+                {t('newMission')}
             </Link>
         </div>
     )
@@ -478,6 +482,7 @@ function EmptyState() {
 // =============================================
 
 function MissionSlots({ used, total }: { used: number; total: number }) {
+    const t = useTranslations('dashboard.missions')
     const remaining = total - used
 
     return (
@@ -494,7 +499,7 @@ function MissionSlots({ used, total }: { used: number; total: number }) {
                 ))}
             </div>
             <span className="text-sm text-neutral-500">
-                {remaining > 0 ? `${remaining} disponible${remaining > 1 ? 's' : ''}` : 'Limite atteinte'}
+                {remaining > 0 ? t('slotsAvailable', { count: remaining }) : t('limitReached')}
             </span>
         </div>
     )
@@ -513,6 +518,7 @@ function GlobalStatsBar({ stats }: {
         totalRevenue: number
     }
 }) {
+    const t = useTranslations('dashboard.missions')
     return (
         <div className="grid grid-cols-4 gap-6 p-6 bg-white border border-neutral-200 rounded-xl">
             <div>
@@ -520,7 +526,7 @@ function GlobalStatsBar({ stats }: {
                     {stats.activeMissions}
                 </p>
                 <p className="text-xs text-neutral-400 uppercase tracking-widest mt-1">
-                    Missions actives
+                    {t('activeMissions')}
                 </p>
             </div>
             <div>
@@ -528,7 +534,7 @@ function GlobalStatsBar({ stats }: {
                     {stats.totalSellers}
                 </p>
                 <p className="text-xs text-neutral-400 uppercase tracking-widest mt-1">
-                    Sellers totaux
+                    {t('totalSellers')}
                 </p>
             </div>
             <div>
@@ -536,7 +542,7 @@ function GlobalStatsBar({ stats }: {
                     {formatNumber(stats.totalClicks)}
                 </p>
                 <p className="text-xs text-neutral-400 uppercase tracking-widest mt-1">
-                    Clicks totaux
+                    {t('totalClicks')}
                 </p>
             </div>
             <div>
@@ -544,7 +550,7 @@ function GlobalStatsBar({ stats }: {
                     {formatCurrency(stats.totalRevenue)}
                 </p>
                 <p className="text-xs text-neutral-400 uppercase tracking-widest mt-1">
-                    Chiffre d'affaires
+                    {t('totalRevenue')}
                 </p>
             </div>
         </div>
@@ -556,6 +562,7 @@ function GlobalStatsBar({ stats }: {
 // =============================================
 
 function MissionsContent() {
+    const t = useTranslations('dashboard.missions')
     const [missions, setMissions] = useState<MissionWithStats[]>([])
     const [activities, setActivities] = useState<ActivityItem[]>([])
     const [requests, setRequests] = useState<ProgramRequest[]>([])
@@ -621,10 +628,10 @@ function MissionsContent() {
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-3xl font-light text-neutral-900 tracking-tight">
-                        Missions
+                        {t('title')}
                     </h1>
                     <p className="text-neutral-500 mt-2">
-                        Manage your affiliate programs
+                        {t('managePrograms')}
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -635,12 +642,12 @@ function MissionsContent() {
                             className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-medium text-sm hover:bg-neutral-800 transition-colors"
                         >
                             <Plus className="w-4 h-4" />
-                            Nouvelle mission
+                            {t('newMission')}
                         </Link>
                     ) : (
                         <div className="flex items-center gap-2 px-5 py-2.5 bg-neutral-100 text-neutral-400 rounded-xl font-medium text-sm cursor-not-allowed">
                             <AlertCircle className="w-4 h-4" />
-                            Limite atteinte
+                            {t('limitReached')}
                         </div>
                     )}
                 </div>
@@ -677,7 +684,7 @@ function MissionsContent() {
                                     <div className="w-10 h-10 rounded-full bg-neutral-100 group-hover:bg-neutral-200 flex items-center justify-center transition-colors">
                                         <Plus className="w-5 h-5" />
                                     </div>
-                                    <span className="font-medium">Ajouter une mission</span>
+                                    <span className="font-medium">{t('addMission')}</span>
                                 </Link>
                             )}
                         </>

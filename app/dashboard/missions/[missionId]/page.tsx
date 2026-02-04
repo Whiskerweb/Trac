@@ -17,6 +17,7 @@ import {
     rejectProgramRequest,
     type EnrichedProgramRequest
 } from '@/app/actions/marketplace-actions'
+import { useTranslations } from 'next-intl'
 
 // =============================================
 // PAGINATION CONFIG
@@ -66,6 +67,7 @@ type SortOrder = 'asc' | 'desc'
 // =============================================
 
 function StatusBadge({ status }: { status: string }) {
+    const t = useTranslations('dashboard.missions.detail.statusLabels')
     const styles: Record<string, string> = {
         ACTIVE: 'bg-green-50 text-green-700',
         DRAFT: 'bg-gray-100 text-gray-600',
@@ -73,12 +75,13 @@ function StatusBadge({ status }: { status: string }) {
     }
     return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
-            {status}
+            {t(status as 'ACTIVE' | 'DRAFT' | 'ARCHIVED')}
         </span>
     )
 }
 
 function ParticipantStatusBadge({ status }: { status: string }) {
+    const t = useTranslations('dashboard.missions.detail.statusLabels')
     const styles: Record<string, string> = {
         APPROVED: 'bg-green-50 text-green-700',
         PENDING: 'bg-orange-50 text-orange-700',
@@ -86,36 +89,35 @@ function ParticipantStatusBadge({ status }: { status: string }) {
     }
     return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
-            {status}
+            {t(status as 'APPROVED' | 'PENDING' | 'REJECTED')}
         </span>
     )
 }
 
 function VisibilityBadge({ visibility }: { visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY' }) {
+    const t = useTranslations('dashboard.missions.detail.visibilityLabels')
     const config = {
         PUBLIC: {
             icon: Globe,
-            label: 'Public',
             styles: 'bg-emerald-50 text-emerald-700',
         },
         PRIVATE: {
             icon: Lock,
-            label: 'Private',
             styles: 'bg-amber-50 text-amber-700',
         },
         INVITE_ONLY: {
             icon: Sparkles,
-            label: 'Invite Only',
             styles: 'bg-violet-50 text-violet-700',
         },
     }
 
-    const { icon: Icon, label, styles } = config[visibility]
+    const { icon: Icon, styles } = config[visibility]
+    const label = visibility === 'PUBLIC' ? 'public' : visibility === 'PRIVATE' ? 'private' : 'inviteOnly'
 
     return (
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${styles}`}>
             <Icon className="w-3 h-3" />
-            {label}
+            {t(label)}
         </span>
     )
 }
@@ -148,6 +150,7 @@ export default function MissionDetailPage({
     params: Promise<{ missionId: string }>
 }) {
     const { missionId } = use(params)
+    const t = useTranslations('dashboard.missions.detail')
     const router = useRouter()
     const [mission, setMission] = useState<MissionDetails | null>(null)
     const [loading, setLoading] = useState(true)
@@ -335,10 +338,10 @@ export default function MissionDetailPage({
                     className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900"
                 >
                     <ChevronLeft className="w-4 h-4" />
-                    Missions
+                    {t('backToMissions')}
                 </button>
                 <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-                    <p className="text-red-700">{error || 'Mission introuvable'}</p>
+                    <p className="text-red-700">{error || t('notFound')}</p>
                 </div>
             </div>
         )
@@ -359,7 +362,7 @@ export default function MissionDetailPage({
                 className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors"
             >
                 <ChevronLeft className="w-4 h-4" />
-                Missions
+                {t('backToMissions')}
             </button>
 
             {/* Header */}
@@ -375,7 +378,7 @@ export default function MissionDetailPage({
                             <VisibilityBadge visibility={mission.visibility} />
                         </div>
                         <p className="text-gray-500 text-sm mt-1">
-                            {mission.description || 'Aucune description'}
+                            {mission.description || t('noDescription')}
                         </p>
                     </div>
                 </div>
@@ -398,9 +401,9 @@ export default function MissionDetailPage({
                                 <LinkIcon className="w-5 h-5 text-violet-600" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-gray-900">Invite Link</h3>
+                                <h3 className="font-semibold text-gray-900">{t('inviteLink')}</h3>
                                 <p className="text-sm text-gray-500">
-                                    Share this link to invite sellers to your mission
+                                    {t('inviteLinkDescription')}
                                 </p>
                             </div>
                         </div>
@@ -415,12 +418,12 @@ export default function MissionDetailPage({
                                 {copied ? (
                                     <>
                                         <Check className="w-4 h-4" />
-                                        Copied!
+                                        {t('copied')}
                                     </>
                                 ) : (
                                     <>
                                         <Copy className="w-4 h-4" />
-                                        Copy Link
+                                        {t('copy')}
                                     </>
                                 )}
                             </button>
@@ -432,27 +435,27 @@ export default function MissionDetailPage({
             {/* Stats Bar */}
             <div className="flex gap-6 p-5 bg-white border border-gray-200 rounded-xl">
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Participants</p>
+                    <p className="text-sm text-gray-500">{t('participants')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{totalParticipants}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Actifs</p>
+                    <p className="text-sm text-gray-500">{t('active')}</p>
                     <p className="text-2xl font-semibold text-green-600">{activeParticipants}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Clicks</p>
+                    <p className="text-sm text-gray-500">{t('clicks')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{formatNumber(totalClicks)}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Ventes</p>
+                    <p className="text-sm text-gray-500">{t('sales')}</p>
                     <p className="text-2xl font-semibold text-gray-900">{totalSales}</p>
                 </div>
                 <div className="w-px bg-gray-200" />
                 <div className="flex-1">
-                    <p className="text-sm text-gray-500">Revenu</p>
+                    <p className="text-sm text-gray-500">{t('revenue')}</p>
                     <p className="text-2xl font-semibold text-green-600">€{(totalRevenue / 100).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                 </div>
             </div>
@@ -466,7 +469,7 @@ export default function MissionDetailPage({
                             <div className="flex items-center gap-2">
                                 <Clock className="w-4 h-4 text-amber-500" />
                                 <span className="text-sm font-medium text-gray-900">
-                                    {pendingRequests.length} demande{pendingRequests.length > 1 ? 's' : ''}
+                                    {pendingRequests.length} {pendingRequests.length > 1 ? t('pendingRequestsPlural') : t('pendingRequests')}
                                 </span>
                             </div>
                             {/* Search */}
@@ -474,7 +477,7 @@ export default function MissionDetailPage({
                                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Rechercher..."
+                                    placeholder={t('searchPlaceholder')}
                                     value={requestsSearch}
                                     onChange={(e) => {
                                         setRequestsSearch(e.target.value)
@@ -487,20 +490,20 @@ export default function MissionDetailPage({
                         {/* Bulk actions */}
                         {selectedRequests.size > 0 && (
                             <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500">{selectedRequests.size} selected{selectedRequests.size > 1 ? 's' : ''}</span>
+                                <span className="text-xs text-gray-500">{selectedRequests.size} {t('selected')}</span>
                                 <button
                                     onClick={handleBulkApprove}
                                     disabled={processingRequest !== null}
                                     className="px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors disabled:opacity-50"
                                 >
-                                    Tout accepter
+                                    {t('approveAll')}
                                 </button>
                                 <button
                                     onClick={handleBulkReject}
                                     disabled={processingRequest !== null}
                                     className="px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors disabled:opacity-50"
                                 >
-                                    Tout refuser
+                                    {t('rejectAll')}
                                 </button>
                             </div>
                         )}
@@ -516,11 +519,11 @@ export default function MissionDetailPage({
                                 className="w-3.5 h-3.5 rounded border-gray-300 text-gray-900 focus:ring-gray-500"
                             />
                         </div>
-                        <div>Seller</div>
-                        <div className="text-right">Revenue generated</div>
-                        <div className="text-right">Ventes</div>
-                        <div className="text-right">Clicks</div>
-                        <div className="text-center">Actions</div>
+                        <div>{t('seller')}</div>
+                        <div className="text-right">{t('revenueGenerated')}</div>
+                        <div className="text-right">{t('sales')}</div>
+                        <div className="text-right">{t('clicks')}</div>
+                        <div className="text-center">{t('actions')}</div>
                     </div>
 
                     {/* Rows */}
@@ -705,29 +708,29 @@ export default function MissionDetailPage({
                         {mission.enrollments.length === 0 ? (
                             <div className="px-6 py-12 text-center">
                                 <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                <p className="text-gray-900 font-medium">Aucun participant</p>
+                                <p className="text-gray-900 font-medium">{t('noParticipants')}</p>
                                 <p className="text-gray-500 text-sm mt-1">
-                                    Partagez votre mission pour attirer des sellers
+                                    {t('shareToAttract')}
                                 </p>
                             </div>
                         ) : (
                             <>
                                 {/* Table Header */}
                                 <div className="flex items-center px-5 py-2.5 bg-gray-50/80 border-b border-gray-100 text-xs font-medium text-gray-500">
-                                    <div className="flex-1 min-w-0">Seller</div>
+                                    <div className="flex-1 min-w-0">{t('seller')}</div>
                                     <button onClick={() => toggleSort('revenue')} className="w-20 flex items-center justify-end gap-1 hover:text-gray-900">
-                                        Rev.
+                                        {t('sortRevenue')}
                                         {sortField === 'revenue' ? (sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                                     </button>
                                     <button onClick={() => toggleSort('sales')} className="w-16 flex items-center justify-end gap-1 hover:text-gray-900">
-                                        Sales
+                                        {t('sortSales')}
                                         {sortField === 'sales' ? (sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                                     </button>
                                     <button onClick={() => toggleSort('clicks')} className="w-16 flex items-center justify-end gap-1 hover:text-gray-900">
-                                        Clicks
+                                        {t('sortClicks')}
                                         {sortField === 'clicks' ? (sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                                     </button>
-                                    <div className="w-24 text-right">Status</div>
+                                    <div className="w-24 text-right">{t('status')}</div>
                                 </div>
 
                                 {/* Table Rows */}
@@ -792,10 +795,10 @@ export default function MissionDetailPage({
                 <div className="w-72 shrink-0 space-y-4">
                     {/* Mission Details */}
                     <div className="bg-white border border-gray-200 rounded-xl p-5">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-4">Details</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('details')}</h3>
                         <div className="space-y-3">
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">URL cible</p>
+                                <p className="text-xs text-gray-500 mb-1">{t('targetUrl')}</p>
                                 <a
                                     href={mission.target_url}
                                     target="_blank"
@@ -807,15 +810,15 @@ export default function MissionDetailPage({
                                 </a>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Reward</p>
+                                <p className="text-xs text-gray-500 mb-1">{t('reward')}</p>
                                 <p className="text-sm font-medium text-green-600">{mission.reward}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Visibility</p>
+                                <p className="text-xs text-gray-500 mb-1">{t('visibility')}</p>
                                 <p className="text-sm text-gray-900">{mission.visibility || 'PUBLIC'}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Created on</p>
+                                <p className="text-xs text-gray-500 mb-1">{t('createdOn')}</p>
                                 <p className="text-sm text-gray-900">{formatDate(mission.created_at)}</p>
                             </div>
                         </div>
@@ -823,7 +826,7 @@ export default function MissionDetailPage({
 
                     {/* Actions */}
                     <div className="bg-white border border-gray-200 rounded-xl p-5">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-4">Actions</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('actionsSection')}</h3>
                         <div className="space-y-2">
                             <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
                                 <Edit className="w-4 h-4" />

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Copy, Check, Loader2, Eye, EyeOff, ChevronDown, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { getOrCreateApiKey, regenerateApiKey } from '@/app/actions/settings'
 import { getVerifiedDomainForWorkspace } from '@/app/actions/domains'
 import { WebhookManager } from '@/components/WebhookManager'
@@ -93,6 +94,7 @@ function Section({
 // =============================================
 
 export default function IntegrationPage() {
+    const t = useTranslations('dashboard.integration')
     const [publicKey, setPublicKey] = useState<string | null>(null)
     const [secretKey, setSecretKey] = useState<string | null>(null)
     const [showSecret, setShowSecret] = useState(false)
@@ -275,10 +277,10 @@ Add webhook in Traaaction dashboard for Stripe events:
             {/* Header */}
             <header className="mb-12">
                 <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight mb-2">
-                    Integration
+                    {t('title')}
                 </h1>
                 <p className="text-neutral-500 text-sm leading-relaxed">
-                    Connect your application to track affiliate conversions.
+                    {t('subtitle')}
                 </p>
             </header>
 
@@ -287,9 +289,9 @@ Add webhook in Traaaction dashboard for Stripe events:
                 <div className="mb-10 pb-10 border-b border-neutral-200">
                     <p className="text-sm text-neutral-500">
                         <Link href="/dashboard/domains" className="text-neutral-900 hover:underline">
-                            Add a custom domain
+                            {t('addCustomDomain')}
                         </Link>
-                        {' '}for better tracking reliability.
+                        {' '}{t('betterTracking')}
                     </p>
                 </div>
             )}
@@ -303,12 +305,12 @@ Add webhook in Traaaction dashboard for Stripe events:
                     {aiCopied ? (
                         <span className="flex items-center gap-1.5">
                             <Check className="w-3.5 h-3.5" />
-                            Copied to clipboard
+                            {t('copiedToClipboard')}
                         </span>
                     ) : (
                         <span className="flex items-center gap-1.5">
                             <Copy className="w-3.5 h-3.5" />
-                            Copy as Markdown for AI assistants
+                            {t('copyAsMarkdown')}
                         </span>
                     )}
                 </button>
@@ -316,62 +318,62 @@ Add webhook in Traaaction dashboard for Stripe events:
 
             {/* Steps */}
             <div className="mb-12">
-                <Section id="step-1" number={1} title="Configure rewrites" defaultOpen>
+                <Section id="step-1" number={1} title={t('step1.title')} defaultOpen>
                     <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
-                        Add these rewrites to your Next.js config. This proxies tracking requests through your domain to avoid ad blockers.
+                        {t('step1.description')}
                     </p>
 
                     <CodeBlock code={rewritesConfig} filename="next.config.js" />
 
                     <p className="text-xs text-neutral-400 mt-4">
-                        For other frameworks, configure equivalent proxy rules.
+                        {t('step1.otherFrameworks')}
                     </p>
                 </Section>
 
-                <Section id="step-2" number={2} title="Add the tracking script">
+                <Section id="step-2" number={2} title={t('step2.title')}>
                     <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
-                        Add this script to your HTML head. It tracks affiliate link clicks and stores a cookie for attribution.
+                        {t('step2.description')}
                     </p>
 
                     <CodeBlock code={scriptTag} filename="app/layout.tsx" />
 
                     <p className="text-xs text-neutral-400 mt-4">
-                        The script uses your proxied path to avoid being blocked.
+                        {t('step2.avoidBlocked')}
                     </p>
                 </Section>
 
-                <Section id="step-3" number={3} title="Track user signups">
+                <Section id="step-3" number={3} title={t('step3.title')}>
                     <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
-                        After creating a user, send a tracking event. This links the user to their referring seller.
+                        {t('step3.description')}
                     </p>
 
                     <CodeBlock code={trackSignup} filename="signup handler" />
 
                     <div className="mt-6 space-y-3 text-xs text-neutral-500">
                         <p>
-                            <span className="text-neutral-700 font-medium">x-publishable-key:</span> Identifies your workspace. Your key is shown above.
+                            <span className="text-neutral-700 font-medium">{t('step3.publishableKey')}</span> {t('step3.publishableKeyDesc')}
                         </p>
                         <p>
-                            <span className="text-neutral-700 font-medium">Automatic attribution:</span> Once the lead is created with a clickId, all future sales from this customer are attributed to the seller.
+                            <span className="text-neutral-700 font-medium">{t('step3.automaticAttribution')}</span> {t('step3.automaticAttributionDesc')}
                         </p>
                     </div>
                 </Section>
 
-                <Section id="step-4" number={4} title="Add Stripe metadata">
+                <Section id="step-4" number={4} title={t('step4.title')}>
                     <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
-                        Include tracking metadata in your Stripe checkout session for payment attribution.
+                        {t('step4.description')}
                     </p>
 
                     <CodeBlock code={stripeMetadata} filename="checkout handler" />
 
                     <p className="text-xs text-neutral-400 mt-4">
-                        Use the same customerExternalId as in trackLead.
+                        {t('step4.sameCustomerId')}
                     </p>
                 </Section>
 
-                <Section id="step-5" number={5} title="Configure webhook">
+                <Section id="step-5" number={5} title={t('step5.title')}>
                     <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
-                        Connect your Stripe account to receive payment notifications automatically.
+                        {t('step5.description')}
                     </p>
 
                     <div className="mt-4">
@@ -384,7 +386,7 @@ Add webhook in Traaaction dashboard for Stripe events:
             <div className="pt-8 border-t border-neutral-200">
                 <details className="group">
                     <summary className="flex items-center justify-between cursor-pointer py-2 list-none">
-                        <span className="text-sm font-medium text-neutral-900">API Keys</span>
+                        <span className="text-sm font-medium text-neutral-900">{t('apiKeys.title')}</span>
                         <ChevronDown className="w-4 h-4 text-neutral-400 group-open:rotate-180 transition-transform" />
                     </summary>
 
@@ -392,17 +394,17 @@ Add webhook in Traaaction dashboard for Stripe events:
                         {/* Public Key */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs text-neutral-500 uppercase tracking-wide">Public Key</span>
+                                <span className="text-xs text-neutral-500 uppercase tracking-wide">{t('apiKeys.publicKey')}</span>
                                 <CopyButton text={publicKey || ''} small />
                             </div>
                             <code className="text-sm font-mono text-neutral-900 break-all">{publicKey}</code>
-                            <p className="text-xs text-neutral-400 mt-1.5">Use in x-publishable-key header.</p>
+                            <p className="text-xs text-neutral-400 mt-1.5">{t('apiKeys.publicKeyDesc')}</p>
                         </div>
 
                         {/* Secret Key */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs text-neutral-500 uppercase tracking-wide">Secret Key</span>
+                                <span className="text-xs text-neutral-500 uppercase tracking-wide">{t('apiKeys.secretKey')}</span>
                                 <div className="flex items-center gap-1">
                                     {secretKey && (
                                         <>
@@ -426,7 +428,7 @@ Add webhook in Traaaction dashboard for Stripe events:
                                     <code className="text-sm font-mono text-neutral-400">sk_live_{'•'.repeat(32)}</code>
                                     <button
                                         onClick={async () => {
-                                            if (confirm('This will invalidate your current key. Continue?')) {
+                                            if (confirm(t('apiKeys.regenerateConfirm'))) {
                                                 const result = await regenerateApiKey()
                                                 if (result.success) {
                                                     setPublicKey(result.publicKey!)
@@ -437,11 +439,11 @@ Add webhook in Traaaction dashboard for Stripe events:
                                         }}
                                         className="text-xs text-neutral-500 hover:text-neutral-900 flex items-center gap-1 transition-colors"
                                     >
-                                        <RefreshCw className="w-3 h-3" /> Regenerate
+                                        <RefreshCw className="w-3 h-3" /> {t('apiKeys.regenerate')}
                                     </button>
                                 </div>
                             )}
-                            <p className="text-xs text-neutral-400 mt-1.5">Keep secret. Never expose in frontend.</p>
+                            <p className="text-xs text-neutral-400 mt-1.5">{t('apiKeys.secretKeyDesc')}</p>
                         </div>
                     </div>
                 </details>
@@ -450,9 +452,9 @@ Add webhook in Traaaction dashboard for Stripe events:
             {/* Support */}
             <div className="mt-12 pt-8 border-t border-neutral-200">
                 <p className="text-sm text-neutral-500">
-                    Need help?{' '}
+                    {t('support.needHelp')}{' '}
                     <a href="mailto:support@traaaction.com" className="text-neutral-900 hover:underline">
-                        Contact support
+                        {t('support.contactSupport')}
                     </a>
                 </p>
             </div>

@@ -1,11 +1,14 @@
 "use client";
 
 import { ArrowRight, Check } from "lucide-react";
+import { useTranslations } from 'next-intl';
 import SellerProfileVisual from "../ui/SellerProfileVisual";
 import MissionJoinVisual from "../ui/MissionJoinVisual";
 import SellerEarningsVisual from "../ui/SellerEarningsVisual";
 
 export const CutThroughTheNoise = () => {
+    const t = useTranslations('landing.sellerSteps');
+
     return (
         <section id="sellers" className="bg-white border-y border-slate-200">
             <div className="container mx-auto px-4 max-w-5xl py-24">
@@ -13,13 +16,13 @@ export const CutThroughTheNoise = () => {
                 {/* Header - Centered per reference */}
                 <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 border border-violet-100 text-violet-600 text-xs font-bold uppercase tracking-wide mb-2">
-                        For Sellers
+                        {t('badge')}
                     </div>
                     <h2 className="text-4xl md:text-5xl font-medium tracking-tight text-slate-900">
-                        Start earning quickly
+                        {t('title')}
                     </h2>
                     <p className="text-lg text-slate-500 leading-relaxed font-medium">
-                        Join the platform, pick a mission, and start generating revenue. No complex onboarding, just <span className="text-slate-900 font-semibold">Traaaction</span>.
+                        {t('subtitle')} <span className="text-slate-900 font-semibold">Traaaction</span>.
                     </p>
                 </div>
 
@@ -29,8 +32,8 @@ export const CutThroughTheNoise = () => {
                     {/* Step 1 */}
                     <FeatureColumn
                         step="01"
-                        title="Create & Validate"
-                        description="Sign up and complete your profile identification. Get verified instantly to access opportunities."
+                        title={t('step1.title')}
+                        description={t('step1.description')}
                         delay={0}
                     >
                         <SellerProfileVisual />
@@ -39,8 +42,8 @@ export const CutThroughTheNoise = () => {
                     {/* Step 2 */}
                     <FeatureColumn
                         step="02"
-                        title="Join & Claim Link"
-                        description="Browse active missions from top brands. Accept a mission and get your unique tracking link."
+                        title={t('step2.title')}
+                        description={t('step2.description')}
                         delay={0.1}
                     >
                         <MissionJoinVisual />
@@ -49,8 +52,8 @@ export const CutThroughTheNoise = () => {
                     {/* Step 3 */}
                     <FeatureColumn
                         step="03"
-                        title="Sell & Earn"
-                        description="Share your link and track sales in real-time. Receive automated payouts directly to your account."
+                        title={t('step3.title')}
+                        description={t('step3.description')}
                         delay={0.2}
                     >
                         <SellerEarningsVisual />

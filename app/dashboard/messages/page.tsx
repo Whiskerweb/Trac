@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { MessageSquare, Send, User, CheckCheck, Gift, ExternalLink, Loader2 } from 'lucide-react'
 import { getConversations, getMessages, sendMessage, markAsRead } from '@/app/actions/messaging'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 interface Conversation {
     id: string
@@ -46,6 +47,7 @@ export default function MessagesPage() {
 }
 
 function MessagesContent() {
+    const t = useTranslations('messages')
     const searchParams = useSearchParams()
     const conversationParam = searchParams.get('conversation')
 
@@ -131,8 +133,8 @@ function MessagesContent() {
             {/* Conversations List (Left) */}
             <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
                 <div className="p-4 border-b border-gray-100">
-                    <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
-                    <p className="text-xs text-gray-500 mt-0.5">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
+                    <h2 className="text-lg font-semibold text-gray-900">{t('title')}</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">{conversations.length} {conversations.length !== 1 ? t('conversations') : t('conversation')}</p>
                 </div>
 
                 {conversations.length === 0 ? (
@@ -141,10 +143,10 @@ function MessagesContent() {
                             <MessageSquare className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
                         </div>
                         <h3 className="text-base font-medium text-gray-900 mb-2">
-                            No messages yet
+                            {t('noMessages')}
                         </h3>
                         <p className="text-sm text-gray-600">
-                            Start a conversation by inviting sellers to your missions.
+                            {t('startConversation')}
                         </p>
                     </div>
                 ) : (
@@ -181,7 +183,7 @@ function MessagesContent() {
                                                 )}
                                             </div>
                                             <p className="text-sm text-gray-500 truncate mt-0.5">
-                                                {convo.last_message || 'New conversation'}
+                                                {convo.last_message || t('newConversation')}
                                             </p>
                                             <p className="text-xs text-gray-400 mt-1">
                                                 {new Date(convo.last_at).toLocaleDateString('en-US')}
@@ -241,7 +243,7 @@ function MessagesContent() {
                                         href={`/dashboard/sellers/${selectedConvo.seller_id}/profile`}
                                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors"
                                     >
-                                        View Profile
+                                        {t('viewProfile')}
                                         <ExternalLink className="w-3 h-3" />
                                     </Link>
                                 )}
@@ -267,7 +269,7 @@ function MessagesContent() {
                                         {msg.is_invitation && (
                                             <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/30">
                                                 <Gift className="w-4 h-4" />
-                                                <span className="text-sm font-medium">Mission Invitation</span>
+                                                <span className="text-sm font-medium">{t('missionInvitation')}</span>
                                             </div>
                                         )}
                                         <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
@@ -295,7 +297,7 @@ function MessagesContent() {
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                                    placeholder="Write a message..."
+                                    placeholder={t('writeMessage')}
                                     className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                                     disabled={sending}
                                 />
@@ -316,10 +318,10 @@ function MessagesContent() {
                                 <MessageSquare className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
                             </div>
                             <h3 className="text-base font-medium text-gray-900 mb-2">
-                                Select a conversation
+                                {t('selectConversation')}
                             </h3>
                             <p className="text-sm text-gray-600">
-                                Choose a conversation on the left to view messages.
+                                {t('chooseConversation')}
                             </p>
                         </div>
                     </div>

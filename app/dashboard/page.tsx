@@ -14,6 +14,7 @@ import {
     X,
     MapPin
 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
 import { GlobeVisualization } from '@/components/dashboard/GlobeVisualization'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
@@ -80,15 +81,15 @@ const kpiFetcher = async (url: string): Promise<KPIResponse> => {
 // DATE RANGES
 // =============================================
 
-const DATE_RANGES = [
-    { label: 'Today', value: 'today', days: 0 },
-    { label: 'Yesterday', value: 'yesterday', days: 1 },
-    { label: 'Last 7 days', value: '7d', days: 7 },
-    { label: 'Last 14 days', value: '14d', days: 14 },
-    { label: 'Last 30 days', value: '30d', days: 30 },
-    { label: 'Last 90 days', value: '90d', days: 90 },
-    { label: 'Last 12 months', value: '12m', days: 365 },
-    { label: 'All time', value: 'all', days: 3650 },
+const DATE_RANGE_KEYS = [
+    { labelKey: 'today', value: 'today', days: 0 },
+    { labelKey: 'yesterday', value: 'yesterday', days: 1 },
+    { labelKey: 'last7days', value: '7d', days: 7 },
+    { labelKey: 'last14days', value: '14d', days: 14 },
+    { labelKey: 'last30days', value: '30d', days: 30 },
+    { labelKey: 'last90days', value: '90d', days: 90 },
+    { labelKey: 'last12months', value: '12m', days: 365 },
+    { labelKey: 'allTime', value: 'all', days: 3650 },
 ]
 
 // =============================================
@@ -216,16 +217,18 @@ function Dropdown({
 
 function FilterBadge({
     filter,
-    onRemove
+    onRemove,
+    isText
 }: {
     filter: ActiveFilter
     onRemove: () => void
+    isText: string
 }) {
     return (
         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm animate-in fade-in slide-in-from-left-2 duration-200">
             {filter.icon}
             <span className="text-gray-500 capitalize">{filter.type}</span>
-            <span className="text-gray-400">is</span>
+            <span className="text-gray-400">{isText}</span>
             <span className="font-semibold text-gray-900">{filter.label}</span>
             <button
                 onClick={onRemove}
@@ -294,16 +297,18 @@ function AnalyticsCard({
     children,
     settingsLabel,
     itemCount = 0,
-    maxItems = 8
+    maxItems = 8,
+    viewAllText = 'View All'
 }: {
     title: string
-    tabs?: string[]
+    tabs?: { key: string; label: string }[]
     activeTab?: string
     onTabChange?: (tab: string) => void
     children: React.ReactNode
     settingsLabel?: string
     itemCount?: number
     maxItems?: number
+    viewAllText?: string
 }) {
     return (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -314,14 +319,14 @@ function AnalyticsCard({
                         {tabs ? (
                             tabs.map((tab) => (
                                 <button
-                                    key={tab}
-                                    onClick={() => onTabChange?.(tab)}
-                                    className={`text-sm font-medium transition-colors ${activeTab === tab
+                                    key={tab.key}
+                                    onClick={() => onTabChange?.(tab.key)}
+                                    className={`text-sm font-medium transition-colors ${activeTab === tab.key
                                         ? 'text-gray-900'
                                         : 'text-gray-400 hover:text-gray-600'
                                         }`}
                                 >
-                                    {tab}
+                                    {tab.label}
                                 </button>
                             ))
                         ) : (
@@ -343,7 +348,7 @@ function AnalyticsCard({
             {itemCount > maxItems && (
                 <div className="px-4 py-2.5 border-t border-gray-100 text-center">
                     <button className="text-sm text-gray-500 hover:text-gray-700 font-medium">
-                        View All
+                        {viewAllText}
                     </button>
                 </div>
             )}
@@ -356,9 +361,18 @@ function AnalyticsCard({
 // =============================================
 
 export default function DashboardPage() {
-    // Date range state
+    const t = useTranslations('dashboard')
+
+    // Build DATE_RANGES with translated labels
+    const DATE_RANGES = DATE_RANGE_KEYS.map(range => ({
+        ...range,
+        label: t(`dateRanges.${range.labelKey}`)
+    }))
+
+    // Date range state - store the value, not the object
     const [dateRangeOpen, setDateRangeOpen] = useState(false)
-    const [selectedRange, setSelectedRange] = useState(DATE_RANGES[4]) // Last 30 days
+    const [selectedRangeValue, setSelectedRangeValue] = useState('30d') // Last 30 days
+    const selectedRange = DATE_RANGES.find(r => r.value === selectedRangeValue) || DATE_RANGES[4]
 
     // Filter state
     const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
@@ -368,9 +382,9 @@ export default function DashboardPage() {
         new Set(['clicks', 'leads', 'sales'])
     )
 
-    // Tab state for analytics cards
-    const [locationTab, setLocationTab] = useState('Countries')
-    const [deviceTab, setDeviceTab] = useState('Devices')
+    // Tab state for analytics cards (use keys, not translated labels)
+    const [locationTab, setLocationTab] = useState('countries')
+    const [deviceTab, setDeviceTab] = useState('devices')
 
     // Calculate dates from range
     const dateFrom = selectedRange.value === 'yesterday'
@@ -739,7 +753,7 @@ export default function DashboardPage() {
     const maxOS = Math.max(...displayOS.map((o: { count: number }) => o.count), 1)
 
     const handleSelectRange = (range: typeof DATE_RANGES[0]) => {
-        setSelectedRange(range)
+        setSelectedRangeValue(range.value)
         setDateRangeOpen(false)
     }
 
@@ -843,7 +857,7 @@ export default function DashboardPage() {
                     {activeEventTypes.size < 3 && (
                         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-100 border border-violet-200 rounded-lg">
                             <span className="text-sm text-violet-700 font-medium">
-                                Showing: {Array.from(activeEventTypes).join(', ')}
+                                {t('filters.showing')}: {Array.from(activeEventTypes).join(', ')}
                             </span>
                             <button
                                 onClick={() => setActiveEventTypes(new Set(['clicks', 'leads', 'sales']))}
@@ -860,6 +874,7 @@ export default function DashboardPage() {
                             key={`${filter.type}-${filter.value}`}
                             filter={filter}
                             onRemove={() => removeFilter(filter.type, filter.value)}
+                            isText={t('filters.is')}
                         />
                     ))}
 
@@ -868,7 +883,7 @@ export default function DashboardPage() {
                         onClick={clearAllFilters}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
                     >
-                        Clear Filters
+                        {t('filters.clearFilters')}
                         <span className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">ESC</span>
                     </button>
                 </div>
@@ -889,13 +904,19 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Locations Card */}
                 <AnalyticsCard
-                    title="Locations"
-                    tabs={['Countries', 'Cities', 'Regions', 'Continents']}
+                    title={t('locations.title')}
+                    tabs={[
+                        { key: 'countries', label: t('locations.countries') },
+                        { key: 'cities', label: t('locations.cities') },
+                        { key: 'regions', label: t('locations.regions') },
+                        { key: 'continents', label: t('locations.continents') }
+                    ]}
                     activeTab={locationTab}
                     onTabChange={setLocationTab}
-                    settingsLabel="CLICKS"
+                    settingsLabel={t('kpi.clicks').toUpperCase()}
+                    viewAllText={t('viewAll')}
                 >
-                    {locationTab === 'Countries' && displayLocations.map((loc) => (
+                    {locationTab === 'countries' && displayLocations.map((loc) => (
                         <SimpleListItem
                             key={loc.code}
                             icon={<span className="text-lg">{loc.flag}</span>}
@@ -906,7 +927,7 @@ export default function DashboardPage() {
                             onClick={() => toggleFilter('country', loc.code, loc.name, <span className="text-sm">{loc.flag}</span>)}
                         />
                     ))}
-                    {locationTab === 'Cities' && displayCities.map((city) => (
+                    {locationTab === 'cities' && displayCities.map((city) => (
                         <SimpleListItem
                             key={city.name}
                             icon={<span className="text-lg">{city.flag}</span>}
@@ -917,7 +938,7 @@ export default function DashboardPage() {
                             onClick={() => toggleFilter('city', city.name, city.name, <span className="text-sm">{city.flag}</span>)}
                         />
                     ))}
-                    {locationTab === 'Regions' && displayRegions.map((region) => (
+                    {locationTab === 'regions' && displayRegions.map((region) => (
                         <SimpleListItem
                             key={region.name}
                             icon={<span className="text-lg">{region.flag}</span>}
@@ -928,7 +949,7 @@ export default function DashboardPage() {
                             onClick={() => toggleFilter('region', region.name, region.name, <span className="text-sm">{region.flag}</span>)}
                         />
                     ))}
-                    {locationTab === 'Continents' && displayContinents.map((cont) => (
+                    {locationTab === 'continents' && displayContinents.map((cont) => (
                         <SimpleListItem
                             key={cont.name}
                             icon={<span className="text-lg">{cont.flag}</span>}
@@ -943,13 +964,18 @@ export default function DashboardPage() {
 
                 {/* Devices Card */}
                 <AnalyticsCard
-                    title="Devices"
-                    tabs={['Devices', 'Browsers', 'OS']}
+                    title={t('devices.title')}
+                    tabs={[
+                        { key: 'devices', label: t('devices.devices') },
+                        { key: 'browsers', label: t('devices.browsers') },
+                        { key: 'os', label: t('devices.os') }
+                    ]}
                     activeTab={deviceTab}
                     onTabChange={setDeviceTab}
-                    settingsLabel="CLICKS"
+                    settingsLabel={t('kpi.clicks').toUpperCase()}
+                    viewAllText={t('viewAll')}
                 >
-                    {deviceTab === 'Devices' && displayDevices.map((device) => {
+                    {deviceTab === 'devices' && displayDevices.map((device) => {
                         const Icon = device.icon
                         return (
                             <SimpleListItem
@@ -963,7 +989,7 @@ export default function DashboardPage() {
                             />
                         )
                     })}
-                    {deviceTab === 'Browsers' && displayBrowsers.map((browser) => (
+                    {deviceTab === 'browsers' && displayBrowsers.map((browser) => (
                         <SimpleListItem
                             key={browser.name}
                             icon={<Globe className="w-4 h-4 text-gray-500" />}
@@ -974,7 +1000,7 @@ export default function DashboardPage() {
                             onClick={() => toggleFilter('browser', browser.name, browser.name, <Globe className="w-3.5 h-3.5 text-gray-500" />)}
                         />
                     ))}
-                    {deviceTab === 'OS' && displayOS.map((os) => (
+                    {deviceTab === 'os' && displayOS.map((os) => (
                         <SimpleListItem
                             key={os.name}
                             icon={<Monitor className="w-4 h-4 text-gray-500" />}
