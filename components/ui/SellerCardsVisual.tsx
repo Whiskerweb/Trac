@@ -3,7 +3,6 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Check, X, Instagram, Linkedin, Link as LinkIcon, Star, TrendingUp } from "lucide-react";
-import Image from "next/image";
 
 const SELLERS = [
     {
@@ -19,7 +18,7 @@ const SELLERS = [
     },
     {
         id: 2,
-        name: "Thomas D.",
+        name: "Thomas M.",
         role: "Affiliate Pro",
         stats: "+12% Conv.",
         img: "/Logotrac/launding/homme1.png",
@@ -80,11 +79,10 @@ export default function SellerCardsVisual() {
                                 {/* Left: Avatar Pro Style */}
                                 <div className="relative">
                                     <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-slate-100 shadow-sm">
-                                        <Image
+                                        <img
                                             src={seller.img}
                                             alt={seller.name}
-                                            fill
-                                            className="object-cover"
+                                            className="w-full h-full object-cover"
                                         />
                                     </div>
                                     <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded bg-white shadow-sm border border-slate-50 flex items-center justify-center ${seller.color}`}>

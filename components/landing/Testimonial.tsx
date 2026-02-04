@@ -1,7 +1,5 @@
 "use client";
 
-import Image from "next/image";
-
 export const Testimonial = () => {
     return (
         <div className="border-t border-slate-200 bg-white relative overflow-hidden">
@@ -18,13 +16,12 @@ export const Testimonial = () => {
                             href="https://www.linkedin.com/in/lucas-roncey/"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border border-slate-200 shadow-sm relative grayscale hover:grayscale-0 transition-all duration-500 block"
+                            className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border border-slate-200 shadow-sm grayscale hover:grayscale-0 transition-all duration-500 block"
                         >
-                            <Image
+                            <img
                                 src="/Logotrac/lucasroncey.png"
                                 alt="Lucas Roncey"
-                                fill
-                                className="object-cover"
+                                className="w-full h-full object-cover"
                             />
                         </a>
 

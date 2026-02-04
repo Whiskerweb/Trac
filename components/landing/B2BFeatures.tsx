@@ -2,7 +2,6 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Globe, ArrowUpRight, Link as LinkIcon, Briefcase, UserPlus, Check, X, Star, ArrowRight, MousePointer2, Zap, BarChart3, ShoppingBag } from "lucide-react";
-import Image from "next/image";
 import { useState, useEffect, createElement } from "react";
 import EuropeMap from "../ui/EuropeMap";
 import ConnectionVisual from "../ui/ConnectionVisual";
@@ -91,13 +90,12 @@ export const B2BFeatures = () => {
                                 href="https://www.linkedin.com/in/catherine-kate-bourlier-masson/"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border border-slate-200 shadow-sm relative grayscale hover:grayscale-0 transition-all duration-500 block"
+                                className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border border-slate-200 shadow-sm grayscale hover:grayscale-0 transition-all duration-500 block"
                             >
-                                <Image
+                                <img
                                     src="/Logotrac/katemasson.png"
                                     alt="Kate B. Masson"
-                                    fill
-                                    className="object-cover"
+                                    className="w-full h-full object-cover"
                                 />
                             </a>
                         </div>

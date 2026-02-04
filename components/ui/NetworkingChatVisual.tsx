@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, MessageSquare, CheckCheck } from "lucide-react";
-import Image from "next/image";
 
 export default function NetworkingChatVisual() {
     const [key, setKey] = useState(0);
@@ -40,8 +39,8 @@ export default function NetworkingChatVisual() {
                         >
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Marie L.</span>
-                                <div className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white shadow-sm overflow-hidden relative">
-                                    <Image src="/Logotrac/launding/femme1.png" alt="Marie" fill className="object-cover grayscale" />
+                                <div className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white shadow-sm overflow-hidden">
+                                    <img src="/Logotrac/launding/femme1.png" alt="Marie" className="w-full h-full object-cover grayscale" />
                                 </div>
                             </div>
                             <div className="bg-violet-600 text-white p-4 rounded-3xl rounded-tr-none shadow-xl max-w-[90%]">

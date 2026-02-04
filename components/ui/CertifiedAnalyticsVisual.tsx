@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { Check, Shield, Star, Award, User } from "lucide-react";
 
 export default function CertifiedAnalyticsVisual() {
@@ -43,12 +42,11 @@ export default function CertifiedAnalyticsVisual() {
                             {/* Header: Profile + Badge */}
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-white shadow-sm overflow-hidden relative grayscale">
-                                        <Image
+                                    <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-white shadow-sm overflow-hidden grayscale">
+                                        <img
                                             src="/Logotrac/launding/femme1.png"
                                             alt="Seller Profile"
-                                            fill
-                                            className="object-cover"
+                                            className="w-full h-full object-cover"
                                         />
                                     </div>
                                     <div className="space-y-0.5">
