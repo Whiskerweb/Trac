@@ -826,7 +826,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     // ============================================
     // PARTNER PORTAL PROTECTION (Biface Architecture)
     // ============================================
-    if (pathname.startsWith('/seller')) {
+    if (pathname.startsWith('/seller') && !pathname.startsWith('/seller-terms')) {
         if (!user) {
             const loginUrl = new URL('/login', request.url)
             loginUrl.searchParams.set('redirectTo', pathname)

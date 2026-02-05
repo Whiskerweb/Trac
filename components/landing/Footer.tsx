@@ -16,13 +16,14 @@ export function Footer() {
             { labelKey: 'pricing', href: '#' },
         ],
         company: [
-            { labelKey: 'aboutUs', href: '#' },
-            { labelKey: 'careers', href: '#' },
+            { labelKey: 'aboutUs', href: '/about' },
+            { labelKey: 'reportAbuse', href: '/report-abuse' },
         ],
         legal: [
             { labelKey: 'privacy', href: '/privacy' },
             { labelKey: 'terms', href: '/terms' },
-            { labelKey: 'cookies', href: '#' },
+            { labelKey: 'sellerTerms', href: '/seller-terms' },
+            { labelKey: 'startupTerms', href: '/startup-terms' },
         ],
     };
 

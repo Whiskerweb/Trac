@@ -224,10 +224,11 @@
             "pricing": "Tarifs",
             "integrations": "Intégrations",
             "aboutUs": "À propos",
-            "careers": "Carrières",
+            "reportAbuse": "Signaler un abus",
             "privacy": "Politique de confidentialité",
             "terms": "Conditions d'utilisation",
-            "cookies": "Politique des cookies",
+            "sellerTerms": "Conditions Seller",
+            "startupTerms": "Conditions Startup",
             "copyright": "© {year} Traaaction. Tous droits réservés."
         }
     },
@@ -1150,6 +1151,156 @@
             "title": "Non autorisé",
             "description": "Vous n'avez pas la permission d'accéder à cette page.",
             "signIn": "Se connecter"
+        }
+    },
+    "about": {
+        "badge": "Notre histoire",
+        "title": "À propos de",
+        "titleAccent": "Traaaction",
+        "subtitle": "Nous construisons le pont entre les startups qui ont besoin de traction et les talents commerciaux prêts à la fournir.",
+        "backToHome": "Retour à Traaaction",
+        "mission": {
+            "number": "01",
+            "title": "Notre mission",
+            "p1": "Les startups ont besoin de traction commerciale pour croître et lever des fonds. Les jeunes professionnels veulent lancer leur carrière et générer des revenus. {highlight}",
+            "p1Highlight": "Traaaction connecte les deux côtés.",
+            "p2": "Nous démocratisons le marketing d'affiliation en le rendant accessible, transparent et orienté performance. Pas de coûts initiaux pour les startups, pas de barrières pour les sellers.",
+            "p3": "Dans un monde où les compétences comptent plus que les diplômes, nous pensons que le talent commercial doit être valorisé par des résultats concrets. Traaaction fournit les outils pour le prouver.",
+            "p4": "Notre plateforme gère tout, du tracking et de l'attribution au calcul des commissions et aux paiements — pour que chaque partie se concentre sur ce qu'elle fait de mieux."
+        },
+        "howItWorks": {
+            "number": "02",
+            "title": "Comment ça marche",
+            "step1Title": "Les startups créent des missions",
+            "step1Desc": "Définissez votre programme d'affiliation : type de commission, taux et audience cible. En ligne en quelques minutes.",
+            "step2Title": "Les sellers rejoignent et partagent",
+            "step2Desc": "Les sellers parcourent la marketplace, rejoignent des missions et partagent des liens tracés avec leur audience.",
+            "step3Title": "Des commissions sur chaque conversion",
+            "step3Desc": "Chaque clic, lead et vente est suivi. Les sellers gagnent des commissions automatiquement."
+        },
+        "values": {
+            "number": "03",
+            "title": "Nos valeurs",
+            "transparency": "Transparence",
+            "transparencyDesc": "Des structures de commissions claires, un suivi en temps réel et une visibilité totale pour les startups et les sellers.",
+            "performance": "Performance",
+            "performanceDesc": "Payez pour des résultats, pas des promesses. Chaque commission est liée à une action réelle et mesurable.",
+            "simplicity": "Simplicité",
+            "simplicityDesc": "Un onboarding facile, des tableaux de bord intuitifs et des outils qui ne vous gênent pas.",
+            "trust": "Confiance",
+            "trustDesc": "Paiements sécurisés via Stripe, détection de fraude et période de rétention de 30 jours pour la tranquillité d'esprit."
+        },
+        "team": {
+            "number": "04",
+            "title": "L'équipe",
+            "subtitle": "Les personnes derrière Traaaction, engagées à faire fonctionner le marketing d'affiliation pour tous.",
+            "cofounder": "Co-fondateur"
+        },
+        "cta": {
+            "title": "Prêt à commencer ?",
+            "subtitle": "Que vous soyez une startup cherchant de la traction ou un seller prêt à gagner, nous serions ravis d'échanger avec vous.",
+            "bookDemo": "Réserver une démo",
+            "contactUs": "Nous contacter"
+        },
+        "footer": {
+            "terms": "Conditions",
+            "privacy": "Confidentialité",
+            "home": "Accueil"
+        }
+    },
+    "sellerTerms": {
+        "badge": "Accord Seller",
+        "title": "Conditions",
+        "titleAccent": "Seller",
+        "subtitle": "Ces conditions régissent votre participation en tant que Seller (affilié) sur la plateforme Traaaction. Veuillez les lire attentivement avant de rejoindre un programme.",
+        "effectiveDate": "5 février 2026",
+        "intro": "Ces Conditions Seller complètent les Conditions Générales d'Utilisation et s'appliquent spécifiquement aux utilisateurs inscrits en tant que Sellers sur Traaaction. En cas de conflit, ces Conditions Seller prévalent pour les questions relatives aux sellers.",
+        "toc": "Table des matières",
+        "sections": {
+            "eligibility": "Éligibilité et compte",
+            "obligations": "Obligations du Seller",
+            "commissions": "Commissions et paiements",
+            "holdPeriods": "Périodes de rétention et récupérations",
+            "prohibited": "Activités interdites",
+            "fraud": "Fraude et détection",
+            "termination": "Résiliation et suspension",
+            "liability": "Responsabilité et avertissements",
+            "contact": "Contact"
+        }
+    },
+    "startupTerms": {
+        "badge": "Accord Startup",
+        "title": "Conditions",
+        "titleAccent": "Startup",
+        "subtitle": "Ces conditions régissent votre utilisation de Traaaction en tant que Startup créant et gérant des programmes d'affiliation. Elles définissent vos obligations envers les Sellers et la plateforme.",
+        "effectiveDate": "5 février 2026",
+        "intro": "Ces Conditions Startup complètent les Conditions Générales d'Utilisation et s'appliquent spécifiquement aux utilisateurs inscrits en tant que Startups sur Traaaction. En cas de conflit, ces Conditions Startup prévalent pour les questions relatives aux startups.",
+        "toc": "Table des matières",
+        "sections": {
+            "eligibility": "Éligibilité et workspace",
+            "obligations": "Obligations de la Startup",
+            "programs": "Gestion des programmes",
+            "fees": "Frais et obligations de paiement",
+            "commissions": "Responsabilités de commission",
+            "tracking": "Tracking et attribution",
+            "sellers": "Gestion des Sellers",
+            "prohibited": "Activités interdites",
+            "termination": "Résiliation et effets",
+            "liability": "Responsabilité et indemnisation",
+            "contact": "Contact"
+        }
+    },
+    "reportAbuse": {
+        "badge": "Sécurité et confiance",
+        "title": "Signaler",
+        "titleAccent": "un abus",
+        "subtitle": "Traaaction s'engage à prévenir les abus et l'utilisation malveillante de sa plateforme. Si vous pensez qu'un lien, un utilisateur ou un programme est utilisé à des fins malveillantes, veuillez le signaler ci-dessous.",
+        "backToHome": "Retour à Traaaction",
+        "whatWeConsider": "Ce que nous considérons comme un abus",
+        "whatWeConsiderDesc": "Traaaction interdit l'utilisation de sa plateforme pour créer ou promouvoir du contenu malveillant, y compris mais sans s'y limiter :",
+        "abuseTypes": {
+            "phishing": "Sites de phishing ou d'arnaque",
+            "malware": "Distribution de malware",
+            "spam": "Spam ou messages en masse non sollicités",
+            "fraud": "Fraude d'affiliation (faux clics, bots)",
+            "adult": "Pornographie ou contenu pour adultes",
+            "gambling": "Jeux d'argent ou paris illégaux",
+            "copyright": "Violation de droits d'auteur",
+            "impersonation": "Usurpation d'identité"
+        },
+        "helperText": "Les liens et programmes étant créés par des utilisateurs individuels, nous ne pouvons pas contrôler tout le contenu. Vos signalements nous aident à garder la plateforme sûre.",
+        "form": {
+            "title": "Signaler un problème",
+            "email": "Votre adresse email",
+            "emailPlaceholder": "vous@exemple.com",
+            "emailHelper": "Pour pouvoir vous contacter si nécessaire.",
+            "type": "Type d'abus",
+            "typePlaceholder": "Sélectionnez un type...",
+            "typeOptions": {
+                "phishing": "Site de phishing ou d'arnaque",
+                "malware": "Malware ou contenu malveillant",
+                "spam": "Spam ou promotion non sollicitée",
+                "fraud": "Fraude d'affiliation (faux clics, auto-référencement)",
+                "impersonation": "Usurpation d'identité",
+                "adult": "Pornographie ou contenu pour adultes",
+                "gambling": "Jeux d'argent ou paris illégaux",
+                "copyright": "Violation de droits d'auteur",
+                "harassment": "Harcèlement ou discours haineux",
+                "other": "Autre"
+            },
+            "url": "URL ou lien signalé",
+            "urlPlaceholder": "https://...",
+            "urlHelper": "Le lien court Traaaction, profil utilisateur ou URL de programme que vous souhaitez signaler.",
+            "description": "Description",
+            "descriptionPlaceholder": "Veuillez décrire l'abus en détail. Incluez toute preuve ou contexte qui nous aidera à enquêter.",
+            "disclaimer": "Tous les signalements sont examinés par notre équipe de confiance et sécurité. Les faux signalements peuvent entraîner des mesures contre le rapporteur.",
+            "submit": "Envoyer le signalement",
+            "submitting": "Envoi en cours..."
+        },
+        "success": {
+            "title": "Signalement envoyé",
+            "description": "Merci de contribuer à la sécurité de Traaaction. Nous examinerons votre signalement et prendrons les mesures appropriées. Vous pourriez recevoir un suivi à l'adresse email fournie.",
+            "backToHome": "Retour à l'accueil"
         }
     }
 }

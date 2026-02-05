@@ -224,10 +224,11 @@
             "pricing": "Precios",
             "integrations": "Integraciones",
             "aboutUs": "Sobre nosotros",
-            "careers": "Carreras",
+            "reportAbuse": "Reportar abuso",
             "privacy": "Política de privacidad",
             "terms": "Términos de servicio",
-            "cookies": "Política de cookies",
+            "sellerTerms": "Términos del Seller",
+            "startupTerms": "Términos de Startup",
             "copyright": "© {year} Traaaction. Todos los derechos reservados."
         }
     },
@@ -1150,6 +1151,156 @@
             "title": "No autorizado",
             "description": "No tienes permiso para acceder a esta página.",
             "signIn": "Iniciar sesión"
+        }
+    },
+    "about": {
+        "badge": "Nuestra historia",
+        "title": "Sobre",
+        "titleAccent": "Traaaction",
+        "subtitle": "Estamos construyendo el puente entre startups que necesitan tracción y talento comercial listo para ofrecerla.",
+        "backToHome": "Volver a Traaaction",
+        "mission": {
+            "number": "01",
+            "title": "Nuestra misión",
+            "p1": "Las startups necesitan tracción comercial para crecer y obtener financiación. Los jóvenes profesionales quieren lanzar sus carreras y generar ingresos. {highlight}",
+            "p1Highlight": "Traaaction conecta ambas partes.",
+            "p2": "Estamos democratizando el marketing de afiliados haciéndolo accesible, transparente y orientado al rendimiento. Sin costes iniciales para startups, sin barreras para sellers.",
+            "p3": "En un mundo donde las habilidades importan más que los títulos, creemos que el talento comercial debe valorarse por resultados reales. Traaaction proporciona las herramientas para demostrarlo.",
+            "p4": "Nuestra plataforma gestiona todo, desde el tracking y la atribución hasta el cálculo de comisiones y los pagos — para que ambas partes se concentren en lo que mejor saben hacer."
+        },
+        "howItWorks": {
+            "number": "02",
+            "title": "Cómo funciona",
+            "step1Title": "Las startups crean misiones",
+            "step1Desc": "Define tu programa de afiliados: tipo de comisión, tarifas y público objetivo. En línea en minutos.",
+            "step2Title": "Los sellers se unen y comparten",
+            "step2Desc": "Los sellers exploran el marketplace, se unen a misiones y comparten enlaces rastreados con su audiencia.",
+            "step3Title": "Comisiones en cada conversión",
+            "step3Desc": "Cada clic, lead y venta se rastrea. Los sellers ganan comisiones automáticamente."
+        },
+        "values": {
+            "number": "03",
+            "title": "Nuestros valores",
+            "transparency": "Transparencia",
+            "transparencyDesc": "Estructuras de comisiones claras, seguimiento en tiempo real y visibilidad total para startups y sellers.",
+            "performance": "Rendimiento",
+            "performanceDesc": "Paga por resultados, no por promesas. Cada comisión está vinculada a una acción real y medible.",
+            "simplicity": "Simplicidad",
+            "simplicityDesc": "Onboarding fácil, dashboards intuitivos y herramientas que no estorban.",
+            "trust": "Confianza",
+            "trustDesc": "Pagos seguros via Stripe, detección de fraude y un período de retención de 30 días para tu tranquilidad."
+        },
+        "team": {
+            "number": "04",
+            "title": "El equipo",
+            "subtitle": "Las personas detrás de Traaaction, comprometidas a hacer que el marketing de afiliados funcione para todos.",
+            "cofounder": "Co-fundador"
+        },
+        "cta": {
+            "title": "¿Listo para empezar?",
+            "subtitle": "Ya seas una startup buscando tracción o un seller listo para ganar, nos encantaría hablar contigo.",
+            "bookDemo": "Reservar una demo",
+            "contactUs": "Contáctanos"
+        },
+        "footer": {
+            "terms": "Condiciones",
+            "privacy": "Privacidad",
+            "home": "Inicio"
+        }
+    },
+    "sellerTerms": {
+        "badge": "Acuerdo Seller",
+        "title": "Condiciones",
+        "titleAccent": "Seller",
+        "subtitle": "Estas condiciones rigen su participación como Seller (afiliado) en la plataforma Traaaction. Por favor léalas atentamente antes de unirse a cualquier programa.",
+        "effectiveDate": "5 de febrero de 2026",
+        "intro": "Estas Condiciones Seller complementan las Condiciones Generales de Uso y se aplican específicamente a los usuarios registrados como Sellers en Traaaction. En caso de conflicto, estas Condiciones Seller prevalecen para asuntos relativos a sellers.",
+        "toc": "Tabla de contenidos",
+        "sections": {
+            "eligibility": "Elegibilidad y cuenta",
+            "obligations": "Obligaciones del Seller",
+            "commissions": "Comisiones y pagos",
+            "holdPeriods": "Períodos de retención y recuperaciones",
+            "prohibited": "Actividades prohibidas",
+            "fraud": "Fraude y detección",
+            "termination": "Terminación y suspensión",
+            "liability": "Responsabilidad y descargos",
+            "contact": "Contacto"
+        }
+    },
+    "startupTerms": {
+        "badge": "Acuerdo Startup",
+        "title": "Condiciones",
+        "titleAccent": "Startup",
+        "subtitle": "Estas condiciones rigen su uso de Traaaction como Startup creando y gestionando programas de afiliados. Definen sus obligaciones hacia los Sellers y la plataforma.",
+        "effectiveDate": "5 de febrero de 2026",
+        "intro": "Estas Condiciones Startup complementan las Condiciones Generales de Uso y se aplican específicamente a los usuarios registrados como Startups en Traaaction. En caso de conflicto, estas Condiciones Startup prevalecen para asuntos relativos a startups.",
+        "toc": "Tabla de contenidos",
+        "sections": {
+            "eligibility": "Elegibilidad y workspace",
+            "obligations": "Obligaciones de la Startup",
+            "programs": "Gestión de programas",
+            "fees": "Tarifas y obligaciones de pago",
+            "commissions": "Responsabilidades de comisión",
+            "tracking": "Tracking y atribución",
+            "sellers": "Gestión de Sellers",
+            "prohibited": "Actividades prohibidas",
+            "termination": "Terminación y efectos",
+            "liability": "Responsabilidad e indemnización",
+            "contact": "Contacto"
+        }
+    },
+    "reportAbuse": {
+        "badge": "Seguridad y confianza",
+        "title": "Reportar",
+        "titleAccent": "abuso",
+        "subtitle": "Traaaction se compromete a prevenir el abuso y el uso malicioso de su plataforma. Si cree que un enlace, usuario o programa se está usando con fines maliciosos, repórtelo a continuación.",
+        "backToHome": "Volver a Traaaction",
+        "whatWeConsider": "Lo que consideramos abuso",
+        "whatWeConsiderDesc": "Traaaction prohíbe el uso de su plataforma para crear o promover contenido malicioso, incluyendo pero sin limitarse a:",
+        "abuseTypes": {
+            "phishing": "Sitios de phishing o estafa",
+            "malware": "Distribución de malware",
+            "spam": "Spam o mensajes masivos no solicitados",
+            "fraud": "Fraude de afiliados (clics falsos, bots)",
+            "adult": "Pornografía o contenido para adultos",
+            "gambling": "Juegos de azar o apuestas ilegales",
+            "copyright": "Infracción de derechos de autor",
+            "impersonation": "Suplantación de identidad"
+        },
+        "helperText": "Los enlaces y programas son creados por usuarios individuales, por lo que no podemos controlar todo el contenido. Sus reportes nos ayudan a mantener la plataforma segura.",
+        "form": {
+            "title": "Reportar una preocupación",
+            "email": "Su dirección de email",
+            "emailPlaceholder": "usted@ejemplo.com",
+            "emailHelper": "Para poder contactarle si es necesario.",
+            "type": "Tipo de abuso",
+            "typePlaceholder": "Seleccione un tipo...",
+            "typeOptions": {
+                "phishing": "Sitio de phishing o estafa",
+                "malware": "Malware o contenido malicioso",
+                "spam": "Spam o promoción no solicitada",
+                "fraud": "Fraude de afiliados (clics falsos, auto-referencia)",
+                "impersonation": "Suplantación de identidad",
+                "adult": "Pornografía o contenido para adultos",
+                "gambling": "Juegos de azar o apuestas ilegales",
+                "copyright": "Infracción de derechos de autor",
+                "harassment": "Acoso o discurso de odio",
+                "other": "Otro"
+            },
+            "url": "URL o enlace reportado",
+            "urlPlaceholder": "https://...",
+            "urlHelper": "El enlace corto de Traaaction, perfil de usuario o URL del programa que desea reportar.",
+            "description": "Descripción",
+            "descriptionPlaceholder": "Por favor describa el abuso en detalle. Incluya cualquier evidencia o contexto que nos ayude a investigar.",
+            "disclaimer": "Todos los reportes son revisados por nuestro equipo de confianza y seguridad. Los reportes falsos pueden resultar en acciones contra el reportante.",
+            "submit": "Enviar reporte",
+            "submitting": "Enviando..."
+        },
+        "success": {
+            "title": "Reporte enviado",
+            "description": "Gracias por ayudar a mantener Traaaction seguro. Revisaremos su reporte y tomaremos las medidas apropiadas. Puede recibir un seguimiento en la dirección de email proporcionada.",
+            "backToHome": "Volver al inicio"
         }
     }
 }

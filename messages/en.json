@@ -224,10 +224,11 @@
             "pricing": "Pricing",
             "integrations": "Integrations",
             "aboutUs": "About Us",
-            "careers": "Careers",
+            "reportAbuse": "Report Abuse",
             "privacy": "Privacy Policy",
             "terms": "Terms of Service",
-            "cookies": "Cookie Policy",
+            "sellerTerms": "Seller Terms",
+            "startupTerms": "Startup Terms",
             "copyright": "© {year} Traaaction. All rights reserved."
         }
     },
@@ -1150,6 +1151,156 @@
             "title": "Unauthorized",
             "description": "You don't have permission to access this page.",
             "signIn": "Sign in"
+        }
+    },
+    "about": {
+        "badge": "Our Story",
+        "title": "About",
+        "titleAccent": "Traaaction",
+        "subtitle": "We're building the bridge between startups that need traction and sales talent ready to deliver it.",
+        "backToHome": "Back to Traaaction",
+        "mission": {
+            "number": "01",
+            "title": "Our Mission",
+            "p1": "Startups need sales traction to grow and raise funding. Young professionals are eager to kickstart their careers and generate revenue. {highlight}",
+            "p1Highlight": "Traaaction connects both sides.",
+            "p2": "We're democratizing affiliate marketing by making it accessible, transparent, and performance-driven. No upfront costs for startups, no barriers for sellers.",
+            "p3": "In a world where skills matter more than degrees, we believe sales talent should be valued through real results. Traaaction provides the tools to prove it.",
+            "p4": "Our platform handles everything from tracking and attribution to commission calculations and payouts — so both sides can focus on what they do best."
+        },
+        "howItWorks": {
+            "number": "02",
+            "title": "How it Works",
+            "step1Title": "Startups create missions",
+            "step1Desc": "Define your affiliate program: commission type, rates, and target audience. Go live in minutes.",
+            "step2Title": "Sellers join & share",
+            "step2Desc": "Sellers browse the marketplace, join missions, and share tracked links with their audience.",
+            "step3Title": "Commissions on every conversion",
+            "step3Desc": "Every click, lead, and sale is tracked. Sellers earn commissions automatically."
+        },
+        "values": {
+            "number": "03",
+            "title": "Our Values",
+            "transparency": "Transparency",
+            "transparencyDesc": "Clear commission structures, real-time tracking, and full visibility for both startups and sellers.",
+            "performance": "Performance",
+            "performanceDesc": "Pay for results, not promises. Every commission is tied to a real, measurable action.",
+            "simplicity": "Simplicity",
+            "simplicityDesc": "Easy onboarding, intuitive dashboards, and tools that get out of your way.",
+            "trust": "Trust",
+            "trustDesc": "Secure payments via Stripe, fraud detection, and a 30-day hold period for peace of mind."
+        },
+        "team": {
+            "number": "04",
+            "title": "The Team",
+            "subtitle": "The people behind Traaaction, committed to making affiliate marketing work for everyone.",
+            "cofounder": "Co-founder"
+        },
+        "cta": {
+            "title": "Ready to get started?",
+            "subtitle": "Whether you're a startup looking for traction or a seller ready to earn, we'd love to hear from you.",
+            "bookDemo": "Book a Demo",
+            "contactUs": "Contact Us"
+        },
+        "footer": {
+            "terms": "Terms",
+            "privacy": "Privacy",
+            "home": "Home"
+        }
+    },
+    "sellerTerms": {
+        "badge": "Seller Agreement",
+        "title": "Seller",
+        "titleAccent": "Terms",
+        "subtitle": "These terms govern your participation as a Seller (affiliate) on the Traaaction platform. Please read them carefully before joining any program.",
+        "effectiveDate": "February 5, 2026",
+        "intro": "These Seller Terms (\"Seller Terms\") supplement the general Terms of Service and apply specifically to users who register as Sellers on Traaaction. In case of conflict, these Seller Terms prevail for seller-related matters.",
+        "toc": "Table of Contents",
+        "sections": {
+            "eligibility": "Eligibility & Account",
+            "obligations": "Seller Obligations",
+            "commissions": "Commissions & Payouts",
+            "holdPeriods": "Hold Periods & Clawbacks",
+            "prohibited": "Prohibited Activities",
+            "fraud": "Fraud & Detection",
+            "termination": "Termination & Suspension",
+            "liability": "Liability & Disclaimers",
+            "contact": "Contact"
+        }
+    },
+    "startupTerms": {
+        "badge": "Startup Agreement",
+        "title": "Startup",
+        "titleAccent": "Terms",
+        "subtitle": "These terms govern your use of Traaaction as a Startup creating and managing affiliate programs. They define your obligations toward Sellers and the platform.",
+        "effectiveDate": "February 5, 2026",
+        "intro": "These Startup Terms (\"Startup Terms\") supplement the general Terms of Service and apply specifically to users who register as Startups on Traaaction. In case of conflict, these Startup Terms prevail for startup-related matters.",
+        "toc": "Table of Contents",
+        "sections": {
+            "eligibility": "Eligibility & Workspace",
+            "obligations": "Startup Obligations",
+            "programs": "Program Management",
+            "fees": "Fees & Payment Obligations",
+            "commissions": "Commission Responsibilities",
+            "tracking": "Tracking & Attribution",
+            "sellers": "Seller Management",
+            "prohibited": "Prohibited Activities",
+            "termination": "Termination & Effects",
+            "liability": "Liability & Indemnification",
+            "contact": "Contact"
+        }
+    },
+    "reportAbuse": {
+        "badge": "Safety & Trust",
+        "title": "Report",
+        "titleAccent": "Abuse",
+        "subtitle": "Traaaction is committed to preventing abuse and misuse of its platform. If you believe a link, user, or program is being used for malicious purposes, please report it below.",
+        "backToHome": "Back to Traaaction",
+        "whatWeConsider": "What we consider abuse",
+        "whatWeConsiderDesc": "Traaaction prohibits the use of its platform to create or promote malicious content, including but not limited to:",
+        "abuseTypes": {
+            "phishing": "Phishing or scam websites",
+            "malware": "Malware distribution",
+            "spam": "Spam or unsolicited bulk messages",
+            "fraud": "Affiliate fraud (fake clicks, bots)",
+            "adult": "Pornography or adult content",
+            "gambling": "Illegal gambling or betting",
+            "copyright": "Copyright infringement",
+            "impersonation": "Impersonation or identity theft"
+        },
+        "helperText": "Since links and programs are created by individual users, we cannot control all content. Your reports help us keep the platform safe.",
+        "form": {
+            "title": "Report a concern",
+            "email": "Your email address",
+            "emailPlaceholder": "you@example.com",
+            "emailHelper": "So we can follow up on your report if needed.",
+            "type": "Type of abuse",
+            "typePlaceholder": "Select a type...",
+            "typeOptions": {
+                "phishing": "Phishing or scam website",
+                "malware": "Malware or malicious content",
+                "spam": "Spam or unsolicited promotion",
+                "fraud": "Affiliate fraud (fake clicks, self-referrals)",
+                "impersonation": "Impersonation or identity theft",
+                "adult": "Pornography or adult content",
+                "gambling": "Illegal gambling or betting",
+                "copyright": "Copyright infringement",
+                "harassment": "Harassment or hate speech",
+                "other": "Other"
+            },
+            "url": "Reported URL or link",
+            "urlPlaceholder": "https://...",
+            "urlHelper": "The Traaaction short link, user profile, or program URL you want to report.",
+            "description": "Description",
+            "descriptionPlaceholder": "Please describe the abuse in detail. Include any evidence or context that will help us investigate.",
+            "disclaimer": "All reports are reviewed by our trust & safety team. False reports may result in action against the reporter.",
+            "submit": "Submit Report",
+            "submitting": "Sending..."
+        },
+        "success": {
+            "title": "Report Submitted",
+            "description": "Thank you for helping keep Traaaction safe. We will review your report and take appropriate action. You may receive a follow-up at the email address you provided.",
+            "backToHome": "Back to Home"
         }
     }
 }
