@@ -57,7 +57,7 @@ export default function ReportAbusePage() {
                     </Link>
                     <div className="flex items-center gap-2">
                         <Image src="/Logotrac/Logo5.png" alt="Traaaction" width={24} height={24} className="rounded-md" />
-                        <span className="text-sm font-medium text-slate-500">Report</span>
+                        <span className="text-sm font-medium text-slate-500">{t('headerLabel')}</span>
                     </div>
                 </div>
             </header>
@@ -203,11 +203,11 @@ export default function ReportAbusePage() {
 
             <footer className="border-t border-slate-200 bg-white px-6 lg:px-16 py-12">
                 <div className="max-w-2xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-                    <p className="text-sm text-slate-400">&copy; {new Date().getFullYear()} Traaaction. All rights reserved.</p>
+                    <p className="text-sm text-slate-400">&copy; {new Date().getFullYear()} Traaaction. {t('footer.allRightsReserved')}</p>
                     <div className="flex items-center gap-6">
-                        <Link href="/terms" className="text-sm text-slate-500 hover:text-slate-800 transition-colors">Terms</Link>
-                        <Link href="/privacy" className="text-sm text-slate-500 hover:text-slate-800 transition-colors">Privacy</Link>
-                        <Link href="/" className="text-sm text-slate-500 hover:text-slate-800 transition-colors">Home</Link>
+                        <Link href="/terms" className="text-sm text-slate-500 hover:text-slate-800 transition-colors">{t('footer.terms')}</Link>
+                        <Link href="/privacy" className="text-sm text-slate-500 hover:text-slate-800 transition-colors">{t('footer.privacy')}</Link>
+                        <Link href="/" className="text-sm text-slate-500 hover:text-slate-800 transition-colors">{t('footer.home')}</Link>
                     </div>
                 </div>
             </footer>

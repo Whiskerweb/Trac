@@ -233,6 +233,10 @@
         }
     },
     "auth": {
+        "back": "Retour",
+        "home": "Accueil",
+        "email": "Email",
+        "password": "Mot de passe",
         "welcome": "Bienvenue sur Traaaction",
         "chooseSpace": "Choisissez votre espace pour continuer",
         "startup": {
@@ -260,9 +264,7 @@
         },
         "google": "Continuer avec Google",
         "orEmail": "ou continuer avec email",
-        "legal": "En continuant, vous acceptez les {terms} et la {privacy}",
-        "termsOfService": "Conditions d'utilisation",
-        "privacyPolicy": "Politique de confidentialité",
+        "legal": "En continuant, vous acceptez les <terms>Conditions d'utilisation</terms> et la <privacy>Politique de confidentialité</privacy>",
         "emailConfirmation": {
             "title": "Vérifiez votre email",
             "sentTo": "Nous avons envoyé un lien de confirmation à",
@@ -276,10 +278,15 @@
             "invalidCredentials": "Email ou mot de passe incorrect",
             "emailNotConfirmed": "Veuillez confirmer votre email avant de vous connecter",
             "emailExists": "Cette adresse email est déjà utilisée",
+            "emailConflict": "Un compte avec cet email existe déjà. Veuillez vous connecter.",
             "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
             "unexpected": "Une erreur inattendue est survenue",
+            "authGeneric": "Une erreur est survenue lors de l'authentification",
             "linkExpired": "Le lien de confirmation a expiré. Veuillez en demander un nouveau.",
-            "noCode": "Lien d'authentification invalide. Veuillez réessayer."
+            "noCode": "Lien d'authentification invalide. Veuillez réessayer.",
+            "sellerCreationFailed": "Échec de la création de votre compte vendeur. Veuillez réessayer.",
+            "googleFailed": "Échec de la connexion avec Google",
+            "resendFailed": "Échec du renvoi de l'email de confirmation"
         }
     },
     "onboarding": {
@@ -1159,6 +1166,7 @@
         "titleAccent": "Traaaction",
         "subtitle": "Nous construisons le pont entre les startups qui ont besoin de traction et les talents commerciaux prêts à la fournir.",
         "backToHome": "Retour à Traaaction",
+        "headerLabel": "À propos",
         "mission": {
             "number": "01",
             "title": "Notre mission",
@@ -1203,6 +1211,7 @@
             "contactUs": "Nous contacter"
         },
         "footer": {
+            "allRightsReserved": "Tous droits réservés.",
             "terms": "Conditions",
             "privacy": "Confidentialité",
             "home": "Accueil"
@@ -1250,12 +1259,268 @@
             "contact": "Contact"
         }
     },
+    "startupTermsPage": {
+        "header": {
+            "backToTraaaction": "Retour à Traaaction",
+            "legal": "Légal"
+        },
+        "sidebar": {
+            "toc": "Table des matières"
+        },
+        "hero": {
+            "badge": "Accord Startup",
+            "title": "Conditions",
+            "titleAccent": "Startup",
+            "subtitle": "Ces conditions régissent votre utilisation de Traaaction en tant que Startup créant et gérant des programmes d'affiliation. Elles définissent vos obligations envers les Sellers et la plateforme.",
+            "effectiveDateLabel": "Date d'effet",
+            "effectiveDate": "5 février 2026"
+        },
+        "intro": "Ces Conditions Startup (« Conditions Startup ») complètent les <termsLink>Conditions Générales d'Utilisation</termsLink> et s'appliquent spécifiquement aux utilisateurs inscrits en tant que Startups sur Traaaction. En cas de conflit, ces Conditions Startup prévalent pour les questions relatives aux startups.",
+        "sections": {
+            "eligibility": "Éligibilité et Workspace",
+            "obligations": "Obligations de la Startup",
+            "programs": "Gestion des programmes",
+            "fees": "Frais et obligations de paiement",
+            "commissions": "Responsabilités de commission",
+            "tracking": "Tracking et attribution",
+            "sellers": "Gestion des Sellers",
+            "prohibited": "Activités interdites",
+            "termination": "Résiliation et effets",
+            "liability": "Responsabilité et indemnisation",
+            "contact": "Contact"
+        },
+        "eligibility": {
+            "intro": "Pour utiliser Traaaction en tant que Startup, vous devez :",
+            "items": {
+                "0": "Être une entité commerciale légalement enregistrée ou un auto-entrepreneur",
+                "1": "Fournir des informations exactes sur l'entreprise (nom, adresse, numéro d'immatriculation le cas échéant)",
+                "2": "Créer un Workspace avec un identifiant slug unique",
+                "3": "Désigner au moins un propriétaire de Workspace disposant de tous les droits d'administration",
+                "4": "Disposer d'un site web ou d'une application fonctionnelle où le SDK de tracking Traaaction sera installé"
+            },
+            "infoCardLabel": "Clés API :",
+            "infoCardText": "À la création du workspace, vous recevez une clé publique (pk_*) pour le tracking côté client et une clé secrète (trac_live_*) pour les opérations côté serveur. Les clés secrètes sont hashées et ne peuvent pas être récupérées — conservez-les en sécurité."
+        },
+        "obligations": {
+            "intro": "En tant que Startup utilisant Traaaction, vous vous engagez à :",
+            "programIntegrity": {
+                "title": "Intégrité du programme",
+                "items": {
+                    "0": "Fournir des descriptions exactes et véridiques de vos produits et services",
+                    "1": "Fixer des taux de commission justes et durables que vous pouvez honorer",
+                    "2": "Ne pas réduire rétroactivement les taux de commission pour les conversions déjà générées",
+                    "3": "Communiquer clairement les règles du programme, les restrictions et les méthodes de promotion autorisées",
+                    "4": "Répondre aux demandes des Sellers dans un délai raisonnable"
+                }
+            },
+            "financialObligations": {
+                "title": "Obligations financières",
+                "items": {
+                    "0": "Payer toutes les commissions approuvées dans le délai défini par ces conditions",
+                    "1": "Maintenir des fonds suffisants pour couvrir les commissions générées",
+                    "2": "Payer les frais de plateforme de 15 % sur toutes les transactions traitées via Traaaction",
+                    "3": "Ne pas contester les commissions légitimes sans motif valable (remboursement, fraude, chargeback)"
+                }
+            },
+            "legalCompliance": {
+                "title": "Conformité juridique",
+                "items": {
+                    "0": "Respecter toutes les lois applicables en matière de commerce électronique, protection des consommateurs et publicité",
+                    "1": "Inclure les mentions obligatoires de divulgation d'affiliation sur votre site web",
+                    "2": "Installer le SDK de tracking Traaaction conformément aux réglementations sur la vie privée (consentement cookies RGPD)",
+                    "3": "Informer vos clients que le tracking d'affiliation est utilisé via votre politique de confidentialité",
+                    "4": "Traiter les remboursements équitablement et conformément à votre politique de remboursement publiée"
+                }
+            }
+        },
+        "programs": {
+            "intro": "Lors de la création et de la gestion de programmes d'affiliation (Missions) sur Traaaction :",
+            "setup": {
+                "title": "Configuration du programme",
+                "items": {
+                    "0": "Définir un type de récompense clair : Vente, Lead ou Récurrent",
+                    "1": "Fixer la structure de commission : Montant fixe ou Pourcentage",
+                    "2": "Choisir la visibilité : Publique, Privée ou Sur invitation",
+                    "3": "Fournir des supports marketing et du contenu pour les Sellers"
+                }
+            },
+            "changes": {
+                "title": "Modifications du programme",
+                "items": {
+                    "0": "Les modifications de taux de commission ne s'appliquent qu'aux conversions futures",
+                    "1": "L'archivage du programme nécessite un préavis de 30 jours aux Sellers actifs",
+                    "2": "Vous devez honorer les commissions en attente après la fermeture du programme",
+                    "3": "Le retrait d'un Seller nécessite une justification valable"
+                }
+            },
+            "infoCardLabel": "Statut du programme :",
+            "infoCardText": "Les programmes peuvent être BROUILLON (non visible), ACTIF (acceptant des sellers) ou ARCHIVÉ (plus de nouvelles inscriptions, commissions existantes toujours honorées)."
+        },
+        "fees": {
+            "intro": "Traaaction facture les frais suivants :",
+            "table": {
+                "headerFee": "Frais",
+                "headerAmount": "Montant",
+                "headerCalculation": "Calcul",
+                "rows": {
+                    "0": {
+                        "fee": "Frais de plateforme",
+                        "amount": "15 %",
+                        "calculation": "Du montant net (après frais Stripe + taxes)"
+                    },
+                    "1": {
+                        "fee": "Traitement des paiements",
+                        "amount": "Tarifs Stripe",
+                        "calculation": "Répercuté, déduit avant le calcul de la commission"
+                    },
+                    "2": {
+                        "fee": "Workspace",
+                        "amount": "Gratuit",
+                        "calculation": "Pas de frais mensuels ni de mise en place"
+                    }
+                }
+            },
+            "paymentProcess": {
+                "title": "Processus de paiement",
+                "steps": {
+                    "0": "Les commissions arrivent à maturité après la période de rétention (3 jours pour les leads, 30 jours pour les ventes)",
+                    "1": "Les commissions maturées apparaissent comme « impayées » dans votre tableau de bord",
+                    "2": "Vous sélectionnez les commissions à payer et lancez un paiement groupé via Stripe Checkout",
+                    "3": "Le paiement inclut les commissions Seller + 15 % de frais de plateforme",
+                    "4": "Après confirmation, les commissions sont distribuées automatiquement aux Sellers"
+                }
+            },
+            "latePaymentLabel": "Retard de paiement :",
+            "latePaymentText": "Le non-paiement des commissions maturées dans un délai de 30 jours peut entraîner la suspension du compte, la perte d'accès à la plateforme et la notification des Sellers du retard de paiement. Un non-paiement persistant peut donner lieu à des poursuites judiciaires."
+        },
+        "commissions": {
+            "intro": "Vous êtes responsable d'assurer des pratiques de commission équitables :",
+            "items": {
+                "0": "Les taux de commission définis dans un programme sont contraignants pour toutes les conversions générées sous ces taux",
+                "1": "Les remboursements doivent être traités via le moyen de paiement d'origine ; Traaaction récupérera automatiquement les commissions concernées",
+                "2": "Les chargebacks déclenchent une annulation automatique de commission — vous êtes responsable de la gestion des litiges avec votre processeur de paiement",
+                "3": "Vous ne pouvez pas retarder ou bloquer artificiellement des conversions légitimes pour éviter de payer des commissions",
+                "4": "Les paiements groupés ne peuvent être initiés que pour les commissions ayant le statut PROCEED (entièrement maturées)"
+            },
+            "infoCardLabel": "Résolution des litiges :",
+            "infoCardText": "Si vous contestez une commission, vous devez fournir des preuves (justificatif de remboursement, avis de chargeback, documentation de fraude) dans un délai de 7 jours. Les commissions non contestées après la période de rétention sont définitives."
+        },
+        "tracking": {
+            "intro": "Traaaction fournit l'infrastructure de tracking. Vos responsabilités :",
+            "items": {
+                "0": "Installer et maintenir correctement le SDK de tracking Traaaction (trac.js) sur votre site web",
+                "1": "Ne pas interférer, bloquer ou manipuler les cookies de tracking ou les données d'attribution",
+                "2": "Configurer correctement les webhooks Stripe pour l'attribution automatique des ventes",
+                "3": "Signaler rapidement tout problème de tracking afin qu'il puisse être résolu",
+                "4": "Maintenir des mécanismes de consentement RGPD adéquats pour les cookies de tracking sur votre site web"
+            },
+            "attributionModel": {
+                "title": "Modèle d'attribution",
+                "description": "Traaaction utilise un <strong>modèle d'attribution au premier clic</strong> avec une fenêtre de cookie de 90 jours :",
+                "items": {
+                    "0": "Le premier Seller à générer un clic pour un client reçoit l'attribution",
+                    "1": "L'attribution est verrouillée sur la fiche client et ne peut pas être écrasée par des clics ultérieurs",
+                    "2": "La fenêtre de cookie est de 90 jours à compter du clic initial",
+                    "3": "Si le cookie expire, le client peut être ré-attribué à un nouveau Seller"
+                }
+            }
+        },
+        "sellers": {
+            "intro": "Vous avez le contrôle sur les Sellers participant à vos programmes :",
+            "items": {
+                "0": "Vous pouvez définir la visibilité du programme sur Publique (inscription ouverte), Privée (approbation requise) ou Sur invitation",
+                "1": "Vous pouvez approuver ou rejeter les candidatures des Sellers sur la base de critères légitimes",
+                "2": "Vous pouvez retirer un Seller de votre programme avec une justification valable",
+                "3": "Vous ne pouvez pas discriminer les Sellers sur la base de caractéristiques protégées",
+                "4": "La communication avec les Sellers doit être professionnelle et passer par le système de messagerie de la plateforme"
+            },
+            "infoCardLabel": "Retrait d'un Seller :",
+            "infoCardText": "Lors du retrait d'un Seller, toutes les commissions en attente doivent être honorées. Les liens de tracking existants du Seller seront désactivés. Vous devez fournir un motif de retrait sur demande."
+        },
+        "prohibited": {
+            "intro": "En tant que Startup, les activités suivantes sont strictement interdites :",
+            "items": {
+                "0": {
+                    "title": "Manipulation de commissions",
+                    "desc": "Réduire artificiellement les taux de conversion, bloquer les attributions valides ou rejeter des commissions légitimes"
+                },
+                "1": {
+                    "title": "Programmes trompeurs",
+                    "desc": "Créer des programmes avec des taux de commission irréalistes pour attirer des Sellers sans intention de payer"
+                },
+                "2": {
+                    "title": "Utilisation abusive des données",
+                    "desc": "Utiliser les coordonnées des Sellers à des fins étrangères à la relation sur la plateforme"
+                },
+                "3": {
+                    "title": "Modifications rétroactives",
+                    "desc": "Modifier les taux de commission pour les appliquer aux conversions déjà générées"
+                },
+                "4": {
+                    "title": "Évitement de paiement",
+                    "desc": "Fermer le workspace ou archiver des programmes pour éviter de payer les commissions acquises"
+                },
+                "5": {
+                    "title": "Falsification de webhooks",
+                    "desc": "Modifier, retarder ou bloquer les événements webhooks Stripe pour empêcher la création de commissions"
+                }
+            }
+        },
+        "termination": {
+            "voluntaryClosure": {
+                "title": "Fermeture volontaire",
+                "items": {
+                    "0": "Vous pouvez fermer votre Workspace à tout moment via les paramètres",
+                    "1": "Toutes les commissions maturées (PROCEED) et en attente (PENDING) doivent être payées avant la finalisation de la fermeture",
+                    "2": "Les Sellers actifs seront notifiés 30 jours avant la fermeture du programme",
+                    "3": "Les liens de tracking seront désactivés lors de la fermeture du workspace"
+                }
+            },
+            "terminationByTraaaction": {
+                "title": "Résiliation par Traaaction",
+                "items": {
+                    "0": "Suspension immédiate en cas de fraude, non-paiement ou violations graves de la politique",
+                    "1": "Résiliation du compte avec préavis de 30 jours pour violations mineures répétées",
+                    "2": "En cas de suspension, les commissions impayées restent une obligation financière"
+                }
+            },
+            "infoCardLabel": "Obligations survivantes :",
+            "infoCardText": "Les obligations de paiement survivent à la résiliation. Traaaction se réserve le droit de poursuivre le recouvrement des commissions impayées par voie légale, y compris le recouvrement de créances et les procédures judiciaires en droit français."
+        },
+        "liability": {
+            "intro": "Dispositions importantes concernant la responsabilité :",
+            "items": {
+                "0": "Traaaction fournit l'infrastructure de tracking et de paiement « en l'état » sans garantie de service ininterrompu",
+                "1": "Traaaction n'est pas responsable des actions des Sellers, y compris la promotion trompeuse ou les violations de politique",
+                "2": "Traaaction n'est pas responsable de la perte de conversions due aux bloqueurs de publicités, restrictions de cookies ou fonctionnalités de confidentialité des navigateurs",
+                "3": "Vous indemnisez Traaaction contre les réclamations découlant de vos produits, services ou pratiques marketing",
+                "4": "Vous indemnisez Traaaction contre les réclamations de vos clients liées aux achats effectués via des liens d'affiliation"
+            },
+            "indemnification": {
+                "title": "Indemnisation",
+                "text": "Vous acceptez d'indemniser et de dégager Traaaction, ses fondateurs, employés et agents de toute réclamation, dommage, perte ou frais juridiques découlant de : (a) votre utilisation de la plateforme, (b) vos produits ou services, (c) votre violation de ces conditions, (d) les litiges avec les Sellers, ou (e) les réclamations de vos clients."
+            }
+        },
+        "contact": {
+            "intro": "Pour toute question relative à ces Conditions Startup :",
+            "addressLine1": "60 rue Amiral Romain-Desfossés",
+            "addressLine2": "29200 Brest, France"
+        },
+        "footer": {
+            "allRightsReserved": "Tous droits réservés.",
+            "sellerTerms": "Conditions Seller",
+            "generalTerms": "Conditions générales",
+            "privacy": "Confidentialité",
+            "home": "Accueil"
+        }
+    },
     "reportAbuse": {
         "badge": "Sécurité et confiance",
         "title": "Signaler",
         "titleAccent": "un abus",
         "subtitle": "Traaaction s'engage à prévenir les abus et l'utilisation malveillante de sa plateforme. Si vous pensez qu'un lien, un utilisateur ou un programme est utilisé à des fins malveillantes, veuillez le signaler ci-dessous.",
         "backToHome": "Retour à Traaaction",
+        "headerLabel": "Signalement",
         "whatWeConsider": "Ce que nous considérons comme un abus",
         "whatWeConsiderDesc": "Traaaction interdit l'utilisation de sa plateforme pour créer ou promouvoir du contenu malveillant, y compris mais sans s'y limiter :",
         "abuseTypes": {
@@ -1301,6 +1566,487 @@
             "title": "Signalement envoyé",
             "description": "Merci de contribuer à la sécurité de Traaaction. Nous examinerons votre signalement et prendrons les mesures appropriées. Vous pourriez recevoir un suivi à l'adresse email fournie.",
             "backToHome": "Retour à l'accueil"
+        },
+        "footer": {
+            "allRightsReserved": "Tous droits réservés.",
+            "terms": "Conditions",
+            "privacy": "Confidentialité",
+            "home": "Accueil"
         }
+    },
+    "sellerTermsPage": {
+        "header": {
+            "backToTraaaction": "Retour à Traaaction",
+            "legal": "Juridique"
+        },
+        "sidebar": {
+            "toc": "Table des matières",
+            "eligibility": "Éligibilité et compte",
+            "obligations": "Obligations du Seller",
+            "commissions": "Commissions et paiements",
+            "holdPeriods": "Périodes de rétention et récupérations",
+            "prohibited": "Activités interdites",
+            "fraud": "Fraude et détection",
+            "termination": "Résiliation et suspension",
+            "liability": "Responsabilité et avertissements",
+            "contact": "Contact"
+        },
+        "hero": {
+            "badge": "Accord Seller",
+            "titleLine1": "Conditions",
+            "titleLine2": "Seller",
+            "subtitle": "Ces conditions régissent votre participation en tant que Seller (affilié) sur la plateforme Traaaction. Veuillez les lire attentivement avant de rejoindre un programme.",
+            "effectiveDateLabel": "Date d'entrée en vigueur",
+            "effectiveDate": "5 février 2026"
+        },
+        "intro": {
+            "text": "Les présentes Conditions Seller (« Conditions Seller ») complètent les <termsLink>Conditions Générales d'Utilisation</termsLink> et s'appliquent spécifiquement aux utilisateurs inscrits en tant que Sellers sur Traaaction. En cas de conflit, les présentes Conditions Seller prévalent pour les questions relatives aux sellers."
+        },
+        "section1": {
+            "title": "Éligibilité et compte",
+            "intro": "Pour participer en tant que Seller sur Traaaction, vous devez :",
+            "itemCount": "5",
+            "items": {
+                "0": "Avoir au moins 18 ans et être juridiquement capable de conclure des contrats",
+                "1": "Fournir des informations personnelles exactes (nom, email, pays de résidence)",
+                "2": "Compléter le processus d'inscription, y compris la configuration du profil",
+                "3": "Configurer un moyen de paiement valide (Stripe Connect, PayPal, IBAN ou Wallet Plateforme)",
+                "4": "Ne pas avoir été précédemment banni de la plateforme"
+            },
+            "infoCard": {
+                "title": "Stripe Connect :",
+                "text": "Pour recevoir des paiements directs, vous devez compléter la vérification d'identité Stripe (KYC). Tant que vous n'êtes pas vérifié, vos gains s'accumulent dans votre Wallet Plateforme et ne peuvent être échangés que sous forme de cartes cadeaux."
+            }
+        },
+        "section2": {
+            "title": "Obligations du Seller",
+            "intro": "En tant que Seller, vous vous engagez à respecter les points suivants :",
+            "sub1": {
+                "title": "Promotion éthique",
+                "itemCount": "5",
+                "items": {
+                    "0": "Promouvoir les produits et services de manière honnête et transparente",
+                    "1": "Toujours divulguer votre relation d'affiliation comme l'exige la loi (FTC, RGPD, Directive UE 2005/29/CE)",
+                    "2": "Ne jamais formuler de déclarations fausses, trompeuses ou exagérées concernant les produits que vous promouvez",
+                    "3": "Utiliser uniquement les supports marketing et messages approuvés fournis par la Startup",
+                    "4": "Respecter les directives et restrictions spécifiques de chaque programme"
+                }
+            },
+            "sub2": {
+                "title": "Conformité juridique",
+                "itemCount": "4",
+                "items": {
+                    "0": "Respecter toutes les lois applicables dans votre pays de résidence et dans les juridictions de votre audience",
+                    "1": "Déclarer les revenus d'affiliation à vos autorités fiscales comme requis",
+                    "2": "Obtenir les licences commerciales ou immatriculations nécessaires le cas échéant",
+                    "3": "Respecter le RGPD et les lois sur la protection des données lors de la collecte ou du traitement de données utilisateurs"
+                }
+            },
+            "sub3": {
+                "title": "Standards de contenu",
+                "itemCount": "3",
+                "items": {
+                    "0": "Ne pas associer les produits promus à du contenu illégal, pour adultes, violent ou haineux",
+                    "1": "Ne pas utiliser de termes déposés dans les noms de domaine ou les mots-clés publicitaires payants sans autorisation écrite",
+                    "2": "Ne pas créer de faux avis, témoignages ou recommandations"
+                }
+            }
+        },
+        "section3": {
+            "title": "Commissions et paiements",
+            "intro": "Les règles de commission sont définies par chaque programme Startup que vous rejoignez :",
+            "typesCount": "3",
+            "types": {
+                "0": {
+                    "type": "Commission sur vente",
+                    "desc": "Gagnée lorsqu'un client référé effectue un achat",
+                    "example": "Montant fixe (ex. : 5\u20ac/vente) ou pourcentage du montant net de la vente"
+                },
+                "1": {
+                    "type": "Commission sur lead",
+                    "desc": "Gagnée lorsqu'un visiteur référé effectue une action qualifiante (inscription, formulaire, etc.)",
+                    "example": "Montant fixe par lead (ex. : 3\u20ac/lead)"
+                },
+                "2": {
+                    "type": "Commission récurrente",
+                    "desc": "Gagnée sur les renouvellements d'abonnement de clients référés",
+                    "example": "Pourcentage de chaque paiement de renouvellement"
+                }
+            },
+            "payoutMethods": {
+                "title": "Méthodes de paiement et minimums",
+                "headerMethod": "Méthode",
+                "headerMinimum": "Minimum",
+                "headerFrequency": "Fréquence",
+                "rowCount": "4",
+                "rows": {
+                    "0": { "method": "Stripe Connect", "minimum": "10\u20ac", "frequency": "Hebdomadaire (lundis)" },
+                    "1": { "method": "PayPal", "minimum": "10\u20ac", "frequency": "Manuel" },
+                    "2": { "method": "IBAN / SEPA", "minimum": "25\u20ac", "frequency": "Manuel" },
+                    "3": { "method": "Wallet Plateforme", "minimum": "0\u20ac", "frequency": "Instantané (cartes cadeaux uniquement)" }
+                }
+            },
+            "walletInfo": {
+                "title": "Limitation du Wallet :",
+                "text": "Les fonds de votre Wallet Plateforme ne peuvent être échangés que sous forme de cartes cadeaux (Amazon, iTunes, Steam, PayPal Gift). Les soldes du Wallet ne sont pas transférables vers Stripe Connect ou des comptes bancaires."
+            }
+        },
+        "section4": {
+            "title": "Périodes de rétention et récupérations",
+            "intro": "Les commissions sont soumises à des périodes de rétention avant de devenir payables :",
+            "periodsCount": "3",
+            "periods": {
+                "0": { "type": "Commissions lead", "period": "3 jours", "reason": "Validation de la qualité du lead" },
+                "1": { "type": "Commissions vente", "period": "30 jours", "reason": "Protection contre les remboursements et les contestations" },
+                "2": { "type": "Commissions récurrentes", "period": "30 jours", "reason": "Protection contre les annulations d'abonnement" }
+            },
+            "clawback": {
+                "title": "Politique de récupération (Clawback)",
+                "intro": "Les commissions peuvent être révoquées (« récupérées ») dans les situations suivantes :",
+                "itemCount": "4",
+                "items": {
+                    "0": "Le client référé demande un remboursement pendant la période de rétention",
+                    "1": "Une contestation de paiement (chargeback) est déposée contre la transaction",
+                    "2": "Le lead ou la vente est déterminé comme frauduleux ou auto-référé",
+                    "3": "La Startup annule le programme ou conteste la conversion"
+                }
+            },
+            "infoCard": {
+                "title": "Commissions déjà payées :",
+                "text": "Si une commission a déjà été payée (statut COMPLETE) et qu'un remboursement ou une fraude est découvert ultérieurement, une entrée de solde négatif sera créée sur votre compte. Ce solde sera déduit de vos gains futurs."
+            }
+        },
+        "section5": {
+            "title": "Activités interdites",
+            "intro": "Les activités suivantes sont strictement interdites et entraîneront des mesures immédiates :",
+            "itemCount": "8",
+            "items": {
+                "0": { "title": "Auto-référencement", "desc": "Acheter via vos propres liens d'affiliation ou utiliser de faux comptes pour générer des commissions" },
+                "1": { "title": "Fraude au clic", "desc": "Gonfler artificiellement les clics par des bots, scripts, fermes à clics ou outils automatisés" },
+                "2": { "title": "Cookie stuffing", "desc": "Déposer des cookies d'affiliation sans intention ou connaissance réelle de l'utilisateur" },
+                "3": { "title": "Spam", "desc": "Envoyer des emails, messages ou communications en masse non sollicités pour promouvoir des liens d'affiliation" },
+                "4": { "title": "Publicités trompeuses", "desc": "Utiliser des textes publicitaires trompeurs, de fausses urgences ou des pages d'atterrissage mensongères" },
+                "5": { "title": "Enchères sur la marque", "desc": "Enchérir sur le nom de marque de la Startup dans la recherche payante sans autorisation écrite" },
+                "6": { "title": "Trafic incentivé", "desc": "Offrir des récompenses pour cliquer ou acheter via vos liens (sauf autorisation explicite)" },
+                "7": { "title": "Partage de compte", "desc": "Partager vos identifiants de compte ou liens d'affiliation avec des tiers non autorisés" }
+            }
+        },
+        "section6": {
+            "title": "Détection et surveillance de la fraude",
+            "intro": "Traaaction utilise des systèmes de détection de fraude automatisés et manuels. En utilisant la plateforme, vous reconnaissez que :",
+            "itemCount": "5",
+            "items": {
+                "0": "Tout le trafic et toutes les conversions sont soumis à une analyse automatisée de fraude",
+                "1": "Les schémas suspects (volumes de clics inhabituels, anomalies géographiques, pics de conversions) peuvent déclencher une vérification",
+                "2": "Traaaction se réserve le droit de retenir ou de bloquer les commissions en attendant une enquête sur la fraude",
+                "3": "Les enquêtes peuvent prendre jusqu'à 30 jours ; vous serez informé du résultat",
+                "4": "Les récidivistes seront définitivement bannis avec perte de toutes les commissions en attente"
+            },
+            "infoCard": {
+                "title": "Recours :",
+                "text": "Si vous estimez qu'une détermination de fraude est incorrecte, vous pouvez faire appel en contactant <email>contact@traaaction.com</email> dans les 14 jours suivant la notification avec des preuves à l'appui."
+            }
+        },
+        "section7": {
+            "title": "Résiliation et suspension",
+            "sub1": {
+                "title": "Résiliation volontaire",
+                "itemCount": "4",
+                "items": {
+                    "0": "Vous pouvez fermer votre compte Seller à tout moment via les paramètres du compte",
+                    "1": "Les commissions en attente pendant la période de rétention seront toujours traitées et payées après maturation",
+                    "2": "Le solde du Wallet reste disponible pour l'échange de cartes cadeaux pendant 90 jours après la fermeture",
+                    "3": "Après 90 jours, les soldes de Wallet non réclamés sont perdus"
+                }
+            },
+            "sub2": {
+                "title": "Résiliation par Traaaction",
+                "itemCount": "3",
+                "items": {
+                    "0": "Suspension immédiate en cas de suspicion de fraude, de violation des règles ou d'activité illégale",
+                    "1": "Résiliation du compte avec un préavis de 14 jours pour des violations mineures répétées",
+                    "2": "Résiliation du compte avec un préavis de 30 jours pour des raisons commerciales"
+                }
+            },
+            "sub3": {
+                "title": "Effets de la résiliation pour cause",
+                "itemCount": "5",
+                "items": {
+                    "0": "Toutes les commissions en attente (PENDING) sont immédiatement perdues",
+                    "1": "Les commissions maturées (PROCEED) peuvent être retenues en attendant l'enquête",
+                    "2": "Le solde du Wallet Plateforme peut être gelé",
+                    "3": "Les liens d'affiliation sont désactivés et redirigeront vers la page d'accueil de la Startup",
+                    "4": "Vous ne pouvez pas créer un nouveau compte sans autorisation écrite"
+                }
+            }
+        },
+        "section8": {
+            "title": "Responsabilité et avertissements",
+            "intro": "Limitations importantes de la responsabilité de Traaaction :",
+            "itemCount": "5",
+            "items": {
+                "0": "Traaaction n'est pas responsable des modifications de programme par les Startups, y compris les modifications de taux de commission ou les fermetures de programme",
+                "1": "Traaaction ne garantit aucun niveau minimum de gains ou de conversions",
+                "2": "Les problèmes techniques de suivi (blocage de cookies, bloqueurs de publicités, restrictions de navigateur) peuvent affecter l'attribution",
+                "3": "Traaaction n'est pas responsable des retards de paiement causés par Stripe, PayPal ou les systèmes bancaires",
+                "4": "La responsabilité totale de Traaaction est limitée aux commissions gagnées au cours des 3 mois précédant la réclamation"
+            },
+            "infoCard": {
+                "title": "Prestataire indépendant :",
+                "text": "En tant que Seller, vous êtes un prestataire indépendant, et non un employé, agent ou représentant de Traaaction ou de toute Startup. Vous êtes seul responsable de vos propres impôts, assurances et conformité juridique."
+            }
+        },
+        "section9": {
+            "title": "Contact",
+            "intro": "Pour toute question concernant les présentes Conditions Seller :",
+            "address": {
+                "line1": "60 rue Amiral Romain-Desfossés",
+                "line2": "29200 Brest, France"
+            }
+        },
+        "footer": {
+            "copyright": "\u00a9 {year} Traaaction. Tous droits réservés.",
+            "startupTerms": "Conditions Startup",
+            "generalTerms": "Conditions générales",
+            "privacy": "Confidentialité",
+            "home": "Accueil"
+        }
+    },
+    "privacyPage": {
+        "header": {
+            "backToTraaaction": "Retour à Traaaction",
+            "legal": "Juridique"
+        },
+        "sidebar": {
+            "tableOfContents": "Table des matières"
+        },
+        "hero": {
+            "badge": "Conforme au RGPD",
+            "titleLine1": "Politique de",
+            "titleLine2": "Confidentialité",
+            "subtitle": "Votre vie privée compte. Cette politique explique comment Traaaction collecte, utilise et protège vos données en pleine conformité avec le RGPD.",
+            "lastUpdatedLabel": "Dernière mise à jour",
+            "lastUpdatedDate": "3 février 2026"
+        },
+        "intro": {
+            "p1": "Bienvenue sur Traaaction. Nous fournissons une plateforme de gestion de programmes de marketing d'affiliation et de partenariats, permettant aux startups de créer des missions et aux sellers de gagner des commissions via des recommandations tracées.",
+            "p2": "Nous nous engageons à protéger votre vie privée et vos données personnelles. En utilisant notre Service, vous acceptez la collecte et l'utilisation des informations telles que décrites dans cette politique."
+        },
+        "sections": {
+            "controller": "Responsable du traitement",
+            "collection": "Données collectées",
+            "cookies": "Cookies et traçage",
+            "usage": "Utilisation de vos données",
+            "legal-basis": "Base légale (RGPD)",
+            "sharing": "Partage des données",
+            "transfers": "Transferts internationaux",
+            "retention": "Conservation des données",
+            "rights": "Vos droits RGPD",
+            "roles": "Responsable vs Sous-traitant",
+            "security": "Sécurité",
+            "children": "Protection des mineurs",
+            "changes": "Modifications de la politique",
+            "contact": "Nous contacter"
+        },
+        "s1": {
+            "description": "Le responsable du traitement de vos données personnelles est :",
+            "address1": "60 rue Amiral Romain-Desfossés",
+            "address2": "29200 Brest, France"
+        },
+        "s2": {
+            "description": "Nous collectons différents types d'informations selon la manière dont vous interagissez avec notre Service :",
+            "startups": {
+                "title": "Pour les Startups (propriétaires de programmes)",
+                "item0": "Informations de compte : nom, adresse email, nom de l'entreprise",
+                "item1": "Paramètres et préférences du workspace",
+                "item2": "Informations de paiement traitées via Stripe",
+                "item3": "Configurations des missions et programmes"
+            },
+            "sellers": {
+                "title": "Pour les Sellers (affiliés)",
+                "item0": "Informations de compte : nom, adresse email",
+                "item1": "Informations de profil : bio, liens réseaux sociaux, photo de profil",
+                "item2": "Informations de paiement : Stripe Connect, PayPal ou IBAN",
+                "item3": "Données de performance : clics, leads, ventes, commissions"
+            },
+            "endUsers": {
+                "title": "Pour les utilisateurs finaux (visiteurs)",
+                "description": "Lorsque vous cliquez sur un lien de traçage, nous pouvons collecter :",
+                "item0": "Identifiants de clic pour l'attribution",
+                "item1": "Adresse IP (géolocalisation uniquement, non stockée pour l'UE)",
+                "item2": "Type d'appareil et informations du navigateur",
+                "item3": "Pays et ville (déduits de l'IP)",
+                "item4": "URL de référence et horodatage"
+            }
+        },
+        "s3": {
+            "description": "Nous utilisons des cookies et des technologies similaires pour faire fonctionner notre Service et fournir le traçage d'attribution.",
+            "table": {
+                "cookie": "Cookie",
+                "purpose": "Finalité",
+                "duration": "Durée"
+            },
+            "cookies": {
+                "tracId": {
+                    "purpose": "Traçage d'attribution",
+                    "duration": "90 jours"
+                },
+                "tracActiveWs": {
+                    "purpose": "Session du workspace actif",
+                    "duration": "Session"
+                },
+                "sb": {
+                    "purpose": "Authentification (Supabase)",
+                    "duration": "Session"
+                }
+            },
+            "noAdCookies": {
+                "title": "Aucun cookie publicitaire.",
+                "description": "Nos cookies de traçage sont strictement propriétaires et utilisés uniquement pour l'attribution d'affiliation."
+            }
+        },
+        "s4": {
+            "description": "Nous utilisons les informations collectées aux fins suivantes :",
+            "items": {
+                "item0": { "title": "Fourniture du service", "desc": "Pour fournir, exploiter et maintenir notre plateforme" },
+                "item1": { "title": "Attribution", "desc": "Pour tracer les clics, leads et ventes vers les bons sellers" },
+                "item2": { "title": "Paiements", "desc": "Pour traiter les commissions et les versements" },
+                "item3": { "title": "Analytics", "desc": "Pour fournir des analyses sur les programmes d'affiliation" },
+                "item4": { "title": "Communication", "desc": "Emails transactionnels et réponses au support" },
+                "item5": { "title": "Sécurité", "desc": "Détection de fraude et prévention des abus" },
+                "item6": { "title": "Amélioration", "desc": "Analyser les usages pour améliorer le Service" },
+                "item7": { "title": "Obligations légales", "desc": "Respecter les lois et réglementations applicables" }
+            }
+        },
+        "s5": {
+            "description": "En vertu du Règlement Général sur la Protection des Données (RGPD), nous traitons vos données personnelles sur la base de :",
+            "items": {
+                "item0": { "basis": "Exécution du contrat", "desc": "Traitement nécessaire à la fourniture de notre Service (gestion de compte, paiements, traçage)" },
+                "item1": { "basis": "Intérêts légitimes", "desc": "Prévention de la fraude, sécurité et amélioration du service" },
+                "item2": { "basis": "Obligation légale", "desc": "Registres fiscaux, conformité anti-blanchiment" },
+                "item3": { "basis": "Consentement", "desc": "Lorsque requis (ex : communications marketing)" }
+            }
+        },
+        "s6": {
+            "description": "Nous partageons vos données avec des prestataires de confiance qui nous aident à exploiter notre plateforme :",
+            "providers": {
+                "title": "Prestataires de services (sous-traitants)",
+                "table": {
+                    "provider": "Prestataire",
+                    "purpose": "Finalité",
+                    "location": "Localisation"
+                },
+                "items": {
+                    "item0": { "name": "Stripe", "purpose": "Traitement des paiements", "location": "US (UE disponible)" },
+                    "item1": { "name": "Supabase", "purpose": "Authentification, base de données", "location": "UE (Francfort)" },
+                    "item2": { "name": "Vercel", "purpose": "Hébergement, fonctions edge", "location": "Global (edge UE)" },
+                    "item3": { "name": "Tinybird", "purpose": "Analytics temps réel", "location": "UE (GCP Europe)" },
+                    "item4": { "name": "Upstash", "purpose": "Cache Redis, limitation de débit", "location": "UE (Francfort)" }
+                }
+            },
+            "otherDisclosures": {
+                "title": "Autres divulgations",
+                "item0": "Pour respecter des obligations légales ou des demandes licites",
+                "item1": "Pour protéger nos droits, notre vie privée, notre sécurité ou nos biens",
+                "item2": "Dans le cadre d'une fusion ou acquisition (avec notification préalable)",
+                "item3": "Avec votre consentement pour toute autre finalité"
+            }
+        },
+        "s7": {
+            "description": "Vos données peuvent être transférées vers des pays hors de l'EEE. Nous assurons des garanties appropriées :",
+            "item0": "Clauses Contractuelles Types (CCT) approuvées par la Commission européenne",
+            "item1": "Décisions d'adéquation le cas échéant",
+            "item2": "Accords de traitement des données avec tous les sous-traitants"
+        },
+        "s8": {
+            "description": "Nous conservons vos données personnelles uniquement aussi longtemps que nécessaire :",
+            "items": {
+                "item0": { "type": "Données de compte", "period": "Jusqu'à suppression + sauvegarde" },
+                "item1": { "type": "Données de transaction", "period": "7 ans (obligation légale)" },
+                "item2": { "type": "Données analytics", "period": "24 mois détaillées, agrégées plus longtemps" },
+                "item3": { "type": "Données de traçage", "period": "90 jours pour l'attribution" },
+                "item4": { "type": "Données de logs", "period": "30 jours pour sécurité/débogage" }
+            }
+        },
+        "s9": {
+            "description": "Si vous êtes dans l'UE/EEE, vous disposez des droits suivants :",
+            "items": {
+                "item0": { "right": "Droit d'accès", "desc": "Demander une copie de vos données personnelles" },
+                "item1": { "right": "Droit de rectification", "desc": "Demander la correction de données inexactes" },
+                "item2": { "right": "Droit à l'effacement", "desc": "Demander la suppression (« droit à l'oubli »)" },
+                "item3": { "right": "Droit à la limitation", "desc": "Limiter le traitement dans certains cas" },
+                "item4": { "right": "Droit à la portabilité", "desc": "Recevoir vos données dans un format lisible par machine" },
+                "item5": { "right": "Droit d'opposition", "desc": "S'opposer au traitement fondé sur l'intérêt légitime" }
+            },
+            "contactText": "Pour exercer ces droits, contactez-nous à",
+            "contactTextEnd": ". Nous répondrons dans un délai de 30 jours. Vous pouvez également déposer une plainte auprès de votre autorité locale de protection des données."
+        },
+        "s10": {
+            "description": "Lorsque vous utilisez nos fonctionnalités de traçage sur votre site web :",
+            "controller": {
+                "label": "Vous (Startup)",
+                "title": "Responsable du traitement",
+                "description": "Responsable de l'obtention du consentement, de l'information des utilisateurs et de la réponse aux demandes de confidentialité."
+            },
+            "processor": {
+                "title": "Sous-traitant",
+                "description": "Traite les données pour votre compte conformément à notre Accord de traitement des données."
+            }
+        },
+        "s11": {
+            "description": "Nous mettons en oeuvre des mesures techniques et organisationnelles appropriées :",
+            "items": {
+                "item0": "Chiffrement (TLS/HTTPS)",
+                "item1": "Authentification sécurisée",
+                "item2": "Audits de sécurité réguliers",
+                "item3": "Contrôles d'accès",
+                "item4": "Validation des entrées",
+                "item5": "Limitation de débit"
+            },
+            "disclaimer": "Bien que nous nous efforcions de protéger vos données, aucune méthode de transmission sur Internet n'est sécurisée à 100 %."
+        },
+        "s12": {
+            "description": "Notre Service n'est pas destiné aux personnes de moins de 18 ans. Nous ne collectons pas sciemment de données auprès de mineurs. Si vous avez connaissance qu'un mineur nous a fourni des données personnelles, veuillez nous contacter."
+        },
+        "s13": {
+            "description": "Nous pouvons mettre à jour cette Politique de confidentialité de temps à autre. En cas de modifications importantes :",
+            "item0": "Nous publierons la politique mise à jour avec une nouvelle date de « Dernière mise à jour »",
+            "item1": "Nous enverrons une notification par email aux utilisateurs inscrits pour les changements importants",
+            "disclaimer": "L'utilisation continue du Service après les modifications constitue l'acceptation de la politique mise à jour."
+        },
+        "s14": {
+            "description": "Si vous avez des questions concernant cette Politique de confidentialité :",
+            "address1": "60 rue Amiral Romain-Desfossés",
+            "address2": "29200 Brest, France"
+        },
+        "footer": {
+            "copyright": "\u00a9 {year} Traaaction. Tous droits réservés.",
+            "terms": "Conditions d'utilisation",
+            "home": "Accueil"
+        }
+    },
+    "termsPage": {
+        "header": { "backToHome": "Retour \u00e0 Traaaction", "legal": "Juridique" },
+        "sidebar": { "toc": "Table des mati\u00e8res" },
+        "hero": { "badge": "Accord juridique", "titleLine1": "Conditions", "titleLine2": "d'utilisation", "subtitle": "Veuillez lire attentivement ces conditions avant d'utiliser Traaaction. En acc\u00e9dant ou en utilisant notre plateforme, vous acceptez d'\u00eatre li\u00e9 par ces conditions.", "effectiveDateLabel": "Date d'effet", "effectiveDate": "3 f\u00e9vrier 2026" },
+        "intro": { "p1": "Les pr\u00e9sentes Conditions d'utilisation (les \u00ab Conditions \u00bb) r\u00e9gissent votre acc\u00e8s et votre utilisation de la plateforme Traaaction, y compris notre site web, nos applications et nos services (collectivement, le \u00ab Service \u00bb).", "p2": "Traaaction est exploit\u00e9 par Traaaction SAS, soci\u00e9t\u00e9 immatricul\u00e9e en France. En utilisant notre Service, vous concluez un accord contraignant avec nous." },
+        "sections": { "acceptance": "Acceptation des conditions", "description": "Description du Service", "accounts": "Comptes utilisateurs", "startups": "Obligations des Startups", "sellers": "Obligations des Sellers", "fees": "Frais et paiements", "commissions": "Structure des commissions", "intellectual": "Propri\u00e9t\u00e9 intellectuelle", "prohibited": "Activit\u00e9s interdites", "termination": "R\u00e9siliation", "disclaimers": "Avertissements", "liability": "Limitation de responsabilit\u00e9", "indemnification": "Indemnisation", "changes": "Modifications des conditions", "contact": "Nous contacter", "governing": "Droit applicable" },
+        "acceptance": { "p1_before": "En acc\u00e9dant ou en utilisant le Service, vous acceptez d'\u00eatre li\u00e9 par les pr\u00e9sentes Conditions et notre", "privacyPolicyLink": "Politique de confidentialit\u00e9", "p1_after": "Si vous n'acceptez pas ces Conditions, vous ne pouvez pas acc\u00e9der au Service ni l'utiliser.", "importantLabel": "Important :", "importantText": "Vous devez avoir au moins 18 ans et \u00eatre capable de conclure un contrat contraignant pour utiliser notre Service.", "p2": "Si vous utilisez le Service pour le compte d'une entreprise ou d'une organisation, vous garantissez que vous avez l'autorit\u00e9 n\u00e9cessaire pour engager cette entit\u00e9 vis-\u00e0-vis des pr\u00e9sentes Conditions." },
+        "description": { "intro": "Traaaction est une plateforme SaaS qui met en relation des Startups (entreprises) avec des Sellers (affili\u00e9s) pour cr\u00e9er et g\u00e9rer des programmes de marketing d'affiliation. Notre Service comprend :", "serviceCount": "6", "services": { "0": { "title": "Cr\u00e9ation de missions", "desc": "Les startups cr\u00e9ent des programmes d'affiliation avec des structures de commissions personnalisables" }, "1": { "title": "Marketplace Sellers", "desc": "Les sellers parcourent et rejoignent des programmes d'affiliation correspondant \u00e0 leur audience" }, "2": { "title": "Suivi d'attribution", "desc": "Suivi en temps r\u00e9el des clics, leads et ventes via des liens uniques" }, "3": { "title": "Gestion des commissions", "desc": "Calcul et suivi automatis\u00e9s des commissions" }, "4": { "title": "Traitement des paiements", "desc": "Paiements s\u00e9curis\u00e9s via Stripe Connect, PayPal ou virement bancaire" }, "5": { "title": "Tableau de bord analytique", "desc": "Rapports complets pour les startups et les sellers" } } },
+        "accounts": { "intro": "Pour utiliser certaines fonctionnalit\u00e9s du Service, vous devez cr\u00e9er un compte. En cr\u00e9ant un compte, vous acceptez de :", "itemCount": "5", "items": { "0": "Fournir des informations exactes, actuelles et compl\u00e8tes", "1": "Maintenir et mettre \u00e0 jour rapidement les informations de votre compte", "2": "Garder votre mot de passe s\u00e9curis\u00e9 et confidentiel", "3": "Accepter la responsabilit\u00e9 de toutes les activit\u00e9s effectu\u00e9es sous votre compte", "4": "Nous notifier imm\u00e9diatement de tout acc\u00e8s non autoris\u00e9" }, "accountTypesTitle": "Types de comptes", "startup": { "label": "Entreprise", "title": "Compte Startup", "desc": "Pour les entreprises cr\u00e9ant des programmes d'affiliation et g\u00e9rant des sellers." }, "seller": { "label": "Particulier", "title": "Compte Seller", "desc": "Pour les affili\u00e9s promouvant des produits et gagnant des commissions." } },
+        "startups": { "intro": "En tant que Startup utilisant notre plateforme, vous acceptez de :", "itemCount": "6", "items": { "0": "Fournir des informations exactes sur vos produits, services et structures de commissions", "1": "Honorer toutes les commissions gagn\u00e9es par les Sellers conform\u00e9ment aux conditions de votre programme", "2": "Payer les frais de plateforme et les commissions des Sellers en temps voulu", "3": "Respecter toutes les lois applicables en mati\u00e8re de publicit\u00e9 et de marketing d'affiliation", "4": "Ne pas modifier r\u00e9troactivement les conditions de commission au d\u00e9triment des Sellers", "5": "Maintenir des fonds suffisants pour couvrir les commissions acquises" }, "paymentLabel": "Obligation de paiement :", "paymentText": "Vous devez payer toutes les commissions approuv\u00e9es dans les 30 jours suivant la date \u00e0 laquelle la commission devient exigible. Le non-respect de cette obligation peut entra\u00eener la suspension de votre compte." },
+        "sellers": { "intro": "En tant que Seller utilisant notre plateforme, vous acceptez de :", "itemCount": "6", "items": { "0": "Promouvoir les produits et services de mani\u00e8re honn\u00eate et transparente", "1": "Divulguer votre relation d'affiliation comme l'exige la loi (FTC, RGPD, etc.)", "2": "Ne pas participer \u00e0 des activit\u00e9s frauduleuses telles que de faux clics, leads ou auto-r\u00e9f\u00e9rencements", "3": "Ne pas utiliser de spam, de publicit\u00e9 trompeuse ou de pratiques mensong\u00e8res", "4": "Respecter les conditions et directives sp\u00e9cifiques de chaque programme", "5": "Fournir des informations de paiement exactes pour recevoir les commissions" }, "disclosureTitle": "Obligations de transparence", "disclosureIntro": "Vous devez clairement divulguer votre relation d'affiliation lors de la promotion de produits. Exemples de mentions :", "disclosureCount": "3", "disclosures": { "0": "\u00ab Cet article contient des liens d'affiliation \u00bb", "1": "\u00ab Je peux percevoir une commission si vous achetez via mon lien \u00bb", "2": "\u00ab #pub \u00bb ou \u00ab #affiliation \u00bb sur les publications r\u00e9seaux sociaux" } },
+        "fees": { "intro": "Traaaction facture des frais pour l'utilisation de notre plateforme :", "table": { "colType": "Type de frais", "colAmount": "Montant", "colPaidBy": "Pay\u00e9 par", "rowCount": "3", "rows": { "0": { "type": "Frais de plateforme", "amount": "15 % du montant net de la transaction", "paidBy": "Startup" }, "1": { "type": "Traitement des paiements", "amount": "Frais Stripe (refactur\u00e9s)", "paidBy": "Startup" }, "2": { "type": "Frais de versement", "amount": "Gratuit (Stripe Connect)", "paidBy": "Seller" } } }, "note": "Les frais de plateforme sont calcul\u00e9s sur le montant net apr\u00e8s d\u00e9duction des frais de traitement Stripe et des taxes applicables." },
+        "commissions": { "intro": "Les commissions sont gagn\u00e9es selon les conditions du programme d\u00e9finies par chaque Startup :", "typesTitle": "Types de commissions", "typeCount": "3", "types": { "0": { "type": "Commission sur vente", "desc": "Pourcentage ou montant fixe par vente r\u00e9alis\u00e9e", "example": "ex. : 10 % de la vente ou 5 \u20ac par vente" }, "1": { "type": "Commission sur lead", "desc": "Montant fixe par lead qualifi\u00e9 ou inscription", "example": "ex. : 3 \u20ac par lead" }, "2": { "type": "Commission r\u00e9currente", "desc": "Commission sur les renouvellements d'abonnement", "example": "ex. : 10 % mensuel pendant 12 mois" } }, "lifecycleTitle": "Cycle de vie des commissions", "lifecycleCount": "3", "lifecycle": { "0": { "status": "En attente", "period": "0-30 jours", "desc": "Commission cr\u00e9\u00e9e, soumise \u00e0 la p\u00e9riode de remboursement" }, "1": { "status": "Approuv\u00e9e", "period": "Apr\u00e8s la p\u00e9riode de r\u00e9tention", "desc": "Commission valid\u00e9e, pr\u00eate pour le versement" }, "2": { "status": "Pay\u00e9e", "period": "Versement effectu\u00e9", "desc": "Transf\u00e9r\u00e9e au Seller" } }, "holdLabel": "P\u00e9riode de r\u00e9tention :", "holdText": "Les commissions sont retenues pendant 30 jours (ventes/r\u00e9currentes) ou 3 jours (leads) pour tenir compte des remboursements et des contestations de paiement." },
+        "intellectual": { "intro": "Tous les droits de propri\u00e9t\u00e9 intellectuelle relatifs au Service, y compris mais sans s'y limiter les logiciels, le design, les logos et le contenu, appartiennent \u00e0 Traaaction ou \u00e0 nos conc\u00e9dants de licence.", "itemCount": "5", "items": { "0": "Vous ne pouvez pas copier, modifier ou distribuer nos mat\u00e9riaux propri\u00e9taires", "1": "Vous ne pouvez pas faire de reverse engineering ou d\u00e9compiler nos logiciels", "2": "Vous conservez la propri\u00e9t\u00e9 du contenu que vous t\u00e9l\u00e9chargez sur la plateforme", "3": "Vous nous accordez une licence d'utilisation de votre contenu pour fournir le Service", "4": "Les marques et logos restent la propri\u00e9t\u00e9 de leurs propri\u00e9taires respectifs" } },
+        "prohibited": { "intro": "Vous vous engagez \u00e0 ne pas vous livrer aux activit\u00e9s interdites suivantes :", "activityCount": "6", "activities": { "0": { "title": "Fraude", "desc": "Faux clics, leads, auto-r\u00e9f\u00e9rencements ou bourrage de cookies" }, "1": { "title": "Spam", "desc": "Emails, messages non sollicit\u00e9s ou soumissions automatis\u00e9es" }, "2": { "title": "Tromperie", "desc": "Publicit\u00e9 trompeuse ou fausses d\u00e9clarations sur des produits" }, "3": { "title": "Usurpation d'identit\u00e9", "desc": "Se faire passer pour une autre personne ou entit\u00e9" }, "4": { "title": "Piratage", "desc": "Tenter d'acc\u00e9der \u00e0 des syst\u00e8mes sans autorisation" }, "5": { "title": "Abus", "desc": "Harc\u00e8lement d'autres utilisateurs ou perturbation du Service" } }, "warningLabel": "Avertissement :", "warningText": "La violation de ces conditions peut entra\u00eener la r\u00e9siliation imm\u00e9diate du compte, la confiscation des commissions et des poursuites judiciaires." },
+        "termination": { "intro": "Chaque partie peut r\u00e9silier l'accord dans les conditions suivantes :", "byYouTitle": "R\u00e9siliation par vous", "byYouCount": "3", "byYou": { "0": "Vous pouvez fermer votre compte \u00e0 tout moment via les param\u00e8tres de votre compte", "1": "Les Startups doivent payer toutes les commissions en cours avant la fermeture", "2": "Les Sellers recevront les commissions acquises apr\u00e8s les p\u00e9riodes de r\u00e9tention standards" }, "byUsTitle": "R\u00e9siliation par Traaaction", "byUsCount": "3", "byUs": { "0": "Nous pouvons suspendre ou r\u00e9silier les comptes pour violation des Conditions", "1": "Nous pouvons r\u00e9silier avec un pr\u00e9avis de 30 jours pour toute raison", "2": "R\u00e9siliation imm\u00e9diate en cas de fraude, d'activit\u00e9 ill\u00e9gale ou d'abus" }, "effectLabel": "Effets de la r\u00e9siliation :", "effectText": "\u00c0 la r\u00e9siliation, votre droit d'utiliser le Service cesse imm\u00e9diatement. Les dispositions devant survivre (obligations de paiement, limitations de responsabilit\u00e9) restent en vigueur." },
+        "disclaimers": { "intro": "LE SERVICE EST FOURNI \u00ab EN L'\u00c9TAT \u00bb ET \u00ab TEL QUE DISPONIBLE \u00bb SANS GARANTIE D'AUCUNE SORTE, EXPRESSE OU IMPLICITE.", "itemCount": "5", "items": { "0": "Nous ne garantissons pas un fonctionnement ininterrompu ou sans erreur", "1": "Nous ne garantissons pas de r\u00e9sultats ou de revenus sp\u00e9cifiques", "2": "Nous ne sommes pas responsables des produits ou services tiers", "3": "Nous ne cautionnons aucune Startup ni aucun Seller sur la plateforme", "4": "Des probl\u00e8mes techniques peuvent temporairement affecter le suivi ou les paiements" } },
+        "liability": { "intro": "DANS TOUTE LA MESURE PERMISE PAR LA LOI, TRAAACTION NE SAURAIT \u00caTRE TENUE RESPONSABLE DE :", "itemCount": "5", "items": { "0": "Dommages indirects, accessoires, sp\u00e9ciaux ou cons\u00e9cutifs", "1": "Perte de b\u00e9n\u00e9fices, de revenus, de donn\u00e9es ou d'opportunit\u00e9s commerciales", "2": "Dommages d\u00e9passant les frais pay\u00e9s au cours des 12 mois pr\u00e9c\u00e9dant la r\u00e9clamation", "3": "Actions ou omissions d'autres utilisateurs sur la plateforme", "4": "Interruptions de service ou perte de donn\u00e9es" }, "note": "Certaines juridictions n'autorisent pas la limitation de responsabilit\u00e9 pour certains dommages. Dans ce cas, notre responsabilit\u00e9 est limit\u00e9e dans la mesure maximale permise par la loi applicable." },
+        "indemnification": { "intro": "Vous acceptez d'indemniser et de d\u00e9gager de toute responsabilit\u00e9 Traaaction et ses dirigeants, administrateurs, employ\u00e9s et mandataires contre toute r\u00e9clamation, dommage, perte ou d\u00e9pense d\u00e9coulant de :", "itemCount": "4", "items": { "0": "Votre utilisation du Service ou violation des pr\u00e9sentes Conditions", "1": "Votre violation de tout droit de tiers", "2": "Le contenu que vous soumettez ou transmettez via le Service", "3": "Votre n\u00e9gligence ou votre faute intentionnelle" } },
+        "changes": { "intro": "Nous pouvons modifier les pr\u00e9sentes Conditions \u00e0 tout moment. En cas de modifications importantes :", "itemCount": "4", "items": { "0": "Nous publierons les Conditions mises \u00e0 jour avec une nouvelle date d'effet", "1": "Nous notifierons les utilisateurs inscrits par email au moins 30 jours \u00e0 l'avance", "2": "La poursuite de l'utilisation apr\u00e8s la date d'effet vaut acceptation", "3": "Si vous n'acceptez pas les modifications, vous pouvez fermer votre compte" } },
+        "contact": { "intro": "Si vous avez des questions concernant les pr\u00e9sentes Conditions d'utilisation :", "address1": "60 rue Amiral Romain-Desfoss\u00e9s", "address2": "29200 Brest, France" },
+        "governing": { "p1": "Les pr\u00e9sentes Conditions sont r\u00e9gies et interpr\u00e9t\u00e9es conform\u00e9ment au droit fran\u00e7ais, sans \u00e9gard aux dispositions relatives aux conflits de lois.", "p2": "Tout litige d\u00e9coulant des pr\u00e9sentes Conditions ou de votre utilisation du Service sera soumis \u00e0 la comp\u00e9tence exclusive des tribunaux de Brest, France.", "note": "Pour les consommateurs de l'UE : rien dans les pr\u00e9sentes Conditions n'affecte vos droits l\u00e9gaux au titre de la l\u00e9gislation applicable en mati\u00e8re de protection des consommateurs." },
+        "footer": { "copyright": "\u00a9 {year} Traaaction. Tous droits r\u00e9serv\u00e9s.", "privacy": "Politique de confidentialit\u00e9", "home": "Accueil" }
     }
 }

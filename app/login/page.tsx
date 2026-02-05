@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Building2, Users, Loader2, Eye, EyeOff, Mail, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
+import { useTranslations } from 'next-intl'
 
 type UserType = 'startup' | 'seller' | null
 type Mode = 'login' | 'signup'
@@ -24,6 +25,7 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 export default function LoginPage() {
+    const t = useTranslations('auth')
     const [userType, setUserType] = useState<UserType>(null)
     const [mode, setMode] = useState<Mode>('login')
     const [viewState, setViewState] = useState<ViewState>('form')
@@ -48,17 +50,17 @@ export default function LoginPage() {
         const urlMessage = params.get('message')
 
         if (urlError) {
-            let errorMessage = urlMessage || 'An error occurred during authentication'
+            let errorMessage = urlMessage || t('errors.authGeneric')
 
             // Map error codes to user-friendly messages
             if (urlError === 'link_expired') {
-                errorMessage = 'The confirmation link has expired. Please request a new one.'
+                errorMessage = t('errors.linkExpired')
             } else if (urlError === 'email_exists' || urlError === 'email_conflict') {
-                errorMessage = 'An account with this email already exists. Please sign in instead.'
+                errorMessage = t('errors.emailConflict')
             } else if (urlError === 'no_code') {
-                errorMessage = 'Invalid authentication link. Please try again.'
+                errorMessage = t('errors.noCode')
             } else if (urlError === 'seller_creation_failed') {
-                errorMessage = urlMessage || 'Failed to create your seller account. Please try again.'
+                errorMessage = urlMessage || t('errors.sellerCreationFailed')
             }
 
             setError(errorMessage)
@@ -91,7 +93,7 @@ export default function LoginPage() {
                 setGoogleLoading(false)
             }
         } catch {
-            setError('Failed to sign in with Google')
+            setError(t('errors.googleFailed'))
             setGoogleLoading(false)
         }
     }
@@ -128,7 +130,7 @@ export default function LoginPage() {
                 // This is a redirect, not an error - let it happen
                 return
             }
-            setError('An unexpected error occurred')
+            setError(t('errors.unexpected'))
             setLoading(false)
         }
     }
@@ -146,10 +148,10 @@ export default function LoginPage() {
             if (result.error) {
                 setError(result.error)
             } else {
-                setSuccessMessage('Confirmation email sent! Please check your inbox.')
+                setSuccessMessage(t('emailConfirmation.sent'))
             }
         } catch {
-            setError('Failed to resend confirmation email')
+            setError(t('errors.resendFailed'))
         } finally {
             setResendLoading(false)
         }
@@ -175,6 +177,8 @@ export default function LoginPage() {
         )
     }
 
+    const typeLabel = userType === 'startup' ? t('startup.title') : t('seller.title')
+
     return (
         <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
             {/* Minimal Header */}
@@ -191,7 +195,7 @@ export default function LoginPage() {
                                 className="flex items-center gap-2 text-neutral-500 hover:text-neutral-900 transition-colors text-sm font-medium"
                             >
                                 <ArrowLeft className="w-4 h-4" />
-                                <span>Back</span>
+                                <span>{t('back')}</span>
                             </motion.button>
                         ) : (
                             <motion.div
@@ -219,7 +223,7 @@ export default function LoginPage() {
                             href="/"
                             className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
                         >
-                            Home
+                            {t('home')}
                         </Link>
                     )}
                 </div>
@@ -243,10 +247,10 @@ export default function LoginPage() {
                             </div>
 
                             <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight mb-3">
-                                Check your email
+                                {t('emailConfirmation.title')}
                             </h1>
                             <p className="text-neutral-500 mb-2">
-                                We sent a confirmation link to
+                                {t('emailConfirmation.sentTo')}
                             </p>
                             <p className="text-neutral-900 font-medium mb-6">
                                 {confirmationEmail}
@@ -254,7 +258,7 @@ export default function LoginPage() {
 
                             <div className="bg-neutral-100 rounded-xl p-4 mb-6">
                                 <p className="text-sm text-neutral-600">
-                                    Click the link in your email to verify your account and complete your registration.
+                                    {t('emailConfirmation.instructions')}
                                 </p>
                             </div>
 
@@ -290,12 +294,12 @@ export default function LoginPage() {
                                 {resendLoading ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />
                                 ) : (
-                                    'Resend confirmation email'
+                                    t('emailConfirmation.resend')
                                 )}
                             </button>
 
                             <p className="mt-6 text-sm text-neutral-400">
-                                Did not receive the email? Check your spam folder or try another email address.
+                                {t('emailConfirmation.didntReceive')}
                             </p>
 
                             <button
@@ -306,7 +310,7 @@ export default function LoginPage() {
                                 }}
                                 className="mt-4 text-sm text-neutral-600 hover:text-neutral-900 font-medium"
                             >
-                                Use a different email
+                                {t('emailConfirmation.useDifferent')}
                             </button>
                         </motion.div>
                     ) : !userType ? (
@@ -321,10 +325,10 @@ export default function LoginPage() {
                         >
                             <div className="text-center mb-14">
                                 <h1 className="text-4xl md:text-5xl font-semibold text-neutral-900 tracking-tight mb-4">
-                                    Welcome to Traaaction
+                                    {t('welcome')}
                                 </h1>
                                 <p className="text-lg text-neutral-500 max-w-md mx-auto">
-                                    Choose your space to continue
+                                    {t('chooseSpace')}
                                 </p>
                             </div>
 
@@ -345,15 +349,15 @@ export default function LoginPage() {
                                     </div>
 
                                     <h2 className="text-xl font-semibold text-neutral-900 mb-2">
-                                        Startup
+                                        {t('startup.title')}
                                     </h2>
                                     <p className="text-neutral-500 text-sm leading-relaxed">
-                                        Create and manage your affiliate programs. Track conversions and pay your sellers.
+                                        {t('startup.description')}
                                     </p>
 
                                     <div className="mt-6 pt-6 border-t border-neutral-100">
                                         <span className="text-xs font-medium text-neutral-400 uppercase tracking-wider">
-                                            Dashboard Startup
+                                            {t('startup.dashboard')}
                                         </span>
                                     </div>
                                 </motion.button>
@@ -374,15 +378,15 @@ export default function LoginPage() {
                                     </div>
 
                                     <h2 className="text-xl font-semibold text-neutral-900 mb-2">
-                                        Seller
+                                        {t('seller.title')}
                                     </h2>
                                     <p className="text-neutral-500 text-sm leading-relaxed">
-                                        Join programs and earn commissions. Track your earnings in real-time.
+                                        {t('seller.description')}
                                     </p>
 
                                     <div className="mt-6 pt-6 border-t border-neutral-100">
                                         <span className="text-xs font-medium text-neutral-400 uppercase tracking-wider">
-                                            Dashboard Seller
+                                            {t('seller.dashboard')}
                                         </span>
                                     </div>
                                 </motion.button>
@@ -409,12 +413,12 @@ export default function LoginPage() {
                                 </div>
 
                                 <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight mb-2">
-                                    {mode === 'login' ? 'Sign in' : 'Create account'}
+                                    {mode === 'login' ? t('login.title') : t('signup.title')}
                                 </h1>
                                 <p className="text-neutral-500 text-sm">
                                     {mode === 'login'
-                                        ? `Access your ${userType === 'startup' ? 'Startup' : 'Seller'} dashboard`
-                                        : `Join Traaaction as a ${userType === 'startup' ? 'Startup' : 'Seller'}`
+                                        ? t('login.subtitle', { type: typeLabel })
+                                        : t('signup.subtitle', { type: typeLabel })
                                     }
                                 </p>
                             </div>
@@ -431,7 +435,7 @@ export default function LoginPage() {
                                 ) : (
                                     <>
                                         <GoogleIcon className="w-5 h-5" />
-                                        Continue with Google
+                                        {t('google')}
                                     </>
                                 )}
                             </button>
@@ -442,7 +446,7 @@ export default function LoginPage() {
                                     <div className="w-full border-t border-neutral-200"></div>
                                 </div>
                                 <div className="relative flex justify-center text-xs uppercase">
-                                    <span className="bg-[#FAFAFA] px-3 text-neutral-400">or continue with email</span>
+                                    <span className="bg-[#FAFAFA] px-3 text-neutral-400">{t('orEmail')}</span>
                                 </div>
                             </div>
 
@@ -457,7 +461,7 @@ export default function LoginPage() {
                                             transition={{ duration: 0.2 }}
                                         >
                                             <label htmlFor="name" className="block text-sm font-medium text-neutral-700 mb-2">
-                                                Full name
+                                                {t('signup.fullName')}
                                             </label>
                                             <input
                                                 type="text"
@@ -474,7 +478,7 @@ export default function LoginPage() {
 
                                 <div>
                                     <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
-                                        Email
+                                        {t('email')}
                                     </label>
                                     <input
                                         type="email"
@@ -489,7 +493,7 @@ export default function LoginPage() {
 
                                 <div>
                                     <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-2">
-                                        Password
+                                        {t('password')}
                                     </label>
                                     <div className="relative">
                                         <input
@@ -516,7 +520,7 @@ export default function LoginPage() {
                                     </div>
                                     {mode === 'signup' && (
                                         <p className="mt-1.5 text-xs text-neutral-400">
-                                            Minimum 6 characters
+                                            {t('signup.minChars', { count: 6 })}
                                         </p>
                                     )}
                                 </div>
@@ -543,7 +547,7 @@ export default function LoginPage() {
                                         <Loader2 className="w-5 h-5 animate-spin" />
                                     ) : (
                                         <>
-                                            {mode === 'login' ? 'Sign in' : 'Create account'}
+                                            {mode === 'login' ? t('login.title') : t('signup.title')}
                                             <ArrowRight className="w-4 h-4" />
                                         </>
                                     )}
@@ -553,7 +557,7 @@ export default function LoginPage() {
                             {/* Toggle Login/Signup */}
                             <div className="mt-6 text-center">
                                 <p className="text-sm text-neutral-500">
-                                    {mode === 'login' ? "Don't have an account?" : "Already have an account?"}{' '}
+                                    {mode === 'login' ? t('login.noAccount') : t('signup.hasAccount')}{' '}
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -562,21 +566,25 @@ export default function LoginPage() {
                                         }}
                                         className="text-neutral-900 font-medium hover:underline underline-offset-4"
                                     >
-                                        {mode === 'login' ? 'Sign up' : 'Sign in'}
+                                        {mode === 'login' ? t('signup.title') : t('login.title')}
                                     </button>
                                 </p>
                             </div>
 
                             {/* Legal */}
                             <p className="mt-6 text-center text-xs text-neutral-400 leading-relaxed">
-                                By continuing, you agree to the{' '}
-                                <Link href="/terms" className="underline underline-offset-2 hover:text-neutral-600 transition-colors">
-                                    Terms of Service
-                                </Link>{' '}
-                                and{' '}
-                                <Link href="/privacy" className="underline underline-offset-2 hover:text-neutral-600 transition-colors">
-                                    Privacy Policy
-                                </Link>
+                                {t.rich('legal', {
+                                    terms: (chunks) => (
+                                        <Link href="/terms" className="underline underline-offset-2 hover:text-neutral-600 transition-colors">
+                                            {chunks}
+                                        </Link>
+                                    ),
+                                    privacy: (chunks) => (
+                                        <Link href="/privacy" className="underline underline-offset-2 hover:text-neutral-600 transition-colors">
+                                            {chunks}
+                                        </Link>
+                                    ),
+                                })}
                             </p>
                         </motion.div>
                     )}
