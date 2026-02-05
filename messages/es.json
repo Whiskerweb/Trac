@@ -974,9 +974,7 @@
             "integration": "Integración",
             "domains": "Dominios",
             "settings": "Configuración",
-            "startupProgram": "Programa Startup",
-            "devTools": "Herramientas dev",
-            "forceMature": "Forzar maduración"
+            "startupProgram": "Programa Startup"
         }
     },
     "seller": {

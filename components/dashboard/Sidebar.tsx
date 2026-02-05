@@ -3,7 +3,7 @@
 import {
     Home, MessageSquare, CreditCard, Users, UserPlus,
     Contact, Coins, Shield, Globe, Settings,
-    Puzzle, User, ExternalLink, Target, Zap,
+    Puzzle, User, ExternalLink, Target,
     ChevronLeft, ChevronRight
 } from 'lucide-react'
 import Link from 'next/link'
@@ -79,19 +79,6 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
     const [userEmail, setUserEmail] = useState<string>('')
     const [startupName, setStartupName] = useState<string>(t('sellerProgram'))
 
-    // Add dev tools section if enabled (via env var)
-    const isDev = process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLS === 'true'
-    const navigationWithDevTools: NavSection[] = isDev
-        ? [
-            ...navigationConfig,
-            {
-                titleKey: 'devTools',
-                items: [
-                    { nameKey: 'forceMature', href: '/dashboard/admin/debug', icon: Zap } as NavItem
-                ]
-            }
-        ]
-        : navigationConfig
 
     useEffect(() => {
         fetch('/api/auth/user-roles')
@@ -133,7 +120,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
 
             {/* Navigation */}
             <nav className={`flex-1 py-4 overflow-y-auto ${collapsed ? 'px-2' : 'px-3'}`}>
-                {navigationWithDevTools.map((section, idx) => (
+                {navigationConfig.map((section, idx) => (
                     <div key={section.titleKey} className={idx > 0 ? 'mt-6' : ''}>
                         {/* Section Title - hidden when collapsed */}
                         {!collapsed && (
