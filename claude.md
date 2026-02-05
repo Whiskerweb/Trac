@@ -58,6 +58,7 @@
 | **Tailwind CSS** | 4 | Styling |
 | **Framer Motion** | 12.29.0 | Animations |
 | **Recharts** | 3.6.0 | Graphiques analytics |
+| **next-intl** | 4.8.2 | Internationalisation (FR/EN/ES) |
 | **Vercel** | - | Deploiement |
 
 ### Variables d'environnement cles
@@ -97,6 +98,8 @@ TRAC_CLIENT_TOKEN, CRON_SECRET
 │   ├── auth/                     # Callbacks OAuth, choix de role
 │   ├── onboarding/               # Creation de workspace startup
 │   ├── merci/page.tsx            # Page de remerciement post-conversion
+│   ├── terms/page.tsx            # Conditions d'utilisation (design editorial)
+│   ├── privacy/page.tsx          # Politique de confidentialite (RGPD)
 │   │
 │   ├── dashboard/                # === DASHBOARD STARTUP ===
 │   │   ├── layout.tsx            # Layout avec sidebar
@@ -151,6 +154,7 @@ TRAC_CLIENT_TOKEN, CRON_SECRET
 │   │   ├── admin.ts              # Operations admin
 │   │   ├── webhooks.ts           # Gestion webhooks
 │   │   ├── mission-stats.ts      # Statistiques missions
+│   │   ├── locale.ts             # Server actions i18n (set/get locale cookie)
 │   │   └── get-user-roles.ts     # Verification roles
 │   │
 │   └── api/                      # === API ROUTES ===
@@ -171,11 +175,12 @@ TRAC_CLIENT_TOKEN, CRON_SECRET
 │       └── events/route.ts       # Event logging
 │
 ├── components/                   # === COMPOSANTS REACT ===
-│   ├── landing/                  # Navbar, Hero, Features, B2BFeatures, FAQ, Footer, Logos, etc.
+│   ├── landing/                  # Navbar, Hero, Features, B2BFeatures, FAQ, Footer, Logos, MissionSelector, AdvancedFeatures
 │   ├── dashboard/                # Sidebar, AnalyticsChart, GlobeVisualization, DateRangePicker, ActivityFeed, etc.
 │   │   └── CommissionDetailModal.tsx # Modal detail commissions seller (agrege)
 │   ├── seller/                  # WalletButton, etc.
 │   ├── ui/                       # GlobeVisualization, EuropeMap, charts, visuals
+│   ├── LanguageSelector.tsx      # Selecteur de langue (FR/EN/ES), variants 'default' et 'minimal'
 │   ├── CreateLinkModal.tsx       # Modal creation lien affilie (20KB)
 │   ├── ProjectCreateModal.tsx    # Modal creation mission
 │   ├── WebhookManager.tsx        # Gestion webhooks (19KB)
@@ -220,8 +225,17 @@ TRAC_CLIENT_TOKEN, CRON_SECRET
 │   ├── Logotrac/                 # Logos et images landing
 │   └── partn/                    # Logos sellers
 │
+├── i18n/                         # === INTERNATIONALISATION ===
+│   ├── config.ts                 # Config locales (en, fr, es), default: en
+│   └── request.ts                # NextIntl request config (cookie NEXT_LOCALE)
+│
+├── messages/                     # === TRADUCTIONS ===
+│   ├── en.json                   # Anglais (1155 lignes)
+│   ├── fr.json                   # Francais (1155 lignes)
+│   └── es.json                   # Espagnol (1155 lignes)
+│
 ├── middleware.ts                  # Edge middleware (900+ lignes) - CRITIQUE
-├── next.config.ts                # Config (rewrites anti-adblock, proxy Tinybird)
+├── next.config.ts                # Config (rewrites anti-adblock, proxy Tinybird, next-intl plugin)
 ├── tailwind.config.ts            # Tailwind v4
 ├── tsconfig.json                 # TypeScript strict
 └── package.json                  # Dependencies
@@ -505,7 +519,7 @@ Webhook /api/webhooks/[endpointId] (multi-tenant, secret par workspace)
 1. Calcul revenue net : gross - stripe_fee - tax
 2. Attribution : clickId → Redis/Tinybird → linkId → Seller
 3. Ingestion Tinybird (sale + sale_items)
-4. Creation Commission (PENDING, hold 7j)
+4. Creation Commission (PENDING, hold 30j)
 5. Idempotence via ProcessedEvent
 ```
 
@@ -703,6 +717,7 @@ Securise par header `CRON_SECRET`.
 | **messaging.ts** | `getConversations()`, `getMessages()`, `sendMessage()`, `initializeConversation()`, `markAsRead()`, `createInvitationMessage()` |
 | **dashboard.ts** | `getLastEvents()` (mix clicks Tinybird + enrollments + commissions) |
 | **links.ts** | `createShortLink()`, `getWorkspaceLinks()` |
+| **locale.ts** | `setLocale()`, `getLocale()` |
 | **workspace.ts** | Operations CRUD workspace |
 
 ---
@@ -736,23 +751,25 @@ Securise par header `CRON_SECRET`.
 ## 14. DESIGN SYSTEM & UI
 
 ### Dashboard Startup
-- **Layout** : Sidebar fixe (desktop) / drawer (mobile)
+- **Layout** : Sidebar fixe (desktop) / drawer mobile avec backdrop blur
 - **Composant** : `components/dashboard/Sidebar.tsx`
+- **Responsive** : Sidebar cachee sur mobile (`hidden md:block`), drawer anime (`animate-in slide-in-from-left`)
+- **Collapse toggle** : Etat persiste dans localStorage
 
 ### Dashboard Seller (Design strict Traaaction)
-- **Layout** : Dual navigation
-  - **Left Rail** (56px) : Nav globale (Programmes, Payouts, Members, Messages)
-  - **Sidebar contextuelle** (240px) : Change selon le contexte
-    - "All programs" : Programs, Marketplace, Invitations
-    - "Seller profile" : Profile, Members, Account, Notifications
-  - Pages Payouts/Messages : sidebar masquee (rail seul)
+- **Layout** : Sidebar collapsible avec drawer mobile
+- **Responsive** : Meme pattern que startup dashboard (drawer + backdrop)
+- **Constantes** :
+  - Sidebar expanded : `w-[260px]`
+  - Sidebar collapsed : `w-[68px]`
+  - Mobile drawer : `w-64 bg-white shadow-xl`
 
 ### Constantes design
 ```tsx
 const DS = {
-  rail: { width: 'w-[56px]', bg: 'bg-[#FAFAFA]' },
-  sidebar: { width: 'w-[240px]', bg: 'bg-white' },
-  content: { bg: 'bg-[#FAFAFA]' }
+  sidebar: { expanded: 'w-[260px]', collapsed: 'w-[68px]', bg: 'bg-white' },
+  content: { bg: 'bg-[#FAFAFA]' },
+  mobile: { drawer: 'w-64 bg-white shadow-xl' }
 }
 ```
 
@@ -964,59 +981,201 @@ Enrichissement en 3 etapes avec gestion correcte des sellers :
 - Events enrichis avec metadata (montant vente, nom event lead)
 - Performance optimale avec cache Redis/Tinybird
 
-### Fichiers récemment modifiés (commités)
-- `lib/sql-sanitize.ts` - **NOUVEAU** Bibliotheque de sanitization SQL pour Tinybird
-- `lib/commission/engine.ts` - Hold days default 30j pour SALE/RECURRING
-- `app/api/track/lead/route.ts` - SQL injection fix + holdDays LEAD 3j
-- `app/api/webhooks/[endpointId]/route.ts` - SQL injection fix + holdDays 30j
-- `app/actions/customers.ts` - SQL injection fix
-- `app/api/stats/check-installation/route.ts` - SQL injection fix
-- `app/seller/settings/page.tsx` - Redesign profile completion bar (glass-morphic + progress ring)
-- `app/seller/wallet/page.tsx` - Ajout Stripe Connect avec modal disclaimer
-- `app/seller/layout.tsx` - Suppression WalletButton du header
-- `app/seller/onboarding/page.tsx` - Traduction EN
-- `app/seller/payouts/page.tsx` - Traduction EN
-- `app/seller/marketplace/page.tsx` - Traduction EN
-- `app/seller/marketplace/[missionId]/page.tsx` - Traduction EN
-- `app/seller/gift-cards/page.tsx` - Traduction EN
-- `app/seller/page.tsx` - Traduction EN
-- `app/seller/programs/[missionId]/page.tsx` - Traduction EN
+### ✅ Internationalisation i18n (FR/EN/ES) COMPLETE (100%)
 
-### Fichiers modifies en cours (non commites)
-- `app/actions/commissions.ts` - Refactoring stats commissions
-- `app/actions/sellers.ts` - Gestion sellers
-- `app/actions/payouts.ts` - Systeme de paiement startup
-- `app/api/webhooks/[endpointId]/route.ts` - Webhook multi-tenant
-- `app/dashboard/commissions/page.tsx` - Page commissions
-- `app/dashboard/sellers/applications/page.tsx` - Applications sellers (renomme de partners)
-- `app/dashboard/payouts/page.tsx` - Page payouts startup
-- `lib/commission/engine.ts` - Moteur de commissions
-- `components/dashboard/ActivityFeed.tsx` - Nouveau composant feed activite
-- `app/dashboard/page.tsx` - Layout 50/50 globe + activity feed
-- `app/api/stats/activity/route.ts` - Enrichissement seller avec fix Prisma
+**Date de completion** : Fevrier 2026
 
-### Nouveau (non track)
-- `app/api/webhooks/startup-payments/` - Webhook paiement startup (nouveau flux)
-- `app/dashboard/sellers/` - Gestion sellers (remplace partners/)
+Support complet de 3 langues sur toute la plateforme.
+
+#### Implementation technique
+- **Librairie** : `next-intl` v4.8.2
+- **Config** : `i18n/config.ts` (locales: en, fr, es, default: en)
+- **Request handler** : `i18n/request.ts` (lecture cookie `NEXT_LOCALE`)
+- **Plugin** : `next.config.ts` integre `withNextIntl`
+- **Layout racine** : `app/layout.tsx` wrappe avec `NextIntlClientProvider`
+- **Persistence** : Cookie `NEXT_LOCALE` avec max-age 1 an
+
+#### Fichiers de traduction
+- `messages/en.json` - Anglais (~2100 lignes, 1527 clés)
+- `messages/fr.json` - Francais (~2100 lignes, 1527 clés)
+- `messages/es.json` - Espagnol (~2100 lignes, 1527 clés)
+
+#### Namespaces de traduction (18 total)
+```
+common (53), nav (11), auth (43), landing (95), onboarding (33),
+dashboard (542), seller (110), messages (15), notifications (9), errors (9),
+about (43), sellerTerms (16), startupTerms (18), startupTermsPage (149),
+reportAbuse (48), sellerTermsPage (168), privacyPage (164), termsPage (197)
+```
+
+#### Composant LanguageSelector
+- **Fichier** : `components/LanguageSelector.tsx`
+- **Variants** : `'default'` (dropdown standard) et `'minimal'` (compact)
+- **Integration** : Footer avec `openDirection="up"` pour eviter coupure
+- **Server action** : `app/actions/locale.ts` (setLocale / getLocale)
+
+#### Pages traduites
+- Toutes les pages landing (Hero, Features, B2BFeatures, FAQ, Footer, Navbar)
+- Toutes les pages dashboard startup
+- Toutes les pages dashboard seller
+- Page integration
+- Page login (`/login`) - selection user type, formulaire login/signup, confirmation email
+- Pages legales : `/terms`, `/privacy`, `/seller-terms`, `/startup-terms`
+- Pages statiques : `/about`, `/report-abuse`
+
+### ✅ Responsive Design Dashboard COMPLETE (100%)
+
+**Date de completion** : Fevrier 2026
+
+Toutes les pages dashboard (startup + seller) sont entierement responsives.
+
+#### Patterns implementes
+- **Mobile drawer** : Menu lateral anime avec backdrop blur
+- **Escape key** : Ferme le menu mobile
+- **Body scroll prevention** : Quand menu ouvert
+- **Desktop sidebar** : `hidden md:block` sur mobile
+- **Animation** : `animate-in slide-in-from-left`
+- **Collapse toggle** : Etat persiste dans localStorage
+- **Grilles responsives** : `md:` breakpoints partout
+- **Padding adaptatif** : `px-4 md:px-6`
+- **Texte adaptatif** : `text-sm md:text-base`
+
+#### Fichiers modifies
+- `app/dashboard/layout.tsx` - Layout responsive startup
+- `app/seller/layout.tsx` - Layout responsive seller
+- Toutes les pages dashboard (commissions, sellers, payouts, messages, etc.)
+- Tous les composants landing
+
+### ✅ Redesign Messages Startup avec Avatars Seller (100%)
+
+**Date de completion** : Fevrier 2026
+
+Refonte de la page messages du dashboard startup.
+
+#### Fonctionnalites
+- **Avatars seller** : Affichage dans la liste de conversations (champ `partner_avatar`)
+- **Conversation routing** : Via `useSearchParams()` pour navigation directe
+- **Suspense boundary** : Loading fallback pour UX fluide
+- **Read/unread tracking** : Compteur de messages non lus
+- **Auto-scroll** : Vers le dernier message
+- **Invitation messages** : Support des messages d'invitation
+- **Avatar fallback** : Initiale avec gradient pour sellers sans photo
+
+### ✅ Pages Legales i18n COMPLETE (100%)
+
+**Date de completion** : Fevrier 2026
+
+6 pages legales/statiques avec design editorial, toutes entierement traduites (FR/EN/ES).
+
+#### Terms of Service (`/terms`) - 197 clés
+- **Namespace** : `termsPage`
+- **Design** : Editorial avec sidebar navigation a gauche
+- **Structure** : 16 sections principales (acceptance, description, accounts, fees, commissions, etc.)
+- **Features** : Scroll progress bar, section active highlighting, tables dynamiques via traductions
+
+#### Privacy Policy (`/privacy`) - 164 clés
+- **Namespace** : `privacyPage`
+- **Design** : Editorial light theme avec gradient violet
+- **Structure** : 14 sections RGPD (data controller, collection, cookies, rights, etc.)
+- **Features** : Tables de cookies, service providers, durees de retention
+
+#### Seller Terms (`/seller-terms`) - 168 clés
+- **Namespace** : `sellerTermsPage`
+- **Design** : Theme emerald
+- **Structure** : 9 sections (eligibility, obligations, commissions, hold periods, prohibited, etc.)
+- **Features** : Table des methodes de payout, periodes de maturation
+
+#### Startup Terms (`/startup-terms`) - 149 clés
+- **Namespace** : `startupTermsPage`
+- **Design** : Theme bleu
+- **Structure** : 11 sections (eligibility, obligations, programs, fees, tracking, etc.)
+- **Features** : Table des frais, etapes du processus de paiement
+
+#### About (`/about`) - 43 clés
+- **Namespace** : `about`
+- **Design** : Theme amber
+- **Structure** : Mission, How it Works (3 etapes), Values (4 valeurs), Team (3 cofounders)
+- **Features** : Icons dynamiques, rich text avec highlights
+
+#### Report Abuse (`/report-abuse`) - 48 clés
+- **Namespace** : `reportAbuse`
+- **Design** : Theme rouge
+- **Structure** : Types d'abus (10 categories), formulaire de signalement
+- **Features** : Dropdown traduit, mailto dynamique, success state
+
+### ✅ Login Page i18n COMPLETE (100%)
+
+**Date de completion** : Fevrier 2026
+
+Page de login/signup entierement traduite avec namespace `auth` (43 clés).
+
+#### Sections traduites
+- **User type selection** : Welcome message, Startup/Seller cards avec descriptions
+- **Login form** : Titre, sous-titre dynamique, labels (Email, Password, Full name)
+- **Signup form** : Titre, sous-titre, indication caracteres minimum
+- **Google sign-in** : Bouton "Continue with Google"
+- **Email confirmation** : Titre, instructions, bouton resend, helper text
+- **Legal footer** : Rich text avec liens Terms/Privacy via `t.rich()`
+- **Navigation** : Back, Home
+- **Error messages** : 11 messages d'erreur traduits (linkExpired, emailConflict, etc.)
+
+#### Implementation technique
+- `useTranslations('auth')` dans `/app/login/page.tsx`
+- Rich text pour le legal footer : `<terms>...</terms>` et `<privacy>...</privacy>`
+- Messages d'erreur mappes depuis les URL params vers les clés de traduction
+- Type dynamique dans les sous-titres : `{type}` remplace par Startup/Seller
+
+### ✅ Landing Page Enhancements COMPLETE (100%)
+
+**Date de completion** : Fevrier 2026
+
+#### Nouveaux composants landing
+- `MissionSelector.tsx` - Selecteur interactif de type de mission
+- `AdvancedFeatures.tsx` - Showcase fonctionnalites avec tabs
+
+#### Composition de la landing (`app/page.tsx`)
+```
+<Navbar /> → <Hero /> → <Logos /> → <MissionSelector /> → <B2BFeatures /> → <Features /> → <FAQ />
+```
+
+#### Calendly Integration
+- CTA "Book a Demo" dans Hero et FAQ
+- Lien : `https://calendly.com/contact-traaaction/30min`
+- Ouverture dans nouvel onglet
+
+### ✅ Integration Page Redesign (100%)
+
+**Date de completion** : Fevrier 2026
+
+Refonte de `/dashboard/integration` avec design Apple-inspired minimaliste.
+
+#### Nouveau design
+- Layout en sections numerotees (01, 02, 03...)
+- Sections expandable/collapsible avec icones
+- Code blocks avec boutons copy sur fond dark (`bg-neutral-950`)
+- Responsive typography pour mobile
+- Integration WebhookManager component
+
+### Fichiers recemment modifies (commites)
+- `app/login/page.tsx` - **UPDATED** Full i18n avec useTranslations('auth')
+- `app/terms/page.tsx` - **UPDATED** i18n avec useTranslations('termsPage')
+- `app/privacy/page.tsx` - **UPDATED** i18n avec useTranslations('privacyPage')
+- `app/seller-terms/page.tsx` - **UPDATED** i18n avec useTranslations('sellerTermsPage')
+- `app/startup-terms/page.tsx` - **UPDATED** i18n avec useTranslations('startupTermsPage')
+- `app/about/page.tsx` - **UPDATED** Fix hardcoded strings (headerLabel, footer.allRightsReserved)
+- `app/report-abuse/page.tsx` - **UPDATED** Fix hardcoded strings (headerLabel, footer.*)
+- `messages/en.json` - **UPDATED** +762 nouvelles clés (legal pages + auth errors)
+- `messages/fr.json` - **UPDATED** +762 nouvelles clés
+- `messages/es.json` - **UPDATED** +762 nouvelles clés
 
 ### Focus actuel
-Le developpement est concentre sur plusieurs axes :
+Le developpement est concentre sur :
 
 1. **Systeme de paiement startup → seller** :
    - Comment la startup paye les commissions des sellers
    - Integration du flux de paiement batch via Stripe Checkout
    - Webhook de confirmation des paiements startup
    - Distinction startup_payment_status (UNPAID/PAID) sur chaque commission
-
-2. **Dashboard Analytics** (✅ COMPLETE) :
-   - Activity Feed en temps reel avec attribution seller
-   - Enrichissement des events (clicks, leads, sales) avec informations seller
-   - Interface compacte et performante avec auto-refresh
-
-3. **UX Seller Dashboard** (✅ COMPLETE) :
-   - Traduction complète en anglais
-   - Redesign profile completion bar
-   - Stripe Connect accessible depuis Wallet avec disclaimer
 
 ### ✅ Securite SQL Injection Fix (100%)
 
