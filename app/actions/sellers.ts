@@ -1300,3 +1300,251 @@ export async function updatePayoutMethod(
         return { success: false, error: 'Failed to update' }
     }
 }
+
+// =============================================
+// STRIPE CONNECT MANAGEMENT
+// =============================================
+
+import Stripe from 'stripe'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+
+export interface StripeAccountInfo {
+    connected: boolean
+    accountId?: string
+    email?: string
+    payoutsEnabled: boolean
+    chargesEnabled: boolean
+    detailsSubmitted: boolean
+    connectedAt?: Date
+    // Requirements info
+    requiresAction: boolean
+    pendingVerification: boolean
+    disabledReason?: string
+}
+
+/**
+ * Get detailed Stripe Connect account information for the current seller
+ */
+export async function getMyStripeAccountInfo(): Promise<{
+    success: boolean
+    account?: StripeAccountInfo
+    error?: string
+}> {
+    try {
+        const currentUser = await getCurrentUser()
+        if (!currentUser) {
+            return { success: false, error: 'Not authenticated' }
+        }
+
+        // Get seller with Stripe info
+        const sellers = await prisma.seller.findMany({
+            where: { user_id: currentUser.userId }
+        })
+
+        if (sellers.length === 0) {
+            return { success: false, error: 'Seller not found' }
+        }
+
+        // Get the seller with stripe_connect_id (prefer global seller)
+        const seller = sellers.find(s => s.stripe_connect_id) || sellers.find(s => !s.program_id) || sellers[0]
+
+        if (!seller.stripe_connect_id) {
+            return {
+                success: true,
+                account: {
+                    connected: false,
+                    payoutsEnabled: false,
+                    chargesEnabled: false,
+                    detailsSubmitted: false,
+                    requiresAction: false,
+                    pendingVerification: false
+                }
+            }
+        }
+
+        // Fetch account details from Stripe
+        const stripeAccount = await stripe.accounts.retrieve(seller.stripe_connect_id)
+
+        // Check if there are any requirements
+        const hasCurrentlyDue = (stripeAccount.requirements?.currently_due?.length || 0) > 0
+        const hasPastDue = (stripeAccount.requirements?.past_due?.length || 0) > 0
+        const hasPendingVerification = (stripeAccount.requirements?.pending_verification?.length || 0) > 0
+
+        return {
+            success: true,
+            account: {
+                connected: true,
+                accountId: seller.stripe_connect_id,
+                email: stripeAccount.email || undefined,
+                payoutsEnabled: stripeAccount.payouts_enabled === true,
+                chargesEnabled: stripeAccount.charges_enabled === true,
+                detailsSubmitted: stripeAccount.details_submitted === true,
+                connectedAt: seller.payouts_enabled_at || undefined,
+                requiresAction: hasCurrentlyDue || hasPastDue,
+                pendingVerification: hasPendingVerification,
+                disabledReason: stripeAccount.requirements?.disabled_reason || undefined
+            }
+        }
+    } catch (error) {
+        console.error('[Stripe] Error fetching account info:', error)
+        return { success: false, error: 'Failed to fetch Stripe account' }
+    }
+}
+
+/**
+ * Get a fresh onboarding/dashboard link for the Stripe account
+ */
+export async function getStripeAccountLink(type: 'onboarding' | 'dashboard'): Promise<{
+    success: boolean
+    url?: string
+    error?: string
+}> {
+    try {
+        const currentUser = await getCurrentUser()
+        if (!currentUser) {
+            return { success: false, error: 'Not authenticated' }
+        }
+
+        const sellers = await prisma.seller.findMany({
+            where: { user_id: currentUser.userId }
+        })
+
+        const seller = sellers.find(s => s.stripe_connect_id)
+
+        if (!seller?.stripe_connect_id) {
+            return { success: false, error: 'No Stripe account connected' }
+        }
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
+        if (type === 'dashboard') {
+            // Create login link for Stripe Express Dashboard
+            const loginLink = await stripe.accounts.createLoginLink(seller.stripe_connect_id)
+            return { success: true, url: loginLink.url }
+        } else {
+            // Create onboarding link to complete setup
+            const accountLink = await stripe.accountLinks.create({
+                account: seller.stripe_connect_id,
+                refresh_url: `${appUrl}/seller/settings?tab=account&stripe=refresh`,
+                return_url: `${appUrl}/seller/settings?tab=account&stripe=success`,
+                type: 'account_onboarding',
+            })
+            return { success: true, url: accountLink.url }
+        }
+    } catch (error) {
+        console.error('[Stripe] Error creating account link:', error)
+        return { success: false, error: 'Failed to create link' }
+    }
+}
+
+/**
+ * Disconnect Stripe account (removes the link, keeps wallet balance)
+ */
+export async function disconnectStripeAccount(): Promise<{
+    success: boolean
+    error?: string
+}> {
+    try {
+        const currentUser = await getCurrentUser()
+        if (!currentUser) {
+            return { success: false, error: 'Not authenticated' }
+        }
+
+        const sellers = await prisma.seller.findMany({
+            where: { user_id: currentUser.userId }
+        })
+
+        const seller = sellers.find(s => s.stripe_connect_id)
+
+        if (!seller?.stripe_connect_id) {
+            return { success: false, error: 'No Stripe account connected' }
+        }
+
+        // Update all seller records for this user to remove Stripe connection
+        await prisma.seller.updateMany({
+            where: { user_id: currentUser.userId },
+            data: {
+                stripe_connect_id: null,
+                payouts_enabled_at: null,
+                payout_method: 'PLATFORM' // Fallback to wallet
+            }
+        })
+
+        console.log(`[Stripe] Disconnected Stripe account for user ${currentUser.userId}`)
+
+        return { success: true }
+    } catch (error) {
+        console.error('[Stripe] Error disconnecting account:', error)
+        return { success: false, error: 'Failed to disconnect' }
+    }
+}
+
+/**
+ * Create a new Stripe Connect account (replaces existing if any)
+ */
+export async function createNewStripeAccount(): Promise<{
+    success: boolean
+    onboardingUrl?: string
+    error?: string
+}> {
+    try {
+        const currentUser = await getCurrentUser()
+        if (!currentUser) {
+            return { success: false, error: 'Not authenticated' }
+        }
+
+        const sellers = await prisma.seller.findMany({
+            where: { user_id: currentUser.userId },
+            include: { Profile: true }
+        })
+
+        if (sellers.length === 0) {
+            return { success: false, error: 'Seller not found' }
+        }
+
+        // Get the primary seller (prefer one with profile)
+        const seller = sellers.find(s => s.Profile) || sellers.find(s => !s.program_id) || sellers[0]
+        const country = seller.Profile?.country || 'FR'
+
+        // Create new Express account
+        const account = await stripe.accounts.create({
+            type: 'express',
+            email: seller.email,
+            country,
+            capabilities: {
+                transfers: { requested: true },
+            },
+            metadata: {
+                seller_id: seller.id,
+                user_id: currentUser.userId,
+            },
+        })
+
+        // Update all seller records for this user
+        await prisma.seller.updateMany({
+            where: { user_id: currentUser.userId },
+            data: {
+                stripe_connect_id: account.id,
+                payout_method: 'STRIPE_CONNECT',
+                payouts_enabled_at: null // Will be set when onboarding completes
+            }
+        })
+
+        // Create onboarding link
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        const accountLink = await stripe.accountLinks.create({
+            account: account.id,
+            refresh_url: `${appUrl}/seller/settings?tab=account&stripe=refresh`,
+            return_url: `${appUrl}/seller/settings?tab=account&stripe=success`,
+            type: 'account_onboarding',
+        })
+
+        console.log(`[Stripe] Created new account ${account.id} for user ${currentUser.userId}`)
+
+        return { success: true, onboardingUrl: accountLink.url }
+    } catch (error) {
+        console.error('[Stripe] Error creating new account:', error)
+        return { success: false, error: 'Failed to create account' }
+    }
+}

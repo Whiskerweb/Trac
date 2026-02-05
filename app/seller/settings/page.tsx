@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Upload, Check, ChevronUp, ChevronDown, CheckCircle2, Circle, Youtube, Globe, Loader2, User, Settings, LogOut, Eye, EyeOff, AlertTriangle, X } from 'lucide-react'
-import { getMySellerProfile, updateMySellerProfile, type MySellerProfileData } from '@/app/actions/sellers'
+import { Upload, Check, ChevronUp, ChevronDown, CheckCircle2, Circle, Youtube, Globe, Loader2, User, Settings, LogOut, Eye, EyeOff, AlertTriangle, X, CreditCard, ExternalLink, Unlink, RefreshCw, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { getMySellerProfile, updateMySellerProfile, getMyStripeAccountInfo, getStripeAccountLink, disconnectStripeAccount, createNewStripeAccount, type MySellerProfileData, type StripeAccountInfo } from '@/app/actions/sellers'
 import { logout } from '@/app/login/actions'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -94,6 +94,12 @@ export default function SettingsPage() {
     const [deleteConfirmText, setDeleteConfirmText] = useState('')
     const [deleting, setDeleting] = useState(false)
     const [deleteError, setDeleteError] = useState('')
+
+    // Stripe account state
+    const [stripeAccount, setStripeAccount] = useState<StripeAccountInfo | null>(null)
+    const [loadingStripe, setLoadingStripe] = useState(false)
+    const [stripeAction, setStripeAction] = useState<'connecting' | 'disconnecting' | 'dashboard' | null>(null)
+    const [showDisconnectModal, setShowDisconnectModal] = useState(false)
 
     // Form state - Basic info
     const [fullName, setFullName] = useState('')
@@ -231,6 +237,93 @@ export default function SettingsPage() {
         }
         loadProfile()
     }, [])
+
+    // Load Stripe account info when switching to account tab
+    useEffect(() => {
+        if (activeTab === 'account' && !stripeAccount && !loadingStripe) {
+            loadStripeInfo()
+        }
+    }, [activeTab])
+
+    async function loadStripeInfo() {
+        setLoadingStripe(true)
+        try {
+            const result = await getMyStripeAccountInfo()
+            if (result.success && result.account) {
+                setStripeAccount(result.account)
+            }
+        } catch (err) {
+            console.error('Error loading Stripe info:', err)
+        } finally {
+            setLoadingStripe(false)
+        }
+    }
+
+    async function handleStripeAction(action: 'connect' | 'dashboard' | 'onboarding') {
+        if (action === 'connect') {
+            setStripeAction('connecting')
+            try {
+                const result = await createNewStripeAccount()
+                if (result.success && result.onboardingUrl) {
+                    window.location.href = result.onboardingUrl
+                } else {
+                    setError(result.error || 'Failed to create Stripe account')
+                }
+            } catch (err) {
+                setError('Failed to connect Stripe')
+            }
+            setStripeAction(null)
+        } else if (action === 'dashboard') {
+            setStripeAction('dashboard')
+            try {
+                const result = await getStripeAccountLink('dashboard')
+                if (result.success && result.url) {
+                    window.open(result.url, '_blank')
+                } else {
+                    setError(result.error || 'Failed to open dashboard')
+                }
+            } catch (err) {
+                setError('Failed to open Stripe dashboard')
+            }
+            setStripeAction(null)
+        } else if (action === 'onboarding') {
+            setStripeAction('connecting')
+            try {
+                const result = await getStripeAccountLink('onboarding')
+                if (result.success && result.url) {
+                    window.location.href = result.url
+                } else {
+                    setError(result.error || 'Failed to continue setup')
+                }
+            } catch (err) {
+                setError('Failed to continue Stripe setup')
+            }
+            setStripeAction(null)
+        }
+    }
+
+    async function handleDisconnectStripe() {
+        setStripeAction('disconnecting')
+        try {
+            const result = await disconnectStripeAccount()
+            if (result.success) {
+                setStripeAccount({
+                    connected: false,
+                    payoutsEnabled: false,
+                    chargesEnabled: false,
+                    detailsSubmitted: false,
+                    requiresAction: false,
+                    pendingVerification: false
+                })
+                setShowDisconnectModal(false)
+            } else {
+                setError(result.error || 'Failed to disconnect')
+            }
+        } catch (err) {
+            setError('Failed to disconnect Stripe')
+        }
+        setStripeAction(null)
+    }
 
     // Upload avatar
     async function handleAvatarUpload(file: File) {
@@ -1249,6 +1342,252 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Payment Method - Stripe Connect */}
+                        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                            <div className="flex items-center gap-3 mb-1">
+                                <CreditCard className="w-5 h-5 text-gray-700" />
+                                <h2 className="text-base font-semibold">Payment method</h2>
+                            </div>
+                            <p className="text-sm text-gray-500 mb-6">
+                                Connect your Stripe account to receive payouts directly to your bank.
+                            </p>
+
+                            {loadingStripe ? (
+                                <div className="flex items-center gap-3 py-4">
+                                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                                    <span className="text-sm text-gray-500">Loading payment info...</span>
+                                </div>
+                            ) : stripeAccount?.connected ? (
+                                <div className="space-y-4">
+                                    {/* Connected account info */}
+                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                                    stripeAccount.payoutsEnabled
+                                                        ? 'bg-emerald-100'
+                                                        : stripeAccount.requiresAction
+                                                            ? 'bg-amber-100'
+                                                            : 'bg-blue-100'
+                                                }`}>
+                                                    {stripeAccount.payoutsEnabled ? (
+                                                        <CheckCircle className="w-5 h-5 text-emerald-600" />
+                                                    ) : stripeAccount.requiresAction ? (
+                                                        <AlertCircle className="w-5 h-5 text-amber-600" />
+                                                    ) : (
+                                                        <Clock className="w-5 h-5 text-blue-600" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium text-gray-900">Stripe Connect</p>
+                                                    <p className="text-sm text-gray-500">{stripeAccount.email || 'Account connected'}</p>
+                                                </div>
+                                            </div>
+                                            <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                                                stripeAccount.payoutsEnabled
+                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                    : stripeAccount.requiresAction
+                                                        ? 'bg-amber-100 text-amber-700'
+                                                        : 'bg-blue-100 text-blue-700'
+                                            }`}>
+                                                {stripeAccount.payoutsEnabled
+                                                    ? 'Active'
+                                                    : stripeAccount.requiresAction
+                                                        ? 'Action required'
+                                                        : 'Pending verification'}
+                                            </div>
+                                        </div>
+
+                                        {/* Status details */}
+                                        <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-2 gap-4 text-sm">
+                                            <div>
+                                                <p className="text-gray-500">Payouts</p>
+                                                <p className={`font-medium ${stripeAccount.payoutsEnabled ? 'text-emerald-600' : 'text-gray-900'}`}>
+                                                    {stripeAccount.payoutsEnabled ? 'Enabled' : 'Not enabled'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-gray-500">Verification</p>
+                                                <p className={`font-medium ${stripeAccount.detailsSubmitted ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                    {stripeAccount.detailsSubmitted ? 'Complete' : 'Incomplete'}
+                                                </p>
+                                            </div>
+                                            {stripeAccount.connectedAt && (
+                                                <div className="col-span-2">
+                                                    <p className="text-gray-500">Connected on</p>
+                                                    <p className="font-medium text-gray-900">
+                                                        {new Date(stripeAccount.connectedAt).toLocaleDateString('en-US', {
+                                                            year: 'numeric',
+                                                            month: 'long',
+                                                            day: 'numeric'
+                                                        })}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Warning for incomplete setup */}
+                                        {stripeAccount.requiresAction && (
+                                            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                                <p className="text-sm text-amber-800">
+                                                    <strong>Action required:</strong> Complete your Stripe verification to enable payouts.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Action buttons */}
+                                    <div className="flex flex-wrap gap-3">
+                                        {!stripeAccount.payoutsEnabled && (
+                                            <button
+                                                onClick={() => handleStripeAction('onboarding')}
+                                                disabled={stripeAction === 'connecting'}
+                                                className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 disabled:opacity-70 transition-colors"
+                                            >
+                                                {stripeAction === 'connecting' ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <RefreshCw className="w-4 h-4" />
+                                                )}
+                                                Complete setup
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => handleStripeAction('dashboard')}
+                                            disabled={stripeAction === 'dashboard'}
+                                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:opacity-70 transition-colors"
+                                        >
+                                            {stripeAction === 'dashboard' ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <ExternalLink className="w-4 h-4" />
+                                            )}
+                                            Stripe Dashboard
+                                        </button>
+                                        <button
+                                            onClick={() => setShowDisconnectModal(true)}
+                                            className="flex items-center gap-2 px-4 py-2 text-red-600 text-sm font-medium hover:bg-red-50 rounded-lg transition-colors"
+                                        >
+                                            <Unlink className="w-4 h-4" />
+                                            Disconnect
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* Not connected state */
+                                <div className="space-y-4">
+                                    <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-xl p-6 border border-white/10">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+                                                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <h3 className="text-white font-semibold">Connect Stripe</h3>
+                                                <p className="text-slate-400 text-sm">Get paid directly to your bank account</p>
+                                            </div>
+                                        </div>
+
+                                        <ul className="space-y-2 mb-6">
+                                            <li className="flex items-center gap-2 text-sm text-slate-300">
+                                                <Check className="w-4 h-4 text-emerald-400" />
+                                                Automatic payouts when you reach €10
+                                            </li>
+                                            <li className="flex items-center gap-2 text-sm text-slate-300">
+                                                <Check className="w-4 h-4 text-emerald-400" />
+                                                Direct bank transfers worldwide
+                                            </li>
+                                            <li className="flex items-center gap-2 text-sm text-slate-300">
+                                                <Check className="w-4 h-4 text-emerald-400" />
+                                                Secure Stripe Express account
+                                            </li>
+                                        </ul>
+
+                                        <button
+                                            onClick={() => handleStripeAction('connect')}
+                                            disabled={stripeAction === 'connecting'}
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-100 disabled:opacity-70 transition-colors"
+                                        >
+                                            {stripeAction === 'connecting' ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    Connecting...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CreditCard className="w-4 h-4" />
+                                                    Connect Stripe
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    <p className="text-xs text-gray-500 text-center">
+                                        Without Stripe, your earnings stay in your Traaaction wallet (gift cards only).
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Disconnect Stripe Modal */}
+                        {showDisconnectModal && (
+                            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                                <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+                                    <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                                <Unlink className="w-5 h-5 text-red-600" />
+                                            </div>
+                                            <h2 className="text-lg font-semibold text-gray-900">Disconnect Stripe</h2>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowDisconnectModal(false)}
+                                            disabled={stripeAction === 'disconnecting'}
+                                            className="p-2 -mr-2 rounded-lg hover:bg-gray-100 transition-colors"
+                                        >
+                                            <X className="w-5 h-5 text-gray-400" />
+                                        </button>
+                                    </div>
+
+                                    <div className="p-6">
+                                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                                            <p className="text-sm text-amber-800">
+                                                <strong>Important:</strong> Future earnings will go to your Traaaction wallet instead of your bank account. Your current wallet balance is not affected.
+                                            </p>
+                                        </div>
+                                        <p className="text-sm text-gray-600">
+                                            You can reconnect Stripe at any time to resume direct bank payouts.
+                                        </p>
+                                    </div>
+
+                                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3">
+                                        <button
+                                            onClick={() => setShowDisconnectModal(false)}
+                                            disabled={stripeAction === 'disconnecting'}
+                                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleDisconnectStripe}
+                                            disabled={stripeAction === 'disconnecting'}
+                                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                        >
+                                            {stripeAction === 'disconnecting' ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    Disconnecting...
+                                                </>
+                                            ) : (
+                                                'Disconnect Stripe'
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Sign Out */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
