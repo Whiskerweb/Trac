@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Linkedin, Mail } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LanguageSelector } from '@/components/LanguageSelector';
 
@@ -44,11 +44,21 @@ export function Footer() {
                         <p className="text-gray-500 text-sm max-w-sm mb-6 leading-relaxed">
                             {t('description')}
                         </p>
-                        <div className="flex gap-4">
-                            {/* Social Icons placeholders */}
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="w-8 h-8 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors cursor-pointer border border-gray-100" />
-                            ))}
+                        <div className="flex gap-3">
+                            <a
+                                href="https://www.linkedin.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-8 h-8 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors cursor-pointer border border-gray-100 flex items-center justify-center"
+                            >
+                                <Linkedin className="w-4 h-4 text-gray-500" />
+                            </a>
+                            <a
+                                href="mailto:contact@traaaction.com"
+                                className="w-8 h-8 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors cursor-pointer border border-gray-100 flex items-center justify-center"
+                            >
+                                <Mail className="w-4 h-4 text-gray-500" />
+                            </a>
                         </div>
                     </div>
 
