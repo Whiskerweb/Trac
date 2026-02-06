@@ -1,6 +1,7 @@
 'use client'
 
 import { Sidebar } from '@/components/dashboard/Sidebar'
+import FeedbackWidget from '@/components/FeedbackWidget'
 import { Menu, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -118,6 +119,9 @@ export default function DashboardLayout({
                     {children}
                 </div>
             </main>
+
+            {/* Feedback Widget */}
+            <FeedbackWidget userType="STARTUP" />
         </div>
     )
 }

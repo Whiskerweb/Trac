@@ -11,7 +11,8 @@ import {
     Settings,
     Shield,
     ChevronRight,
-    Wallet
+    Wallet,
+    MessageSquareText
 } from 'lucide-react'
 
 interface NavItem {
@@ -22,6 +23,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'Feedback', href: '/admin/feedback', icon: MessageSquareText },
     { name: 'Treasury', href: '/admin/treasury', icon: Wallet },
     { name: 'Gift Cards', href: '/admin/gift-cards', icon: Gift },
     { name: 'Sellers', href: '/admin/sellers', icon: Users },

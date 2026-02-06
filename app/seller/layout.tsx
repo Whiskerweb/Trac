@@ -17,6 +17,7 @@ import {
     ChevronRight
 } from 'lucide-react'
 import ProfileCompletionBanner from '@/components/seller/ProfileCompletionBanner'
+import FeedbackWidget from '@/components/FeedbackWidget'
 import { getMySellerProfile } from '@/app/actions/sellers'
 
 // ==========================================
@@ -363,6 +364,9 @@ export default function SellerLayout({
                     {children}
                 </div>
             </main>
+
+            {/* Feedback Widget */}
+            <FeedbackWidget userType="SELLER" />
 
         </div>
     )

@@ -71,3 +71,17 @@ export const DEFAULT_API_SCOPES: ApiScope[] = [
     'links:write',
 ];
 
+// =============================================
+// ADMIN CONFIGURATION
+// =============================================
+
+/**
+ * List of admin email addresses
+ * These users have access to /admin/* routes
+ */
+export const ADMIN_EMAILS = [
+    'lucas@traaaction.com',
+    'admin@traaaction.com',
+    // Add more admin emails as needed
+];
+

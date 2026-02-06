@@ -909,3 +909,57 @@ model StartupPayment {
   @@index([status])
   @@index([created_at])
 }
+
+// === FEEDBACK SYSTEM (MVP) ===
+
+/// User type for feedback
+enum FeedbackUserType {
+  STARTUP
+  SELLER
+}
+
+/// Feedback status
+enum FeedbackStatus {
+  /// New feedback, not reviewed
+  NEW
+  /// Reviewed by admin
+  REVIEWED
+  /// Marked as resolved/implemented
+  RESOLVED
+  /// Archived/dismissed
+  ARCHIVED
+}
+
+/// Feedback from users during MVP phase
+model Feedback {
+  id          String           @id @default(cuid())
+  /// User who submitted the feedback
+  user_id     String
+  /// Email for contact
+  user_email  String?
+  /// Name for display
+  user_name   String?
+  /// Type of user (STARTUP or SELLER)
+  user_type   FeedbackUserType
+  /// Feedback message content
+  message     String
+  /// File attachments (array of URLs)
+  attachments Json?
+  /// Voice recording URL
+  voice_url   String?
+  /// Page URL where feedback was submitted
+  page_url    String?
+  /// Browser user agent
+  user_agent  String?
+  /// Status for admin tracking
+  status      FeedbackStatus   @default(NEW)
+  /// Admin notes
+  admin_notes String?
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+
+  @@index([user_id])
+  @@index([user_type])
+  @@index([status])
+  @@index([created_at])
+}
