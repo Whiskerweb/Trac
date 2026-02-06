@@ -560,6 +560,7 @@ model Commission {
   @@index([sale_id])
   @@index([subscription_id])
   @@index([startup_payment_status])
+  @@index([link_id])
 }
 
 /// Partner Balance for tracking payouts and negative balances (clawbacks)

@@ -1019,39 +1019,38 @@ export async function getMissionsWithFullStats(): Promise<MissionsWithStatsRespo
             orderBy: { created_at: 'desc' }
         })
 
-        // Get all commissions for this workspace to calculate per-mission stats
-        const allCommissions = await prisma.commission.findMany({
-            where: { program_id: workspace.workspaceId },
-            select: {
-                id: true,
-                link_id: true,
-                gross_amount: true,
-                commission_amount: true
-            }
-        })
+        // Extract link_ids and user_ids from enrollments for parallel queries
+        const allLinkIds = missions.flatMap(m =>
+            m.MissionEnrollment.map(e => e.link_id).filter(Boolean)
+        ) as string[]
+        const uniqueUserIds = [...new Set(missions.flatMap(m => m.MissionEnrollment.map(e => e.user_id)))]
 
-        // Build a map of link_id -> commission totals
-        const commissionsByLink = new Map<string, { count: number; grossTotal: number; commissionTotal: number }>()
-        for (const comm of allCommissions) {
-            if (comm.link_id) {
-                const existing = commissionsByLink.get(comm.link_id) || { count: 0, grossTotal: 0, commissionTotal: 0 }
-                existing.count += 1
-                existing.grossTotal += comm.gross_amount
-                existing.commissionTotal += comm.commission_amount
-                commissionsByLink.set(comm.link_id, existing)
-            }
-        }
+        // Parallel: aggregate commissions by link_id (DB-side) + fetch seller info
+        const [commissionStats, sellers] = await Promise.all([
+            allLinkIds.length > 0
+                ? prisma.commission.groupBy({
+                    by: ['link_id'],
+                    where: { link_id: { in: allLinkIds } },
+                    _count: { id: true },
+                    _sum: { gross_amount: true, commission_amount: true }
+                })
+                : Promise.resolve([]),
+            uniqueUserIds.length > 0
+                ? prisma.seller.findMany({
+                    where: { user_id: { in: uniqueUserIds } },
+                    select: { user_id: true, name: true, email: true }
+                })
+                : Promise.resolve([])
+        ])
 
-        // Get seller info for recent enrollments
-        const allUserIds = missions.flatMap(m => m.MissionEnrollment.map(e => e.user_id))
-        const uniqueUserIds = [...new Set(allUserIds)]
-
-        const sellers = uniqueUserIds.length > 0
-            ? await prisma.seller.findMany({
-                where: { user_id: { in: uniqueUserIds } },
-                select: { user_id: true, name: true, email: true }
-            })
-            : []
+        // Build map of link_id -> aggregated commission stats
+        const commissionsByLink = new Map(
+            commissionStats.map(s => [s.link_id!, {
+                count: s._count.id,
+                grossTotal: s._sum.gross_amount || 0,
+                commissionTotal: s._sum.commission_amount || 0
+            }])
+        )
 
         const sellerMap = new Map(sellers.map(s => [s.user_id, { name: s.name, email: s.email }]))
 
@@ -1176,57 +1175,58 @@ export async function getRecentMissionActivity(limit: number = 20): Promise<{
     }
 
     try {
-        // Get recent enrollments with seller info
-        const recentEnrollments = await prisma.missionEnrollment.findMany({
-            where: {
-                Mission: { workspace_id: workspace.workspaceId }
-            },
-            include: {
-                Mission: { select: { id: true, title: true } }
-            },
-            orderBy: { created_at: 'desc' },
-            take: limit
-        })
-
-        // Get seller info
-        const userIds = recentEnrollments.map(e => e.user_id)
-        const sellers = userIds.length > 0
-            ? await prisma.seller.findMany({
-                where: { user_id: { in: userIds } },
-                select: { user_id: true, name: true, email: true }
-            })
-            : []
-        const sellerMap = new Map(sellers.map(s => [s.user_id, s]))
-
-        // Get recent commissions (sales)
-        const recentCommissions = await prisma.commission.findMany({
-            where: { program_id: workspace.workspaceId },
-            include: {
-                Seller: { select: { name: true, email: true } }
-            },
-            orderBy: { created_at: 'desc' },
-            take: limit
-        })
-
-        // Get link -> mission mapping for commissions
-        const linkIds = recentCommissions.map(c => c.link_id).filter((id): id is string => id !== null)
-        const linkMissionMap = new Map<string, { id: string; title: string }>()
-
-        if (linkIds.length > 0) {
-            const links = await prisma.shortLink.findMany({
-                where: { id: { in: linkIds } },
+        // Round 1: Fetch enrollments and commissions in parallel (independent queries)
+        const [recentEnrollments, recentCommissions] = await Promise.all([
+            prisma.missionEnrollment.findMany({
+                where: {
+                    Mission: { workspace_id: workspace.workspaceId }
+                },
                 include: {
-                    MissionEnrollment: {
-                        include: {
-                            Mission: { select: { id: true, title: true } }
+                    Mission: { select: { id: true, title: true } }
+                },
+                orderBy: { created_at: 'desc' },
+                take: limit
+            }),
+            prisma.commission.findMany({
+                where: { program_id: workspace.workspaceId },
+                include: {
+                    Seller: { select: { name: true, email: true } }
+                },
+                orderBy: { created_at: 'desc' },
+                take: limit
+            })
+        ])
+
+        // Round 2: Fetch sellers and link->mission mapping in parallel (depend on round 1 results)
+        const userIds = recentEnrollments.map(e => e.user_id)
+        const linkIds = recentCommissions.map(c => c.link_id).filter((id): id is string => id !== null)
+
+        const [sellers, links] = await Promise.all([
+            userIds.length > 0
+                ? prisma.seller.findMany({
+                    where: { user_id: { in: userIds } },
+                    select: { user_id: true, name: true, email: true }
+                })
+                : Promise.resolve([]),
+            linkIds.length > 0
+                ? prisma.shortLink.findMany({
+                    where: { id: { in: linkIds } },
+                    include: {
+                        MissionEnrollment: {
+                            include: {
+                                Mission: { select: { id: true, title: true } }
+                            }
                         }
                     }
-                }
-            })
-            for (const link of links) {
-                if (link.MissionEnrollment?.Mission) {
-                    linkMissionMap.set(link.id, link.MissionEnrollment.Mission)
-                }
+                })
+                : Promise.resolve([])
+        ])
+
+        const sellerMap = new Map(sellers.map(s => [s.user_id, s]))
+        const linkMissionMap = new Map<string, { id: string; title: string }>()
+        for (const link of links) {
+            if (link.MissionEnrollment?.Mission) {
+                linkMissionMap.set(link.id, link.MissionEnrollment.Mission)
             }
         }
 
