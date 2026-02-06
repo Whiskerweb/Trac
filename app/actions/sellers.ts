@@ -1195,70 +1195,64 @@ export async function getProfileCompletionStatus(): Promise<{
 
         const missingFields: string[] = []
         let completedFields = 0
-        const totalRequiredFields = 8
+        const totalRequiredFields = 6
 
-        // Check name
-        if (!seller.name || seller.name.trim().length === 0) {
-            missingFields.push('Full name')
-        } else {
+        // 1. Check country
+        if (seller.Profile?.country && seller.Profile.country.trim().length > 0) {
             completedFields++
-        }
-
-        // Check bio (min 50 chars)
-        if (!seller.Profile?.bio || seller.Profile.bio.trim().length < 50) {
-            missingFields.push('About you (minimum 50 characters)')
         } else {
-            completedFields++
-        }
-
-        // Check country
-        if (!seller.Profile?.country) {
             missingFields.push('Country')
-        } else {
-            completedFields++
         }
 
-        // Check profileType
-        if (!seller.Profile?.profile_type) {
-            missingFields.push('Profile type (Individual or Company)')
-        } else {
+        // 2. Check social media (at least one)
+        const hasSocialMedia = !!(
+            seller.Profile?.website_url?.trim() ||
+            seller.Profile?.youtube_url?.trim() ||
+            seller.Profile?.twitter_url?.trim() ||
+            seller.Profile?.linkedin_url?.trim() ||
+            seller.Profile?.instagram_url?.trim() ||
+            seller.Profile?.tiktok_url?.trim()
+        )
+        if (hasSocialMedia) {
             completedFields++
+        } else {
+            missingFields.push('Social media')
         }
 
-        // Check industryInterests (at least 1)
+        // 3. Check description (min 10 chars)
+        if (seller.Profile?.bio && seller.Profile.bio.trim().length > 10) {
+            completedFields++
+        } else {
+            missingFields.push('Description')
+        }
+
+        // 4. Check industryInterests (at least 1)
         const industryInterests = seller.Profile?.industry_interests
         const hasIndustries = Array.isArray(industryInterests) && industryInterests.length > 0
-        if (!hasIndustries) {
-            missingFields.push('Industry interests (select at least 1)')
-        } else {
+        if (hasIndustries) {
             completedFields++
+        } else {
+            missingFields.push('Industries')
         }
 
-        // Check monthlyTraffic
-        if (!seller.Profile?.monthly_traffic) {
-            missingFields.push('Monthly traffic')
-        } else {
+        // 5. Check activityType
+        if (seller.Profile?.activity_type) {
             completedFields++
+        } else {
+            missingFields.push('Activity')
         }
 
-        // Check earningPreferences (at least 1)
+        // 6. Check how you work (earning preferences OR sales channels)
         const earningPreferences = seller.Profile?.earning_preferences as any
+        const salesChannels = seller.Profile?.sales_channels as any
         const hasEarningPref = earningPreferences && typeof earningPreferences === 'object' &&
             Object.values(earningPreferences).some(v => v === true)
-        if (!hasEarningPref) {
-            missingFields.push('Earning preferences (select at least 1)')
-        } else {
-            completedFields++
-        }
-
-        // Check salesChannels (at least 1)
-        const salesChannels = seller.Profile?.sales_channels as any
         const hasSalesChannel = salesChannels && typeof salesChannels === 'object' &&
             Object.values(salesChannels).some(v => v === true)
-        if (!hasSalesChannel) {
-            missingFields.push('Sales channels (select at least 1)')
-        } else {
+        if (hasEarningPref || hasSalesChannel) {
             completedFields++
+        } else {
+            missingFields.push('Work style')
         }
 
         const completionPercentage = Math.round((completedFields / totalRequiredFields) * 100)
