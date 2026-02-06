@@ -394,7 +394,8 @@ export default function ProfilePage() {
                                         </div>
                                         <div>
                                             <h3 className="text-[15px] font-semibold text-neutral-900">Complete your profile</h3>
-                                            <p className="text-[13px] text-neutral-500">{PROFILE_TASKS.length - completedTasks.length} steps remaining</p>
+                                            <p className="text-[13px] text-neutral-500">to appear in the Seller Network</p>
+                                            <p className="text-[12px] text-neutral-400 mt-1">{Math.round((completedTasks.length / PROFILE_TASKS.length) * 100)}% complete • {PROFILE_TASKS.length - completedTasks.length} fields remaining</p>
                                         </div>
                                     </div>
                                     <button
