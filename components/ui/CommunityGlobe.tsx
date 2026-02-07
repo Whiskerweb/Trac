@@ -47,21 +47,21 @@ export default function CommunityGlobe() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl relative z-30 mb-[-50px]">
                     <StatCard
                         label={t('linksCreated')}
-                        value={stats ? formatNumber(stats.links) : "124 064 982"}
+                        value={stats ? formatNumber(stats.links) : "N/A"}
                         icon={Link2}
                         delay={0.1}
                     />
                     {/* Center Card Pops Out More */}
                     <StatCard
                         label={t('revenueTracked')}
-                        value={stats ? formatCurrency(stats.revenue) : "$466,536,413.64"}
+                        value={stats ? formatCurrency(stats.revenue) : "N/A"}
                         icon={TrendingUp}
                         delay={0.2}
                         featured
                     />
                     <StatCard
                         label={t('clicksTracked')}
-                        value={stats ? formatNumber(stats.clicks) : "1 814 203 631"}
+                        value={stats ? formatNumber(stats.clicks) : "N/A"}
                         icon={MousePointer2}
                         delay={0.3}
                     />
