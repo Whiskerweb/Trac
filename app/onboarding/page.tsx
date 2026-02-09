@@ -19,11 +19,19 @@ export default function OnboardingPage() {
     // Guard: sellers should NEVER see this page
     useEffect(() => {
         async function checkRole() {
+            // Fast check: if trac_signup_role cookie says seller, redirect immediately
+            if (document.cookie.includes('trac_signup_role=seller')) {
+                console.log('[Onboarding] Seller signup cookie detected, redirecting to /seller/onboarding')
+                router.replace('/seller/onboarding')
+                return
+            }
+
             try {
                 const res = await fetch('/api/auth/workspace-check')
                 if (res.ok) {
                     const data = await res.json()
                     if (data.hasSeller && !data.hasWorkspace) {
+                        console.log('[Onboarding] Seller detected via API, redirecting to /seller')
                         router.replace('/seller')
                         return
                     }
@@ -31,6 +39,8 @@ export default function OnboardingPage() {
                         router.replace('/dashboard')
                         return
                     }
+                } else {
+                    console.warn('[Onboarding] workspace-check returned', res.status)
                 }
             } catch (err) {
                 console.error('[Onboarding] Role check failed:', err)

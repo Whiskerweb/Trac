@@ -44,6 +44,11 @@ export default function SellerLayout({
     children: React.ReactNode
 }) {
     const pathname = usePathname()
+
+    // Onboarding page renders standalone — no sidebar, no banner, no layout wrapper
+    if (pathname === '/seller/onboarding') {
+        return <>{children}</>
+    }
     const [profile, setProfile] = useState<{ name: string; email: string; avatarUrl: string | null; hasStripeConnect: boolean } | null>(null)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isCollapsed, setIsCollapsed] = useState(false)

@@ -46,6 +46,7 @@ export default function SellerOnboardingPage() {
 
     // Step 3 state
     const [payoutChoice, setPayoutChoice] = useState<'stripe' | 'wallet' | null>(null)
+    const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
     // Load seller data — if ?new=1, this runs in the background while step 1 is already visible
     useEffect(() => {
@@ -116,36 +117,48 @@ export default function SellerOnboardingPage() {
     const handleStep1Submit = async (e: React.FormEvent) => {
         e.preventDefault()
         setSubmitting(true)
+        setErrorMsg(null)
 
-        // If sellerId not yet resolved (background fetch still running for ?new=1),
-        // wait for it with polling (max 20s)
-        let resolvedId = sellerId
-        if (!resolvedId) {
-            for (let i = 0; i < 10; i++) {
-                await new Promise(r => setTimeout(r, 2000))
-                // Re-check — the useEffect may have set it
-                // We need to get the latest value, so call the API directly
-                try {
-                    const status = await getOnboardingStatus('current-user')
-                    if (status.success && status.seller?.id) {
-                        resolvedId = status.seller.id
-                        setSellerId(resolvedId)
-                        break
-                    }
-                } catch { /* retry */ }
+        try {
+            // If sellerId not yet resolved (background fetch still running for ?new=1),
+            // wait for it with polling (max 20s)
+            let resolvedId = sellerId
+            if (!resolvedId) {
+                for (let i = 0; i < 10; i++) {
+                    await new Promise(r => setTimeout(r, 2000))
+                    try {
+                        const status = await getOnboardingStatus('current-user')
+                        if (status.success && status.seller?.id) {
+                            resolvedId = status.seller.id
+                            setSellerId(resolvedId)
+                            break
+                        }
+                    } catch { /* retry */ }
+                }
             }
+
+            if (!resolvedId) {
+                console.error('[Seller Onboarding] Could not resolve seller ID after retries')
+                setErrorMsg('Unable to load your account. Please refresh the page and try again.')
+                setSubmitting(false)
+                return
+            }
+
+            console.log('[Seller Onboarding] Saving step 1 for seller:', resolvedId)
+            const result = await saveOnboardingStep1({ sellerId: resolvedId, name, bio })
+
+            if (result.success) {
+                console.log('[Seller Onboarding] Step 1 saved, going to step 2')
+                goToStep(2)
+            } else {
+                console.error('[Seller Onboarding] Step 1 failed:', result.error)
+                setErrorMsg(result.error || 'Failed to save. Please try again.')
+            }
+        } catch (err) {
+            console.error('[Seller Onboarding] Step 1 exception:', err)
+            setErrorMsg('An unexpected error occurred. Please try again.')
         }
 
-        if (!resolvedId) {
-            setSubmitting(false)
-            return
-        }
-
-        const result = await saveOnboardingStep1({ sellerId: resolvedId, name, bio })
-
-        if (result.success) {
-            goToStep(2)
-        }
         setSubmitting(false)
     }
 
@@ -331,6 +344,10 @@ export default function SellerOnboardingPage() {
                                     />
                                 </div>
                             </div>
+
+                            {errorMsg && (
+                                <p className="mt-6 text-sm text-red-500 text-center">{errorMsg}</p>
+                            )}
 
                             <button
                                 type="submit"
