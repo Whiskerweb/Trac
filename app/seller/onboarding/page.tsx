@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, ExternalLink, Check, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -21,8 +21,10 @@ const STEPS = [
 
 export default function SellerOnboardingPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const isNewSignup = searchParams.get('new') === '1'
     const [currentStep, setCurrentStep] = useState(1)
-    const [loading, setLoading] = useState(true)
+    const [loading, setLoading] = useState(!isNewSignup) // If ?new=1, show step 1 immediately
     const [submitting, setSubmitting] = useState(false)
     const [sellerId, setSellerId] = useState<string | null>(null)
     const [direction, setDirection] = useState(1)
@@ -41,8 +43,9 @@ export default function SellerOnboardingPage() {
     // Step 3 state
     const [payoutChoice, setPayoutChoice] = useState<'stripe' | 'wallet' | null>(null)
 
+    // Load seller data — if ?new=1, this runs in the background while step 1 is already visible
     useEffect(() => {
-        async function loadStatus(retries = 5) {
+        async function loadStatus(retries = isNewSignup ? 10 : 5) {
             let result
             try {
                 result = await getOnboardingStatus('current-user')
@@ -52,20 +55,20 @@ export default function SellerOnboardingPage() {
                     await new Promise(r => setTimeout(r, 2000))
                     return loadStatus(retries - 1)
                 }
-                router.push('/seller')
+                if (!isNewSignup) router.push('/seller')
                 return
             }
 
             if (!result.success || !result.hasSeller || !result.seller) {
                 // Retry: seller may have just been created in the auth callback
-                // DB replication lag can cause the read to miss the newly created record
+                // DB replication lag (PgBouncer) can cause the read to miss the newly created record
                 if (retries > 0) {
                     console.log(`[Seller Onboarding] Seller not found yet (${result.error || 'no seller'}), retrying in 2s... (${retries} left)`)
                     await new Promise(r => setTimeout(r, 2000))
                     return loadStatus(retries - 1)
                 }
                 console.log('[Seller Onboarding] Seller not found after retries, redirecting to /seller')
-                router.push('/seller')
+                if (!isNewSignup) router.push('/seller')
                 return
             }
 
@@ -80,7 +83,10 @@ export default function SellerOnboardingPage() {
                 return
             }
 
-            setCurrentStep(step + 1)
+            // Only override step/fields if NOT a new signup showing step 1 already
+            if (!isNewSignup || loading) {
+                setCurrentStep(step + 1)
+            }
 
             if (result.seller.name) setName(result.seller.name)
             if (result.profile) {
@@ -96,7 +102,7 @@ export default function SellerOnboardingPage() {
         }
 
         loadStatus()
-    }, [router])
+    }, [router, isNewSignup])
 
     const goToStep = (step: number) => {
         setDirection(step > currentStep ? 1 : -1)
@@ -105,10 +111,33 @@ export default function SellerOnboardingPage() {
 
     const handleStep1Submit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!sellerId) return
-
         setSubmitting(true)
-        const result = await saveOnboardingStep1({ sellerId, name, bio })
+
+        // If sellerId not yet resolved (background fetch still running for ?new=1),
+        // wait for it with polling (max 20s)
+        let resolvedId = sellerId
+        if (!resolvedId) {
+            for (let i = 0; i < 10; i++) {
+                await new Promise(r => setTimeout(r, 2000))
+                // Re-check — the useEffect may have set it
+                // We need to get the latest value, so call the API directly
+                try {
+                    const status = await getOnboardingStatus('current-user')
+                    if (status.success && status.seller?.id) {
+                        resolvedId = status.seller.id
+                        setSellerId(resolvedId)
+                        break
+                    }
+                } catch { /* retry */ }
+            }
+        }
+
+        if (!resolvedId) {
+            setSubmitting(false)
+            return
+        }
+
+        const result = await saveOnboardingStep1({ sellerId: resolvedId, name, bio })
 
         if (result.success) {
             goToStep(2)

@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import { getUserRoles } from '@/app/actions/get-user-roles'
 import { createGlobalSeller, claimSellers } from '@/app/actions/sellers'
@@ -13,6 +13,22 @@ export async function GET(request: Request) {
     // Error from Supabase (e.g., otp_expired, email_exists)
     const errorCode = searchParams.get('error_code')
     const errorDescription = searchParams.get('error_description')
+
+    // =============================================
+    // COOKIE COLLECTION — applied to EVERY redirect response
+    // This is the fix: session cookies from exchangeCodeForSession()
+    // MUST be forwarded on the redirect response. Using cookies()
+    // from next/headers silently fails in Route Handlers.
+    // =============================================
+    const cookiesToForward: { name: string; value: string; options: Record<string, unknown> }[] = []
+
+    function createRedirect(url: string) {
+        const response = NextResponse.redirect(url)
+        for (const { name, value, options } of cookiesToForward) {
+            response.cookies.set(name, value, options)
+        }
+        return response
+    }
 
     console.log('[Auth Callback] Starting...', {
         code: !!code,
@@ -29,22 +45,48 @@ export async function GET(request: Request) {
         console.error('[Auth Callback] Supabase error:', errorCode, errorDescription)
 
         if (errorCode === 'otp_expired') {
-            return NextResponse.redirect(`${origin}/login?error=link_expired&message=${encodeURIComponent('The confirmation link has expired. Please request a new one.')}`)
+            return createRedirect(`${origin}/login?error=link_expired&message=${encodeURIComponent('The confirmation link has expired. Please request a new one.')}`)
         }
         if (errorCode === 'access_denied' || errorCode === 'email_exists') {
-            return NextResponse.redirect(`${origin}/login?error=email_conflict&message=${encodeURIComponent('An account with this email already exists. Please sign in instead.')}`)
+            return createRedirect(`${origin}/login?error=email_conflict&message=${encodeURIComponent('An account with this email already exists. Please sign in instead.')}`)
         }
 
-        return NextResponse.redirect(`${origin}/login?error=${errorCode}&message=${encodeURIComponent(errorDescription || 'Authentication failed')}`)
+        return createRedirect(`${origin}/login?error=${errorCode}&message=${encodeURIComponent(errorDescription || 'Authentication failed')}`)
     }
 
     if (!code) {
         console.error('[Auth Callback] No code provided')
-        return NextResponse.redirect(`${origin}/login?error=no_code`)
+        return createRedirect(`${origin}/login?error=no_code`)
     }
 
     try {
-        const supabase = await createClient()
+        // =============================================
+        // CREATE SUPABASE CLIENT WITH RESPONSE-LEVEL COOKIES
+        // Same pattern as utils/supabase/middleware.ts
+        // =============================================
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    getAll() {
+                        const cookieHeader = request.headers.get('cookie') || ''
+                        return cookieHeader
+                            .split(';')
+                            .filter(Boolean)
+                            .map(c => {
+                                const [name, ...rest] = c.trim().split('=')
+                                return { name, value: rest.join('=') }
+                            })
+                    },
+                    setAll(cookiesToSet) {
+                        // Collect cookies — they'll be applied to the redirect response
+                        cookiesToForward.push(...cookiesToSet)
+                    },
+                },
+            }
+        )
+
         const { data: { user }, error: authError } = await supabase.auth.exchangeCodeForSession(code)
 
         if (authError) {
@@ -52,18 +94,18 @@ export async function GET(request: Request) {
 
             // Handle specific auth errors
             if (authError.message.includes('expired') || authError.code === 'otp_expired') {
-                return NextResponse.redirect(`${origin}/login?error=link_expired&message=${encodeURIComponent('The confirmation link has expired. Please request a new one.')}`)
+                return createRedirect(`${origin}/login?error=link_expired&message=${encodeURIComponent('The confirmation link has expired. Please request a new one.')}`)
             }
             if (authError.message.includes('already registered') || authError.message.includes('email_exists')) {
-                return NextResponse.redirect(`${origin}/login?error=email_exists&message=${encodeURIComponent('An account with this email already exists. Please sign in instead.')}`)
+                return createRedirect(`${origin}/login?error=email_exists&message=${encodeURIComponent('An account with this email already exists. Please sign in instead.')}`)
             }
 
-            return NextResponse.redirect(`${origin}/login?error=auth_error&message=${encodeURIComponent(authError.message)}`)
+            return createRedirect(`${origin}/login?error=auth_error&message=${encodeURIComponent(authError.message)}`)
         }
 
         if (!user) {
             console.error('[Auth Callback] No user returned')
-            return NextResponse.redirect(`${origin}/login?error=no_user`)
+            return createRedirect(`${origin}/login?error=no_user`)
         }
 
         console.log('[Auth Callback] User authenticated:', user.id, user.email)
@@ -78,20 +120,17 @@ export async function GET(request: Request) {
 
         // Third fallback: check cookie (set during signup as backup for PKCE flow)
         if (!roleIntent) {
-            const { cookies } = await import('next/headers')
-            const cookieStore = await cookies()
-            const cookieRole = cookieStore.get('trac_signup_role')?.value
-            if (cookieRole) {
-                roleIntent = cookieRole
+            const cookieHeader = request.headers.get('cookie') || ''
+            const match = cookieHeader.match(/trac_signup_role=([^;]+)/)
+            if (match) {
+                roleIntent = match[1]
                 console.log('[Auth Callback] Using role from cookie fallback:', roleIntent)
-                // Keep cookie alive as safety net — middleware will clean it up
-                // after the user successfully lands on the seller onboarding page
             }
         }
 
         // If explicit redirect was requested (e.g. from invite link), honor it
         if (redirectTo) {
-            return NextResponse.redirect(`${origin}${redirectTo}`)
+            return createRedirect(`${origin}${redirectTo}`)
         }
 
         // Claim any shadow sellers for this email (non-blocking)
@@ -109,7 +148,7 @@ export async function GET(request: Request) {
             roles = await getUserRoles(user.id)
         } catch (rolesError) {
             console.error('[Auth Callback] getUserRoles error:', rolesError)
-            return NextResponse.redirect(`${origin}/login?error=roles_error`)
+            return createRedirect(`${origin}/login?error=roles_error`)
         }
 
         if (!roles) {
@@ -136,23 +175,23 @@ export async function GET(request: Request) {
                     })
 
                     if (result.success) {
-                        console.log('[Auth Callback] ✅ Auto-created Global Seller, redirecting to onboarding')
-                        // Redirect to seller onboarding to complete setup (Stripe Connect, etc.)
-                        return NextResponse.redirect(`${origin}/seller/onboarding`)
+                        console.log('[Auth Callback] Auto-created Global Seller, redirecting to onboarding')
+                        // ?new=1 tells the onboarding page to show step 1 immediately
+                        // without waiting for the DB read (PgBouncer lag protection)
+                        return createRedirect(`${origin}/seller/onboarding?new=1`)
                     } else {
-                        console.error('[Auth Callback] ❌ Failed to create seller:', result.error)
-                        // Redirect with error
-                        return NextResponse.redirect(`${origin}/login?error=seller_creation_failed&message=${encodeURIComponent(result.error || 'Failed to create seller account')}`)
+                        console.error('[Auth Callback] Failed to create seller:', result.error)
+                        return createRedirect(`${origin}/login?error=seller_creation_failed&message=${encodeURIComponent(result.error || 'Failed to create seller account')}`)
                     }
                 } catch (createError) {
                     console.error('[Auth Callback] createGlobalSeller exception:', createError)
-                    return NextResponse.redirect(`${origin}/login?error=seller_creation_failed&message=${encodeURIComponent('An error occurred while creating your seller account')}`)
+                    return createRedirect(`${origin}/login?error=seller_creation_failed&message=${encodeURIComponent('An error occurred while creating your seller account')}`)
                 }
             }
 
             // Startup flow → onboarding to create workspace
             console.log('[Auth Callback] Redirecting to startup onboarding')
-            return NextResponse.redirect(`${origin}/onboarding`)
+            return createRedirect(`${origin}/onboarding`)
         }
 
         // =============================================
@@ -162,29 +201,29 @@ export async function GET(request: Request) {
         // Dual Role User -> Auth Choice (Resume session)
         if (roles.hasWorkspace && roles.hasSeller) {
             if (roleIntent === 'seller') {
-                return NextResponse.redirect(`${origin}/seller`)
+                return createRedirect(`${origin}/seller`)
             }
             if (roleIntent === 'startup') {
-                return NextResponse.redirect(`${origin}/dashboard`)
+                return createRedirect(`${origin}/dashboard`)
             }
-            return NextResponse.redirect(`${origin}/auth/choice`)
+            return createRedirect(`${origin}/auth/choice`)
         }
 
         // Seller Only -> Seller Dashboard
         if (roles.hasSeller) {
-            return NextResponse.redirect(`${origin}/seller`)
+            return createRedirect(`${origin}/seller`)
         }
 
         // Startup Only -> Dashboard
         if (roles.hasWorkspace) {
-            return NextResponse.redirect(`${origin}/dashboard`)
+            return createRedirect(`${origin}/dashboard`)
         }
 
         // Fallback
-        return NextResponse.redirect(`${origin}/onboarding`)
+        return createRedirect(`${origin}/onboarding`)
 
     } catch (error) {
         console.error('[Auth Callback] Unexpected error:', error)
-        return NextResponse.redirect(`${origin}/login?error=unexpected_error`)
+        return createRedirect(`${origin}/login?error=unexpected_error`)
     }
 }
