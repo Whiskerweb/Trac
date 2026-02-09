@@ -527,7 +527,9 @@ export async function POST(
                     // ========================================
                     // CREATE COMMISSION (IF SELLER ATTRIBUTION + SALE ENABLED)
                     // ========================================
-                    if (sellerId || linkId) {
+                    if (grossAmount <= 0) {
+                        console.log(`[Webhook] ⏭️ Skipping commission — non-positive amount: ${grossAmount / 100} ${currency}`)
+                    } else if (sellerId || linkId) {
                         try {
                             // ✅ STEP 1: Get mission commission config (V2 multi-commission support)
                             // Use getMissionCommissionConfig to check if sale_enabled
@@ -797,6 +799,11 @@ export async function POST(
                     // ========================================
                     // CREATE RECURRING COMMISSION (IF SUBSCRIPTION TRACKED + WITHIN LIMIT)
                     // ========================================
+                    if (grossAmount <= 0) {
+                        console.log(`[Webhook] ⏭️ Skipping recurring commission — non-positive amount: ${grossAmount / 100} ${currency}`)
+                        return
+                    }
+
                     const subscriptionId = typeof (invoice as any).subscription === 'string'
                         ? (invoice as any).subscription
                         : null

@@ -249,39 +249,27 @@ export async function handleClawback(params: {
             return { success: true }
         }
 
-        if (commission.status === 'PENDING' || commission.status === 'PROCEED') {
-            // Not yet paid - simply delete the commission
-            await prisma.commission.delete({
-                where: { id: commission.id }
-            })
-            console.log(`[Commission] 🔙 Deleted ${commission.status} commission ${commission.id} due to refund`)
+        const clawbackAmount = commission.status === 'COMPLETE' ? commission.commission_amount : 0
 
-        } else if (commission.status === 'COMPLETE') {
-            // Already paid - create negative balance entry by decrementing balance
-            await prisma.sellerBalance.upsert({
+        // Delete the commission
+        await prisma.commission.delete({
+            where: { id: commission.id }
+        })
+        console.log(`[Commission] 🔙 Deleted ${commission.status} commission ${commission.id} due to refund`)
+
+        // Recalculate balance from remaining commissions
+        await updateSellerBalance(commission.seller_id)
+
+        // For COMPLETE commissions: apply negative balance (money already paid out)
+        if (clawbackAmount > 0) {
+            await prisma.sellerBalance.update({
                 where: { seller_id: commission.seller_id },
-                create: {
-                    seller_id: commission.seller_id,
-                    balance: -commission.commission_amount, // Negative balance
-                    pending: 0,
-                    due: 0,
-                    paid_total: 0
-                },
-                update: {
-                    balance: { decrement: commission.commission_amount }
+                data: {
+                    balance: { decrement: clawbackAmount }
                 }
             })
-
-            // Delete the commission after adjusting balance
-            await prisma.commission.delete({
-                where: { id: commission.id }
-            })
-
-            console.log(`[Commission] 🔙 Clawed back COMPLETE commission ${commission.id} - created negative balance`)
+            console.log(`[Commission] 🔙 Applied -${clawbackAmount} clawback for already-paid commission`)
         }
-
-        // Update partner balance
-        await updateSellerBalance(commission.seller_id)
 
         return { success: true }
 
