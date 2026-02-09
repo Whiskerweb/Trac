@@ -926,10 +926,11 @@ export async function POST(
 
                     // Strategy 2: Find via invoice ID (recurring subscription renewals)
                     // Recurring commissions use invoice.id as sale_id, not session.id
-                    if (!clawbackDone && charge.invoice) {
-                        const invoiceId = typeof charge.invoice === 'string'
-                            ? charge.invoice
-                            : charge.invoice.id
+                    const chargeInvoice = (charge as any).invoice
+                    if (!clawbackDone && chargeInvoice) {
+                        const invoiceId = typeof chargeInvoice === 'string'
+                            ? chargeInvoice
+                            : chargeInvoice.id
 
                         await handleClawback({ saleId: invoiceId, reason: refundReason })
                         console.log(`[Webhook] ✅ Clawback processed for invoice ${invoiceId}`)
