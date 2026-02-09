@@ -178,6 +178,18 @@ export async function signup(formData: FormData) {
 
     console.log('[Auth] ✅ Signup initiated for:', email, '- Role:', role)
 
+    // Store role in a cookie as backup for email confirmation callback
+    // (Supabase PKCE flow can lose URL query params during redirect)
+    const { cookies } = await import('next/headers')
+    const cookieStore = await cookies()
+    cookieStore.set('trac_signup_role', role, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60, // 1 hour
+        path: '/',
+    })
+
     // =============================================
     // EMAIL CONFIRMATION REQUIRED
     // =============================================

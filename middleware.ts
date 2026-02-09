@@ -887,6 +887,15 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
         if (!user) {
             return NextResponse.redirect(new URL('/login', request.url))
         }
+        // Safety net: if user signed up as seller but landed here due to PKCE flow issue,
+        // redirect them to the seller onboarding instead
+        const signupRole = request.cookies.get('trac_signup_role')?.value
+        if (signupRole === 'seller') {
+            console.log('[Middleware] 🛡️ Seller signup detected via cookie, redirecting to /seller/onboarding')
+            const response = NextResponse.redirect(new URL('/seller/onboarding', request.url))
+            response.cookies.delete('trac_signup_role')
+            return response
+        }
         // Allow access to onboarding - the page will handle redirect if user already has workspace
     }
 

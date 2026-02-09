@@ -76,6 +76,19 @@ export async function GET(request: Request) {
             console.log('[Auth Callback] Using role from user_metadata:', roleIntent)
         }
 
+        // Third fallback: check cookie (set during signup as backup for PKCE flow)
+        if (!roleIntent) {
+            const { cookies } = await import('next/headers')
+            const cookieStore = await cookies()
+            const cookieRole = cookieStore.get('trac_signup_role')?.value
+            if (cookieRole) {
+                roleIntent = cookieRole
+                console.log('[Auth Callback] Using role from cookie fallback:', roleIntent)
+                // Clean up the cookie
+                cookieStore.delete('trac_signup_role')
+            }
+        }
+
         // If explicit redirect was requested (e.g. from invite link), honor it
         if (redirectTo) {
             return NextResponse.redirect(`${origin}${redirectTo}`)
