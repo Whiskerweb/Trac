@@ -872,6 +872,8 @@ enum OrganizationStatus {
   ACTIVE
   /// Suspended by admin
   SUSPENDED
+  /// Application rejected by admin
+  REJECTED
 }
 
 enum OrganizationVisibility {

@@ -3,13 +3,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Building2, Users, Check, Ban, ChevronRight, RotateCcw, Globe, Lock, KeyRound, MessageSquare } from 'lucide-react'
-import { getAllOrgs, approveOrg, suspendOrg, reactivateOrg } from '@/app/actions/admin-org-actions'
+import { getAllOrgs, approveOrg, suspendOrg, reactivateOrg, rejectOrg } from '@/app/actions/admin-org-actions'
 
 function StatusBadge({ status }: { status: string }) {
     const styles: Record<string, string> = {
         PENDING: 'bg-orange-50 text-orange-700 border-orange-200',
         ACTIVE: 'bg-green-50 text-green-700 border-green-200',
         SUSPENDED: 'bg-red-50 text-red-700 border-red-200',
+        REJECTED: 'bg-red-50 text-red-500 border-red-200',
     }
     return (
         <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status] || 'bg-gray-100 text-gray-500 border-gray-200'}`}>
@@ -22,7 +23,7 @@ export default function AdminOrganizationsPage() {
     const router = useRouter()
     const [loading, setLoading] = useState(true)
     const [organizations, setOrganizations] = useState<any[]>([])
-    const [filter, setFilter] = useState<'all' | 'PENDING' | 'ACTIVE' | 'SUSPENDED'>('all')
+    const [filter, setFilter] = useState<'all' | 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED'>('all')
 
     const loadData = useCallback(async () => {
         setLoading(true)
@@ -51,6 +52,11 @@ export default function AdminOrganizationsPage() {
         loadData()
     }
 
+    const handleReject = async (orgId: string) => {
+        await rejectOrg(orgId)
+        loadData()
+    }
+
     return (
         <div className="space-y-6">
             <div>
@@ -60,7 +66,7 @@ export default function AdminOrganizationsPage() {
 
             {/* Filter tabs */}
             <div className="flex gap-2">
-                {(['all', 'PENDING', 'ACTIVE', 'SUSPENDED'] as const).map(f => (
+                {(['all', 'PENDING', 'ACTIVE', 'SUSPENDED', 'REJECTED'] as const).map(f => (
                     <button
                         key={f}
                         onClick={() => setFilter(f)}
@@ -117,13 +123,22 @@ export default function AdminOrganizationsPage() {
                                     <StatusBadge status={org.status} />
 
                                     {org.status === 'PENDING' && (
-                                        <button
-                                            onClick={() => handleApprove(org.id)}
-                                            className="p-1.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30"
-                                            title="Approve"
-                                        >
-                                            <Check className="w-4 h-4" />
-                                        </button>
+                                        <>
+                                            <button
+                                                onClick={() => handleApprove(org.id)}
+                                                className="p-1.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30"
+                                                title="Approve"
+                                            >
+                                                <Check className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleReject(org.id)}
+                                                className="p-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30"
+                                                title="Reject"
+                                            >
+                                                <Ban className="w-4 h-4" />
+                                            </button>
+                                        </>
                                     )}
                                     {org.status === 'ACTIVE' && (
                                         <button
