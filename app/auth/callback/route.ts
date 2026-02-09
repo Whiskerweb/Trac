@@ -84,8 +84,8 @@ export async function GET(request: Request) {
             if (cookieRole) {
                 roleIntent = cookieRole
                 console.log('[Auth Callback] Using role from cookie fallback:', roleIntent)
-                // Clean up the cookie
-                cookieStore.delete('trac_signup_role')
+                // Keep cookie alive as safety net — middleware will clean it up
+                // after the user successfully lands on the seller onboarding page
             }
         }
 
