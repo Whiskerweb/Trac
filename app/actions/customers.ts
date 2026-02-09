@@ -159,6 +159,15 @@ export interface CustomerActivity {
     amount?: number  // For sales
 }
 
+export interface CustomerSubscriptionInfo {
+    subscriptionId: string
+    isActive: boolean
+    currentMonth: number
+    maxMonths: number | null  // null = Lifetime
+    cancelledAt: Date | null
+    startedAt: Date
+}
+
 export interface CustomerDetailWithActivity extends CustomerWithDetails {
     // Device info (from first click)
     device: string | null
@@ -178,6 +187,8 @@ export interface CustomerDetailWithActivity extends CustomerWithDetails {
     lifetimeValue: number
     // Referrer link
     referrerLinkSlug: string | null
+    // Subscription info
+    subscriptions: CustomerSubscriptionInfo[]
 }
 
 /**
@@ -456,6 +467,53 @@ export async function getCustomerWithActivity(customerId: string): Promise<{
             else os = 'Other'
         }
 
+        // Fetch subscription info from commissions with subscription_id
+        const subscriptionCommissions = await prisma.commission.findMany({
+            where: {
+                program_id: workspace.workspaceId,
+                subscription_id: { not: null },
+                seller_id: { not: undefined },
+                // Match via link_id or seller who referred this customer
+                ...(customer.link_id ? { link_id: customer.link_id } : {}),
+            },
+            select: {
+                subscription_id: true,
+                recurring_month: true,
+                recurring_max: true,
+                created_at: true,
+                commission_source: true,
+            },
+            orderBy: { created_at: 'asc' }
+        })
+
+        // Group by subscription_id
+        const subscriptionMap = new Map<string, typeof subscriptionCommissions>()
+        for (const c of subscriptionCommissions) {
+            if (!c.subscription_id) continue
+            const existing = subscriptionMap.get(c.subscription_id) || []
+            existing.push(c)
+            subscriptionMap.set(c.subscription_id, existing)
+        }
+
+        const subscriptions: CustomerSubscriptionInfo[] = []
+        for (const [subId, comms] of subscriptionMap) {
+            const maxMonth = Math.max(...comms.map(c => c.recurring_month ?? 0))
+            const recurringMax = comms[0]?.recurring_max ?? null
+            const startedAt = comms[0]?.created_at
+            // If there's a recurringMax and we've reached it, it's completed
+            // Otherwise we consider it active (Stripe will stop sending invoice.paid on cancel)
+            const isActive = recurringMax === null || maxMonth < recurringMax
+
+            subscriptions.push({
+                subscriptionId: subId,
+                isActive,
+                currentMonth: maxMonth,
+                maxMonths: recurringMax,
+                cancelledAt: null,  // We don't store cancel date yet, just status
+                startedAt
+            })
+        }
+
         // Build activity timeline
         const activity: CustomerActivity[] = []
 
@@ -555,7 +613,9 @@ export async function getCustomerWithActivity(customerId: string): Promise<{
             })),
             lifetimeValue: lifetimeValue,  // Already in cents from Tinybird
             // Referrer link
-            referrerLinkSlug
+            referrerLinkSlug,
+            // Subscription info
+            subscriptions
         }
 
         return { success: true, customer: customerWithActivity }

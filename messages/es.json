@@ -628,6 +628,12 @@
                 "externalId": "ID Externo",
                 "affiliateLink": "Enlace de afiliado",
                 "referrer": "Referente",
+                "subscription": "Suscripción",
+                "subscriptionActive": "Activa",
+                "subscriptionEnded": "Finalizada",
+                "subscriptionMonth": "Mes",
+                "subscriptionLifetime": "Ilimitada",
+                "subscriptionStarted": "Desde el",
                 "notFound": "Cliente no encontrado",
                 "backToList": "Volver a clientes"
             }

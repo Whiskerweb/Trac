@@ -113,6 +113,15 @@ export async function createCommission(params: {
     } = params
 
     try {
+        // Safety net: enforce recurringMax limit for RECURRING commissions
+        if (commissionSource === 'RECURRING' && subscriptionId && recurringMax !== null) {
+            const existingCount = await countRecurringCommissions(subscriptionId)
+            if (existingCount >= recurringMax) {
+                console.log(`[Commission] ⛔ Recurring limit reached for subscription ${subscriptionId}: ${existingCount}/${recurringMax}`)
+                return { success: false, error: `Recurring limit reached (${existingCount}/${recurringMax})` }
+            }
+        }
+
         // Calculate commission based on reward string
         const { amount: rawCommission, type } = calculateCommission({ netAmount: htAmount, missionReward })
 
@@ -205,6 +214,16 @@ export async function createCommission(params: {
             error: error instanceof Error ? error.message : 'Unknown error'
         }
     }
+}
+
+/**
+ * Count all commissions linked to a specific subscription_id.
+ * Used to enforce recurringMax limits and calculate recurringMonth.
+ */
+export async function countRecurringCommissions(subscriptionId: string): Promise<number> {
+    return prisma.commission.count({
+        where: { subscription_id: subscriptionId }
+    })
 }
 
 /**

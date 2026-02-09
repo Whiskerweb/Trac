@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics/tinybird'
 import { waitUntil } from '@vercel/functions'
-import { createCommission, findSellerForSale, handleClawback, getMissionCommissionConfig } from '@/lib/commission/engine'
+import { createCommission, findSellerForSale, handleClawback, getMissionCommissionConfig, countRecurringCommissions } from '@/lib/commission/engine'
 import { CommissionSource } from '@/lib/generated/prisma/client'
 import { sanitizeClickId, sanitizeUUID } from '@/lib/sql-sanitize'
 
@@ -538,59 +538,15 @@ export async function POST(
 
                             if (!missionConfig) {
                                 console.log(`[Webhook] ℹ️ No mission config found`)
-                            } else if (!missionConfig.saleEnabled) {
-                                console.log(`[Webhook] ℹ️ No SALE commission - mission "${missionConfig.missionName}" has sale_enabled=false`)
                             } else {
-                                // ✅ STEP 2: Check attribution limit based on mission configuration
-                                // - Standard missions: 45 days fixed limit
-                                // - Recurring missions with duration = null: Lifetime (no limit)
-                                // - Recurring missions with duration = X: X months * 30 days
-                                let attributionValid = true
+                                // Determine if this is a subscription checkout with recurring enabled
+                                const isSubscription = typeof session.subscription === 'string'
+                                const isRecurringMission = isSubscription && missionConfig.recurringEnabled
 
-                                // Calculate attribution limit based on mission config
-                                let attributionLimitDays = 45  // Default
-
-                                if (missionConfig.recurringEnabled && missionConfig.recurringDuration !== null) {
-                                    if (missionConfig.recurringDuration === null) {
-                                        // Lifetime = no limit
-                                        attributionLimitDays = Infinity
-                                        console.log(`[Webhook] 📅 Mission with Lifetime duration - no attribution limit`)
-                                    } else {
-                                        // Convert months to days (approx 30 days per month)
-                                        attributionLimitDays = missionConfig.recurringDuration * 30
-                                        console.log(`[Webhook] 📅 Mission with ${missionConfig.recurringDuration} months = ${attributionLimitDays} days limit`)
-                                    }
-                                } else {
-                                    console.log(`[Webhook] 📅 Standard sale - 45 days fixed limit`)
-                                }
-
-                                // Lookup customer to check attribution date
-                                const customer = await prisma.customer.findFirst({
-                                    where: {
-                                        workspace_id: workspaceId,
-                                        OR: [
-                                            { external_id: customerExternalId },
-                                            { email: session.customer_details?.email || undefined }
-                                        ]
-                                    },
-                                    select: { created_at: true, affiliate_id: true }
-                                })
-
-                                if (customer?.created_at && customer.affiliate_id) {
-                                    const daysSinceAttribution = Math.floor(
-                                        (Date.now() - customer.created_at.getTime()) / (1000 * 60 * 60 * 24)
-                                    )
-
-                                    if (daysSinceAttribution > attributionLimitDays) {
-                                        attributionValid = false
-                                        console.log(`[Webhook] ⏰ Attribution expired: ${daysSinceAttribution} days > ${attributionLimitDays} days limit`)
-                                    } else {
-                                        console.log(`[Webhook] ✅ Attribution valid: ${daysSinceAttribution} days < ${attributionLimitDays} days limit`)
-                                    }
-                                }
-
-                                if (attributionValid) {
-                                    // ✅ STEP 3: Find seller and create commission
+                                if (isRecurringMission) {
+                                    // ========================================
+                                    // BRANCH A: Subscription + recurring enabled → RECURRING commission (month 1)
+                                    // ========================================
                                     const partnerId = await findSellerForSale({
                                         linkId,
                                         sellerId,
@@ -604,22 +560,83 @@ export async function POST(
                                             saleId: session.id,
                                             linkId,
                                             grossAmount,
-                                            htAmount,  // ✅ FIXED: Pass HT for correct platform fee calculation
+                                            htAmount,
                                             netAmount,
                                             stripeFee,
                                             taxAmount: tax,
-                                            missionReward: missionConfig.saleReward || '0',
+                                            missionReward: missionConfig.recurringReward || '0',
                                             currency,
-                                            // Subscription tracking if applicable
-                                            subscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
+                                            subscriptionId: session.subscription as string,
                                             recurringMonth: 1,
-                                            holdDays: 30,  // 30 days hold for refund protection
-                                            commissionSource: CommissionSource.SALE
+                                            recurringMax: missionConfig.recurringDuration ?? undefined,
+                                            holdDays: 30,
+                                            commissionSource: CommissionSource.RECURRING
                                         })
-                                        console.log(`[Webhook] 💰 Commission created for seller ${partnerId} on mission "${missionConfig.missionName}" with SALE reward ${missionConfig.saleReward}`)
+                                        console.log(`[Webhook] 💰 RECURRING commission (month 1) created for seller ${partnerId} on mission "${missionConfig.missionName}" with reward ${missionConfig.recurringReward}`)
                                     } else {
                                         console.log(`[Webhook] ⚠️ No approved seller found for seller ${sellerId}`)
                                     }
+                                } else if (missionConfig.saleEnabled) {
+                                    // ========================================
+                                    // BRANCH B: One-time purchase OR recurring disabled → SALE commission
+                                    // ========================================
+                                    // Check attribution limit (45 days for standard sales)
+                                    let attributionValid = true
+
+                                    const customer = await prisma.customer.findFirst({
+                                        where: {
+                                            workspace_id: workspaceId,
+                                            OR: [
+                                                { external_id: customerExternalId },
+                                                { email: session.customer_details?.email || undefined }
+                                            ]
+                                        },
+                                        select: { created_at: true, affiliate_id: true }
+                                    })
+
+                                    if (customer?.created_at && customer.affiliate_id) {
+                                        const daysSinceAttribution = Math.floor(
+                                            (Date.now() - customer.created_at.getTime()) / (1000 * 60 * 60 * 24)
+                                        )
+
+                                        if (daysSinceAttribution > 45) {
+                                            attributionValid = false
+                                            console.log(`[Webhook] ⏰ SALE attribution expired: ${daysSinceAttribution} days > 45 days limit`)
+                                        } else {
+                                            console.log(`[Webhook] ✅ SALE attribution valid: ${daysSinceAttribution} days < 45 days limit`)
+                                        }
+                                    }
+
+                                    if (attributionValid) {
+                                        const partnerId = await findSellerForSale({
+                                            linkId,
+                                            sellerId,
+                                            programId: workspaceId
+                                        })
+
+                                        if (partnerId) {
+                                            await createCommission({
+                                                partnerId,
+                                                programId: workspaceId,
+                                                saleId: session.id,
+                                                linkId,
+                                                grossAmount,
+                                                htAmount,
+                                                netAmount,
+                                                stripeFee,
+                                                taxAmount: tax,
+                                                missionReward: missionConfig.saleReward || '0',
+                                                currency,
+                                                holdDays: 30,
+                                                commissionSource: CommissionSource.SALE
+                                            })
+                                            console.log(`[Webhook] 💰 SALE commission created for seller ${partnerId} on mission "${missionConfig.missionName}" with reward ${missionConfig.saleReward}`)
+                                        } else {
+                                            console.log(`[Webhook] ⚠️ No approved seller found for seller ${sellerId}`)
+                                        }
+                                    }
+                                } else {
+                                    console.log(`[Webhook] ℹ️ No commission - mission "${missionConfig.missionName}" has neither sale nor recurring enabled for this checkout`)
                                 }
                             }
                         } catch (commissionError) {
@@ -778,93 +795,85 @@ export async function POST(
                     }
 
                     // ========================================
-                    // CREATE RECURRING COMMISSION (IF RECURRING ENABLED + WITHIN DURATION)
+                    // CREATE RECURRING COMMISSION (IF SUBSCRIPTION TRACKED + WITHIN LIMIT)
                     // ========================================
-                    if (clickId && clickId !== 'recurring') {
-                        try {
-                            // Get customer for attribution check
-                            const customer = await prisma.customer.findFirst({
-                                where: {
-                                    workspace_id: workspaceId,
-                                    OR: [
-                                        { external_id: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id },
-                                        { email: invoice.customer_email || undefined }
-                                    ]
-                                }
-                            })
+                    const subscriptionId = typeof (invoice as any).subscription === 'string'
+                        ? (invoice as any).subscription
+                        : null
 
-                            if (customer?.click_id) {
-                                // ✅ STEP 1: Get mission commission config (V2 multi-commission support)
-                                const missionConfig = await getMissionCommissionConfig({
-                                    linkId: customer.link_id,
-                                    programId: workspaceId
+                    if (subscriptionId) {
+                        try {
+                            // Step 1: Check if this subscription is tracked (has existing commissions)
+                            const existingCount = await countRecurringCommissions(subscriptionId)
+
+                            if (existingCount === 0) {
+                                console.log(`[Webhook] ℹ️ Subscription ${subscriptionId} not tracked (no existing commissions) - skipping`)
+                            } else {
+                                // Step 2: Find Customer for attribution (via Stripe customer ID or email)
+                                const stripeCustomerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id
+                                const customer = await prisma.customer.findFirst({
+                                    where: {
+                                        workspace_id: workspaceId,
+                                        OR: [
+                                            { external_id: stripeCustomerId },
+                                            { email: invoice.customer_email || undefined }
+                                        ]
+                                    }
                                 })
 
-                                if (!missionConfig) {
-                                    console.log(`[Webhook] ℹ️ No mission config found for recurring`)
-                                } else if (!missionConfig.recurringEnabled) {
-                                    console.log(`[Webhook] ℹ️ No recurring commission - mission "${missionConfig.missionName}" has recurring_enabled=false`)
+                                if (!customer?.link_id && !customer?.affiliate_id) {
+                                    console.log(`[Webhook] ⚠️ No attributed customer found for subscription ${subscriptionId}`)
                                 } else {
-                                    // ✅ STEP 2: Check attribution limit based on mission configuration
-                                    // - recurringDuration = null: Lifetime (no limit)
-                                    // - recurringDuration = X: X months * 30 days
-                                    let attributionValid = true
+                                    // Step 3: Get mission commission config
+                                    const missionConfig = await getMissionCommissionConfig({
+                                        linkId: customer.link_id,
+                                        programId: workspaceId
+                                    })
 
-                                    // Calculate attribution limit based on mission config
-                                    let attributionLimitDays = 45  // Default
-
-                                    if (missionConfig.recurringDuration === null) {
-                                        // Lifetime = no limit
-                                        attributionLimitDays = Infinity
-                                        console.log(`[Webhook] 📅 Recurring mission (invoice) with Lifetime duration - no attribution limit`)
+                                    if (!missionConfig) {
+                                        console.log(`[Webhook] ℹ️ No mission config found for recurring`)
+                                    } else if (!missionConfig.recurringEnabled) {
+                                        console.log(`[Webhook] ℹ️ No recurring commission - mission "${missionConfig.missionName}" has recurring_enabled=false`)
                                     } else {
-                                        // Convert months to days (approx 30 days per month)
-                                        attributionLimitDays = missionConfig.recurringDuration * 30
-                                        console.log(`[Webhook] 📅 Recurring mission (invoice) with ${missionConfig.recurringDuration} months = ${attributionLimitDays} days limit`)
-                                    }
-
-                                    if (customer.created_at && customer.affiliate_id) {
-                                        const daysSinceAttribution = Math.floor(
-                                            (Date.now() - customer.created_at.getTime()) / (1000 * 60 * 60 * 24)
-                                        )
-
-                                        if (daysSinceAttribution > attributionLimitDays) {
-                                            attributionValid = false
-                                            console.log(`[Webhook] ⏰ Recurring attribution expired: ${daysSinceAttribution} days > ${attributionLimitDays} days limit`)
+                                        // Step 4: Enforce recurringMax (replaces daysSinceAttribution check)
+                                        if (missionConfig.recurringDuration !== null && existingCount >= missionConfig.recurringDuration) {
+                                            console.log(`[Webhook] ⛔ Recurring limit reached for subscription ${subscriptionId}: ${existingCount}/${missionConfig.recurringDuration}`)
                                         } else {
-                                            console.log(`[Webhook] ✅ Recurring attribution valid: ${daysSinceAttribution} days < ${attributionLimitDays} days limit`)
-                                        }
-                                    }
+                                            // Step 5: Calculate recurringMonth from DB count
+                                            const recurringMonth = existingCount + 1
 
-                                    if (attributionValid) {
-                                        // ✅ STEP 3: Create commission
-                                        const partnerId = await findSellerForSale({
-                                            linkId: customer.link_id,
-                                            programId: workspaceId
-                                        })
+                                            console.log(`[Webhook] 📅 Recurring month ${recurringMonth}/${missionConfig.recurringDuration ?? 'Lifetime'} for subscription ${subscriptionId}`)
 
-                                        if (partnerId) {
-                                            // Calculate recurring month from invoice number
-                                            const recurringMonth = invoice.number ? parseInt(invoice.number.split('-').pop() || '1') : 1
-
-                                            await createCommission({
-                                                partnerId,
-                                                programId: workspaceId,
-                                                saleId: invoice.id,
+                                            // Step 6: Find seller and create commission
+                                            const partnerId = await findSellerForSale({
                                                 linkId: customer.link_id,
-                                                grossAmount,
-                                                htAmount,  // ✅ FIXED: Pass HT for correct platform fee
-                                                netAmount,
-                                                stripeFee,  // ✅ FIXED: Now fetched from balance_transaction
-                                                taxAmount: tax,
-                                                missionReward: missionConfig.recurringReward || '0',
-                                                currency,
-                                                subscriptionId: typeof (invoice as any).subscription === 'string' ? (invoice as any).subscription : null,
-                                                recurringMonth,
-                                                holdDays: 30,  // 30 days hold for refund protection
-                                                commissionSource: CommissionSource.RECURRING
+                                                sellerId: customer.affiliate_id,
+                                                programId: workspaceId
                                             })
-                                            console.log(`[Webhook] 💰 Recurring commission created for partner ${partnerId} on mission "${missionConfig.missionName}" (month ${recurringMonth}) with RECURRING reward ${missionConfig.recurringReward}`)
+
+                                            if (partnerId) {
+                                                await createCommission({
+                                                    partnerId,
+                                                    programId: workspaceId,
+                                                    saleId: invoice.id,
+                                                    linkId: customer.link_id,
+                                                    grossAmount,
+                                                    htAmount,
+                                                    netAmount,
+                                                    stripeFee,
+                                                    taxAmount: tax,
+                                                    missionReward: missionConfig.recurringReward || '0',
+                                                    currency,
+                                                    subscriptionId,
+                                                    recurringMonth,
+                                                    recurringMax: missionConfig.recurringDuration ?? undefined,
+                                                    holdDays: 30,
+                                                    commissionSource: CommissionSource.RECURRING
+                                                })
+                                                console.log(`[Webhook] 💰 Recurring commission created for partner ${partnerId} on mission "${missionConfig.missionName}" (month ${recurringMonth}) with RECURRING reward ${missionConfig.recurringReward}`)
+                                            } else {
+                                                console.log(`[Webhook] ⚠️ No approved seller found for subscription ${subscriptionId}`)
+                                            }
                                         }
                                     }
                                 }
@@ -872,6 +881,8 @@ export async function POST(
                         } catch (commError) {
                             console.error('[Webhook] ⚠️ Recurring commission failed (non-blocking):', commError)
                         }
+                    } else {
+                        console.log(`[Webhook] ℹ️ Invoice ${invoice.id} has no subscription - skipping recurring commission`)
                     }
 
                 } catch (err) {
@@ -919,6 +930,9 @@ export async function POST(
                 }
             })()
         )
+    } else if (event.type === 'customer.subscription.deleted') {
+        const subscription = event.data.object as Stripe.Subscription
+        console.log(`[Webhook] Subscription ${subscription.id} cancelled for workspace ${endpoint.workspace_id}`)
     } else {
         console.log(`[Multi-Tenant Webhook] ⏭️ Ignoring event ${event.type}`)
     }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ChevronLeft, MapPin, Monitor, Globe, Smartphone, Calendar, DollarSign, Link2, ExternalLink, Copy, Check, MousePointer, ShoppingCart, UserPlus, Loader2, User } from 'lucide-react'
+import { ChevronLeft, MapPin, Monitor, Globe, Smartphone, Calendar, DollarSign, Link2, ExternalLink, Copy, Check, MousePointer, ShoppingCart, UserPlus, Loader2, User, RefreshCw } from 'lucide-react'
 import { getCustomerWithActivity, CustomerDetailWithActivity, CustomerActivity } from '@/app/actions/customers'
 import { useTranslations } from 'next-intl'
 
@@ -322,6 +322,34 @@ export default function CustomerProfilePage() {
                             <p className="text-xs font-medium text-gray-500 mb-1">{t('lifetimeValue')}</p>
                             <p className="text-sm font-semibold text-gray-900">{formatCurrency(customer.lifetimeValue)}</p>
                         </div>
+
+                        {/* Subscription Info */}
+                        {customer.subscriptions.length > 0 && (
+                            <>
+                                <hr className="border-gray-100" />
+                                <div>
+                                    <p className="text-xs font-medium text-gray-500 mb-2">{t('subscription')}</p>
+                                    <div className="space-y-2">
+                                        {customer.subscriptions.map((sub) => (
+                                            <div key={sub.subscriptionId} className="bg-gray-50 rounded-lg p-2.5 space-y-1.5">
+                                                <div className="flex items-center gap-1.5">
+                                                    <RefreshCw className={`w-3.5 h-3.5 ${sub.isActive ? 'text-green-500' : 'text-gray-400'}`} />
+                                                    <span className={`text-xs font-medium ${sub.isActive ? 'text-green-700' : 'text-gray-500'}`}>
+                                                        {sub.isActive ? t('subscriptionActive') : t('subscriptionEnded')}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-gray-600">
+                                                    {t('subscriptionMonth')} {sub.currentMonth}{sub.maxMonths ? ` / ${sub.maxMonths}` : ` (${t('subscriptionLifetime')})`}
+                                                </p>
+                                                <p className="text-xs text-gray-400">
+                                                    {t('subscriptionStarted')} {formatDate(sub.startedAt)}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                         {/* External ID */}
                         <div>
