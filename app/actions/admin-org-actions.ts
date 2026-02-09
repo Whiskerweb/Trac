@@ -161,9 +161,22 @@ const SUPPORT_WORKSPACE_SLUG = 'traaaction-support'
  */
 async function getOrCreateSupportWorkspace(): Promise<string> {
     const existing = await prisma.workspace.findUnique({
-        where: { slug: SUPPORT_WORKSPACE_SLUG }
+        where: { slug: SUPPORT_WORKSPACE_SLUG },
+        include: { Profile: true }
     })
-    if (existing) return existing.id
+    if (existing) {
+        // Ensure profile with logo exists
+        if (!existing.Profile) {
+            await prisma.workspaceProfile.create({
+                data: {
+                    workspace_id: existing.id,
+                    logo_url: '/Logotrac/logo1.png',
+                    description: 'Traaaction Platform Support',
+                }
+            })
+        }
+        return existing.id
+    }
 
     const ws = await prisma.workspace.create({
         data: {
@@ -172,6 +185,16 @@ async function getOrCreateSupportWorkspace(): Promise<string> {
             owner_id: 'system',
         }
     })
+
+    // Create profile with Traaaction logo
+    await prisma.workspaceProfile.create({
+        data: {
+            workspace_id: ws.id,
+            logo_url: '/Logotrac/logo1.png',
+            description: 'Traaaction Platform Support',
+        }
+    })
+
     return ws.id
 }
 
