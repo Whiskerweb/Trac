@@ -21,7 +21,8 @@ import {
     Link as LinkIcon,
     Mail,
     Copy,
-    ExternalLink
+    ExternalLink,
+    RefreshCw
 } from 'lucide-react'
 
 // =============================================
@@ -860,7 +861,13 @@ function Step2CommissionSetup({
                     title="Sale Commission"
                     description="Pay for each successful purchase"
                     enabled={data.sale.enabled}
-                    onToggle={(enabled) => onChange({ sale: { ...data.sale, enabled } })}
+                    onToggle={(enabled) => {
+                        onChange({ sale: { ...data.sale, enabled } })
+                        // Disable recurring if sale is disabled
+                        if (!enabled) {
+                            onChange({ recurring: { ...data.recurring, enabled: false } })
+                        }
+                    }}
                 >
                     <div className="space-y-4">
                         {/* Structure */}
@@ -925,21 +932,155 @@ function Step2CommissionSetup({
                                 </span>
                             </div>
                         </div>
+
+                        {/* Recurring toggle — inside Sale card */}
+                        <div className="pt-3 border-t border-gray-100">
+                            <button
+                                type="button"
+                                onClick={() => onChange({
+                                    recurring: {
+                                        ...data.recurring,
+                                        enabled: !data.recurring.enabled,
+                                        // Default recurring to same structure/amount as sale if first time enabling
+                                        ...(!data.recurring.enabled && data.recurring.amount === 0 ? {
+                                            structure: data.sale.structure,
+                                            amount: data.sale.amount
+                                        } : {})
+                                    }
+                                })}
+                                className={`
+                                    w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all
+                                    ${data.recurring.enabled
+                                        ? 'bg-gray-900 text-white'
+                                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                                    }
+                                `}
+                            >
+                                <RefreshCw className={`w-4 h-4 shrink-0 ${data.recurring.enabled ? 'text-white' : 'text-gray-400'}`} />
+                                <div className="flex-1 min-w-0">
+                                    <span className="text-sm font-medium">
+                                        {data.recurring.enabled ? 'Recurring enabled' : 'Add recurring commission'}
+                                    </span>
+                                    <p className={`text-xs mt-0.5 ${data.recurring.enabled ? 'text-gray-300' : 'text-gray-400'}`}>
+                                        Earn on subscription renewals too
+                                    </p>
+                                </div>
+                                {data.recurring.enabled ? (
+                                    <Check className="w-4 h-4 shrink-0" />
+                                ) : (
+                                    <Plus className="w-4 h-4 shrink-0 text-gray-400" />
+                                )}
+                            </button>
+
+                            {/* Recurring config — animated expand */}
+                            <div
+                                className={`
+                                    grid transition-all duration-300 ease-in-out
+                                    ${data.recurring.enabled ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0'}
+                                `}
+                            >
+                                <div className="overflow-hidden">
+                                    <div className="space-y-4 bg-gray-50 rounded-xl p-4">
+                                        {/* Recurring structure */}
+                                        <div className="space-y-2">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                                Recurring commission type
+                                            </label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onChange({ recurring: { ...data.recurring, structure: 'FLAT' } })}
+                                                    className={`
+                                                        px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                                                        ${data.recurring.structure === 'FLAT'
+                                                            ? 'bg-gray-900 text-white'
+                                                            : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                                                        }
+                                                    `}
+                                                >
+                                                    Fixed amount
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onChange({ recurring: { ...data.recurring, structure: 'PERCENTAGE' } })}
+                                                    className={`
+                                                        px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                                                        ${data.recurring.structure === 'PERCENTAGE'
+                                                            ? 'bg-gray-900 text-white'
+                                                            : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                                                        }
+                                                    `}
+                                                >
+                                                    Percentage
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Recurring amount */}
+                                        <div className="space-y-2">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                                {data.recurring.structure === 'FLAT' ? 'Amount per renewal' : 'Percentage per renewal'}
+                                            </label>
+                                            <div className="relative">
+                                                {data.recurring.structure === 'FLAT' && (
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">€</span>
+                                                )}
+                                                <input
+                                                    type="number"
+                                                    value={data.recurring.amount || ''}
+                                                    onChange={(e) => onChange({
+                                                        recurring: { ...data.recurring, amount: parseFloat(e.target.value) || 0 }
+                                                    })}
+                                                    placeholder={data.recurring.structure === 'FLAT' ? '10' : '5'}
+                                                    className={`
+                                                        w-full py-3 border border-gray-200 rounded-xl bg-white
+                                                        focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5
+                                                        ${data.recurring.structure === 'FLAT' ? 'pl-9 pr-20' : 'pl-4 pr-12'}
+                                                    `}
+                                                />
+                                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                                                    {data.recurring.structure === 'FLAT' ? 'per month' : '%'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Duration */}
+                                        <div className="space-y-2">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                                Duration
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    value={data.recurring.duration ?? 0}
+                                                    onChange={(e) => {
+                                                        const val = parseInt(e.target.value)
+                                                        onChange({
+                                                            recurring: { ...data.recurring, duration: val === 0 ? null : val }
+                                                        })
+                                                    }}
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white
+                                                        focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5
+                                                        appearance-none cursor-pointer"
+                                                >
+                                                    {DURATION_OPTIONS.map(opt => (
+                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                            </div>
+                                            <p className="text-xs text-gray-400">
+                                                {data.recurring.duration === null
+                                                    ? 'Partner earns on every renewal, forever.'
+                                                    : `Partner earns on the first ${data.recurring.duration} renewals.`
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </CommissionCard>
-
-                {/* Recurring Commission - Temporarily hidden */}
-                {/* TODO: Re-enable when subscription feature is ready
-                <CommissionCard
-                    icon={Repeat}
-                    title="Recurring Commission"
-                    description="Pay for subscription renewals"
-                    enabled={data.recurring.enabled}
-                    onToggle={(enabled) => onChange({ recurring: { ...data.recurring, enabled } })}
-                >
-                    ...
-                </CommissionCard>
-                */}
             </div>
         </div>
     )
