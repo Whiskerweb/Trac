@@ -1,9 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getUserRoles } from '@/app/actions/get-user-roles'
 import { createGlobalSeller, claimSellers } from '@/app/actions/sellers'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
     // Capture redirection target if exists (e.g., inviting user)
@@ -16,9 +16,9 @@ export async function GET(request: Request) {
 
     // =============================================
     // COOKIE COLLECTION — applied to EVERY redirect response
-    // This is the fix: session cookies from exchangeCodeForSession()
-    // MUST be forwarded on the redirect response. Using cookies()
-    // from next/headers silently fails in Route Handlers.
+    // Session cookies from exchangeCodeForSession() MUST be forwarded
+    // on the redirect response. Using cookies() from next/headers
+    // silently fails in Route Handlers (Next.js 16).
     // =============================================
     const cookiesToForward: { name: string; value: string; options: Record<string, unknown> }[] = []
 
@@ -27,6 +27,7 @@ export async function GET(request: Request) {
         for (const { name, value, options } of cookiesToForward) {
             response.cookies.set(name, value, options)
         }
+        console.log(`[Auth Callback] Redirect → ${new URL(url).pathname} (${cookiesToForward.length} cookies forwarded: ${cookiesToForward.map(c => c.name).join(', ')})`)
         return response
     }
 
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
     try {
         // =============================================
         // CREATE SUPABASE CLIENT WITH RESPONSE-LEVEL COOKIES
-        // Same pattern as utils/supabase/middleware.ts
+        // Uses NextRequest.cookies.getAll() — same API as middleware.ts
         // =============================================
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,14 +71,7 @@ export async function GET(request: Request) {
             {
                 cookies: {
                     getAll() {
-                        const cookieHeader = request.headers.get('cookie') || ''
-                        return cookieHeader
-                            .split(';')
-                            .filter(Boolean)
-                            .map(c => {
-                                const [name, ...rest] = c.trim().split('=')
-                                return { name, value: rest.join('=') }
-                            })
+                        return request.cookies.getAll()
                     },
                     setAll(cookiesToSet) {
                         // Collect cookies — they'll be applied to the redirect response
@@ -88,6 +82,13 @@ export async function GET(request: Request) {
         )
 
         const { data: { user }, error: authError } = await supabase.auth.exchangeCodeForSession(code)
+
+        console.log('[Auth Callback] After exchangeCodeForSession:', {
+            hasUser: !!user,
+            hasError: !!authError,
+            cookiesCollected: cookiesToForward.length,
+            cookieNames: cookiesToForward.map(c => c.name),
+        })
 
         if (authError) {
             console.error('[Auth Callback] Auth error:', authError.message, authError.code)
@@ -109,8 +110,6 @@ export async function GET(request: Request) {
         }
 
         console.log('[Auth Callback] User authenticated:', user.id, user.email)
-        console.log('[Auth Callback] User metadata:', user.user_metadata)
-        console.log('[Auth Callback] App metadata:', user.app_metadata)
 
         // If roleIntent not in URL, check user_metadata (set during signup)
         if (!roleIntent && user.user_metadata?.role) {
@@ -120,10 +119,9 @@ export async function GET(request: Request) {
 
         // Third fallback: check cookie (set during signup as backup for PKCE flow)
         if (!roleIntent) {
-            const cookieHeader = request.headers.get('cookie') || ''
-            const match = cookieHeader.match(/trac_signup_role=([^;]+)/)
-            if (match) {
-                roleIntent = match[1]
+            const cookieRole = request.cookies.get('trac_signup_role')?.value
+            if (cookieRole) {
+                roleIntent = cookieRole
                 console.log('[Auth Callback] Using role from cookie fallback:', roleIntent)
             }
         }
@@ -156,7 +154,7 @@ export async function GET(request: Request) {
             roles = { hasWorkspace: false, hasSeller: false }
         }
 
-        console.log('[Auth Callback] User roles:', roles)
+        console.log('[Auth Callback] User roles:', roles, 'roleIntent:', roleIntent)
 
         // =============================================
         // NEW USER HANDLING (Google OAuth or Email Confirmation)
