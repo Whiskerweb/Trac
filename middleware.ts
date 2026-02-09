@@ -62,6 +62,7 @@ const PRIMARY_DOMAIN = process.env.PRIMARY_DOMAIN || 'traaaction.com'
 const PRIMARY_DOMAINS = [
     'traaaction.com',
     'www.traaaction.com',
+    'vercel.app',
     'localhost',
     '127.0.0.1',
     'localhost:3000',
