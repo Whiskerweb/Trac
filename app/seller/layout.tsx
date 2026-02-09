@@ -10,6 +10,7 @@ import {
     Store,
     Settings,
     User,
+    Users,
     Wallet,
     Menu,
     X,
@@ -189,6 +190,7 @@ export default function SellerLayout({
                 <div className="space-y-1">
                     <NavItem href="/seller" icon={Home} label="Overview" collapsed={collapsed} />
                     <NavItem href="/seller/marketplace" icon={Store} label="Marketplace" collapsed={collapsed} />
+                    <NavItem href="/seller/organizations" icon={Users} label="Organizations" collapsed={collapsed} />
                 </div>
 
                 {/* GAINS Section - Conditional: Stripe Connect = Payouts, No Stripe = Wallet */}

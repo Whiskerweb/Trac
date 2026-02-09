@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics/tinybird'
 import { waitUntil } from '@vercel/functions'
-import { createCommission, findSellerForSale, handleClawback, getMissionCommissionConfig, countRecurringCommissions, updateSellerBalance } from '@/lib/commission/engine'
+import { createCommission, createOrgCommissions, findSellerForSale, handleClawback, getMissionCommissionConfig, getOrgMissionConfig, countRecurringCommissions, updateSellerBalance } from '@/lib/commission/engine'
 import { CommissionSource } from '@/lib/generated/prisma/client'
 import { sanitizeClickId, sanitizeUUID } from '@/lib/sql-sanitize'
 
@@ -556,25 +556,48 @@ export async function POST(
                                     })
 
                                     if (partnerId) {
-                                        await createCommission({
-                                            partnerId,
-                                            programId: workspaceId,
-                                            saleId: session.id,
-                                            linkId,
-                                            grossAmount,
-                                            htAmount,
-                                            netAmount,
-                                            stripeFee,
-                                            taxAmount: tax,
-                                            missionReward: missionConfig.recurringReward || '0',
-                                            currency,
-                                            subscriptionId: session.subscription as string,
-                                            recurringMonth: 1,
-                                            recurringMax: missionConfig.recurringDuration ?? undefined,
-                                            holdDays: 30,
-                                            commissionSource: CommissionSource.RECURRING
-                                        })
-                                        console.log(`[Webhook] 💰 RECURRING commission (month 1) created for seller ${partnerId} on mission "${missionConfig.missionName}" with reward ${missionConfig.recurringReward}`)
+                                        // Check if this is an org enrollment → dual commissions
+                                        const orgConfig = await getOrgMissionConfig({ linkId })
+                                        if (orgConfig?.isOrgEnrollment) {
+                                            await createOrgCommissions({
+                                                memberId: partnerId,
+                                                leaderId: orgConfig.leaderId,
+                                                programId: workspaceId,
+                                                saleId: session.id,
+                                                linkId,
+                                                grossAmount, htAmount, netAmount, stripeFee, taxAmount: tax,
+                                                memberReward: orgConfig.memberReward,
+                                                leaderReward: orgConfig.leaderReward,
+                                                currency,
+                                                organizationMissionId: orgConfig.organizationMissionId,
+                                                subscriptionId: session.subscription as string,
+                                                recurringMonth: 1,
+                                                recurringMax: missionConfig.recurringDuration ?? undefined,
+                                                holdDays: 30,
+                                                commissionSource: CommissionSource.RECURRING
+                                            })
+                                            console.log(`[Webhook] 💰 ORG RECURRING commission (month 1) created for member ${partnerId} + leader ${orgConfig.leaderId}`)
+                                        } else {
+                                            await createCommission({
+                                                partnerId,
+                                                programId: workspaceId,
+                                                saleId: session.id,
+                                                linkId,
+                                                grossAmount,
+                                                htAmount,
+                                                netAmount,
+                                                stripeFee,
+                                                taxAmount: tax,
+                                                missionReward: missionConfig.recurringReward || '0',
+                                                currency,
+                                                subscriptionId: session.subscription as string,
+                                                recurringMonth: 1,
+                                                recurringMax: missionConfig.recurringDuration ?? undefined,
+                                                holdDays: 30,
+                                                commissionSource: CommissionSource.RECURRING
+                                            })
+                                            console.log(`[Webhook] 💰 RECURRING commission (month 1) created for seller ${partnerId} on mission "${missionConfig.missionName}" with reward ${missionConfig.recurringReward}`)
+                                        }
                                     } else {
                                         console.log(`[Webhook] ⚠️ No approved seller found for seller ${sellerId}`)
                                     }
@@ -617,22 +640,42 @@ export async function POST(
                                         })
 
                                         if (partnerId) {
-                                            await createCommission({
-                                                partnerId,
-                                                programId: workspaceId,
-                                                saleId: session.id,
-                                                linkId,
-                                                grossAmount,
-                                                htAmount,
-                                                netAmount,
-                                                stripeFee,
-                                                taxAmount: tax,
-                                                missionReward: missionConfig.saleReward || '0',
-                                                currency,
-                                                holdDays: 30,
-                                                commissionSource: CommissionSource.SALE
-                                            })
-                                            console.log(`[Webhook] 💰 SALE commission created for seller ${partnerId} on mission "${missionConfig.missionName}" with reward ${missionConfig.saleReward}`)
+                                            // Check if this is an org enrollment → dual commissions
+                                            const orgConfig = await getOrgMissionConfig({ linkId })
+                                            if (orgConfig?.isOrgEnrollment) {
+                                                await createOrgCommissions({
+                                                    memberId: partnerId,
+                                                    leaderId: orgConfig.leaderId,
+                                                    programId: workspaceId,
+                                                    saleId: session.id,
+                                                    linkId,
+                                                    grossAmount, htAmount, netAmount, stripeFee, taxAmount: tax,
+                                                    memberReward: orgConfig.memberReward,
+                                                    leaderReward: orgConfig.leaderReward,
+                                                    currency,
+                                                    organizationMissionId: orgConfig.organizationMissionId,
+                                                    holdDays: 30,
+                                                    commissionSource: CommissionSource.SALE
+                                                })
+                                                console.log(`[Webhook] 💰 ORG SALE commission created for member ${partnerId} + leader ${orgConfig.leaderId}`)
+                                            } else {
+                                                await createCommission({
+                                                    partnerId,
+                                                    programId: workspaceId,
+                                                    saleId: session.id,
+                                                    linkId,
+                                                    grossAmount,
+                                                    htAmount,
+                                                    netAmount,
+                                                    stripeFee,
+                                                    taxAmount: tax,
+                                                    missionReward: missionConfig.saleReward || '0',
+                                                    currency,
+                                                    holdDays: 30,
+                                                    commissionSource: CommissionSource.SALE
+                                                })
+                                                console.log(`[Webhook] 💰 SALE commission created for seller ${partnerId} on mission "${missionConfig.missionName}" with reward ${missionConfig.saleReward}`)
+                                            }
                                         } else {
                                             console.log(`[Webhook] ⚠️ No approved seller found for seller ${sellerId}`)
                                         }
@@ -859,25 +902,48 @@ export async function POST(
                                             })
 
                                             if (partnerId) {
-                                                await createCommission({
-                                                    partnerId,
-                                                    programId: workspaceId,
-                                                    saleId: invoice.id,
-                                                    linkId: customer.link_id,
-                                                    grossAmount,
-                                                    htAmount,
-                                                    netAmount,
-                                                    stripeFee,
-                                                    taxAmount: tax,
-                                                    missionReward: missionConfig.recurringReward || '0',
-                                                    currency,
-                                                    subscriptionId,
-                                                    recurringMonth,
-                                                    recurringMax: missionConfig.recurringDuration ?? undefined,
-                                                    holdDays: 30,
-                                                    commissionSource: CommissionSource.RECURRING
-                                                })
-                                                console.log(`[Webhook] 💰 Recurring commission created for partner ${partnerId} on mission "${missionConfig.missionName}" (month ${recurringMonth}) with RECURRING reward ${missionConfig.recurringReward}`)
+                                                // Check if this is an org enrollment → dual commissions
+                                                const orgConfig = await getOrgMissionConfig({ linkId: customer.link_id })
+                                                if (orgConfig?.isOrgEnrollment) {
+                                                    await createOrgCommissions({
+                                                        memberId: partnerId,
+                                                        leaderId: orgConfig.leaderId,
+                                                        programId: workspaceId,
+                                                        saleId: invoice.id,
+                                                        linkId: customer.link_id,
+                                                        grossAmount, htAmount, netAmount, stripeFee, taxAmount: tax,
+                                                        memberReward: orgConfig.memberReward,
+                                                        leaderReward: orgConfig.leaderReward,
+                                                        currency,
+                                                        organizationMissionId: orgConfig.organizationMissionId,
+                                                        subscriptionId,
+                                                        recurringMonth,
+                                                        recurringMax: missionConfig.recurringDuration ?? undefined,
+                                                        holdDays: 30,
+                                                        commissionSource: CommissionSource.RECURRING
+                                                    })
+                                                    console.log(`[Webhook] 💰 ORG Recurring commission (month ${recurringMonth}) for member ${partnerId} + leader ${orgConfig.leaderId}`)
+                                                } else {
+                                                    await createCommission({
+                                                        partnerId,
+                                                        programId: workspaceId,
+                                                        saleId: invoice.id,
+                                                        linkId: customer.link_id,
+                                                        grossAmount,
+                                                        htAmount,
+                                                        netAmount,
+                                                        stripeFee,
+                                                        taxAmount: tax,
+                                                        missionReward: missionConfig.recurringReward || '0',
+                                                        currency,
+                                                        subscriptionId,
+                                                        recurringMonth,
+                                                        recurringMax: missionConfig.recurringDuration ?? undefined,
+                                                        holdDays: 30,
+                                                        commissionSource: CommissionSource.RECURRING
+                                                    })
+                                                    console.log(`[Webhook] 💰 Recurring commission created for partner ${partnerId} on mission "${missionConfig.missionName}" (month ${recurringMonth}) with RECURRING reward ${missionConfig.recurringReward}`)
+                                                }
                                             } else {
                                                 console.log(`[Webhook] ⚠️ No approved seller found for subscription ${subscriptionId}`)
                                             }

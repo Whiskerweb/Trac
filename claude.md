@@ -59,9 +59,9 @@ CRON_SECRET
 
 ```
 app/
-├── dashboard/          # Startup: missions, sellers, commissions, payouts, messages, settings
-├── seller/             # Seller: marketplace, wallet, payouts, profile, settings, onboarding
-├── admin/              # Admin: feedback, treasury, gift-cards, sellers, payouts
+├── dashboard/          # Startup: missions, sellers, commissions, payouts, messages, settings, organizations
+├── seller/             # Seller: marketplace, wallet, payouts, profile, settings, onboarding, organizations
+├── admin/              # Admin: feedback, treasury, gift-cards, sellers, payouts, organizations
 ├── api/
 │   ├── auth/           # me, verify, user-roles
 │   ├── track/          # click, lead
@@ -69,7 +69,7 @@ app/
 │   ├── webhooks/       # [endpointId] (Stripe), startup-payments
 │   ├── cron/           # commissions, mature-commissions, payouts
 │   └── seller/         # connect, wallet, withdraw, payout-method
-├── actions/            # 22 Server Actions (commissions, sellers, payouts, missions, messaging, customers, etc.)
+├── actions/            # Server Actions (commissions, sellers, payouts, missions, messaging, customers, organizations, admin-org)
 └── [pages legales]     # terms, privacy, seller-terms, startup-terms, about, report-abuse
 
 components/
@@ -106,6 +106,8 @@ User → WorkspaceMember → Workspace → Mission → MissionEnrollment
                               └── Conversation → Message
 
 Seller → SellerProfile, SellerBalance, Commission, GiftCardRedemption
+       → Organization (as Leader), OrganizationMember (as Member)
+Organization → OrganizationMember[], OrganizationMission[]
 Feedback (standalone) → user feedback avec attachments
 ```
 
@@ -118,18 +120,23 @@ Feedback (standalone) → user feedback avec attachments
 | **Commission** | Ledger: gross/net/commission/platform_fee, status, hold_days |
 | **SellerBalance** | Solde agrege: balance, pending, due, paid_total |
 | **Customer** | Attribution first-click permanente (external_id = Stripe customer ID) |
+| **Organization** | Groupe de sellers avec leader, status admin-validated |
+| **OrganizationMember** | Liaison seller ↔ org (PENDING/ACTIVE/REMOVED) |
+| **OrganizationMission** | Contrat startup ↔ org : total_reward, leader_reward, member_reward |
 | **Feedback** | Feedback utilisateur MVP (message, attachments, voice, status) |
 
-### Champs Commission (recurring)
+### Champs Commission (recurring + org)
 ```
-sale_id          String @unique   — checkout session ID ou invoice ID
-subscription_id  String?          — Stripe subscription ID (index)
-recurring_month  Int?             — numero du mois (1, 2, 3...)
-recurring_max    Int?             — limite max de mois (null = lifetime)
-commission_source CommissionSource — LEAD | SALE | RECURRING
-hold_days        Int @default(30) — jours avant maturation
-matured_at       DateTime?        — date de passage PROCEED
-startup_payment_status String?    — UNPAID | PAID
+sale_id                   String @unique   — checkout session ID ou invoice ID
+subscription_id           String?          — Stripe subscription ID (index)
+recurring_month           Int?             — numero du mois (1, 2, 3...)
+recurring_max             Int?             — limite max de mois (null = lifetime)
+commission_source         CommissionSource — LEAD | SALE | RECURRING
+hold_days                 Int @default(30) — jours avant maturation
+matured_at                DateTime?        — date de passage PROCEED
+startup_payment_status    String?          — UNPAID | PAID
+org_parent_commission_id  String?          — lie leader commission → member commission
+organization_mission_id   String?          — lie au contrat OrganizationMission
 ```
 
 ### Enums critiques
@@ -141,6 +148,9 @@ EnrollmentStatus: PENDING, APPROVED, REJECTED
 MissionVisibility: PUBLIC, PRIVATE, INVITE_ONLY
 PayoutMethod: STRIPE_CONNECT, PAYPAL, IBAN, PLATFORM
 FeedbackStatus: NEW, REVIEWED, RESOLVED, ARCHIVED
+OrganizationStatus: PENDING, ACTIVE, SUSPENDED
+OrgMemberStatus: PENDING, ACTIVE, REMOVED
+OrgMissionStatus: PROPOSED, ACCEPTED, REJECTED
 ```
 
 ---
@@ -371,6 +381,19 @@ Responsabilites:
   - Status: NEW → REVIEWED → RESOLVED → ARCHIVED
   - Protection admin via email whitelist
 
+### Organizations (Fevrier 2026)
+- [x] **Schema** : Organization, OrganizationMember, OrganizationMission + champs org sur Commission/MissionEnrollment
+- [x] **Dual commission** : membre + leader par vente org (`createOrgCommissions`)
+- [x] **Commission engine** : `getOrgMissionConfig()`, `createOrgCommissions()`, cascade clawback leader
+- [x] **countRecurringCommissions** : filtre `org_parent_commission_id: null` (exclut leader cuts)
+- [x] **Webhook** : branch org dans checkout.session.completed + invoice.paid
+- [x] **Actions** : `organization-actions.ts` (CRUD org, membres, missions) + `admin-org-actions.ts`
+- [x] **UI Startup** : `/dashboard/sellers/groups` (liste orgs) + `[orgId]` (detail + propose mission)
+- [x] **UI Seller** : `/seller/organizations` (mes orgs) + `/create` + `[orgId]` (detail leader/membre)
+- [x] **UI Admin** : `/admin/organizations` (approve/suspend) + `[orgId]` (detail)
+- [x] **Auto-enrollment** : acceptation mission → tous les membres inscrits (ShortLink + Redis + MissionEnrollment)
+- [x] **I18n** : `organizations` ajoute dans sidebar (FR/EN/ES)
+
 ---
 
 ## 12. REGLES METIER CRITIQUES
@@ -391,6 +414,12 @@ Responsabilites:
 | Annulation abo | Supprime PENDING, preserve PROCEED/COMPLETE |
 | Refund COMPLETE | Supprime commission + applique solde negatif |
 | grossAmount <= 0 | Skip commission (trials, credits, ajustements) |
+| Org creation | Seller APPROVED fait demande → admin valide (PENDING→ACTIVE) |
+| Org commission split | Membre = memberReward + platform_fee 15%, Leader = leaderReward + platform_fee 0 |
+| Leader sale_id | `{original}:orgcut` pour unicite (ne compte pas dans recurring count) |
+| Org enrollment | Leader accepte mission → tous membres ACTIVE auto-inscrits |
+| Org multi-membre | Un seller peut etre dans plusieurs orgs |
+| Org clawback | Refund supprime les 2 commissions (membre + leader via cascade) |
 
 ---
 

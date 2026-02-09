@@ -40,7 +40,7 @@ const navigationConfig: NavSection[] = [
         titleKey: 'sellers',
         items: [
             { nameKey: 'allSellers', href: '/dashboard/sellers', icon: Users },
-            { nameKey: 'groups', href: '/dashboard/sellers/groups', icon: Users },
+            { nameKey: 'organizations', href: '/dashboard/sellers/groups', icon: Users },
             { nameKey: 'mySellers', href: '/dashboard/sellers/applications', icon: UserPlus },
         ]
     },

@@ -222,7 +222,10 @@ export async function createCommission(params: {
  */
 export async function countRecurringCommissions(subscriptionId: string): Promise<number> {
     return prisma.commission.count({
-        where: { subscription_id: subscriptionId }
+        where: {
+            subscription_id: subscriptionId,
+            org_parent_commission_id: null  // Exclude leader cuts from count
+        }
     })
 }
 
@@ -249,26 +252,37 @@ export async function handleClawback(params: {
             return { success: true }
         }
 
-        const clawbackAmount = commission.status === 'COMPLETE' ? commission.commission_amount : 0
-
-        // Delete the commission
-        await prisma.commission.delete({
-            where: { id: commission.id }
+        // Find child leader commission (org split) if any
+        const leaderCommission = await prisma.commission.findFirst({
+            where: { org_parent_commission_id: commission.id }
         })
+
+        // Delete the member commission
+        const clawbackAmount = commission.status === 'COMPLETE' ? commission.commission_amount : 0
+        await prisma.commission.delete({ where: { id: commission.id } })
         console.log(`[Commission] 🔙 Deleted ${commission.status} commission ${commission.id} due to refund`)
-
-        // Recalculate balance from remaining commissions
         await updateSellerBalance(commission.seller_id)
-
-        // For COMPLETE commissions: apply negative balance (money already paid out)
         if (clawbackAmount > 0) {
             await prisma.sellerBalance.update({
                 where: { seller_id: commission.seller_id },
-                data: {
-                    balance: { decrement: clawbackAmount }
-                }
+                data: { balance: { decrement: clawbackAmount } }
             })
             console.log(`[Commission] 🔙 Applied -${clawbackAmount} clawback for already-paid commission`)
+        }
+
+        // Also delete the leader commission if this was an org sale
+        if (leaderCommission) {
+            const leaderClawback = leaderCommission.status === 'COMPLETE' ? leaderCommission.commission_amount : 0
+            await prisma.commission.delete({ where: { id: leaderCommission.id } })
+            console.log(`[Commission] 🔙 Deleted org leader commission ${leaderCommission.id}`)
+            await updateSellerBalance(leaderCommission.seller_id)
+            if (leaderClawback > 0) {
+                await prisma.sellerBalance.update({
+                    where: { seller_id: leaderCommission.seller_id },
+                    data: { balance: { decrement: leaderClawback } }
+                })
+                console.log(`[Commission] 🔙 Applied -${leaderClawback} leader clawback`)
+            }
         }
 
         return { success: true }
@@ -803,5 +817,176 @@ export async function getMissionCommissionConfig(params: {
     } catch (error) {
         console.error('[Commission] ❌ Error getting mission commission config:', error)
         return null
+    }
+}
+
+// =============================================
+// ORGANIZATION COMMISSION SPLIT
+// =============================================
+
+/**
+ * Check if a sale link is tied to an organization enrollment.
+ * Returns the org config (leader/member rewards) or null if not an org enrollment.
+ */
+export async function getOrgMissionConfig(params: {
+    linkId?: string | null
+}): Promise<{
+    isOrgEnrollment: boolean
+    organizationMissionId: string
+    leaderId: string
+    memberReward: string
+    leaderReward: string
+} | null> {
+    const { linkId } = params
+    if (!linkId) return null
+
+    try {
+        // Find enrollment for this link
+        const enrollment = await prisma.missionEnrollment.findFirst({
+            where: { link_id: linkId }
+        })
+
+        if (!enrollment?.organization_mission_id) return null
+
+        // Fetch org-mission config with leader info
+        const orgMission = await prisma.organizationMission.findUnique({
+            where: { id: enrollment.organization_mission_id },
+            include: { Organization: { select: { leader_id: true } } }
+        })
+
+        if (!orgMission || orgMission.status !== 'ACCEPTED') return null
+
+        return {
+            isOrgEnrollment: true,
+            organizationMissionId: orgMission.id,
+            leaderId: orgMission.Organization.leader_id,
+            memberReward: orgMission.member_reward,
+            leaderReward: orgMission.leader_reward
+        }
+    } catch (error) {
+        console.error('[Commission] ❌ Error checking org mission config:', error)
+        return null
+    }
+}
+
+/**
+ * Create dual commissions for an organization sale:
+ * 1. Member commission (with platform fee)
+ * 2. Leader commission (no platform fee, linked to member commission)
+ */
+export async function createOrgCommissions(params: {
+    memberId: string
+    leaderId: string
+    programId: string
+    saleId: string
+    linkId?: string | null
+    grossAmount: number
+    htAmount: number
+    netAmount: number
+    stripeFee: number
+    taxAmount: number
+    memberReward: string
+    leaderReward: string
+    currency: string
+    organizationMissionId: string
+    subscriptionId?: string | null
+    recurringMonth?: number
+    recurringMax?: number
+    holdDays?: number
+    commissionSource?: CommissionSource
+}): Promise<{
+    success: boolean
+    memberCommission?: { id: string; commission_amount: number; platform_fee: number }
+    leaderCommission?: { id: string; commission_amount: number; platform_fee: number }
+    error?: string
+}> {
+    const {
+        memberId, leaderId, programId, saleId, linkId,
+        grossAmount, htAmount, netAmount, stripeFee, taxAmount,
+        memberReward, leaderReward, currency, organizationMissionId,
+        subscriptionId, recurringMonth, recurringMax,
+        holdDays = 30, commissionSource = 'SALE'
+    } = params
+
+    try {
+        // 1. Create member commission (normal flow with platform fee)
+        const memberResult = await createCommission({
+            partnerId: memberId,
+            programId,
+            saleId,
+            linkId,
+            grossAmount, htAmount, netAmount, stripeFee, taxAmount,
+            missionReward: memberReward,
+            currency,
+            subscriptionId,
+            recurringMonth,
+            recurringMax,
+            holdDays,
+            commissionSource
+        })
+
+        if (!memberResult.success || !memberResult.commission) {
+            return { success: false, error: memberResult.error || 'Failed to create member commission' }
+        }
+
+        // 2. Create leader commission (no platform fee, linked to member)
+        const { amount: leaderRawCommission, type: leaderType } = calculateCommission({
+            netAmount: htAmount,
+            missionReward: leaderReward
+        })
+
+        const leaderSaleId = `${saleId}:orgcut`
+
+        const leaderResult = await prisma.commission.upsert({
+            where: { sale_id: leaderSaleId },
+            create: {
+                seller_id: leaderId,
+                program_id: programId,
+                sale_id: leaderSaleId,
+                link_id: linkId,
+                gross_amount: grossAmount,
+                net_amount: netAmount,
+                stripe_fee: 0,
+                tax_amount: 0,
+                commission_amount: leaderRawCommission,
+                platform_fee: 0,  // Platform fee already on member commission
+                commission_rate: leaderReward,
+                commission_type: leaderType,
+                currency: currency.toUpperCase(),
+                status: 'PENDING',
+                startup_payment_status: 'UNPAID',
+                commission_source: commissionSource,
+                subscription_id: subscriptionId,
+                recurring_month: recurringMonth,
+                recurring_max: recurringMax,
+                hold_days: holdDays,
+                org_parent_commission_id: memberResult.commission.id,
+                organization_mission_id: organizationMissionId
+            },
+            update: {}
+        })
+
+        // Update member commission with org reference
+        await prisma.commission.update({
+            where: { id: memberResult.commission.id },
+            data: { organization_mission_id: organizationMissionId }
+        })
+
+        await updateSellerBalance(leaderId)
+
+        console.log(`[Commission] ✅ Org split: member ${memberId} gets ${memberResult.commission.commission_amount / 100}€, leader ${leaderId} gets ${leaderRawCommission / 100}€`)
+
+        return {
+            success: true,
+            memberCommission: memberResult.commission,
+            leaderCommission: { id: leaderResult.id, commission_amount: leaderRawCommission, platform_fee: 0 }
+        }
+
+    } catch (error) {
+        console.error('[Commission] ❌ Org commission creation failed:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }
     }
 }
