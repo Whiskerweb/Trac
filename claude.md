@@ -17,9 +17,9 @@
 ### Modes de remuneration
 | Mode | Declencheur | Configuration |
 |------|------------|---------------|
-| **SALE** | Achat client | Flat ou % du net |
+| **SALE** | Achat client (one-time) | Flat ou % du net |
 | **LEAD** | Inscription/action | Flat uniquement |
-| **RECURRING** | Abonnement mensuel | Commission par renouvellement |
+| **RECURRING** | Abonnement mensuel (renouvellements) | Flat ou % du net, limite en mois |
 
 ### Interfaces
 - **Landing** (`/`) - Vitrine publique
@@ -69,22 +69,29 @@ app/
 │   ├── webhooks/       # [endpointId] (Stripe), startup-payments
 │   ├── cron/           # commissions, mature-commissions, payouts
 │   └── seller/         # connect, wallet, withdraw, payout-method
-├── actions/            # Server Actions (commissions, sellers, payouts, missions, messaging, etc.)
+├── actions/            # 22 Server Actions (commissions, sellers, payouts, missions, messaging, customers, etc.)
 └── [pages legales]     # terms, privacy, seller-terms, startup-terms, about, report-abuse
 
 components/
-├── FeedbackWidget.tsx  # Widget feedback flottant (MVP)
-├── dashboard/          # Sidebar, ActivityFeed, charts
-├── landing/            # Navbar, Hero, Features, FAQ
-└── seller/             # ProfileCompletionBanner
+├── FeedbackWidget.tsx    # Widget feedback flottant (MVP)
+├── WebhookManager.tsx    # Guide configuration webhook Stripe (4 events)
+├── dashboard/            # Sidebar, ActivityFeed, charts
+├── landing/              # Navbar, Hero, Features, FAQ
+└── seller/               # ProfileCompletionBanner
 
 lib/
-├── commission/engine.ts  # Moteur commissions (CRITIQUE)
+├── commission/engine.ts  # Moteur commissions (CRITIQUE — voir section 7)
 ├── stripe-connect.ts     # Setup Stripe Connect
-├── payout-service.ts     # Orchestration payouts
+├── payout-service.ts     # Orchestration payouts + getSellerWallet()
 ├── admin.ts              # Admin email whitelist
 ├── sql-sanitize.ts       # Protection injection SQL
 └── analytics/tinybird.ts # API Tinybird
+
+scripts/
+├── test-recurring.ts       # 30 tests — scenarios core recurring
+├── test-recurring-edge.ts  # 47 tests — edge cases (limites, concurrence, devises)
+├── test-recurring-ui.ts    # 69 tests — integrite donnees UI (dashboards, wallet, payouts)
+└── [autres]                # migrations, diagnostics, infra tests
 ```
 
 ---
@@ -106,16 +113,31 @@ Feedback (standalone) → user feedback avec attachments
 | Modele | Role |
 |--------|------|
 | **Workspace** | Tenant startup (1 par startup) |
-| **Mission** | Programme d'affiliation avec rewards |
-| **Seller** | Affilie avec stripe_connect_id, payout_method |
+| **Mission** | Programme d'affiliation avec rewards (sale, lead, recurring) |
+| **Seller** | Affilie avec stripe_connect_id, payout_method, tenant_id, email |
 | **Commission** | Ledger: gross/net/commission/platform_fee, status, hold_days |
-| **Customer** | Attribution first-click permanente |
+| **SellerBalance** | Solde agrege: balance, pending, due, paid_total |
+| **Customer** | Attribution first-click permanente (external_id = Stripe customer ID) |
 | **Feedback** | Feedback utilisateur MVP (message, attachments, voice, status) |
+
+### Champs Commission (recurring)
+```
+sale_id          String @unique   — checkout session ID ou invoice ID
+subscription_id  String?          — Stripe subscription ID (index)
+recurring_month  Int?             — numero du mois (1, 2, 3...)
+recurring_max    Int?             — limite max de mois (null = lifetime)
+commission_source CommissionSource — LEAD | SALE | RECURRING
+hold_days        Int @default(30) — jours avant maturation
+matured_at       DateTime?        — date de passage PROCEED
+startup_payment_status String?    — UNPAID | PAID
+```
 
 ### Enums critiques
 ```
 CommissionStatus: PENDING → PROCEED → COMPLETE
+CommissionSource: LEAD, SALE, RECURRING
 SellerStatus: PENDING, APPROVED, BANNED
+EnrollmentStatus: PENDING, APPROVED, REJECTED
 MissionVisibility: PUBLIC, PRIVATE, INVITE_ONLY
 PayoutMethod: STRIPE_CONNECT, PAYPAL, IBAN, PLATFORM
 FeedbackStatus: NEW, REVIEWED, RESOLVED, ARCHIVED
@@ -152,24 +174,40 @@ SELLER: Signup → Auto-create Seller → /seller/onboarding (4 etapes) → /sel
 
 ### Attribution (first-click)
 - Priorite webhook: `session.metadata.tracClickId` → `client_reference_id` → Customer lookup
+- Pour renewals (invoice.paid): attribution via Customer table (link_id, affiliate_id)
 - Une fois set sur Customer, jamais ecrase
 
 ---
 
 ## 7. COMMISSIONS
 
+### Moteur — `lib/commission/engine.ts`
+
+| Fonction | Role |
+|----------|------|
+| `parseReward()` | Parse "5€" ou "10%" en structure {type, value} |
+| `calculateCommission()` | Calcule montant commission (% ou flat) |
+| `createCommission()` | Cree commission PENDING avec support recurring + safety net |
+| `countRecurringCommissions()` | Compte commissions par subscription_id (enforcement limite) |
+| `handleClawback()` | Supprime commission sur refund, applique solde negatif si COMPLETE |
+| `updateSellerBalance()` | Recalcule SellerBalance depuis aggregats Commission par status |
+| `findSellerForSale()` | Trouve seller par attribution click (link_id ou sellerId) |
+| `matureCommissions()` | Mature PENDING → PROCEED apres expiration hold_days |
+| `getMissionCommissionConfig()` | Config multi-commission (Lead, Sale, Recurring) |
+
 ### Calcul
 ```
 PERCENTAGE: commission = netAmount * (value / 100)
 FIXED: commission = value (en centimes)
 Platform fee: TOUJOURS 15% du net
+Guard: grossAmount <= 0 → skip (trials, credits, ajustements)
 ```
 
 ### Lifecycle
 ```
 PENDING (hold) → PROCEED (mature) → COMPLETE (paid)
-     ↓ refund        ↓ refund
-   DELETE      DELETE + negative balance
+     ↓ refund        ↓ refund            ↓ refund
+   DELETE           DELETE          DELETE + negative balance
 ```
 
 ### Hold periods
@@ -179,9 +217,68 @@ PENDING (hold) → PROCEED (mature) → COMPLETE (paid)
 | SALE | 30j | Protection chargebacks |
 | RECURRING | 30j | Protection annulations |
 
+### Mode RECURRING — Flux complet
+```
+1. checkout.session.completed (session.subscription present)
+   → Commission RECURRING mois 1 (recurringReward, pas saleReward)
+   → subscription_id tracke, recurring_max = mission config
+
+2. invoice.paid (renouvellement mois 2, 3... N)
+   → Verifie subscription_id traque (existingCount > 0)
+   → Verifie limite: existingCount < recurringMax
+   → recurring_month = existingCount + 1 (DB-based, pas parse du numero facture)
+   → Attribution via Customer table (pas besoin du clickId)
+
+3. customer.subscription.deleted (annulation)
+   → Supprime toutes les commissions PENDING du subscription_id
+   → Recalcule SellerBalance
+   → Les commissions PROCEED/COMPLETE sont preservees
+
+4. charge.refunded (remboursement)
+   → Strategie 1: lookup via checkout session (one-time + mois 1)
+   → Strategie 2: fallback via charge.invoice (renouvellements)
+   → PENDING/PROCEED → delete
+   → COMPLETE → delete + negative balance
+```
+
+### Clawback — Ordre d'operations
+```
+1. Sauvegarder clawbackAmount (si COMPLETE)
+2. Supprimer la commission
+3. updateSellerBalance() — recalcule depuis aggregats
+4. Si COMPLETE: decrement balance (applique le negatif APRES recalcul)
+```
+> **CRITIQUE** : Le decrement doit etre APRES updateSellerBalance(), sinon le recalcul ecrase le solde negatif.
+
 ---
 
-## 8. PAIEMENTS
+## 8. WEBHOOK STRIPE — `app/api/webhooks/[endpointId]/route.ts`
+
+### Events traites (4 requis)
+| Event | Action |
+|-------|--------|
+| `checkout.session.completed` | Attribution + commission SALE ou RECURRING mois 1 |
+| `invoice.paid` | Commission RECURRING mois 2+ (renouvellements) |
+| `charge.refunded` | Clawback (dual strategy: session + invoice) |
+| `customer.subscription.deleted` | Suppression PENDING + recalcul balance |
+
+### Configuration startup
+La startup doit configurer dans son dashboard Stripe :
+- Endpoint URL: fourni par Traaaction
+- Events: les 4 ci-dessus
+- Metadata obligatoire: `tracClickId` dans session metadata
+- Mode: `payment` (one-time) ou `subscription` (abonnement)
+
+### Guards
+- `grossAmount <= 0` → skip (trials, credits, ajustements)
+- `subscriptionId` absent sur invoice → skip recurring
+- `existingCount === 0` sur invoice → abonnement non traque → skip
+- `existingCount >= recurringMax` → limite atteinte → skip
+- Idempotence via `sale_id` unique (upsert)
+
+---
+
+## 9. PAIEMENTS
 
 ### Flux 1: Client → Startup
 ```
@@ -205,9 +302,9 @@ Startup selectionne commissions PROCEED+UNPAID
 
 ---
 
-## 9. MIDDLEWARE (CRITIQUE)
+## 10. MIDDLEWARE (CRITIQUE)
 
-**Fichier**: `middleware.ts` (~900 lignes, Edge runtime)
+**Fichier**: `middleware.ts` (~940 lignes, Edge runtime)
 
 Responsabilites:
 1. Rate limiting (Redis sliding window)
@@ -215,10 +312,11 @@ Responsabilites:
 3. First-party tracking (CNAME cloaking)
 4. Session refresh Supabase
 5. Workspace/Seller isolation
+6. Vercel preview domains autorises
 
 ---
 
-## 10. FONCTIONNALITES COMPLETEES
+## 11. FONCTIONNALITES COMPLETEES
 
 ### Core
 - [x] Migration Partner → Seller (100%)
@@ -228,6 +326,23 @@ Responsabilites:
 - [x] Stripe Connect depuis Wallet
 - [x] Activity Feed avec attribution seller
 - [x] Messagerie startup ↔ seller
+
+### Commissions
+- [x] Mode SALE (one-time) — flat + percentage
+- [x] Mode LEAD — flat uniquement
+- [x] Mode RECURRING — abonnements avec limite en mois ou lifetime
+- [x] Multi-commission par mission (Sale + Recurring configurables independamment)
+- [x] UI creation mission avec toggle recurring dans la carte Sale
+- [x] Clawback dual strategy (session + invoice)
+- [x] Negative balance sur refund COMPLETE
+- [x] Guard grossAmount <= 0 (trials, credits)
+- [x] Annulation abonnement → suppression PENDING
+- [x] 146 tests automatises (core + edge + UI)
+
+### Integration page
+- [x] Guide Stripe metadata (mode payment + subscription)
+- [x] WebhookManager avec 4 events requis
+- [x] Export markdown AI avec documentation complete
 
 ### i18n (FR/EN/ES)
 - [x] Toutes pages landing, dashboard, seller
@@ -240,10 +355,12 @@ Responsabilites:
 - [x] Seller settings redesign (Apple-like)
 - [x] Profile completion bar (glass-morphic)
 - [x] Integration page redesign
+- [x] Customer detail page avec infos abonnement
 
 ### Securite
 - [x] SQL injection fix (lib/sql-sanitize.ts)
-- [x] Hold days: SALE/RECURRING 7→30 jours
+- [x] Hold days: SALE/RECURRING 30 jours, LEAD 3 jours
+- [x] Idempotence webhook via sale_id unique
 
 ### MVP Features
 - [x] **Feedback System** (Fevrier 2026)
@@ -256,7 +373,7 @@ Responsabilites:
 
 ---
 
-## 11. REGLES METIER CRITIQUES
+## 12. REGLES METIER CRITIQUES
 
 | Regle | Detail |
 |-------|--------|
@@ -267,10 +384,17 @@ Responsabilites:
 | Wallet → Stripe | Solde NON transferable, gains futurs only |
 | Cookie tracking | 90 jours |
 | Admin access | Email whitelist (`lib/admin.ts`) |
+| Recurring mois 1 | Commission RECURRING (pas SALE) si subscription |
+| Recurring limite | DB-based (count), pas parse du numero facture |
+| Recurring lifetime | `recurringMax = null` → pas de limite |
+| One-time + subscription | Un produit one-time = SALE, un abonnement = RECURRING |
+| Annulation abo | Supprime PENDING, preserve PROCEED/COMPLETE |
+| Refund COMPLETE | Supprime commission + applique solde negatif |
+| grossAmount <= 0 | Skip commission (trials, credits, ajustements) |
 
 ---
 
-## 12. COMMANDES
+## 13. COMMANDES
 
 ```bash
 npm run dev              # Dev server
@@ -280,9 +404,16 @@ npm run db:generate      # Generate Prisma client
 npm run lint             # ESLint
 ```
 
+### Tests recurring
+```bash
+npx tsx scripts/test-recurring.ts       # 30 tests core
+npx tsx scripts/test-recurring-edge.ts  # 47 tests edge cases
+npx tsx scripts/test-recurring-ui.ts    # 69 tests UI data integrity
+```
+
 ---
 
-## 13. SECURITE
+## 14. SECURITE
 
 | Aspect | Implementation |
 |--------|---------------|
@@ -292,6 +423,8 @@ npm run lint             # ESLint
 | Webhooks | Signature Stripe HMAC par workspace |
 | SQL Injection | Sanitization Tinybird (`lib/sql-sanitize.ts`) |
 | Admin | Email whitelist |
+| Idempotence | sale_id unique sur Commission (upsert) |
+| Recurring safety | countRecurringCommissions() + guard dans createCommission() |
 
 ---
 
