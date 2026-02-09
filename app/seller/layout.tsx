@@ -15,11 +15,15 @@ import {
     Menu,
     X,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Search,
+    FolderOpen,
+    Crown
 } from 'lucide-react'
 import ProfileCompletionBanner from '@/components/seller/ProfileCompletionBanner'
 import FeedbackWidget from '@/components/FeedbackWidget'
 import { getMySellerProfile } from '@/app/actions/sellers'
+import { getMyOrganizations } from '@/app/actions/organization-actions'
 
 // ==========================================
 // DESIGN SYSTEM - TRAAACTION SELLER
@@ -50,6 +54,7 @@ export default function SellerLayout({
         return <>{children}</>
     }
     const [profile, setProfile] = useState<{ name: string; email: string; avatarUrl: string | null; hasStripeConnect: boolean } | null>(null)
+    const [managedOrgs, setManagedOrgs] = useState<{ id: string; name: string; status: string }[]>([])
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isCollapsed, setIsCollapsed] = useState(false)
     const [isHydrated, setIsHydrated] = useState(false)
@@ -70,7 +75,7 @@ export default function SellerLayout({
         localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(newState))
     }
 
-    // Load profile data for sidebar
+    // Load profile data + managed orgs for sidebar
     useEffect(() => {
         async function loadProfile() {
             try {
@@ -87,7 +92,18 @@ export default function SellerLayout({
                 console.error('Failed to load profile for sidebar:', err)
             }
         }
+        async function loadOrgs() {
+            try {
+                const result = await getMyOrganizations()
+                if (result.success && result.led) {
+                    setManagedOrgs(result.led.filter((o: any) => o.status === 'ACTIVE').map((o: any) => ({ id: o.id, name: o.name, status: o.status })))
+                }
+            } catch (err) {
+                console.error('Failed to load orgs for sidebar:', err)
+            }
+        }
         loadProfile()
+        loadOrgs()
     }, [])
 
     // Close mobile menu on escape key
@@ -117,6 +133,10 @@ export default function SellerLayout({
     const isActive = (href: string) => {
         if (href === '/seller') {
             return pathname === '/seller' || pathname.startsWith('/seller/programs')
+        }
+        // Organizations browse should not match /seller/organizations/my or /seller/organizations/apply
+        if (href === '/seller/organizations') {
+            return pathname === '/seller/organizations'
         }
         return pathname === href || pathname.startsWith(href + '/')
     }
@@ -195,7 +215,16 @@ export default function SellerLayout({
                 <div className="space-y-1">
                     <NavItem href="/seller" icon={Home} label="Overview" collapsed={collapsed} />
                     <NavItem href="/seller/marketplace" icon={Store} label="Marketplace" collapsed={collapsed} />
-                    <NavItem href="/seller/organizations" icon={Users} label="Organizations" collapsed={collapsed} />
+                </div>
+
+                {/* ORGANIZATIONS Section */}
+                <SectionLabel collapsed={collapsed}>Organizations</SectionLabel>
+                <div className="space-y-1">
+                    <NavItem href="/seller/organizations" icon={Search} label="Browse" collapsed={collapsed} />
+                    <NavItem href="/seller/organizations/my" icon={FolderOpen} label="My Orgs" collapsed={collapsed} />
+                    {managedOrgs.map(org => (
+                        <NavItem key={org.id} href={`/seller/manage/${org.id}`} icon={Crown} label={org.name} collapsed={collapsed} />
+                    ))}
                 </div>
 
                 {/* GAINS Section - Conditional: Stripe Connect = Payouts, No Stripe = Wallet */}

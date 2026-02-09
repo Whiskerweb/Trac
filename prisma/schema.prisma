@@ -598,15 +598,22 @@ model SellerBalance {
 
 /// Seller organization — leader manages a group of sellers
 model Organization {
-  id          String             @id @default(cuid())
-  name        String
-  description String?
-  logo_url    String?
+  id                 String                  @id @default(cuid())
+  name               String
+  description        String?
+  logo_url           String?
   /// Seller.id of the organization leader
-  leader_id   String
-  status      OrganizationStatus @default(PENDING)
-  created_at  DateTime           @default(now())
-  updated_at  DateTime           @updatedAt
+  leader_id          String
+  status             OrganizationStatus      @default(PENDING)
+  visibility         OrganizationVisibility  @default(PUBLIC)
+  slug               String?                 @unique
+  invite_code        String?                 @unique
+  /// Why the leader wants to create this org (admin review)
+  motivation         String?
+  /// Expected audience size: "< 10", "10-50", "50-200", "200+"
+  estimated_audience String?
+  created_at         DateTime                @default(now())
+  updated_at         DateTime                @updatedAt
 
   Leader   Seller               @relation("OrgLeader", fields: [leader_id], references: [id])
   Members  OrganizationMember[]
@@ -865,6 +872,15 @@ enum OrganizationStatus {
   ACTIVE
   /// Suspended by admin
   SUSPENDED
+}
+
+enum OrganizationVisibility {
+  /// Listed in browse, anyone can join
+  PUBLIC
+  /// Listed in browse, approval needed to join
+  PRIVATE
+  /// Hidden from browse, invite code only
+  INVITE_ONLY
 }
 
 enum OrgMemberStatus {

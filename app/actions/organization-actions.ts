@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
+import { nanoid } from 'nanoid'
 
 // =============================================
 // ORGANIZATION SERVER ACTIONS
@@ -24,24 +25,56 @@ async function getSellerForCurrentUser() {
 // =============================================
 
 /**
+ * Generate a URL-safe slug from a name, ensuring uniqueness
+ */
+function generateSlug(name: string): string {
+    return name
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 40)
+}
+
+async function ensureUniqueSlug(baseSlug: string): Promise<string> {
+    let slug = baseSlug
+    let attempt = 0
+    while (true) {
+        const existing = await prisma.organization.findUnique({ where: { slug } })
+        if (!existing) return slug
+        attempt++
+        slug = `${baseSlug}-${attempt}`
+    }
+}
+
+/**
  * A seller applies to create an organization (pending admin approval)
  */
-export async function applyToCreateOrg({ name, description, logo_url }: {
+export async function applyToCreateOrg({ name, description, motivation, estimated_audience }: {
     name: string
     description?: string
-    logo_url?: string
+    motivation?: string
+    estimated_audience?: string
 }) {
     try {
         const seller = await getSellerForCurrentUser()
         if (!seller) return { success: false, error: 'Not authenticated or not an approved seller' }
 
+        const slug = await ensureUniqueSlug(generateSlug(name))
+        const invite_code = nanoid(12)
+
         const org = await prisma.organization.create({
             data: {
                 name,
                 description: description || null,
-                logo_url: logo_url || null,
+                logo_url: null,
                 leader_id: seller.id,
                 status: 'PENDING',
+                visibility: 'PUBLIC',
+                slug,
+                invite_code,
+                motivation: motivation || null,
+                estimated_audience: estimated_audience || null,
             }
         })
 
@@ -202,20 +235,36 @@ export async function inviteMemberToOrg(orgId: string, sellerEmail: string) {
 }
 
 /**
- * A seller applies to join an organization
+ * A seller applies to join an organization.
+ * PUBLIC → auto-approve + auto-enroll in missions.
+ * PRIVATE → PENDING (needs leader approval).
+ * INVITE_ONLY → rejected (must use invite code).
  */
 export async function applyToJoinOrg(orgId: string) {
     try {
         const seller = await getSellerForCurrentUser()
         if (!seller) return { success: false, error: 'Not authenticated' }
 
-        const org = await prisma.organization.findUnique({ where: { id: orgId } })
+        const org = await prisma.organization.findUnique({
+            where: { id: orgId },
+            include: {
+                Members: { where: { status: 'ACTIVE' }, include: { Seller: true } },
+                Missions: { where: { status: 'ACCEPTED' }, include: { Mission: true } },
+            }
+        })
         if (!org || org.status !== 'ACTIVE') {
             return { success: false, error: 'Organization not found or not active' }
         }
         if (org.leader_id === seller.id) {
             return { success: false, error: 'You are already the leader of this organization' }
         }
+        if (org.visibility === 'INVITE_ONLY') {
+            return { success: false, error: 'This organization is invite-only. Use an invite link.' }
+        }
+
+        // PUBLIC = auto-approve, PRIVATE = pending
+        const autoApprove = org.visibility === 'PUBLIC'
+        const status = autoApprove ? 'ACTIVE' : 'PENDING'
 
         const membership = await prisma.organizationMember.upsert({
             where: {
@@ -227,13 +276,24 @@ export async function applyToJoinOrg(orgId: string) {
             create: {
                 organization_id: orgId,
                 seller_id: seller.id,
-                status: 'PENDING',
-                invited_by: null, // Self-application
+                status,
+                invited_by: null,
             },
             update: {} // No-op if already exists
         })
 
-        return { success: true, membership }
+        // If auto-approved, enroll in all accepted missions
+        if (autoApprove && membership.status === 'ACTIVE' && seller.user_id) {
+            for (const orgMission of org.Missions) {
+                await enrollSingleMemberInMission(
+                    seller as { id: string; user_id: string },
+                    orgMission.Mission,
+                    orgMission.id
+                )
+            }
+        }
+
+        return { success: true, membership, autoApproved: autoApprove }
     } catch (error) {
         console.error('[Org] Failed to apply to org:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -546,17 +606,29 @@ export async function getOrgMissionProposalsForLeader() {
 // =============================================
 
 /**
- * Get all active organizations (for sellers to browse/apply)
+ * Get all active organizations (for sellers to browse/apply).
+ * Excludes INVITE_ONLY orgs. Supports search.
  */
-export async function getActiveOrganizations() {
+export async function getActiveOrganizations(params?: { search?: string }) {
     try {
         const seller = await getSellerForCurrentUser()
         if (!seller) return { success: false, error: 'Not authenticated' }
 
+        const where: any = {
+            status: 'ACTIVE',
+            visibility: { not: 'INVITE_ONLY' },
+        }
+        if (params?.search) {
+            where.OR = [
+                { name: { contains: params.search, mode: 'insensitive' } },
+                { description: { contains: params.search, mode: 'insensitive' } },
+            ]
+        }
+
         const organizations = await prisma.organization.findMany({
-            where: { status: 'ACTIVE' },
+            where,
             include: {
-                Leader: { select: { name: true, email: true } },
+                Leader: { select: { id: true, name: true, email: true } },
                 _count: { select: { Members: { where: { status: 'ACTIVE' } }, Missions: { where: { status: 'ACCEPTED' } } } },
             },
             orderBy: { created_at: 'desc' }
@@ -610,6 +682,324 @@ export async function getActiveOrganizationsForStartup() {
     } catch (error) {
         console.error('[Org] Failed to get organizations for startup:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+// =============================================
+// SELLER: Organization Detail (by slug)
+// =============================================
+
+/**
+ * Get organization detail page data by slug (public-facing)
+ */
+export async function getOrganizationBySlug(slug: string) {
+    try {
+        const seller = await getSellerForCurrentUser()
+        if (!seller) return { success: false, error: 'Not authenticated' }
+
+        const org = await prisma.organization.findUnique({
+            where: { slug },
+            include: {
+                Leader: { select: { id: true, name: true, email: true } },
+                Members: {
+                    where: { status: 'ACTIVE' },
+                    include: { Seller: { select: { id: true, name: true, email: true } } },
+                },
+                Missions: {
+                    where: { status: 'ACCEPTED' },
+                    include: { Mission: { select: { id: true, title: true, status: true, target_url: true, reward: true } } },
+                },
+                _count: { select: { Members: { where: { status: 'ACTIVE' } }, Missions: { where: { status: 'ACCEPTED' } } } },
+            }
+        })
+        if (!org || (org.status !== 'ACTIVE' && org.leader_id !== seller.id)) {
+            return { success: false, error: 'Organization not found' }
+        }
+
+        // Determine user's relationship to this org
+        const isLeader = org.leader_id === seller.id
+        const membership = await prisma.organizationMember.findUnique({
+            where: {
+                organization_id_seller_id: {
+                    organization_id: org.id,
+                    seller_id: seller.id,
+                }
+            }
+        })
+
+        return {
+            success: true,
+            organization: org,
+            isLeader,
+            membershipStatus: isLeader ? 'LEADER' as const : (membership?.status || null),
+        }
+    } catch (error) {
+        console.error('[Org] Failed to get org by slug:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+/**
+ * Join an organization by invite code (works for any visibility including INVITE_ONLY)
+ */
+export async function joinOrgByInviteCode(code: string) {
+    try {
+        const seller = await getSellerForCurrentUser()
+        if (!seller) return { success: false, error: 'Not authenticated' }
+
+        const org = await prisma.organization.findUnique({
+            where: { invite_code: code },
+            include: {
+                Missions: { where: { status: 'ACCEPTED' }, include: { Mission: true } },
+            }
+        })
+        if (!org || org.status !== 'ACTIVE') {
+            return { success: false, error: 'Invalid or expired invite code' }
+        }
+        if (org.leader_id === seller.id) {
+            return { success: false, error: 'You are already the leader' }
+        }
+
+        // Auto-approve via invite code
+        const membership = await prisma.organizationMember.upsert({
+            where: {
+                organization_id_seller_id: {
+                    organization_id: org.id,
+                    seller_id: seller.id,
+                }
+            },
+            create: {
+                organization_id: org.id,
+                seller_id: seller.id,
+                status: 'ACTIVE',
+                invited_by: org.leader_id,
+            },
+            update: {
+                status: 'ACTIVE',
+                invited_by: org.leader_id,
+            }
+        })
+
+        // Enroll in all accepted missions
+        if (seller.user_id) {
+            for (const orgMission of org.Missions) {
+                await enrollSingleMemberInMission(
+                    seller as { id: string; user_id: string },
+                    orgMission.Mission,
+                    orgMission.id
+                )
+            }
+        }
+
+        return { success: true, membership, organization: { id: org.id, name: org.name, slug: org.slug } }
+    } catch (error) {
+        console.error('[Org] Failed to join by invite code:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+/**
+ * Leader updates organization settings (name, description, visibility)
+ */
+export async function updateOrganizationSettings(orgId: string, data: {
+    name?: string
+    description?: string
+    visibility?: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
+}) {
+    try {
+        const seller = await getSellerForCurrentUser()
+        if (!seller) return { success: false, error: 'Not authenticated' }
+
+        const org = await prisma.organization.findUnique({ where: { id: orgId } })
+        if (!org || org.leader_id !== seller.id) {
+            return { success: false, error: 'Only the leader can update settings' }
+        }
+
+        const updateData: any = {}
+        if (data.name && data.name !== org.name) {
+            updateData.name = data.name
+            updateData.slug = await ensureUniqueSlug(generateSlug(data.name))
+        }
+        if (data.description !== undefined) updateData.description = data.description || null
+        if (data.visibility) updateData.visibility = data.visibility
+
+        const updated = await prisma.organization.update({
+            where: { id: orgId },
+            data: updateData,
+        })
+
+        return { success: true, organization: updated }
+    } catch (error) {
+        console.error('[Org] Failed to update settings:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+/**
+ * Get organization stats for organizer dashboard
+ */
+export async function getOrganizationStats(orgId: string) {
+    try {
+        const seller = await getSellerForCurrentUser()
+        if (!seller) return { success: false, error: 'Not authenticated' }
+
+        const org = await prisma.organization.findUnique({ where: { id: orgId } })
+        if (!org || org.leader_id !== seller.id) {
+            return { success: false, error: 'Only the leader can view stats' }
+        }
+
+        const [memberCount, missionCount, commissions] = await Promise.all([
+            prisma.organizationMember.count({
+                where: { organization_id: orgId, status: 'ACTIVE' }
+            }),
+            prisma.organizationMission.count({
+                where: { organization_id: orgId, status: 'ACCEPTED' }
+            }),
+            prisma.commission.findMany({
+                where: { organization_mission_id: { not: null }, org_parent_commission_id: null },
+                select: { commission_amount: true, status: true, organization_mission_id: true },
+            }),
+        ])
+
+        // Filter commissions to only those belonging to this org's missions
+        const orgMissions = await prisma.organizationMission.findMany({
+            where: { organization_id: orgId },
+            select: { id: true }
+        })
+        const orgMissionIds = new Set(orgMissions.map(m => m.id))
+        const orgCommissions = commissions.filter(c => c.organization_mission_id && orgMissionIds.has(c.organization_mission_id))
+
+        const totalRevenue = orgCommissions.reduce((sum, c) => sum + c.commission_amount, 0)
+        const pendingRevenue = orgCommissions.filter(c => c.status === 'PENDING').reduce((sum, c) => sum + c.commission_amount, 0)
+
+        return {
+            success: true,
+            stats: {
+                memberCount,
+                missionCount,
+                totalCommissions: orgCommissions.length,
+                totalRevenue,
+                pendingRevenue,
+            }
+        }
+    } catch (error) {
+        console.error('[Org] Failed to get org stats:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+/**
+ * Get org commissions for the organizer dashboard
+ */
+export async function getOrganizationCommissions(orgId: string) {
+    try {
+        const seller = await getSellerForCurrentUser()
+        if (!seller) return { success: false, error: 'Not authenticated' }
+
+        const org = await prisma.organization.findUnique({ where: { id: orgId } })
+        if (!org || org.leader_id !== seller.id) {
+            return { success: false, error: 'Only the leader can view commissions' }
+        }
+
+        const orgMissions = await prisma.organizationMission.findMany({
+            where: { organization_id: orgId },
+            select: { id: true }
+        })
+        const orgMissionIds = orgMissions.map(m => m.id)
+
+        const commissions = await prisma.commission.findMany({
+            where: {
+                organization_mission_id: { in: orgMissionIds },
+                org_parent_commission_id: null, // exclude leader cuts from list
+            },
+            include: {
+                Seller: { select: { name: true, email: true } },
+            },
+            orderBy: { created_at: 'desc' },
+            take: 100,
+        })
+
+        // Fetch mission titles for display
+        const missionIds = [...new Set(commissions.map(c => c.program_id))]
+        const missions = await prisma.mission.findMany({
+            where: { id: { in: missionIds } },
+            select: { id: true, title: true }
+        })
+        const missionMap = new Map(missions.map(m => [m.id, m.title]))
+
+        const commissionsWithMission = commissions.map(c => ({
+            ...c,
+            missionTitle: missionMap.get(c.program_id) || '-',
+        }))
+
+        return { success: true, commissions: commissionsWithMission }
+    } catch (error) {
+        console.error('[Org] Failed to get org commissions:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+/**
+ * Get public org data by slug (no auth required — for public share page)
+ */
+export async function getPublicOrganization(slug: string) {
+    try {
+        const org = await prisma.organization.findUnique({
+            where: { slug },
+            include: {
+                Leader: { select: { name: true } },
+                _count: { select: { Members: { where: { status: 'ACTIVE' } }, Missions: { where: { status: 'ACCEPTED' } } } },
+            }
+        })
+        if (!org || org.status !== 'ACTIVE') {
+            return { success: false, error: 'Organization not found' }
+        }
+        return {
+            success: true,
+            organization: {
+                id: org.id,
+                name: org.name,
+                description: org.description,
+                visibility: org.visibility,
+                slug: org.slug,
+                leaderName: org.Leader?.name,
+                memberCount: org._count.Members,
+                missionCount: org._count.Missions,
+            }
+        }
+    } catch (error) {
+        return { success: false, error: 'Unknown error' }
+    }
+}
+
+/**
+ * Get org info by invite code (for invite landing page, no auth required)
+ */
+export async function getOrgByInviteCode(code: string) {
+    try {
+        const org = await prisma.organization.findUnique({
+            where: { invite_code: code },
+            include: {
+                Leader: { select: { name: true } },
+                _count: { select: { Members: { where: { status: 'ACTIVE' } } } },
+            }
+        })
+        if (!org || org.status !== 'ACTIVE') {
+            return { success: false, error: 'Invalid or expired invite code' }
+        }
+        return {
+            success: true,
+            organization: {
+                id: org.id,
+                name: org.name,
+                description: org.description,
+                slug: org.slug,
+                leaderName: org.Leader?.name,
+                memberCount: org._count.Members,
+            }
+        }
+    } catch (error) {
+        return { success: false, error: 'Unknown error' }
     }
 }
 

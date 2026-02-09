@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Building2, Users, Check, Ban, ChevronRight, RotateCcw } from 'lucide-react'
+import { Loader2, Building2, Users, Check, Ban, ChevronRight, RotateCcw, Globe, Lock, KeyRound, MessageSquare } from 'lucide-react'
 import { getAllOrgs, approveOrg, suspendOrg, reactivateOrg } from '@/app/actions/admin-org-actions'
 
 function StatusBadge({ status }: { status: string }) {
@@ -92,9 +92,24 @@ export default function AdminOrganizationsPage() {
                                         <Users className="w-5 h-5 text-gray-400" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-white">{org.name}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-medium text-white">{org.name}</p>
+                                            {org.visibility && (
+                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                                    org.visibility === 'PUBLIC' ? 'bg-green-500/20 text-green-400' :
+                                                    org.visibility === 'PRIVATE' ? 'bg-amber-500/20 text-amber-400' :
+                                                    'bg-purple-500/20 text-purple-400'
+                                                }`}>
+                                                    {org.visibility}
+                                                </span>
+                                            )}
+                                            {org.slug && (
+                                                <span className="text-[10px] text-gray-500">/org/{org.slug}</span>
+                                            )}
+                                        </div>
                                         <p className="text-xs text-gray-400">
                                             Leader: {org.Leader?.name || org.Leader?.email} · {org._count?.Members || 0} members · {org._count?.Missions || 0} missions
+                                            {org.estimated_audience && <> · Audience: {org.estimated_audience}</>}
                                         </p>
                                     </div>
                                 </div>
@@ -139,6 +154,18 @@ export default function AdminOrganizationsPage() {
                             </div>
                             {org.description && (
                                 <p className="text-sm text-gray-500 mt-2 line-clamp-1">{org.description}</p>
+                            )}
+                            {/* Questionnaire fields (shown for PENDING) */}
+                            {org.status === 'PENDING' && org.motivation && (
+                                <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+                                    <div className="flex items-start gap-2">
+                                        <MessageSquare className="w-3.5 h-3.5 text-gray-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Motivation</p>
+                                            <p className="text-xs text-gray-300 line-clamp-3">{org.motivation}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     ))}
