@@ -14,6 +14,7 @@ const DEFAULT_ADMIN_EMAILS = [
     'lucas@traaaction.com',
     'admin@traaaction.com',
     'lucas.music.manager@gmail.com',
+    'contact.traaaction@gmail.com',
 ]
 
 /**
