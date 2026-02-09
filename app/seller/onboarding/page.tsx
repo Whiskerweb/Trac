@@ -42,15 +42,25 @@ export default function SellerOnboardingPage() {
     const [payoutChoice, setPayoutChoice] = useState<'stripe' | 'wallet' | null>(null)
 
     useEffect(() => {
-        async function loadStatus() {
+        async function loadStatus(retries = 3) {
             const result = await getOnboardingStatus('current-user')
 
             if (!result.success || !result.hasSeller || !result.seller) {
-                router.push('/auth/choice')
+                // Retry: seller may have just been created in the auth callback
+                if (retries > 0) {
+                    console.log(`[Seller Onboarding] Seller not found yet, retrying in 1s... (${retries} left)`)
+                    await new Promise(r => setTimeout(r, 1000))
+                    return loadStatus(retries - 1)
+                }
+                console.log('[Seller Onboarding] Seller not found after retries, redirecting')
+                router.push('/login')
                 return
             }
 
             setSellerId(result.seller.id)
+
+            // Clean up signup role cookie (seller successfully loaded)
+            document.cookie = 'trac_signup_role=; path=/; max-age=0'
 
             const step = result.seller.onboardingStep
             if (step >= 4) {

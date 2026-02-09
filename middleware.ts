@@ -877,7 +877,13 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
         if (!user) {
             return NextResponse.redirect(new URL('/login', request.url))
         }
-        // Choice page handles role detection
+        // Safety net: if user signed up as seller but got redirected here,
+        // skip choice page and go straight to seller onboarding
+        const signupRoleChoice = request.cookies.get('trac_signup_role')?.value
+        if (signupRoleChoice === 'seller') {
+            console.log('[Middleware] 🛡️ Seller signup detected at /auth/choice, redirecting to /seller/onboarding')
+            return NextResponse.redirect(new URL('/seller/onboarding', request.url))
+        }
     }
 
     // ============================================

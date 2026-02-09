@@ -183,7 +183,7 @@ export async function signup(formData: FormData) {
     const { cookies } = await import('next/headers')
     const cookieStore = await cookies()
     cookieStore.set('trac_signup_role', role, {
-        httpOnly: true,
+        httpOnly: false, // Readable by client-side for cleanup after successful onboarding
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 60 * 60, // 1 hour
