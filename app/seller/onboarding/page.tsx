@@ -22,9 +22,13 @@ const STEPS = [
 export default function SellerOnboardingPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const isNewSignup = searchParams.get('new') === '1'
+    // Detect new signup: ?new=1 from callback OR trac_signup_role cookie from signup action
+    // Cookie check is a safety net for when callback doesn't pass ?new=1 (e.g. old code on production)
+    const hasNewParam = searchParams.get('new') === '1'
+    const hasSignupCookie = typeof document !== 'undefined' && document.cookie.includes('trac_signup_role=seller')
+    const isNewSignup = hasNewParam || hasSignupCookie
     const [currentStep, setCurrentStep] = useState(1)
-    const [loading, setLoading] = useState(!isNewSignup) // If ?new=1, show step 1 immediately
+    const [loading, setLoading] = useState(!isNewSignup) // If new signup, show step 1 immediately
     const [submitting, setSubmitting] = useState(false)
     const [sellerId, setSellerId] = useState<string | null>(null)
     const [direction, setDirection] = useState(1)
