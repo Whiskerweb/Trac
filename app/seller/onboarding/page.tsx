@@ -42,18 +42,30 @@ export default function SellerOnboardingPage() {
     const [payoutChoice, setPayoutChoice] = useState<'stripe' | 'wallet' | null>(null)
 
     useEffect(() => {
-        async function loadStatus(retries = 3) {
-            const result = await getOnboardingStatus('current-user')
+        async function loadStatus(retries = 5) {
+            let result
+            try {
+                result = await getOnboardingStatus('current-user')
+            } catch (err) {
+                console.error('[Seller Onboarding] Error loading status:', err)
+                if (retries > 0) {
+                    await new Promise(r => setTimeout(r, 2000))
+                    return loadStatus(retries - 1)
+                }
+                router.push('/seller')
+                return
+            }
 
             if (!result.success || !result.hasSeller || !result.seller) {
                 // Retry: seller may have just been created in the auth callback
+                // DB replication lag can cause the read to miss the newly created record
                 if (retries > 0) {
-                    console.log(`[Seller Onboarding] Seller not found yet, retrying in 1s... (${retries} left)`)
-                    await new Promise(r => setTimeout(r, 1000))
+                    console.log(`[Seller Onboarding] Seller not found yet (${result.error || 'no seller'}), retrying in 2s... (${retries} left)`)
+                    await new Promise(r => setTimeout(r, 2000))
                     return loadStatus(retries - 1)
                 }
-                console.log('[Seller Onboarding] Seller not found after retries, redirecting')
-                router.push('/login')
+                console.log('[Seller Onboarding] Seller not found after retries, redirecting to /seller')
+                router.push('/seller')
                 return
             }
 

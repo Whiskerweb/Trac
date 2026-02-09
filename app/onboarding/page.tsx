@@ -8,12 +8,37 @@ import { checkSlugAvailability, createWorkspaceOnboarding } from './actions'
 export default function OnboardingPage() {
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
+    const [roleChecked, setRoleChecked] = useState(false)
 
     // Form state
     const [name, setName] = useState('')
     const [slug, setSlug] = useState('')
     const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
     const [error, setError] = useState('')
+
+    // Guard: sellers should NEVER see this page
+    useEffect(() => {
+        async function checkRole() {
+            try {
+                const res = await fetch('/api/auth/workspace-check')
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.hasSeller && !data.hasWorkspace) {
+                        router.replace('/seller')
+                        return
+                    }
+                    if (data.hasWorkspace) {
+                        router.replace('/dashboard')
+                        return
+                    }
+                }
+            } catch (err) {
+                console.error('[Onboarding] Role check failed:', err)
+            }
+            setRoleChecked(true)
+        }
+        checkRole()
+    }, [router])
 
     // Auto-generate slug from name
     useEffect(() => {
@@ -75,6 +100,15 @@ export default function OnboardingPage() {
     }
 
     const isValid = name.length >= 2 && slugStatus === 'available'
+
+    // Show loading while checking if user is a seller (prevents flash of wrong page)
+    if (!roleChecked) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
