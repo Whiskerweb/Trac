@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics/tinybird'
 import { waitUntil } from '@vercel/functions'
-import { createCommission, findSellerForSale, handleClawback, getMissionCommissionConfig, countRecurringCommissions } from '@/lib/commission/engine'
+import { createCommission, findSellerForSale, handleClawback, getMissionCommissionConfig, countRecurringCommissions, updateSellerBalance } from '@/lib/commission/engine'
 import { CommissionSource } from '@/lib/generated/prisma/client'
 import { sanitizeClickId, sanitizeUUID } from '@/lib/sql-sanitize'
 
@@ -902,13 +902,15 @@ export async function POST(
                 try {
                     console.log(`[Webhook] 🔙 Processing refund for charge ${charge.id}`)
 
-                    // Find associated session via payment_intent
+                    const refundReason = charge.refunds?.data[0]?.reason || 'Customer refund'
+                    let clawbackDone = false
+
+                    // Strategy 1: Find via checkout session (one-time payments + first subscription month)
                     if (charge.payment_intent) {
                         const paymentIntentId = typeof charge.payment_intent === 'string'
                             ? charge.payment_intent
                             : charge.payment_intent.id
 
-                        // Find the session that used this payment intent
                         const sessions = await stripe.checkout.sessions.list({
                             payment_intent: paymentIntentId,
                             limit: 1
@@ -916,14 +918,26 @@ export async function POST(
 
                         if (sessions.data.length > 0) {
                             const sessionId = sessions.data[0].id
-                            await handleClawback({
-                                saleId: sessionId,
-                                reason: charge.refunds?.data[0]?.reason || 'Customer refund'
-                            })
+                            await handleClawback({ saleId: sessionId, reason: refundReason })
                             console.log(`[Webhook] ✅ Clawback processed for session ${sessionId}`)
-                        } else {
-                            console.log(`[Webhook] ⚠️ No checkout session found for payment intent ${paymentIntentId}`)
+                            clawbackDone = true
                         }
+                    }
+
+                    // Strategy 2: Find via invoice ID (recurring subscription renewals)
+                    // Recurring commissions use invoice.id as sale_id, not session.id
+                    if (!clawbackDone && charge.invoice) {
+                        const invoiceId = typeof charge.invoice === 'string'
+                            ? charge.invoice
+                            : charge.invoice.id
+
+                        await handleClawback({ saleId: invoiceId, reason: refundReason })
+                        console.log(`[Webhook] ✅ Clawback processed for invoice ${invoiceId}`)
+                        clawbackDone = true
+                    }
+
+                    if (!clawbackDone) {
+                        console.log(`[Webhook] ⚠️ No commission found to clawback for charge ${charge.id}`)
                     }
                 } catch (err) {
                     console.error('[Webhook] ❌ Clawback processing error:', err)
@@ -933,6 +947,40 @@ export async function POST(
     } else if (event.type === 'customer.subscription.deleted') {
         const subscription = event.data.object as Stripe.Subscription
         console.log(`[Webhook] Subscription ${subscription.id} cancelled for workspace ${endpoint.workspace_id}`)
+
+        waitUntil(
+            (async () => {
+                try {
+                    // Delete all PENDING commissions for this subscription
+                    // If still within the 30-day hold, the seller shouldn't be paid
+                    const deleted = await prisma.commission.deleteMany({
+                        where: {
+                            subscription_id: subscription.id,
+                            status: 'PENDING'
+                        }
+                    })
+
+                    if (deleted.count > 0) {
+                        console.log(`[Webhook] 🗑️ Deleted ${deleted.count} PENDING commission(s) for cancelled subscription ${subscription.id}`)
+
+                        // Update seller balances for affected sellers
+                        const affectedSellers = await prisma.commission.findMany({
+                            where: { subscription_id: subscription.id },
+                            select: { seller_id: true },
+                            distinct: ['seller_id']
+                        })
+
+                        for (const { seller_id } of affectedSellers) {
+                            await updateSellerBalance(seller_id)
+                        }
+                    } else {
+                        console.log(`[Webhook] ℹ️ No PENDING commissions to delete for subscription ${subscription.id}`)
+                    }
+                } catch (err) {
+                    console.error('[Webhook] ❌ Error cleaning up cancelled subscription:', err)
+                }
+            })()
+        )
     } else {
         console.log(`[Multi-Tenant Webhook] ⏭️ Ignoring event ${event.type}`)
     }

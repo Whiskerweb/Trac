@@ -167,12 +167,24 @@ await fetch('/_trac/api/track/lead', {
 });`
 
     const stripeMetadata = `// Backend - Stripe Checkout creation
+
+// One-time payment
 const session = await stripe.checkout.sessions.create({
   line_items: [...],
   mode: 'payment',
   metadata: {
     tracCustomerExternalId: user.id,  // Same ID as trackLead
     tracClickId: clickId              // Optional if lead already created
+  }
+});
+
+// Subscription (recurring)
+const session = await stripe.checkout.sessions.create({
+  line_items: [...],
+  mode: 'subscription',              // Required for recurring commissions
+  metadata: {
+    tracCustomerExternalId: user.id,
+    tracClickId: clickId
   }
 });`
 
@@ -241,6 +253,7 @@ await fetch('/_trac/api/track/lead', {
 Add tracking metadata to your checkout session:
 
 \`\`\`typescript
+// One-time payment
 const session = await stripe.checkout.sessions.create({
   line_items: [...],
   mode: 'payment',
@@ -249,14 +262,28 @@ const session = await stripe.checkout.sessions.create({
     tracClickId: clickId              // Optional if lead already created
   }
 });
+
+// Subscription (recurring)
+const session = await stripe.checkout.sessions.create({
+  line_items: [...],
+  mode: 'subscription',              // Required for recurring commissions
+  metadata: {
+    tracCustomerExternalId: user.id,
+    tracClickId: clickId
+  }
+});
 \`\`\`
+
+> **Important:** Use \`mode: 'subscription'\` for recurring products.
+> Traaaction automatically detects the subscription and tracks recurring commissions.
 
 ## Step 5: Configure Webhook
 
 Add webhook in Traaaction dashboard for Stripe events:
 - checkout.session.completed
 - invoice.paid
-- charge.refunded`
+- charge.refunded
+- customer.subscription.deleted (recommended)`
 
     const handleCopyAI = async () => {
         await navigator.clipboard.writeText(aiMarkdown)
@@ -365,6 +392,11 @@ Add webhook in Traaaction dashboard for Stripe events:
                     </p>
 
                     <CodeBlock code={stripeMetadata} filename="checkout handler" />
+
+                    <div className="mt-4 sm:mt-6 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                        <p className="text-xs sm:text-sm text-amber-800 font-medium">{t('step4.subscriptionNote')}</p>
+                        <p className="text-xs text-amber-700 mt-1">{t('step4.subscriptionNoteDesc')}</p>
+                    </div>
 
                     <p className="text-xs text-neutral-400 mt-3 sm:mt-4">
                         {t('step4.sameCustomerId')}

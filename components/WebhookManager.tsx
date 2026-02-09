@@ -297,7 +297,7 @@ export function WebhookManager({ onStatusChange }: WebhookManagerProps) {
                         Event Selection
                     </h4>
                     <div className="ml-0 sm:ml-8 space-y-2">
-                        <p className="text-xs sm:text-sm text-slate-600 mb-2 sm:mb-3">Select these 3 essential events:</p>
+                        <p className="text-xs sm:text-sm text-slate-600 mb-2 sm:mb-3">Select these 4 essential events:</p>
                         <div className="space-y-2">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 bg-white border border-slate-200 rounded-lg">
                                 <div className="w-5 h-5 bg-green-100 border-2 border-green-500 rounded flex items-center justify-center flex-shrink-0">
@@ -319,6 +319,13 @@ export function WebhookManager({ onStatusChange }: WebhookManagerProps) {
                                 </div>
                                 <code className="text-xs sm:text-sm font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded break-all">charge.refunded</code>
                                 <span className="text-xs text-slate-500">Remboursements / Clawbacks</span>
+                            </div>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 bg-white border border-slate-200 rounded-lg">
+                                <div className="w-5 h-5 bg-green-100 border-2 border-green-500 rounded flex items-center justify-center flex-shrink-0">
+                                    <Check className="w-3 h-3 text-green-600" />
+                                </div>
+                                <code className="text-xs sm:text-sm font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded break-all">customer.subscription.deleted</code>
+                                <span className="text-xs text-slate-500">Subscription cancellations</span>
                             </div>
                         </div>
                     </div>

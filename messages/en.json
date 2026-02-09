@@ -890,7 +890,9 @@
             "step4": {
                 "title": "Add Stripe metadata",
                 "description": "Include tracking metadata in your Stripe checkout session for payment attribution.",
-                "sameCustomerId": "Use the same customerExternalId as in trackLead."
+                "sameCustomerId": "Use the same customerExternalId as in trackLead.",
+                "subscriptionNote": "Subscriptions: use mode: 'subscription'",
+                "subscriptionNoteDesc": "For recurring products, Traaaction automatically detects the subscription and tracks recurring commissions month by month."
             },
             "step5": {
                 "title": "Configure webhook",

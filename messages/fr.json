@@ -890,7 +890,9 @@
             "step4": {
                 "title": "Ajouter les métadonnées Stripe",
                 "description": "Incluez les métadonnées de tracking dans votre session de paiement Stripe pour l'attribution des paiements.",
-                "sameCustomerId": "Utilisez le même customerExternalId que dans trackLead."
+                "sameCustomerId": "Utilisez le même customerExternalId que dans trackLead.",
+                "subscriptionNote": "Abonnements : utilisez mode: 'subscription'",
+                "subscriptionNoteDesc": "Pour les produits récurrents, Traaaction détecte automatiquement l'abonnement et suit les commissions récurrentes mois par mois."
             },
             "step5": {
                 "title": "Configurer le webhook",
