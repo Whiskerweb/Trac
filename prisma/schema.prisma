@@ -93,10 +93,11 @@ model Mission {
   /// Unique code for INVITE_ONLY missions (allows joining via /invite/[code])
   invite_code String? @unique
 
-  Workspace         Workspace           @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  Contents          MissionContent[]
-  MissionEnrollment MissionEnrollment[]
-  Requests          ProgramRequest[]
+  Workspace            Workspace              @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  Contents             MissionContent[]
+  MissionEnrollment    MissionEnrollment[]
+  Requests             ProgramRequest[]
+  OrganizationMissions OrganizationMission[]
 
   @@index([status])
   @@index([visibility])
@@ -109,6 +110,8 @@ model MissionEnrollment {
   user_id    String
   status     EnrollmentStatus @default(PENDING)
   link_id    String?          @unique
+  /// If enrolled via an organization
+  organization_mission_id String?
   created_at DateTime         @default(now())
   updated_at DateTime         @updatedAt
   ShortLink  ShortLink?       @relation(fields: [link_id], references: [id])
@@ -117,6 +120,7 @@ model MissionEnrollment {
   @@unique([mission_id, user_id])
   @@index([mission_id])
   @@index([user_id])
+  @@index([organization_mission_id])
 }
 
 model ShortLink {
@@ -416,6 +420,8 @@ model Seller {
   Profile             SellerProfile?
   Requests            ProgramRequest[]
   GiftCardRedemptions GiftCardRedemption[]
+  LeadOrganizations   Organization[]       @relation("OrgLeader")
+  OrgMemberships      OrganizationMember[]
 
   @@unique([program_id, email])
   @@index([email])
@@ -548,6 +554,12 @@ model Commission {
   /// Reference to batch payment
   startup_payment_id     String?
 
+  // === ORGANIZATION SPLIT ===
+  /// For leader commissions: points to the member's commission ID
+  org_parent_commission_id String?
+  /// Links to the OrganizationMission that generated this commission
+  organization_mission_id  String?
+
   created_at     DateTime        @default(now())
   updated_at     DateTime        @updatedAt
   Seller         Seller          @relation(fields: [seller_id], references: [id], onDelete: Cascade)
@@ -561,6 +573,8 @@ model Commission {
   @@index([subscription_id])
   @@index([startup_payment_status])
   @@index([link_id])
+  @@index([org_parent_commission_id])
+  @@index([organization_mission_id])
 }
 
 /// Partner Balance for tracking payouts and negative balances (clawbacks)
@@ -579,6 +593,77 @@ model SellerBalance {
 
   @@index([seller_id])
 }
+
+// === ORGANIZATION MODELS ===
+
+/// Seller organization — leader manages a group of sellers
+model Organization {
+  id          String             @id @default(cuid())
+  name        String
+  description String?
+  logo_url    String?
+  /// Seller.id of the organization leader
+  leader_id   String
+  status      OrganizationStatus @default(PENDING)
+  created_at  DateTime           @default(now())
+  updated_at  DateTime           @updatedAt
+
+  Leader   Seller               @relation("OrgLeader", fields: [leader_id], references: [id])
+  Members  OrganizationMember[]
+  Missions OrganizationMission[]
+
+  @@index([leader_id])
+  @@index([status])
+}
+
+/// Membership linking a seller to an organization
+model OrganizationMember {
+  id              String          @id @default(cuid())
+  organization_id String
+  seller_id       String
+  status          OrgMemberStatus @default(PENDING)
+  /// seller_id of the leader if invitation (null if seller applied)
+  invited_by      String?
+  created_at      DateTime        @default(now())
+
+  Organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  Seller       Seller       @relation(fields: [seller_id], references: [id])
+
+  @@unique([organization_id, seller_id])
+  @@index([seller_id])
+}
+
+/// Contract between a startup and an org for a specific mission
+model OrganizationMission {
+  id              String @id @default(cuid())
+  organization_id String
+  mission_id      String
+
+  /// Total commission rate negotiated with startup (e.g., "30%")
+  total_reward            String
+  /// Leader's cut per sale (e.g., "5%")
+  leader_reward           String
+  /// Member's cut per sale (e.g., "25%")
+  member_reward           String
+  /// Leader reward structure (FLAT or PERCENTAGE)
+  leader_reward_structure RewardStructure @default(PERCENTAGE)
+  /// Member reward structure (FLAT or PERCENTAGE)
+  member_reward_structure RewardStructure @default(PERCENTAGE)
+
+  status      OrgMissionStatus @default(PROPOSED)
+  /// workspace_id of the startup that proposed
+  proposed_by String
+  accepted_at DateTime?
+  created_at  DateTime         @default(now())
+
+  Organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  Mission      Mission      @relation(fields: [mission_id], references: [id])
+
+  @@unique([organization_id, mission_id])
+  @@index([mission_id])
+}
+
+// === DISCOUNTS ===
 
 /// Discount for dual-sided incentives - linked to Program (Workspace)
 /// Enables "{partner} vous offre {discount}%" banners
@@ -769,6 +854,35 @@ enum CommissionSource {
   SALE
   /// Commission from subscription renewal
   RECURRING
+}
+
+// === ORGANIZATION ENUMS ===
+
+enum OrganizationStatus {
+  /// Application submitted, awaiting admin validation
+  PENDING
+  /// Validated by admin, org is operational
+  ACTIVE
+  /// Suspended by admin
+  SUSPENDED
+}
+
+enum OrgMemberStatus {
+  /// Invitation or application pending leader approval
+  PENDING
+  /// Active member
+  ACTIVE
+  /// Removed by leader
+  REMOVED
+}
+
+enum OrgMissionStatus {
+  /// Startup proposed the mission to the org
+  PROPOSED
+  /// Leader accepted, members enrolled
+  ACCEPTED
+  /// Leader rejected
+  REJECTED
 }
 
 // === PAYOUT METHOD ENUMS ===

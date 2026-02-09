@@ -26,6 +26,7 @@ const navigation: NavItem[] = [
     { name: 'Feedback', href: '/admin/feedback', icon: MessageSquareText },
     { name: 'Treasury', href: '/admin/treasury', icon: Wallet },
     { name: 'Gift Cards', href: '/admin/gift-cards', icon: Gift },
+    { name: 'Organizations', href: '/admin/organizations', icon: Users },
     { name: 'Sellers', href: '/admin/sellers', icon: Users },
     { name: 'Payouts', href: '/admin/payouts', icon: CreditCard },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
