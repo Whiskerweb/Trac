@@ -893,8 +893,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
         if (!user) {
             return NextResponse.redirect(new URL('/login', request.url))
         }
-        // Safety net: if user signed up as seller but landed here due to PKCE flow issue,
-        // redirect them to the seller onboarding instead
+        // Safety net 1: cookie check (fast, no DB call)
         const signupRole = request.cookies.get('trac_signup_role')?.value
         if (signupRole === 'seller') {
             console.log('[Middleware] 🛡️ Seller signup detected via cookie, redirecting to /seller/onboarding')
@@ -902,7 +901,27 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             response.cookies.delete('trac_signup_role')
             return response
         }
-        // Allow access to onboarding - the page will handle redirect if user already has workspace
+        // Safety net 2: DB check — sellers should NEVER see startup onboarding
+        try {
+            const checkUrl = new URL('/api/auth/workspace-check', request.url)
+            const checkRes = await fetch(checkUrl, {
+                headers: { cookie: request.headers.get('cookie') || '' }
+            })
+            if (checkRes.ok) {
+                const { hasWorkspace, hasSeller } = await checkRes.json()
+                if (hasSeller && !hasWorkspace) {
+                    console.log('[Middleware] 🛡️ Seller detected at /onboarding, redirecting to /seller')
+                    return NextResponse.redirect(new URL('/seller', request.url))
+                }
+                if (hasWorkspace) {
+                    console.log('[Middleware] 🛡️ User already has workspace, redirecting to /dashboard')
+                    return NextResponse.redirect(new URL('/dashboard', request.url))
+                }
+            }
+        } catch (err) {
+            console.error('[Middleware] ⚠️ Onboarding check failed:', err)
+        }
+        // Allow access to onboarding - user has no workspace and no seller
     }
 
     if (pathname.startsWith('/marketplace')) {
