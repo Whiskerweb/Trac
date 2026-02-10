@@ -90,7 +90,7 @@ function StatPill({ icon: Icon, label, value, color }: {
 }
 
 export default function ManageOrgMembers() {
-    const { org, reload } = useOrg()
+    const { org, isLeader, reload } = useOrg()
     const [inviteEmail, setInviteEmail] = useState('')
     const [inviting, setInviting] = useState(false)
     const [inviteMsg, setInviteMsg] = useState<{ text: string; success: boolean } | null>(null)
@@ -103,6 +103,46 @@ export default function ManageOrgMembers() {
     const pendingMembers = org.Members?.filter((m: any) => m.status === 'PENDING') || []
     const activeMembers = org.Members?.filter((m: any) => m.status === 'ACTIVE') || []
     const removedMembers = org.Members?.filter((m: any) => m.status === 'REMOVED') || []
+
+    // ── Member-only read-only view ──
+    if (!isLeader) {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Members
+                    </h2>
+                    <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        {activeMembers.length}
+                    </span>
+                </div>
+                {activeMembers.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 bg-white border border-gray-100 rounded-2xl">
+                        <Users className="w-8 h-8 text-gray-300 mb-3" />
+                        <p className="text-sm text-gray-400">No active members yet</p>
+                    </div>
+                ) : (
+                    <div className="bg-white border border-gray-100/80 rounded-2xl overflow-hidden">
+                        {activeMembers.map((m: any, i: number) => (
+                            <div
+                                key={m.id}
+                                className={`flex items-center gap-3.5 px-5 py-3.5 ${
+                                    i < activeMembers.length - 1 ? 'border-b border-gray-50' : ''
+                                }`}
+                            >
+                                <MemberAvatar name={m.Seller?.name || m.Seller?.email || '?'} />
+                                <div>
+                                    <p className="text-sm font-medium text-gray-900">{m.Seller?.name || 'Unknown'}</p>
+                                    <p className="text-xs text-gray-400">{m.Seller?.email}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        )
+    }
 
     const filteredActive = useMemo(() => {
         if (!searchQuery.trim()) return activeMembers

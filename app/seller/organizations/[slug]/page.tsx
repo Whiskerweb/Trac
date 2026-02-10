@@ -180,9 +180,15 @@ export default function OrganizationDetailPage() {
                                 <Crown className="w-4 h-4" /> Manage Organization
                             </Link>
                         ) : membershipStatus === 'ACTIVE' ? (
-                            <div className="text-center">
-                                <div className="flex items-center justify-center gap-2 px-4 py-3 bg-green-50 text-green-700 rounded-xl text-sm font-medium">
-                                    <Check className="w-4 h-4" /> You are a member
+                            <div className="space-y-2">
+                                <Link
+                                    href={`/seller/manage/${org.id}`}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+                                >
+                                    <Users className="w-4 h-4" /> View Dashboard
+                                </Link>
+                                <div className="flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-xl text-xs font-medium">
+                                    <Check className="w-3.5 h-3.5" /> You are a member
                                 </div>
                             </div>
                         ) : membershipStatus === 'PENDING' ? (

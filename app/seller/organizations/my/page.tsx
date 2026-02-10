@@ -110,7 +110,7 @@ export default function MyOrganizationsPage() {
                             </h2>
                             <div className="space-y-2">
                                 {memberOrgs.map((org: any) => (
-                                    <Link key={org.id} href={`/seller/organizations/${org.slug || org.id}`}>
+                                    <Link key={org.id} href={`/seller/manage/${org.id}`}>
                                         <div className="group flex items-center justify-between px-5 py-4 bg-white border border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">

@@ -310,10 +310,19 @@ const ORG_MESSAGES: Record<string, Record<OrgLocale, (name: string, orgName: str
 /**
  * Send a localized org notification to the leader
  */
-async function notifyOrgLeader(org: { leader_id: string; name: string; Leader?: { name?: string | null } | null }, action: keyof typeof ORG_MESSAGES) {
-    const locale = await getSellerLocale(org.leader_id)
-    const message = ORG_MESSAGES[action][locale](org.Leader?.name || '', org.name)
-    await sendSupportMessage(org.leader_id, message)
+async function notifyOrgLeader(org: { leader_id: string; name: string; Leader?: { name?: string | null } | null }, action: string) {
+    const validActions = Object.keys(ORG_MESSAGES) as (keyof typeof ORG_MESSAGES)[]
+    if (!validActions.includes(action as keyof typeof ORG_MESSAGES)) {
+        console.error(`[Admin Org] Invalid notification action: ${action}`)
+        return
+    }
+    try {
+        const locale = await getSellerLocale(org.leader_id)
+        const message = ORG_MESSAGES[action as keyof typeof ORG_MESSAGES][locale](org.Leader?.name || '', org.name)
+        await sendSupportMessage(org.leader_id, message)
+    } catch (error) {
+        console.error(`[Admin Org] Failed to notify org leader:`, error)
+    }
 }
 
 // =============================================

@@ -391,6 +391,23 @@ export async function leaveOrganization(orgId: string) {
         const seller = await getSellerForCurrentUser()
         if (!seller) return { success: false, error: 'Not authenticated' }
 
+        // Fetch org to check leader + system-managed status
+        const org = await prisma.organization.findUnique({
+            where: { id: orgId },
+            select: { leader_id: true, slug: true }
+        })
+        if (!org) return { success: false, error: 'Organization not found' }
+
+        // Leaders cannot leave their own org
+        if (org.leader_id === seller.id) {
+            return { success: false, error: 'Leaders cannot leave their own organization' }
+        }
+
+        // Traaaction Top Tierce is mandatory — no one can leave
+        if (org.slug === TRAAACTION_ORG_SLUG) {
+            return { success: false, error: 'You cannot leave this organization' }
+        }
+
         const membership = await prisma.organizationMember.findUnique({
             where: {
                 organization_id_seller_id: {
@@ -845,8 +862,17 @@ export async function getOrganizationStats(orgId: string) {
         if (!seller) return { success: false, error: 'Not authenticated' }
 
         const org = await prisma.organization.findUnique({ where: { id: orgId } })
-        if (!org || org.leader_id !== seller.id) {
-            return { success: false, error: 'Only the leader can view stats' }
+        if (!org) return { success: false, error: 'Organization not found' }
+
+        // Allow leader OR active member to view stats
+        const isLeader = org.leader_id === seller.id
+        if (!isLeader) {
+            const membership = await prisma.organizationMember.findUnique({
+                where: { organization_id_seller_id: { organization_id: orgId, seller_id: seller.id } }
+            })
+            if (!membership || membership.status !== 'ACTIVE') {
+                return { success: false, error: 'Access denied' }
+            }
         }
 
         const [memberCount, missionCount, commissions] = await Promise.all([
@@ -1150,13 +1176,22 @@ async function getOrCreateTraaactionOrg(): Promise<string> {
  */
 export async function autoJoinTraaactionOrg(sellerId: string) {
     try {
-        const orgId = await getOrCreateTraaactionOrg()
+        // Verify the seller belongs to the current authenticated user
+        const currentUser = await getCurrentUser()
+        if (!currentUser) return
 
         const seller = await prisma.seller.findUnique({
             where: { id: sellerId },
             select: { id: true, user_id: true }
         })
         if (!seller?.user_id) return
+
+        if (seller.user_id !== currentUser.userId) {
+            console.error(`[Org] autoJoinTraaactionOrg: seller ${sellerId} does not belong to user ${currentUser.userId}`)
+            return
+        }
+
+        const orgId = await getOrCreateTraaactionOrg()
 
         // Upsert membership (idempotent)
         await prisma.organizationMember.upsert({

@@ -3,7 +3,7 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { useParams, usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, LayoutDashboard, Users, Briefcase, DollarSign, Settings, ArrowLeft } from 'lucide-react'
+import { Loader2, LayoutDashboard, Users, Briefcase, DollarSign, Settings, ArrowLeft, Crown } from 'lucide-react'
 import { getOrganizationDetail } from '@/app/actions/organization-actions'
 
 interface OrgContextType {
@@ -15,12 +15,18 @@ interface OrgContextType {
 const OrgContext = createContext<OrgContextType>({ org: null, isLeader: false, reload: async () => {} })
 export const useOrg = () => useContext(OrgContext)
 
-const TABS = [
+const LEADER_TABS = [
     { href: '', label: 'Overview', icon: LayoutDashboard },
     { href: '/members', label: 'Members', icon: Users },
     { href: '/missions', label: 'Missions', icon: Briefcase },
     { href: '/commissions', label: 'Commissions', icon: DollarSign },
     { href: '/settings', label: 'Settings', icon: Settings },
+]
+
+const MEMBER_TABS = [
+    { href: '', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/missions', label: 'Missions', icon: Briefcase },
+    { href: '/members', label: 'Members', icon: Users },
 ]
 
 export default function ManageOrgLayout({ children }: { children: React.ReactNode }) {
@@ -38,10 +44,6 @@ export default function ManageOrgLayout({ children }: { children: React.ReactNod
         if (result.success) {
             setOrg(result.organization)
             setIsLeader(result.isLeader || false)
-            if (!result.isLeader) {
-                router.push('/seller/organizations')
-                return
-            }
         } else {
             router.push('/seller/organizations')
             return
@@ -61,7 +63,15 @@ export default function ManageOrgLayout({ children }: { children: React.ReactNod
 
     if (!org) return null
 
+    const tabs = isLeader ? LEADER_TABS : MEMBER_TABS
     const basePath = `/seller/manage/${orgId}`
+
+    // For members, redirect leader-only pages to overview
+    const leaderOnlyPaths = ['/commissions', '/settings']
+    if (!isLeader && leaderOnlyPaths.some(p => pathname.endsWith(p))) {
+        router.push(basePath)
+        return null
+    }
 
     return (
         <OrgContext.Provider value={{ org, isLeader, reload: loadOrg }}>
@@ -72,19 +82,28 @@ export default function ManageOrgLayout({ children }: { children: React.ReactNod
                         <ArrowLeft className="w-4 h-4" /> My Organizations
                     </Link>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                            <span className="text-lg font-bold text-white">{org.name.charAt(0)}</span>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                            isLeader
+                                ? 'bg-gradient-to-br from-amber-400 to-orange-500'
+                                : 'bg-gradient-to-br from-violet-500 to-purple-600'
+                        }`}>
+                            {isLeader
+                                ? <Crown className="w-5 h-5 text-white" />
+                                : <span className="text-lg font-bold text-white">{org.name.charAt(0)}</span>
+                            }
                         </div>
                         <div>
                             <h1 className="text-xl font-bold text-gray-900">{org.name}</h1>
-                            <p className="text-xs text-gray-500">Organization Management</p>
+                            <p className="text-xs text-gray-500">
+                                {isLeader ? 'Organization Management' : 'Member Dashboard'}
+                            </p>
                         </div>
                     </div>
                 </div>
 
                 {/* Tabs */}
                 <div className="flex gap-1 mb-8 overflow-x-auto pb-1 border-b border-gray-100">
-                    {TABS.map(tab => {
+                    {tabs.map(tab => {
                         const href = `${basePath}${tab.href}`
                         const isActive = tab.href === ''
                             ? pathname === basePath

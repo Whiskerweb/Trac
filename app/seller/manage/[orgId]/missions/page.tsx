@@ -20,19 +20,22 @@ function MissionStatusBadge({ status }: { status: string }) {
 }
 
 export default function ManageOrgMissions() {
-    const { org, reload } = useOrg()
+    const { org, isLeader, reload } = useOrg()
     const [proposals, setProposals] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState<string | null>(null)
 
     useEffect(() => {
         async function load() {
-            const result = await getOrgMissionProposalsForLeader()
-            if (result.success) setProposals(result.proposals || [])
+            // Only leaders can see proposals
+            if (isLeader) {
+                const result = await getOrgMissionProposalsForLeader()
+                if (result.success) setProposals(result.proposals || [])
+            }
             setLoading(false)
         }
         load()
-    }, [])
+    }, [isLeader])
 
     if (!org) return null
 
@@ -44,7 +47,6 @@ export default function ManageOrgMissions() {
         setActionLoading(id)
         await acceptOrgMission(id)
         await reload()
-        // Refresh proposals
         const result = await getOrgMissionProposalsForLeader()
         if (result.success) setProposals(result.proposals || [])
         setActionLoading(null)
@@ -67,6 +69,50 @@ export default function ManageOrgMissions() {
         )
     }
 
+    // =============================================
+    // MEMBER VIEW — read-only active missions
+    // =============================================
+    if (!isLeader) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                        Active Missions ({acceptedMissions.length})
+                    </h2>
+                    {acceptedMissions.length === 0 ? (
+                        <div className="text-center py-12 bg-white border border-gray-100 rounded-2xl">
+                            <Briefcase className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-400">No active missions yet</p>
+                            <p className="text-xs text-gray-300 mt-1">The leader will accept mission proposals from startups</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {acceptedMissions.map((m: any) => (
+                                <div key={m.id} className="flex items-center justify-between px-4 py-3.5 bg-white border border-gray-100 rounded-xl">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
+                                            <Briefcase className="w-4 h-4 text-purple-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">{m.Mission?.title}</p>
+                                            {m.member_reward && (
+                                                <p className="text-xs text-gray-400">Your reward: <span className="text-green-600 font-medium">{m.member_reward}</span></p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <MissionStatusBadge status="ACCEPTED" />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        )
+    }
+
+    // =============================================
+    // LEADER VIEW — proposals + active + rejected
+    // =============================================
     return (
         <div className="space-y-8">
             {/* Pending Proposals */}
