@@ -34,6 +34,11 @@ const signupSchema = z.object({
  * - If hasSeller only → /seller
  * - If neither → /onboarding
  */
+// In production, redirect directly to the correct subdomain to avoid CORS on RSC fetches
+const isProduction = process.env.NODE_ENV === 'production'
+const SELLER_BASE = isProduction ? 'https://seller.traaaction.com' : ''
+const APP_BASE = isProduction ? 'https://app.traaaction.com' : ''
+
 async function getAuthRedirectPath(userId: string): Promise<string> {
     const roles = await getUserRoles(userId)
 
@@ -47,11 +52,11 @@ async function getAuthRedirectPath(userId: string): Promise<string> {
     }
 
     if (roles.hasWorkspace) {
-        return '/dashboard'
+        return `${APP_BASE}/dashboard`
     }
 
     if (roles.hasSeller) {
-        return '/seller'
+        return `${SELLER_BASE}/seller`
     }
 
     return '/onboarding'
@@ -112,7 +117,7 @@ export async function login(formData: FormData) {
 
     // If user explicitly chose "Seller" and HAS seller role -> Go to /seller
     if (roleIntent === 'seller' && userRoles?.hasSeller) {
-        redirect('/seller')
+        redirect(`${SELLER_BASE}/seller`)
     }
 
     // If user explicitly chose "Seller" but has NO seller record -> create one & go to onboarding
@@ -125,14 +130,14 @@ export async function login(formData: FormData) {
         })
         if (result.success) {
             console.log('[Auth] Auto-created seller for login with roleIntent=seller')
-            redirect('/seller/onboarding')
+            redirect(`${SELLER_BASE}/seller/onboarding`)
         }
         // If creation fails, fall through to smart detection
     }
 
     // If user explicitly chose "Startup" and HAS workspace -> Go to /dashboard
     if (roleIntent === 'startup' && userRoles?.hasWorkspace) {
-        redirect('/dashboard')
+        redirect(`${APP_BASE}/dashboard`)
     }
 
     // Fallback: Use smart detection
@@ -251,7 +256,7 @@ export async function signup(formData: FormData) {
         }
 
         revalidatePath('/', 'layout')
-        redirect('/seller/onboarding')
+        redirect(`${SELLER_BASE}/seller/onboarding`)
     }
 
     // STARTUP FLOW
