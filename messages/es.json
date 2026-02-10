@@ -274,6 +274,29 @@
             "useDifferent": "Usar otro email",
             "sent": "¡Email de confirmación enviado! Revisa tu bandeja de entrada."
         },
+        "forgotPassword": {
+            "title": "Restablece tu contraseña",
+            "subtitle": "Ingresa el email asociado a tu cuenta y te enviaremos un enlace para restablecer tu contraseña.",
+            "submit": "Enviar enlace",
+            "backToLogin": "Volver a iniciar sesión",
+            "emailSentTitle": "Revisa tu email",
+            "emailSentTo": "Hemos enviado un enlace de restablecimiento a",
+            "emailSentInstructions": "Haz clic en el enlace de tu email para restablecer tu contraseña. El enlace expira en 1 hora.",
+            "didntReceive": "¿No recibiste el email? Revisa tu carpeta de spam.",
+            "tryAgain": "Reenviar email"
+        },
+        "resetPassword": {
+            "title": "Nueva contraseña",
+            "subtitle": "Elige una nueva contraseña para tu cuenta",
+            "newPassword": "Nueva contraseña",
+            "confirmPassword": "Confirmar contraseña",
+            "submit": "Actualizar contraseña",
+            "mismatch": "Las contraseñas no coinciden",
+            "successTitle": "Contraseña actualizada",
+            "successSubtitle": "Tu contraseña ha sido actualizada exitosamente.",
+            "redirecting": "Redirigiendo al inicio de sesión...",
+            "updateSuccess": "Tu contraseña ha sido actualizada. Ya puedes iniciar sesión con tu nueva contraseña."
+        },
         "errors": {
             "invalidCredentials": "Email o contraseña incorrectos",
             "emailNotConfirmed": "Por favor confirma tu email antes de iniciar sesión",

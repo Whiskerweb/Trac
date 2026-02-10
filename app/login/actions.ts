@@ -286,6 +286,70 @@ export async function logout() {
 // RESEND CONFIRMATION EMAIL ACTION
 // =============================================
 
+// =============================================
+// PASSWORD RESET REQUEST ACTION
+// =============================================
+
+export async function requestPasswordReset(email: string) {
+    const supabase = await createClient()
+
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail || !z.string().email().safeParse(trimmedEmail).success) {
+        return { error: 'Please enter a valid email address' }
+    }
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.traaaction.com'
+    const redirectUrl = `${siteUrl}/auth/callback?next=/auth/reset-password`
+
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: redirectUrl,
+    })
+
+    if (error) {
+        console.error('[Auth] ❌ Password reset request failed:', error.message)
+        if (error.message.includes('rate limit')) {
+            return { error: 'Please wait a few minutes before requesting another reset email' }
+        }
+        // Don't reveal if email exists or not for security
+        return { success: true }
+    }
+
+    console.log('[Auth] 📧 Password reset email sent to:', trimmedEmail)
+    // Always return success even if email doesn't exist (security best practice)
+    return { success: true }
+}
+
+// =============================================
+// UPDATE PASSWORD ACTION (for reset flow)
+// =============================================
+
+export async function updatePassword(newPassword: string) {
+    const supabase = await createClient()
+
+    if (!newPassword || newPassword.length < 6) {
+        return { error: 'Password must be at least 6 characters' }
+    }
+
+    const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+    })
+
+    if (error) {
+        console.error('[Auth] ❌ Password update failed:', error.message)
+        if (error.message.includes('same password')) {
+            return { error: 'New password must be different from your current password' }
+        }
+        return { error: 'Failed to update password. Please try again.' }
+    }
+
+    console.log('[Auth] ✅ Password updated successfully')
+    return { success: true }
+}
+
+// =============================================
+// RESEND CONFIRMATION EMAIL ACTION
+// =============================================
+
 export async function resendConfirmationEmail(email: string, role: string = 'startup') {
     const supabase = await createClient()
 

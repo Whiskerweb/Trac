@@ -274,6 +274,29 @@
             "useDifferent": "Use a different email",
             "sent": "Confirmation email sent! Please check your inbox."
         },
+        "forgotPassword": {
+            "title": "Reset your password",
+            "subtitle": "Enter the email address associated with your account and we'll send you a link to reset your password.",
+            "submit": "Send reset link",
+            "backToLogin": "Back to sign in",
+            "emailSentTitle": "Check your email",
+            "emailSentTo": "We sent a password reset link to",
+            "emailSentInstructions": "Click the link in your email to reset your password. The link will expire in 1 hour.",
+            "didntReceive": "Didn't receive the email? Check your spam folder.",
+            "tryAgain": "Send another email"
+        },
+        "resetPassword": {
+            "title": "Set new password",
+            "subtitle": "Choose a new password for your account",
+            "newPassword": "New password",
+            "confirmPassword": "Confirm password",
+            "submit": "Update password",
+            "mismatch": "Passwords do not match",
+            "successTitle": "Password updated",
+            "successSubtitle": "Your password has been updated successfully.",
+            "redirecting": "Redirecting to sign in...",
+            "updateSuccess": "Your password has been updated. You can now sign in with your new password."
+        },
         "errors": {
             "invalidCredentials": "Invalid email or password",
             "emailNotConfirmed": "Please confirm your email before signing in",

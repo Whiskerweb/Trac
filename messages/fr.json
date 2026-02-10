@@ -274,6 +274,29 @@
             "useDifferent": "Utiliser un autre email",
             "sent": "Email de confirmation envoyé ! Vérifiez votre boîte de réception."
         },
+        "forgotPassword": {
+            "title": "Réinitialisez votre mot de passe",
+            "subtitle": "Entrez l'adresse email associée à votre compte et nous vous enverrons un lien pour réinitialiser votre mot de passe.",
+            "submit": "Envoyer le lien",
+            "backToLogin": "Retour à la connexion",
+            "emailSentTitle": "Vérifiez votre email",
+            "emailSentTo": "Nous avons envoyé un lien de réinitialisation à",
+            "emailSentInstructions": "Cliquez sur le lien dans votre email pour réinitialiser votre mot de passe. Le lien expire dans 1 heure.",
+            "didntReceive": "Vous n'avez pas reçu l'email ? Vérifiez vos spams.",
+            "tryAgain": "Renvoyer un email"
+        },
+        "resetPassword": {
+            "title": "Nouveau mot de passe",
+            "subtitle": "Choisissez un nouveau mot de passe pour votre compte",
+            "newPassword": "Nouveau mot de passe",
+            "confirmPassword": "Confirmer le mot de passe",
+            "submit": "Mettre à jour",
+            "mismatch": "Les mots de passe ne correspondent pas",
+            "successTitle": "Mot de passe mis à jour",
+            "successSubtitle": "Votre mot de passe a été mis à jour avec succès.",
+            "redirecting": "Redirection vers la connexion...",
+            "updateSuccess": "Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe."
+        },
         "errors": {
             "invalidCredentials": "Email ou mot de passe incorrect",
             "emailNotConfirmed": "Veuillez confirmer votre email avant de vous connecter",

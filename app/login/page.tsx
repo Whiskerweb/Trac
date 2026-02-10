@@ -1,17 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { login, signup, resendConfirmationEmail } from './actions'
+import { login, signup, resendConfirmationEmail, requestPasswordReset } from './actions'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Building2, Users, Loader2, Eye, EyeOff, Mail, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Building2, Users, Loader2, Eye, EyeOff, Mail, CheckCircle2, KeyRound } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useTranslations } from 'next-intl'
 
 type UserType = 'startup' | 'seller' | null
 type Mode = 'login' | 'signup'
-type ViewState = 'form' | 'confirmation-pending'
+type ViewState = 'form' | 'confirmation-pending' | 'forgot-password' | 'reset-email-sent'
 
 function GoogleIcon({ className }: { className?: string }) {
     return (
@@ -38,6 +38,8 @@ export default function LoginPage() {
     const [mounted, setMounted] = useState(false)
     const [confirmationEmail, setConfirmationEmail] = useState('')
     const [confirmationRole, setConfirmationRole] = useState<string>('startup')
+    const [resetEmail, setResetEmail] = useState('')
+    const [resetLoading, setResetLoading] = useState(false)
 
     const supabase = createClient()
 
@@ -70,6 +72,13 @@ export default function LoginPage() {
         const params = new URLSearchParams(window.location.search)
         const urlError = params.get('error')
         const urlMessage = params.get('message')
+
+        // Handle success messages (e.g., password updated)
+        const urlSuccess = params.get('success')
+        if (urlSuccess === 'password_updated') {
+            setSuccessMessage(t('resetPassword.updateSuccess'))
+            window.history.replaceState({}, '', '/login')
+        }
 
         if (urlError) {
             let errorMessage = urlMessage || t('errors.authGeneric')
@@ -179,8 +188,34 @@ export default function LoginPage() {
         }
     }
 
+    async function handlePasswordReset(e: React.FormEvent) {
+        e.preventDefault()
+        if (!resetEmail.trim()) return
+
+        setResetLoading(true)
+        setError('')
+
+        try {
+            const result = await requestPasswordReset(resetEmail)
+            if (result.error) {
+                setError(result.error)
+            } else {
+                setViewState('reset-email-sent')
+            }
+        } catch {
+            setError(t('errors.unexpected'))
+        } finally {
+            setResetLoading(false)
+        }
+    }
+
     const handleBack = () => {
-        if (viewState === 'confirmation-pending') {
+        if (viewState === 'forgot-password' || viewState === 'reset-email-sent') {
+            setViewState('form')
+            setError('')
+            setSuccessMessage('')
+            setResetEmail('')
+        } else if (viewState === 'confirmation-pending') {
             setViewState('form')
             setError('')
             setSuccessMessage('')
@@ -208,7 +243,7 @@ export default function LoginPage() {
             <header className="fixed top-0 left-0 right-0 z-50 px-6 py-5">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <AnimatePresence mode="wait">
-                        {userType || viewState === 'confirmation-pending' ? (
+                        {userType || viewState !== 'form' ? (
                             <motion.button
                                 key="back"
                                 initial={{ opacity: 0, x: -10 }}
@@ -255,7 +290,145 @@ export default function LoginPage() {
             {/* Main Content */}
             <main className="flex-1 flex items-center justify-center px-6 pt-20 pb-12">
                 <AnimatePresence mode="wait">
-                    {viewState === 'confirmation-pending' ? (
+                    {viewState === 'forgot-password' ? (
+                        /* Forgot Password View */
+                        <motion.div
+                            key="forgot-password"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+                            className="w-full max-w-[380px]"
+                        >
+                            <div className="text-center mb-8">
+                                <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <KeyRound className="w-8 h-8 text-neutral-600" />
+                                </div>
+                                <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight mb-2">
+                                    {t('forgotPassword.title')}
+                                </h1>
+                                <p className="text-neutral-500 text-sm">
+                                    {t('forgotPassword.subtitle')}
+                                </p>
+                            </div>
+
+                            <form onSubmit={handlePasswordReset} className="space-y-4">
+                                <div>
+                                    <label htmlFor="reset-email" className="block text-sm font-medium text-neutral-700 mb-2">
+                                        {t('email')}
+                                    </label>
+                                    <input
+                                        type="email"
+                                        id="reset-email"
+                                        value={resetEmail}
+                                        onChange={(e) => setResetEmail(e.target.value)}
+                                        required
+                                        autoComplete="email"
+                                        autoFocus
+                                        className="w-full h-12 bg-white border border-neutral-200 rounded-xl px-4 text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 transition-all"
+                                        placeholder="you@example.com"
+                                    />
+                                </div>
+
+                                <AnimatePresence>
+                                    {error && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            className="bg-red-50 border border-red-100 rounded-xl p-4 text-sm text-red-600"
+                                        >
+                                            {error}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                <button
+                                    type="submit"
+                                    disabled={resetLoading}
+                                    className="w-full h-12 bg-neutral-900 hover:bg-neutral-800 disabled:bg-neutral-400 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+                                >
+                                    {resetLoading ? (
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                        <>
+                                            {t('forgotPassword.submit')}
+                                            <ArrowRight className="w-4 h-4" />
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+
+                            <div className="mt-6 text-center">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setViewState('form')
+                                        setError('')
+                                        setResetEmail('')
+                                    }}
+                                    className="text-sm text-neutral-500 hover:text-neutral-900 font-medium"
+                                >
+                                    {t('forgotPassword.backToLogin')}
+                                </button>
+                            </div>
+                        </motion.div>
+                    ) : viewState === 'reset-email-sent' ? (
+                        /* Reset Email Sent View */
+                        <motion.div
+                            key="reset-sent"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+                            className="w-full max-w-[420px] text-center"
+                        >
+                            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Mail className="w-10 h-10 text-green-600" />
+                            </div>
+
+                            <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight mb-3">
+                                {t('forgotPassword.emailSentTitle')}
+                            </h1>
+                            <p className="text-neutral-500 mb-2">
+                                {t('forgotPassword.emailSentTo')}
+                            </p>
+                            <p className="text-neutral-900 font-medium mb-6">
+                                {resetEmail}
+                            </p>
+
+                            <div className="bg-neutral-100 rounded-xl p-4 mb-6">
+                                <p className="text-sm text-neutral-600">
+                                    {t('forgotPassword.emailSentInstructions')}
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setViewState('form')
+                                    setError('')
+                                    setResetEmail('')
+                                }}
+                                className="w-full h-12 bg-neutral-900 hover:bg-neutral-800 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+                            >
+                                {t('forgotPassword.backToLogin')}
+                            </button>
+
+                            <p className="mt-6 text-sm text-neutral-400">
+                                {t('forgotPassword.didntReceive')}
+                            </p>
+
+                            <button
+                                onClick={() => {
+                                    setViewState('forgot-password')
+                                    setError('')
+                                }}
+                                className="mt-4 text-sm text-neutral-600 hover:text-neutral-900 font-medium"
+                            >
+                                {t('forgotPassword.tryAgain')}
+                            </button>
+                        </motion.div>
+                    ) : viewState === 'confirmation-pending' ? (
                         /* Email Confirmation Pending View */
                         <motion.div
                             key="confirmation"
@@ -546,9 +719,35 @@ export default function LoginPage() {
                                             {t('signup.minChars', { count: 6 })}
                                         </p>
                                     )}
+                                    {mode === 'login' && (
+                                        <div className="mt-2 text-right">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setViewState('forgot-password')
+                                                    setError('')
+                                                    setSuccessMessage('')
+                                                }}
+                                                className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                                            >
+                                                {t('login.forgotPassword')}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <AnimatePresence>
+                                    {successMessage && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            className="bg-green-50 border border-green-100 rounded-xl p-4 text-sm text-green-600 flex items-center gap-2"
+                                        >
+                                            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                                            {successMessage}
+                                        </motion.div>
+                                    )}
                                     {error && (
                                         <motion.div
                                             initial={{ opacity: 0, y: -10 }}
