@@ -117,20 +117,21 @@ function MessagesContent() {
     }
 
     const selectedConvo = conversations.find(c => c.id === selectedConversation)
+    const isSupportBot = selectedConvo?.workspace_name === 'Traaaction Support'
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+            <div className="h-screen bg-[#FAFAFA] flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA] flex">
+        <div className="h-screen bg-[#FAFAFA] flex overflow-hidden">
             {/* Conversations List (Left) - Full width on mobile, fixed on desktop */}
-            <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} w-full md:w-80 bg-white border-r border-gray-200 flex-col`}>
-                <div className="p-4 sm:p-6 border-b border-gray-100">
+            <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} w-full md:w-80 bg-white border-r border-gray-200 flex-col overflow-hidden`}>
+                <div className="p-4 sm:p-6 border-b border-gray-100 flex-shrink-0">
                     <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
                     <p className="text-xs text-gray-500 mt-0.5">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
                 </div>
@@ -192,11 +193,11 @@ function MessagesContent() {
             </div>
 
             {/* Messages View (Right) - Hidden on mobile when no conversation selected */}
-            <div className={`${!selectedConversation ? 'hidden md:flex' : 'flex'} flex-1 flex-col`}>
+            <div className={`${!selectedConversation ? 'hidden md:flex' : 'flex'} flex-1 flex-col overflow-hidden`}>
                 {selectedConvo ? (
                     <>
                         {/* Header */}
-                        <div className="p-4 sm:p-6 bg-white border-b border-gray-200">
+                        <div className="p-4 sm:p-6 bg-white border-b border-gray-200 flex-shrink-0">
                             <div className="flex items-center gap-3">
                                 {/* Back button for mobile */}
                                 <button
@@ -218,9 +219,9 @@ function MessagesContent() {
                                 )}
                                 <div className="flex-1">
                                     <h3 className="font-semibold text-gray-900">{selectedConvo.workspace_name}</h3>
-                                    <p className="text-sm text-gray-500">Startup</p>
+                                    <p className="text-sm text-gray-500">{isSupportBot ? 'System' : 'Startup'}</p>
                                 </div>
-                                {selectedConvo.workspace_id && (
+                                {selectedConvo.workspace_id && !isSupportBot && (
                                     <Link
                                         href={`/seller/startup/${selectedConvo.workspace_id}`}
                                         className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors"
@@ -269,27 +270,33 @@ function MessagesContent() {
                             <div ref={messagesEndRef} />
                         </div>
 
-                        {/* Input */}
-                        <div className="p-4 sm:p-6 bg-white border-t border-gray-200">
-                            <div className="flex items-center gap-2 sm:gap-3">
-                                <input
-                                    type="text"
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                                    placeholder="Write a message..."
-                                    className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    disabled={sending}
-                                />
-                                <button
-                                    onClick={handleSendMessage}
-                                    disabled={!newMessage.trim() || sending}
-                                    className="w-10 h-10 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 rounded-full flex items-center justify-center transition-colors"
-                                >
-                                    <Send className="w-4 h-4 text-white" />
-                                </button>
+                        {/* Input — hidden for support bot */}
+                        {isSupportBot ? (
+                            <div className="p-4 sm:p-6 bg-gray-50 border-t border-gray-200 flex-shrink-0">
+                                <p className="text-center text-sm text-gray-400">This is an automated notification — replies are not monitored.</p>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="p-4 sm:p-6 bg-white border-t border-gray-200 flex-shrink-0">
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <input
+                                        type="text"
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                                        placeholder="Write a message..."
+                                        className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        disabled={sending}
+                                    />
+                                    <button
+                                        onClick={handleSendMessage}
+                                        disabled={!newMessage.trim() || sending}
+                                        className="w-10 h-10 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 rounded-full flex items-center justify-center transition-colors"
+                                    >
+                                        <Send className="w-4 h-4 text-white" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </>
                 ) : (
                     <div className="flex-1 flex items-center justify-center">

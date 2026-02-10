@@ -8,8 +8,9 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { getUnreadCount } from '@/app/actions/messaging'
 
 // =============================================
 // NAVIGATION STRUCTURE (Traaaction style)
@@ -78,7 +79,14 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
     const t = useTranslations('dashboard.sidebarNav')
     const [userEmail, setUserEmail] = useState<string>('')
     const [startupName, setStartupName] = useState<string>(t('sellerProgram'))
+    const [unreadMessages, setUnreadMessages] = useState(0)
 
+    const loadUnread = useCallback(async () => {
+        try {
+            const count = await getUnreadCount('startup')
+            setUnreadMessages(count)
+        } catch {}
+    }, [])
 
     useEffect(() => {
         fetch('/api/auth/user-roles')
@@ -90,7 +98,10 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                 }
             })
             .catch(() => { })
-    }, [])
+        loadUnread()
+        const interval = setInterval(loadUnread, 30000)
+        return () => clearInterval(interval)
+    }, [loadUnread])
 
     // Don't show collapse button on mobile drawer
     const showCollapseButton = !isMobile && onToggleCollapse
@@ -144,6 +155,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                                     ? pathname === item.href
                                     : pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
                                 const Icon = item.icon
+                                const badge = item.nameKey === 'messages' ? unreadMessages : 0
 
                                 return (
                                     <li key={item.nameKey}>
@@ -160,13 +172,25 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                                             `}
                                         >
                                             <div className={`flex items-center ${collapsed ? '' : 'gap-3'}`}>
-                                                <Icon
-                                                    className={`w-4 h-4 ${isActive ? 'text-purple-600' : 'text-gray-400'}`}
-                                                    strokeWidth={2}
-                                                />
+                                                <div className="relative">
+                                                    <Icon
+                                                        className={`w-4 h-4 ${isActive ? 'text-purple-600' : 'text-gray-400'}`}
+                                                        strokeWidth={2}
+                                                    />
+                                                    {collapsed && badge > 0 && (
+                                                        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                                                            {badge > 9 ? '9+' : badge}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 {!collapsed && <span>{t(item.nameKey)}</span>}
                                             </div>
-                                            {!collapsed && item.external && (
+                                            {!collapsed && badge > 0 && (
+                                                <span className="min-w-[20px] h-5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1.5">
+                                                    {badge > 99 ? '99+' : badge}
+                                                </span>
+                                            )}
+                                            {!collapsed && !badge && item.external && (
                                                 <ExternalLink className="w-3 h-3 text-gray-400" />
                                             )}
                                         </Link>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Search, Loader2, ArrowRight, Users, Plus, Lock, Globe } from 'lucide-react'
+import { Search, Loader2, ArrowRight, Users, Lock, Globe } from 'lucide-react'
 import { getActiveOrganizations } from '@/app/actions/organization-actions'
 
 function VisibilityBadge({ visibility }: { visibility: string }) {
@@ -143,15 +143,9 @@ export default function BrowseOrganizationsPage() {
                     <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight mb-3">
                         Organizations
                     </h1>
-                    <p className="text-gray-500 text-[15px] mb-6">
+                    <p className="text-gray-500 text-[15px]">
                         Join a team and earn together
                     </p>
-                    <Link
-                        href="/seller/organizations/apply"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
-                    >
-                        <Plus className="w-4 h-4" /> Apply to create
-                    </Link>
                 </header>
 
                 {/* Search */}
@@ -214,6 +208,16 @@ export default function BrowseOrganizationsPage() {
                         </div>
                     </>
                 )}
+
+                {/* Discreet create link */}
+                <div className="text-center mt-16 pb-4">
+                    <p className="text-xs text-gray-400">
+                        Want to lead your own team?{' '}
+                        <Link href="/seller/organizations/apply" className="text-gray-500 hover:text-gray-700 underline underline-offset-2">
+                            Apply to create an organization
+                        </Link>
+                    </p>
+                </div>
             </div>
         </div>
     )

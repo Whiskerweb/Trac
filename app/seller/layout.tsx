@@ -24,6 +24,7 @@ import ProfileCompletionBanner from '@/components/seller/ProfileCompletionBanner
 import FeedbackWidget from '@/components/FeedbackWidget'
 import { getMySellerProfile } from '@/app/actions/sellers'
 import { getMyOrganizations } from '@/app/actions/organization-actions'
+import { getUnreadCount } from '@/app/actions/messaging'
 
 // ==========================================
 // DESIGN SYSTEM - TRAAACTION SELLER
@@ -55,6 +56,7 @@ export default function SellerLayout({
     }
     const [profile, setProfile] = useState<{ name: string; email: string; avatarUrl: string | null; hasStripeConnect: boolean } | null>(null)
     const [managedOrgs, setManagedOrgs] = useState<{ id: string; name: string; status: string }[]>([])
+    const [unreadMessages, setUnreadMessages] = useState(0)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isCollapsed, setIsCollapsed] = useState(false)
     const [isHydrated, setIsHydrated] = useState(false)
@@ -102,8 +104,18 @@ export default function SellerLayout({
                 console.error('Failed to load orgs for sidebar:', err)
             }
         }
+        async function loadUnread() {
+            try {
+                const count = await getUnreadCount('partner')
+                setUnreadMessages(count)
+            } catch {}
+        }
         loadProfile()
         loadOrgs()
+        loadUnread()
+        // Poll unread count every 30s
+        const interval = setInterval(loadUnread, 30000)
+        return () => clearInterval(interval)
     }, [])
 
     // Close mobile menu on escape key
@@ -144,7 +156,7 @@ export default function SellerLayout({
     const isProfileActive = pathname === '/seller/profile'
 
     // Navigation item component
-    const NavItem = ({ href, icon: Icon, label, collapsed = false }: { href: string; icon: React.ElementType; label: string; collapsed?: boolean }) => {
+    const NavItem = ({ href, icon: Icon, label, collapsed = false, badge = 0 }: { href: string; icon: React.ElementType; label: string; collapsed?: boolean; badge?: number }) => {
         const active = isActive(href)
         return (
             <Link
@@ -152,7 +164,7 @@ export default function SellerLayout({
                 title={collapsed ? label : undefined}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`
-                    flex items-center gap-3 rounded-xl
+                    relative flex items-center gap-3 rounded-xl
                     text-[14px] font-medium
                     transition-all duration-150
                     ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'}
@@ -162,12 +174,28 @@ export default function SellerLayout({
                     }
                 `}
             >
-                <Icon
-                    strokeWidth={1.5}
-                    size={18}
-                    className={active ? 'text-violet-600' : 'text-gray-400'}
-                />
-                {!collapsed && label}
+                <div className="relative">
+                    <Icon
+                        strokeWidth={1.5}
+                        size={18}
+                        className={active ? 'text-violet-600' : 'text-gray-400'}
+                    />
+                    {collapsed && badge > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                            {badge > 9 ? '9+' : badge}
+                        </span>
+                    )}
+                </div>
+                {!collapsed && (
+                    <>
+                        <span className="flex-1">{label}</span>
+                        {badge > 0 && (
+                            <span className="min-w-[20px] h-5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1.5">
+                                {badge > 99 ? '99+' : badge}
+                            </span>
+                        )}
+                    </>
+                )}
             </Link>
         )
     }
@@ -240,7 +268,7 @@ export default function SellerLayout({
                 {/* COMMUNICATION Section */}
                 <SectionLabel collapsed={collapsed}>Communication</SectionLabel>
                 <div className="space-y-1">
-                    <NavItem href="/seller/messages" icon={MessageSquare} label="Messages" collapsed={collapsed} />
+                    <NavItem href="/seller/messages" icon={MessageSquare} label="Messages" collapsed={collapsed} badge={unreadMessages} />
                 </div>
 
                 {/* COMPTE Section */}

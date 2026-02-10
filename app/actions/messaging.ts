@@ -125,6 +125,40 @@ export async function getConversations(role: 'startup' | 'partner'): Promise<{
 }
 
 /**
+ * Get total unread message count for sidebar badge
+ */
+export async function getUnreadCount(role: 'startup' | 'partner'): Promise<number> {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return 0
+
+        if (role === 'startup') {
+            const workspace = await getActiveWorkspaceForUser()
+            if (!workspace) return 0
+            const result = await prisma.conversation.aggregate({
+                where: { workspace_id: workspace.workspaceId },
+                _sum: { unread_startup: true }
+            })
+            return result._sum.unread_startup || 0
+        } else {
+            const sellers = await prisma.seller.findMany({
+                where: { user_id: user.id },
+                select: { id: true }
+            })
+            if (sellers.length === 0) return 0
+            const result = await prisma.conversation.aggregate({
+                where: { seller_id: { in: sellers.map(s => s.id) } },
+                _sum: { unread_partner: true }
+            })
+            return result._sum.unread_partner || 0
+        }
+    } catch {
+        return 0
+    }
+}
+
+/**
  * Get messages for a specific conversation
  */
 export async function getMessages(conversationId: string): Promise<{

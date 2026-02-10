@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Crown, Users, ChevronRight, FolderOpen, Plus } from 'lucide-react'
+import { Loader2, Crown, Users, ChevronRight, FolderOpen } from 'lucide-react'
 import { getMyOrganizations } from '@/app/actions/organization-actions'
 
 function OrgStatusBadge({ status }: { status: string }) {
@@ -50,17 +50,9 @@ export default function MyOrganizationsPage() {
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">My Organizations</h1>
-                    <p className="text-gray-500 text-sm mt-1">Organizations you lead or belong to</p>
-                </div>
-                <Link
-                    href="/seller/organizations/apply"
-                    className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
-                >
-                    <Plus className="w-4 h-4" /> Create new
-                </Link>
+            <div className="mb-8">
+                <h1 className="text-2xl font-bold text-gray-900">My Organizations</h1>
+                <p className="text-gray-500 text-sm mt-1">Organizations you lead or belong to</p>
             </div>
 
             {!hasOrgs ? (
@@ -69,15 +61,10 @@ export default function MyOrganizationsPage() {
                         <FolderOpen className="w-7 h-7 text-gray-400" />
                     </div>
                     <p className="text-gray-900 font-medium mb-1">No organizations yet</p>
-                    <p className="text-gray-500 text-sm mb-4">Browse organizations to join a team, or create your own.</p>
-                    <div className="flex gap-3">
-                        <Link href="/seller/organizations" className="px-4 py-2 border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50">
-                            Browse
-                        </Link>
-                        <Link href="/seller/organizations/apply" className="px-4 py-2 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800">
-                            Create
-                        </Link>
-                    </div>
+                    <p className="text-gray-500 text-sm mb-6">Browse organizations to find a team and start earning together.</p>
+                    <Link href="/seller/organizations" className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors">
+                        Browse organizations
+                    </Link>
                 </div>
             ) : (
                 <div className="space-y-8">
@@ -143,6 +130,16 @@ export default function MyOrganizationsPage() {
                     )}
                 </div>
             )}
+
+            {/* Discreet create link */}
+            <div className="text-center mt-16 pb-4">
+                <p className="text-xs text-gray-400">
+                    Want to lead your own team?{' '}
+                    <Link href="/seller/organizations/apply" className="text-gray-500 hover:text-gray-700 underline underline-offset-2">
+                        Apply to create an organization
+                    </Link>
+                </p>
+            </div>
         </div>
     )
 }

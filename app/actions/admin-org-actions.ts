@@ -366,11 +366,29 @@ export async function getOrgAdminDetail(orgId: string) {
                     select: {
                         id: true, name: true, email: true, status: true,
                         stripe_connect_id: true, payout_method: true,
+                        created_at: true, onboarding_step: true,
+                        Profile: {
+                            select: {
+                                avatar_url: true, bio: true, country: true,
+                                tiktok_url: true, instagram_url: true, twitter_url: true,
+                                youtube_url: true, website_url: true,
+                            }
+                        },
+                        _count: {
+                            select: { Commissions: true, Requests: true }
+                        }
                     }
                 },
                 Members: {
                     include: {
-                        Seller: { select: { id: true, name: true, email: true, status: true } }
+                        Seller: {
+                            select: {
+                                id: true, name: true, email: true, status: true,
+                                created_at: true, stripe_connect_id: true,
+                                Profile: { select: { avatar_url: true, country: true } },
+                                _count: { select: { Commissions: true } }
+                            }
+                        }
                     },
                     orderBy: { created_at: 'desc' }
                 },
@@ -385,7 +403,13 @@ export async function getOrgAdminDetail(orgId: string) {
 
         if (!org) return { success: false, error: 'Organization not found' }
 
-        return { success: true, organization: org }
+        // Fetch leader balance separately (no direct relation)
+        const leaderBalance = await prisma.sellerBalance.findUnique({
+            where: { seller_id: org.leader_id },
+            select: { balance: true, pending: true, due: true, paid_total: true }
+        })
+
+        return { success: true, organization: { ...org, leaderBalance } }
     } catch (error) {
         console.error('[Admin Org] Failed to get org detail:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
