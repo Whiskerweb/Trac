@@ -41,8 +41,19 @@ export default function LoginPage() {
 
     const supabase = createClient()
 
+    // Detect seller subdomain — auto-select seller role, skip role choice
+    const isSellerDomain = typeof window !== 'undefined' && (
+        window.location.hostname === 'seller.traaaction.com' ||
+        window.location.hostname === 'seller.localhost'
+    )
+
     useEffect(() => {
         setMounted(true)
+
+        // On seller subdomain, force seller role immediately
+        if (isSellerDomain && !userType) {
+            setUserType('seller')
+        }
 
         // Check for error in URL params (from auth callback)
         const params = new URLSearchParams(window.location.search)
@@ -162,7 +173,8 @@ export default function LoginPage() {
             setViewState('form')
             setError('')
             setSuccessMessage('')
-        } else if (userType) {
+        } else if (userType && !isSellerDomain) {
+            // On seller subdomain, don't allow going back to role selection
             setUserType(null)
             setError('')
             setSuccessMessage('')

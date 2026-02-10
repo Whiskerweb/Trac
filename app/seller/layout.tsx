@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
     Home,
     CreditCard,
@@ -18,13 +18,15 @@ import {
     ChevronRight,
     Search,
     FolderOpen,
-    Crown
+    Crown,
+    Loader2
 } from 'lucide-react'
 import ProfileCompletionBanner from '@/components/seller/ProfileCompletionBanner'
 import FeedbackWidget from '@/components/FeedbackWidget'
 import { getMySellerProfile } from '@/app/actions/sellers'
 import { getMyOrganizations } from '@/app/actions/organization-actions'
 import { getUnreadCount } from '@/app/actions/messaging'
+import { getOnboardingStatus } from '@/app/actions/seller-onboarding'
 
 // ==========================================
 // DESIGN SYSTEM - TRAAACTION SELLER
@@ -49,11 +51,13 @@ export default function SellerLayout({
     children: React.ReactNode
 }) {
     const pathname = usePathname()
+    const router = useRouter()
+    const isOnboarding = pathname === '/seller/onboarding'
 
-    // Onboarding page renders standalone — no sidebar, no banner, no layout wrapper
-    if (pathname === '/seller/onboarding') {
-        return <>{children}</>
-    }
+    // ==========================================
+    // ALL HOOKS — called unconditionally (Rules of Hooks)
+    // ==========================================
+    const [sellerVerified, setSellerVerified] = useState(false)
     const [profile, setProfile] = useState<{ name: string; email: string; avatarUrl: string | null; hasStripeConnect: boolean } | null>(null)
     const [managedOrgs, setManagedOrgs] = useState<{ id: string; name: string; status: string }[]>([])
     const [unreadMessages, setUnreadMessages] = useState(0)
@@ -63,12 +67,13 @@ export default function SellerLayout({
 
     // Load collapsed state from localStorage on mount
     useEffect(() => {
+        if (isOnboarding) return
         const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
         if (saved !== null) {
             setIsCollapsed(saved === 'true')
         }
         setIsHydrated(true)
-    }, [])
+    }, [isOnboarding])
 
     // Persist collapsed state to localStorage
     const handleToggleCollapse = () => {
@@ -77,8 +82,45 @@ export default function SellerLayout({
         localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(newState))
     }
 
+    // ==========================================
+    // SELLER VERIFICATION GUARD
+    // Replaces the middleware workspace-check.
+    // If no seller record → redirect to onboarding.
+    // ==========================================
+    useEffect(() => {
+        if (isOnboarding) {
+            setSellerVerified(true) // Skip check for onboarding page
+            return
+        }
+
+        async function verifySeller() {
+            try {
+                const result = await getOnboardingStatus('current-user')
+                if (!result.success || !result.hasSeller) {
+                    // No seller record — send to onboarding to create one
+                    router.replace('/seller/onboarding')
+                    return
+                }
+                if (result.seller && result.seller.onboardingStep < 4) {
+                    // Onboarding not complete
+                    router.replace('/seller/onboarding')
+                    return
+                }
+                setSellerVerified(true)
+            } catch (err) {
+                console.error('[SellerLayout] Seller verification failed:', err)
+                // Fail open — show the page rather than blocking
+                setSellerVerified(true)
+            }
+        }
+
+        verifySeller()
+    }, [isOnboarding, router])
+
     // Load profile data + managed orgs for sidebar
     useEffect(() => {
+        if (isOnboarding || !sellerVerified) return
+
         async function loadProfile() {
             try {
                 const result = await getMySellerProfile()
@@ -116,7 +158,7 @@ export default function SellerLayout({
         // Poll unread count every 30s
         const interval = setInterval(loadUnread, 30000)
         return () => clearInterval(interval)
-    }, [])
+    }, [isOnboarding, sellerVerified])
 
     // Close mobile menu on escape key
     useEffect(() => {
@@ -140,6 +182,28 @@ export default function SellerLayout({
             document.body.style.overflow = ''
         }
     }, [isMobileMenuOpen])
+
+    // ==========================================
+    // EARLY RETURNS (after all hooks)
+    // ==========================================
+
+    // Onboarding page renders standalone — no sidebar, no banner
+    if (isOnboarding) {
+        return <>{children}</>
+    }
+
+    // Loading while verifying seller record
+    if (!sellerVerified) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white">
+                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+            </div>
+        )
+    }
+
+    // ==========================================
+    // SIDEBAR COMPONENTS
+    // ==========================================
 
     // Check if route is active
     const isActive = (href: string) => {

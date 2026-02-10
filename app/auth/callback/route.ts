@@ -31,12 +31,25 @@ export async function GET(request: NextRequest) {
         return response
     }
 
+    // =============================================
+    // SELLER SUBDOMAIN DETECTION
+    // If callback comes from seller.traaaction.com, force seller role
+    // =============================================
+    const callbackHostname = new URL(request.url).hostname
+    const isSellerDomain = callbackHostname === 'seller.traaaction.com' || callbackHostname === 'seller.localhost'
+
+    if (isSellerDomain && !roleIntent) {
+        roleIntent = 'seller'
+        console.log('[Auth Callback] Seller subdomain detected, forcing roleIntent=seller')
+    }
+
     console.log('[Auth Callback] Starting...', {
         code: !!code,
         redirectTo,
         roleIntent,
         errorCode,
-        errorDescription
+        errorDescription,
+        isSellerDomain,
     })
 
     // =============================================

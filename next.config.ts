@@ -14,6 +14,15 @@ const nextConfig: NextConfig = {
       // beforeFiles rewrites are processed before pages/public files
       beforeFiles: [
         // =============================================
+        // SELLER SUBDOMAIN REWRITE
+        // seller.traaaction.com/* → /seller/*
+        // =============================================
+        {
+          source: '/:path*',
+          has: [{ type: 'host', value: 'seller.traaaction.com' }],
+          destination: '/seller/:path*',
+        },
+        // =============================================
         // WHITE-LABEL PORTAL REWRITES
         // Seller portals serve Traaaction content while preserving their URL
         // =============================================
@@ -22,12 +31,6 @@ const nextConfig: NextConfig = {
           has: [{ type: 'host', value: 'partners.cardz.dev' }],
           destination: '/seller/:path*',
         },
-        // Add more white-label domains here:
-        // {
-        //   source: '/:path*',
-        //   has: [{ type: 'host', value: 'affiliate.otherbrand.com' }],
-        //   destination: '/seller/:path*',
-        // },
       ],
       // afterFiles rewrites run after pages check but before fallback
       afterFiles: [

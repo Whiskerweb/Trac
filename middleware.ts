@@ -62,14 +62,16 @@ const PRIMARY_DOMAIN = process.env.PRIMARY_DOMAIN || 'traaaction.com'
 const PRIMARY_DOMAINS = [
     'traaaction.com',
     'www.traaaction.com',
+    'seller.traaaction.com',
+    'app.traaaction.com',
     'vercel.app',
     'localhost',
     '127.0.0.1',
     'localhost:3000',
 ]
 
-// Partner subdomain for biface architecture
-const PARTNER_SUBDOMAIN = 'sellers.traaaction.com'
+// Seller subdomain for biface architecture
+const PARTNER_SUBDOMAIN = 'seller.traaaction.com'
 
 // Cache for domain lookups (Edge-compatible in-memory)
 const domainCache = new Map<string, { workspaceId: string | null; timestamp: number }>()
@@ -315,28 +317,26 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     // HOST HEADER ROUTING (Architecture Alignment)
     // ============================================
     const isPartnersDomain = hostname === PARTNER_SUBDOMAIN ||
-        (process.env.NODE_ENV === 'development' && hostname === 'sellers.localhost')
+        (process.env.NODE_ENV === 'development' && hostname === 'seller.localhost')
 
-    // 🔄 PARTNER PORTAL ROUTING
+    // 🔄 SELLER PORTAL ROUTING (seller.traaaction.com)
     if (isPartnersDomain) {
-        // Rewrite all requests on partners.domain.com to /seller internal path
-        // e.g. sellers.traaaction.com/settings -> /seller/settings
-        // e.g. sellers.traaaction.com/ -> /seller
+        // Exclude shared pages (auth, assets) from rewriting — they work normally
+        const sharedPaths = ['/login', '/auth', '/onboarding', '/seller-terms',
+                             '/_next', '/api', '/Logotrac', '/favicon']
+        const isShared = sharedPaths.some(p => pathname.startsWith(p))
 
-        const newUrl = request.nextUrl.clone()
-        // If root, map to /seller
-        if (pathname === '/') {
-            newUrl.pathname = '/seller'
-        } else {
-            // If already has path, prepend /seller (unless it's already there, which shoudln't happen in clean routing)
-            // But we must be careful not to double-prefix if user visits /seller on the partner domain
-            if (!pathname.startsWith('/seller') && !pathname.startsWith('/api')) {
+        if (!isShared) {
+            const newUrl = request.nextUrl.clone()
+            if (pathname === '/') {
+                newUrl.pathname = '/seller'
+            } else if (!pathname.startsWith('/seller')) {
                 newUrl.pathname = `/seller${pathname}`
             }
+            console.log(`[Middleware] 🔀 Rewriting Seller Domain: ${hostname}${pathname} -> ${newUrl.pathname}`)
+            return NextResponse.rewrite(newUrl)
         }
-
-        console.log(`[Middleware] 🔀 Rewriting Partner Domain: ${hostname}${pathname} -> ${newUrl.pathname}`)
-        return NextResponse.rewrite(newUrl)
+        // Shared paths: fall through to normal middleware flow (login, auth, etc.)
     }
 
     // ============================================
@@ -825,49 +825,34 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     }
 
     // ============================================
-    // PARTNER PORTAL PROTECTION (Biface Architecture)
+    // SELLER PORTAL PROTECTION (Biface Architecture)
+    // Subdomain = source of truth. No workspace-check API call.
+    // The seller layout handles "no seller record" → redirect to onboarding.
     // ============================================
     if (pathname.startsWith('/seller') && !pathname.startsWith('/seller-terms')) {
+        // In production on main domain, redirect /seller/* to seller subdomain
+        if (!isPartnersDomain && !isDev) {
+            const sellerPath = pathname.replace('/seller', '') || '/'
+            const sellerUrl = new URL(sellerPath, `https://${PARTNER_SUBDOMAIN}`)
+            sellerUrl.search = request.nextUrl.search
+            return NextResponse.redirect(sellerUrl)
+        }
+
         if (!user) {
             const loginUrl = new URL('/login', request.url)
             loginUrl.searchParams.set('redirectTo', pathname)
             return NextResponse.redirect(loginUrl)
         }
 
-        // Skip role check for onboarding page (let the page itself handle it)
+        // Onboarding: let the page handle it (no seller record check needed)
         if (pathname === '/seller/onboarding') {
-            // Let the page handle seller verification
             return supabaseResponse
         }
 
-        // Role Isolation: Block Startup users (have workspace but no seller) from Seller Portal
-        try {
-            const checkUrl = new URL('/api/auth/workspace-check', request.url)
-            const checkRes = await fetch(checkUrl, {
-                headers: {
-                    cookie: request.headers.get('cookie') || ''
-                }
-            })
-
-            if (checkRes.ok) {
-                const { hasWorkspace, hasSeller } = await checkRes.json()
-
-                // If user has a workspace but is NOT a seller, they are a Startup - block access
-                if (hasWorkspace && !hasSeller) {
-                    console.log('[Middleware] 🛡️ Startup attempting to access Seller Portal - Redirecting to /dashboard')
-                    return NextResponse.redirect(new URL('/dashboard', request.url))
-                }
-
-                // If user has no seller record at all, redirect to auth choice
-                if (!hasSeller && !hasWorkspace) {
-                    console.log('[Middleware] 🚀 User has no role, redirecting to auth choice')
-                    return NextResponse.redirect(new URL('/auth/choice', request.url))
-                }
-            }
-        } catch (err) {
-            console.error('[Middleware] ⚠️ Seller portal check failed:', err)
-            // Fail open - let the page handle it
-        }
+        // No workspace-check. The seller layout verifies the seller record.
+        // Any authenticated user can reach the seller pages;
+        // the layout redirects to /seller/onboarding if no seller record.
+        return supabaseResponse
     }
 
     // ============================================

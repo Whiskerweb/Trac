@@ -25,10 +25,17 @@ export const CNAME_TARGET = 'cname.traaaction.com';
 // Primary domain for the application (redirects for admin routes)
 export const PRIMARY_DOMAIN = process.env.PRIMARY_DOMAIN || 'traaaction.com';
 
+// Seller subdomain (biface architecture)
+export const SELLER_SUBDOMAIN = 'seller.traaaction.com';
+export const SELLER_SUBDOMAIN_DEV = 'seller.localhost';
+export const APP_SUBDOMAIN = 'app.traaaction.com';
+
 // List of known primary/internal domains (not custom domains)
 export const PRIMARY_DOMAINS = [
     'traaaction.com',
     'www.traaaction.com',
+    'seller.traaaction.com',
+    'app.traaaction.com',
     'localhost',
     '127.0.0.1',
     'localhost:3000',
