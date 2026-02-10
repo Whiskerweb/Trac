@@ -76,11 +76,18 @@ export async function POST(req: NextRequest) {
                     console.log(`[Webhook Startup] ✅ Payment ${paymentId} confirmed successfully`)
                 } else {
                     console.error(`[Webhook Startup] ❌ Failed to confirm payment ${paymentId}`)
+                    return NextResponse.json(
+                        { error: 'Payment confirmation failed' },
+                        { status: 500 }
+                    )
                 }
             } catch (err) {
                 console.error('[Webhook Startup] Error confirming payment:', err)
-                // Return 200 to prevent Stripe retries (we logged the error)
-                // Manual intervention may be needed
+                // Return 500 so Stripe retries on transient failures
+                return NextResponse.json(
+                    { error: 'Internal processing error' },
+                    { status: 500 }
+                )
             }
         } else {
             console.log(`[Webhook Startup] Ignoring session (type: ${session.metadata?.type || 'none'})`)

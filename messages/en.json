@@ -2305,5 +2305,122 @@
             "privacy": "Privacy Policy",
             "home": "Home"
         }
+    },
+    "sellerReferral": {
+        "title": "Referral Program",
+        "subtitle": "Invite sellers and earn a percentage of every sale they generate — for life.",
+        "howItWorks": "How it works",
+        "gen1": "Direct referral",
+        "gen2": "Their referrals",
+        "gen3": "3rd generation",
+        "generation": "Generation",
+        "disclaimer": "Percentages are calculated on the sale amount (HT) and funded by Traaaction — your referred sellers earn the exact same commissions.",
+        "yourLink": "Your referral link",
+        "code": "Code",
+        "copy": "Copy",
+        "copied": "Copied",
+        "stats": {
+            "referred": "Referred sellers",
+            "earned": "Total earned",
+            "commissions": "Commissions",
+            "pendingEarnings": "Pending"
+        },
+        "generations": {
+            "title": "Earnings by generation",
+            "sellers": "sellers",
+            "earned": "earned",
+            "commissions": "commissions"
+        },
+        "referredBy": "You were referred by",
+        "yourReferrals": "Your referrals",
+        "joined": "Joined",
+        "sales": "sales",
+        "earnedFromThem": "earned",
+        "active": "Active",
+        "noReferrals": "No referrals yet. Share your link to get started!",
+        "errorTitle": "Unable to load referral data",
+        "errorRetry": "Retry",
+        "learnMore": "Learn more about the referral program",
+        "page": "Page"
+    },
+    "affiliate": {
+        "badge": "Referral program",
+        "hero": {
+            "title1": "Traaaction",
+            "title2": "Affiliation",
+            "subtitle": "Invite sellers to Traaaction and earn up to 10% of the revenue (excl. tax) on every sale — across 3 generations, for life. Funded by Traaaction, not your referrals.",
+            "cta": "Become a seller",
+            "ctaSecondary": "How it works"
+        },
+        "tiers": {
+            "title": "Up to 10% per sale",
+            "subtitle": "3 commission tiers, fully funded by Traaaction. Your referrals are never impacted.",
+            "htLabel": "of revenue (excl. tax)",
+            "gen1": {
+                "rate": "5%",
+                "label": "Generation 1",
+                "tag": "Direct referral",
+                "desc": "Your referral signs up via your link. You earn 5% of the revenue on every sale they make."
+            },
+            "gen2": {
+                "rate": "3%",
+                "label": "Generation 2",
+                "tag": "Indirect referral",
+                "desc": "Your referral's referral. When they sell, you earn 3% of the revenue — automatically."
+            },
+            "gen3": {
+                "rate": "2%",
+                "label": "Generation 3",
+                "tag": "3rd level",
+                "desc": "The 3rd generation of your network. Every sale still earns you 2% of the revenue."
+            }
+        },
+        "example": {
+            "label": "Concrete example",
+            "title": "On a \u20ac100 sale (excl. tax) by a 3rd generation seller, here's how commissions are split.",
+            "note": "The selling seller earns the exact same commission as a non-referred seller. Only Traaaction reduces its margin to fund the program.",
+            "g1": "Original referrer",
+            "g2": "Intermediate referrer",
+            "g3": "3rd level referrer",
+            "seller": "The seller",
+            "sellerNote": "Commission unchanged",
+            "platformKeeps": "Traaaction keeps"
+        },
+        "howItWorks": {
+            "title": "In 4 steps",
+            "subtitle": "From signup to your first referral commissions.",
+            "step1": { "title": "Sign up", "desc": "Create your seller account and complete your profile. Your unique referral link is generated automatically." },
+            "step2": { "title": "Share", "desc": "Send your link to other creators, influencers or sales professionals." },
+            "step3": { "title": "Sales", "desc": "Your referrals join missions and generate sales for partner startups." },
+            "step4": { "title": "Commissions", "desc": "On every sale, your commission is calculated and credited. Visible in real time." }
+        },
+        "benefits": {
+            "title": "Why it works",
+            "zeroImpact": { "title": "Zero impact on your referrals", "desc": "Referred sellers earn exactly the same. No disadvantage whatsoever. Everything is funded by Traaaction from its margin." },
+            "lifetime": { "title": "Passive income for life", "desc": "No time limit. As long as your referrals sell, you earn your referral commission." },
+            "generations": { "title": "3 generations deep", "desc": "Not just your direct referrals: their own referrals and the next generation also earn you commissions." },
+            "automatic": { "title": "Fully automatic", "desc": "No paperwork, no manual tracking. Commissions are calculated, credited and paid out automatically." }
+        },
+        "faq": {
+            "title": "Frequently asked questions",
+            "q1": { "q": "How does the referral program work?", "a": "Every Traaaction seller has a unique referral link. When a new seller signs up via your link and starts generating sales, you automatically receive a percentage of the revenue (excl. tax) on every transaction — for life." },
+            "q2": { "q": "Where does the referral commission money come from?", "a": "Referral commissions are funded by Traaaction, from our 15% platform fee. The referred seller earns exactly the same as a non-referred seller. Nothing changes for them, nor for the startup." },
+            "q3": { "q": "How many generations can I earn from?", "a": "Up to 3 generations. You earn 5% on your direct referrals' sales, 3% on their referrals' sales, and 2% on the 3rd generation. Maximum 10% of revenue per sale." },
+            "q4": { "q": "When do I receive my earnings?", "a": "Referral commissions follow the same cycle as regular commissions: a 30-day hold period (chargeback protection), then they become available for withdrawal via Stripe Connect, PayPal, or bank transfer." },
+            "q5": { "q": "Does the referral expire?", "a": "No, the referral is for life. As long as your referral generates sales on Traaaction, you earn your referral commission. No time limit." },
+            "q6": { "q": "Do I need to be an active seller to refer?", "a": "Yes, you need to have completed your seller profile on Traaaction. Your referral link is generated automatically and accessible from your dashboard, in the Referral section." },
+            "q7": { "q": "What happens if a sale is refunded?", "a": "If a sale is refunded, all related commissions (seller commission + referral commissions) are automatically cancelled. If they have already been paid out, a negative balance is applied." }
+        },
+        "cta": {
+            "title": "Ready to build your network?",
+            "subtitle": "Create your seller account, share your link, and start earning on every sale in your network.",
+            "button": "Get started for free",
+            "note": "Free. No commitment. Referral link generated instantly."
+        },
+        "network": {
+            "you": "You",
+            "gen1": "Gen 1",
+            "gen2": "Gen 2"
+        }
     }
 }

@@ -52,10 +52,10 @@ export function Navbar() {
                         {t('auth.seller.title')}
                     </Link>
                     <Link
-                        href="#"
+                        href="/affiliate"
                         className="text-sm font-medium text-gray-500 hover:text-black transition-colors"
                     >
-                        Roadmap
+                        Affiliation
                     </Link>
                 </div>
 

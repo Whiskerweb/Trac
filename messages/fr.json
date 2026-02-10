@@ -2078,5 +2078,122 @@
         "contact": { "intro": "Si vous avez des questions concernant les pr\u00e9sentes Conditions d'utilisation :", "address1": "60 rue Amiral Romain-Desfoss\u00e9s", "address2": "29200 Brest, France" },
         "governing": { "p1": "Les pr\u00e9sentes Conditions sont r\u00e9gies et interpr\u00e9t\u00e9es conform\u00e9ment au droit fran\u00e7ais, sans \u00e9gard aux dispositions relatives aux conflits de lois.", "p2": "Tout litige d\u00e9coulant des pr\u00e9sentes Conditions ou de votre utilisation du Service sera soumis \u00e0 la comp\u00e9tence exclusive des tribunaux de Brest, France.", "note": "Pour les consommateurs de l'UE : rien dans les pr\u00e9sentes Conditions n'affecte vos droits l\u00e9gaux au titre de la l\u00e9gislation applicable en mati\u00e8re de protection des consommateurs." },
         "footer": { "copyright": "\u00a9 {year} Traaaction. Tous droits r\u00e9serv\u00e9s.", "privacy": "Politique de confidentialit\u00e9", "home": "Accueil" }
+    },
+    "sellerReferral": {
+        "title": "Programme de parrainage",
+        "subtitle": "Invitez des sellers et gagnez un pourcentage sur chaque vente qu'ils generent — a vie.",
+        "howItWorks": "Comment ca marche",
+        "gen1": "Parrainage direct",
+        "gen2": "Leurs filleuls",
+        "gen3": "3eme generation",
+        "generation": "Generation",
+        "disclaimer": "Les pourcentages sont calcules sur le montant HT et finances par Traaaction — vos filleuls gagnent exactement les memes commissions.",
+        "yourLink": "Votre lien de parrainage",
+        "code": "Code",
+        "copy": "Copier",
+        "copied": "Copie",
+        "stats": {
+            "referred": "Sellers parraines",
+            "earned": "Total gagne",
+            "commissions": "Commissions",
+            "pendingEarnings": "En attente"
+        },
+        "generations": {
+            "title": "Gains par generation",
+            "sellers": "sellers",
+            "earned": "gagnes",
+            "commissions": "commissions"
+        },
+        "referredBy": "Vous avez ete parraine par",
+        "yourReferrals": "Vos filleuls",
+        "joined": "Inscrit le",
+        "sales": "ventes",
+        "earnedFromThem": "gagnes",
+        "active": "Actif",
+        "noReferrals": "Aucun filleul pour le moment. Partagez votre lien pour commencer !",
+        "errorTitle": "Impossible de charger les donnees de parrainage",
+        "errorRetry": "Reessayer",
+        "learnMore": "En savoir plus sur le programme de parrainage",
+        "page": "Page"
+    },
+    "affiliate": {
+        "badge": "Programme de parrainage",
+        "hero": {
+            "title1": "Traaaction",
+            "title2": "Affiliation",
+            "subtitle": "Invitez des sellers sur Traaaction et recevez jusqu'a 10% du HT de chaque vente — sur 3 generations, a vie. Finance par Traaaction, pas par vos filleuls.",
+            "cta": "Devenir seller",
+            "ctaSecondary": "Comment ca marche"
+        },
+        "tiers": {
+            "title": "Jusqu'a 10% par vente",
+            "subtitle": "3 niveaux de commission, finances integralement par Traaaction. Vos filleuls ne sont jamais impactes.",
+            "htLabel": "du chiffre d'affaires HT",
+            "gen1": {
+                "rate": "5%",
+                "label": "Generation 1",
+                "tag": "Filleul direct",
+                "desc": "Votre filleul s'inscrit via votre lien. Vous touchez 5% du HT de chacune de ses ventes."
+            },
+            "gen2": {
+                "rate": "3%",
+                "label": "Generation 2",
+                "tag": "Filleul indirect",
+                "desc": "Le filleul de votre filleul. Quand il vend, vous touchez 3% du HT — automatiquement."
+            },
+            "gen3": {
+                "rate": "2%",
+                "label": "Generation 3",
+                "tag": "3e niveau",
+                "desc": "La 3eme generation de votre reseau. Chaque vente vous rapporte encore 2% du HT."
+            }
+        },
+        "example": {
+            "label": "Exemple concret",
+            "title": "Sur une vente de 100\u20ac HT par un seller de 3e generation, voici comment les commissions se repartissent.",
+            "note": "Le seller qui vend touche exactement la meme commission qu'un seller non-parraine. Seule Traaaction reduit sa marge pour financer le programme.",
+            "g1": "Parrain originel",
+            "g2": "Parrain intermediaire",
+            "g3": "Parrain de 3e niveau",
+            "seller": "Le vendeur",
+            "sellerNote": "Commission inchangee",
+            "platformKeeps": "Traaaction conserve"
+        },
+        "howItWorks": {
+            "title": "En 4 etapes",
+            "subtitle": "De l'inscription a vos premieres commissions de parrainage.",
+            "step1": { "title": "Inscription", "desc": "Creez votre compte seller et completez votre profil. Votre lien unique est genere automatiquement." },
+            "step2": { "title": "Partage", "desc": "Envoyez votre lien a d'autres createurs, influenceurs ou commerciaux." },
+            "step3": { "title": "Ventes", "desc": "Vos filleuls rejoignent des missions et generent des ventes pour les startups." },
+            "step4": { "title": "Commissions", "desc": "A chaque vente, votre commission est calculee et creditee. Visible en temps reel." }
+        },
+        "benefits": {
+            "title": "Pourquoi ca marche",
+            "zeroImpact": { "title": "Zero impact sur vos filleuls", "desc": "Les sellers parraines gagnent exactement la meme chose. Aucun desavantage. Tout est finance par Traaaction sur sa marge." },
+            "lifetime": { "title": "Revenus passifs a vie", "desc": "Aucune limite dans le temps. Tant que vos filleuls vendent, vous touchez votre commission de parrainage." },
+            "generations": { "title": "3 generations de profondeur", "desc": "Pas seulement vos filleuls directs : leurs propres filleuls et la generation suivante vous rapportent aussi." },
+            "automatic": { "title": "Tout est automatique", "desc": "Pas de paperasse, pas de suivi manuel. Les commissions sont calculees, creditees et versees automatiquement." }
+        },
+        "faq": {
+            "title": "Questions frequentes",
+            "q1": { "q": "Comment fonctionne le programme d'affiliation ?", "a": "Chaque seller Traaaction dispose d'un lien de parrainage unique. Quand un nouveau seller s'inscrit via votre lien et commence a generer des ventes, vous recevez automatiquement un pourcentage du chiffre d'affaires HT de chaque transaction — a vie." },
+            "q2": { "q": "D'ou vient l'argent des commissions de parrainage ?", "a": "Les commissions de parrainage sont financees par Traaaction, sur nos frais de plateforme de 15%. Le seller parraine gagne exactement la meme chose qu'un seller non-parraine. Rien ne change pour lui, ni pour la startup." },
+            "q3": { "q": "Combien de generations puis-je toucher ?", "a": "Jusqu'a 3 generations. Vous touchez 5% sur les ventes de vos filleuls directs, 3% sur les ventes de leurs filleuls, et 2% sur la 3eme generation. Maximum 10% du HT par vente." },
+            "q4": { "q": "Quand est-ce que je recois mes gains ?", "a": "Les commissions de parrainage suivent le meme cycle que les commissions normales : une periode de hold de 30 jours (protection contre les remboursements), puis elles deviennent disponibles au retrait via Stripe Connect, PayPal, ou virement IBAN." },
+            "q5": { "q": "Est-ce que le parrainage expire ?", "a": "Non, le parrainage est a vie. Tant que votre filleul genere des ventes sur Traaaction, vous touchez votre commission de parrainage. Aucune limite dans le temps." },
+            "q6": { "q": "Est-ce que je dois etre un seller actif pour parrainer ?", "a": "Oui, vous devez avoir complete votre profil seller sur Traaaction. Votre lien de parrainage est genere automatiquement et accessible depuis votre dashboard, section Referral." },
+            "q7": { "q": "Que se passe-t-il en cas de remboursement ?", "a": "Si une vente est remboursee, toutes les commissions liees (commission du seller + commissions de parrainage) sont annulees automatiquement. Si elles ont deja ete versees, un solde negatif est applique." }
+        },
+        "cta": {
+            "title": "Pret a construire votre reseau ?",
+            "subtitle": "Creez votre compte seller, partagez votre lien, et commencez a gagner sur chaque vente de votre reseau.",
+            "button": "Commencer gratuitement",
+            "note": "Gratuit. Aucun engagement. Lien de parrainage genere instantanement."
+        },
+        "network": {
+            "you": "Vous",
+            "gen1": "Gen 1",
+            "gen2": "Gen 2"
+        }
     }
 }

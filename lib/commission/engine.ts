@@ -251,76 +251,177 @@ export async function countRecurringCommissions(subscriptionId: string): Promise
 
 /**
  * Handle charge.refunded - Clawback logic
- * With simplified enum (PENDING/PROCEED/COMPLETE):
- * - Delete the commission if PENDING or PROCEED
- * - If COMPLETE: Create negative balance entry
+ *
+ * Supports both FULL and PARTIAL refunds:
+ * - Full refund: Delete the commission entirely
+ * - Partial refund: Reduce commission proportionally
+ *
+ * If COMPLETE: Apply negative wallet balance
+ *
+ * All operations wrapped in $transaction for atomicity.
  */
 export async function handleClawback(params: {
     saleId: string
     reason?: string
+    refundAmount?: number    // Amount refunded in cents (if provided, enables partial refund)
+    originalAmount?: number  // Original charge amount in cents
 }): Promise<{ success: boolean; error?: string }> {
-    const { saleId, reason } = params
+    const { saleId, reason, refundAmount, originalAmount } = params
 
     try {
-        // Find existing commission
-        const commission = await prisma.commission.findUnique({
-            where: { sale_id: saleId }
-        })
+        // Determine if this is a partial refund
+        const isPartialRefund = refundAmount !== undefined &&
+                                originalAmount !== undefined &&
+                                originalAmount > 0 &&
+                                refundAmount < originalAmount
 
-        if (!commission) {
-            console.log(`[Commission] ⚠️ No commission found for sale ${saleId} - nothing to claw back`)
-            return { success: true }
-        }
+        // Track affected sellers for balance recalculation after transaction
+        const affectedSellerIds: string[] = []
 
-        // Find child leader commission (org split) if any
-        const leaderCommission = await prisma.commission.findFirst({
-            where: { org_parent_commission_id: commission.id }
-        })
-
-        // Delete the member commission
-        const clawbackAmount = commission.status === 'COMPLETE' ? commission.commission_amount : 0
-        await prisma.commission.delete({ where: { id: commission.id } })
-        console.log(`[Commission] 🔙 Deleted ${commission.status} commission ${commission.id} due to refund`)
-        await updateSellerBalance(commission.seller_id)
-        if (clawbackAmount > 0) {
-            await prisma.sellerBalance.update({
-                where: { seller_id: commission.seller_id },
-                data: { balance: { decrement: clawbackAmount } }
+        // === ALL CRITICAL OPERATIONS IN A SINGLE TRANSACTION ===
+        await prisma.$transaction(async (tx) => {
+            // Find existing commission
+            const commission = await tx.commission.findUnique({
+                where: { sale_id: saleId }
             })
-            console.log(`[Commission] 🔙 Applied -${clawbackAmount} clawback for already-paid commission`)
-        }
 
-        // Also delete the leader commission if this was an org sale
-        if (leaderCommission) {
-            const leaderClawback = leaderCommission.status === 'COMPLETE' ? leaderCommission.commission_amount : 0
-            await prisma.commission.delete({ where: { id: leaderCommission.id } })
-            console.log(`[Commission] 🔙 Deleted org leader commission ${leaderCommission.id}`)
-            await updateSellerBalance(leaderCommission.seller_id)
-            if (leaderClawback > 0) {
-                await prisma.sellerBalance.update({
-                    where: { seller_id: leaderCommission.seller_id },
-                    data: { balance: { decrement: leaderClawback } }
-                })
-                console.log(`[Commission] 🔙 Applied -${leaderClawback} leader clawback`)
+            if (!commission) {
+                console.log(`[Commission] ⚠️ No commission found for sale ${saleId} - nothing to claw back`)
+                return
             }
-        }
 
-        // Cascade delete referral commissions linked to this sale
-        const referralCommissions = await prisma.commission.findMany({
-            where: { referral_source_commission_id: commission.id }
+            affectedSellerIds.push(commission.seller_id)
+
+            // Find child leader commission (org split) if any
+            const leaderCommission = await tx.commission.findFirst({
+                where: { org_parent_commission_id: commission.id }
+            })
+
+            // Find referral commissions linked to this sale
+            const referralCommissions = await tx.commission.findMany({
+                where: { referral_source_commission_id: commission.id }
+            })
+
+            if (isPartialRefund) {
+                // === PARTIAL REFUND: Reduce commission proportionally ===
+                const refundRatio = refundAmount! / originalAmount!
+                const commissionReduction = Math.floor(commission.commission_amount * refundRatio)
+                const platformFeeReduction = Math.floor(commission.platform_fee * refundRatio)
+
+                console.log(`[Commission] 🔙 Partial refund: ${refundAmount! / 100}€ / ${originalAmount! / 100}€ (${(refundRatio * 100).toFixed(1)}%) → reducing commission by ${commissionReduction / 100}€`)
+
+                await tx.commission.update({
+                    where: { id: commission.id },
+                    data: {
+                        commission_amount: { decrement: commissionReduction },
+                        platform_fee: { decrement: platformFeeReduction },
+                        gross_amount: { decrement: refundAmount! },
+                    }
+                })
+
+                // If COMPLETE, apply negative wallet balance for the reduced amount
+                if (commission.status === 'COMPLETE' && commissionReduction > 0) {
+                    await tx.sellerBalance.update({
+                        where: { seller_id: commission.seller_id },
+                        data: { balance: { decrement: commissionReduction } }
+                    })
+                    console.log(`[Commission] 🔙 Applied -${commissionReduction / 100}€ partial clawback for seller ${commission.seller_id}`)
+                }
+
+                // Handle leader commission proportionally
+                if (leaderCommission) {
+                    const leaderReduction = Math.floor(leaderCommission.commission_amount * refundRatio)
+                    affectedSellerIds.push(leaderCommission.seller_id)
+
+                    await tx.commission.update({
+                        where: { id: leaderCommission.id },
+                        data: {
+                            commission_amount: { decrement: leaderReduction },
+                            gross_amount: { decrement: refundAmount! },
+                        }
+                    })
+
+                    if (leaderCommission.status === 'COMPLETE' && leaderReduction > 0) {
+                        await tx.sellerBalance.update({
+                            where: { seller_id: leaderCommission.seller_id },
+                            data: { balance: { decrement: leaderReduction } }
+                        })
+                        console.log(`[Commission] 🔙 Applied -${leaderReduction / 100}€ partial leader clawback`)
+                    }
+                }
+
+                // Handle referral commissions proportionally
+                for (const refComm of referralCommissions) {
+                    const refReduction = Math.floor(refComm.commission_amount * refundRatio)
+                    affectedSellerIds.push(refComm.seller_id)
+
+                    await tx.commission.update({
+                        where: { id: refComm.id },
+                        data: { commission_amount: { decrement: refReduction } }
+                    })
+
+                    if (refComm.status === 'COMPLETE' && refReduction > 0) {
+                        await tx.sellerBalance.update({
+                            where: { seller_id: refComm.seller_id },
+                            data: { balance: { decrement: refReduction } }
+                        })
+                        console.log(`[Commission] 🔙 Applied -${refReduction / 100}€ referral partial clawback for seller ${refComm.seller_id}`)
+                    }
+                }
+            } else {
+                // === FULL REFUND: Delete commissions entirely ===
+
+                // 1. Delete referral commissions first (they reference the member commission)
+                for (const refComm of referralCommissions) {
+                    const refClawback = refComm.status === 'COMPLETE' ? refComm.commission_amount : 0
+                    await tx.commission.delete({ where: { id: refComm.id } })
+                    affectedSellerIds.push(refComm.seller_id)
+                    console.log(`[Commission] 🔙 Deleted referral gen${refComm.referral_generation} commission ${refComm.id}`)
+
+                    if (refClawback > 0) {
+                        await tx.sellerBalance.update({
+                            where: { seller_id: refComm.seller_id },
+                            data: { balance: { decrement: refClawback } }
+                        })
+                        console.log(`[Commission] 🔙 Applied -${refClawback / 100}€ referral clawback for seller ${refComm.seller_id}`)
+                    }
+                }
+
+                // 2. Delete leader commission (references member commission)
+                if (leaderCommission) {
+                    const leaderClawback = leaderCommission.status === 'COMPLETE' ? leaderCommission.commission_amount : 0
+                    await tx.commission.delete({ where: { id: leaderCommission.id } })
+                    affectedSellerIds.push(leaderCommission.seller_id)
+                    console.log(`[Commission] 🔙 Deleted org leader commission ${leaderCommission.id}`)
+
+                    if (leaderClawback > 0) {
+                        await tx.sellerBalance.update({
+                            where: { seller_id: leaderCommission.seller_id },
+                            data: { balance: { decrement: leaderClawback } }
+                        })
+                        console.log(`[Commission] 🔙 Applied -${leaderClawback / 100}€ leader clawback`)
+                    }
+                }
+
+                // 3. Delete the member commission
+                const clawbackAmount = commission.status === 'COMPLETE' ? commission.commission_amount : 0
+                await tx.commission.delete({ where: { id: commission.id } })
+                console.log(`[Commission] 🔙 Deleted ${commission.status} commission ${commission.id} due to refund`)
+
+                if (clawbackAmount > 0) {
+                    await tx.sellerBalance.update({
+                        where: { seller_id: commission.seller_id },
+                        data: { balance: { decrement: clawbackAmount } }
+                    })
+                    console.log(`[Commission] 🔙 Applied -${clawbackAmount / 100}€ clawback for already-paid commission`)
+                }
+            }
         })
-        for (const refComm of referralCommissions) {
-            const refClawback = refComm.status === 'COMPLETE' ? refComm.commission_amount : 0
-            await prisma.commission.delete({ where: { id: refComm.id } })
-            console.log(`[Commission] 🔙 Deleted referral gen${refComm.referral_generation} commission ${refComm.id}`)
-            await updateSellerBalance(refComm.seller_id)
-            if (refClawback > 0) {
-                await prisma.sellerBalance.update({
-                    where: { seller_id: refComm.seller_id },
-                    data: { balance: { decrement: refClawback } }
-                })
-                console.log(`[Commission] 🔙 Applied -${refClawback} referral clawback for seller ${refComm.seller_id}`)
-            }
+
+        // After transaction committed: recalculate denormalized balance fields (pending/due/paid_total)
+        const uniqueSellerIds = [...new Set(affectedSellerIds)]
+        for (const sellerId of uniqueSellerIds) {
+            await updateSellerBalance(sellerId)
         }
 
         return { success: true }
@@ -358,11 +459,13 @@ export async function updateSellerBalance(sellerId: string): Promise<void> {
         }
 
         // Upsert balance record
+        // NOTE: `balance` is managed exclusively by the wallet ledger (payout-service.ts)
+        // DO NOT set balance = due here — it would overwrite the wallet balance
         await prisma.sellerBalance.upsert({
             where: { seller_id: sellerId },
             create: {
                 seller_id: sellerId,
-                balance: due, // Available for payout
+                balance: 0, // Wallet balance starts at 0, managed by ledger
                 pending,
                 due,
                 paid_total: paid
@@ -370,7 +473,7 @@ export async function updateSellerBalance(sellerId: string): Promise<void> {
             update: {
                 pending,
                 due,
-                balance: due,
+                // balance intentionally NOT updated — managed by wallet ledger
                 paid_total: paid
             }
         })
@@ -1155,18 +1258,15 @@ export async function createOrgCommissions(params: {
 const REFERRAL_RATES: { generation: number; rate: number }[] = [
     { generation: 1, rate: 0.05 },
     { generation: 2, rate: 0.03 },
-    { generation: 3, rate: 0.01 },
+    { generation: 3, rate: 0.02 },
 ]
-
-/** Referral bonuses expire after 1 year */
-const REFERRAL_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000
 
 /**
  * Create referral commissions for the ancestors of a seller who just earned a commission.
  * Walks up the referred_by chain (max 3 generations).
  *
  * - Funded from Traaaction's 15% platform fee (seller earnings unchanged)
- * - Expires 1 year after referral date
+ * - Lifetime (no expiry)
  * - Idempotent via sale_id = "{original}:ref:gen{N}:{ancestorId}"
  * - Same hold_days as the source commission
  *
@@ -1203,19 +1303,10 @@ export async function createReferralCommissions(sourceCommission: {
             // Fetch the current seller's referrer
             const seller = await prisma.seller.findUnique({
                 where: { id: currentSellerId },
-                select: { referred_by: true, referred_at: true }
+                select: { referred_by: true }
             })
 
             if (!seller?.referred_by) break // No referrer → stop
-
-            // Check 1-year expiry
-            if (seller.referred_at) {
-                const expiresAt = new Date(seller.referred_at.getTime() + REFERRAL_EXPIRY_MS)
-                if (new Date() > expiresAt) {
-                    console.log(`[Referral] ⏰ Gen ${generation} expired for seller ${currentSellerId} (referred ${seller.referred_at.toISOString()})`)
-                    break // Expired → stop entire chain
-                }
-            }
 
             const referrerId = seller.referred_by
             const referralAmount = Math.floor(ht_amount * rate)

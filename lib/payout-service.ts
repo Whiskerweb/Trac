@@ -51,7 +51,7 @@ const MIN_PAYOUT = {
  * Record an immutable ledger entry for wallet movements
  * This creates a complete audit trail for reconciliation
  */
-async function recordLedgerEntry(params: {
+export async function recordLedgerEntry(params: {
     sellerId: string
     entryType: LedgerEntryType
     amount: number // in cents, always positive
@@ -59,37 +59,55 @@ async function recordLedgerEntry(params: {
     referenceId: string
     description: string
 }): Promise<{ ledgerId: string; balanceAfter: number }> {
-    // Get current balance from ledger (source of truth)
-    const currentLedgerBalance = await calculateLedgerBalance(params.sellerId)
+    // Wrap balance read + entry create in transaction to prevent race conditions
+    // on balance_after calculation (two concurrent entries would read same balance)
+    const result = await prisma.$transaction(async (tx) => {
+        // Get current balance from ledger (source of truth)
+        const ledgerAgg = await tx.walletLedger.groupBy({
+            by: ['entry_type'],
+            where: { seller_id: params.sellerId },
+            _sum: { amount: true },
+        })
 
-    // Calculate new balance
-    const balanceAfter = params.entryType === 'CREDIT'
-        ? currentLedgerBalance + params.amount
-        : currentLedgerBalance - params.amount
-
-    // Create immutable ledger entry
-    const entry = await prisma.walletLedger.create({
-        data: {
-            seller_id: params.sellerId,
-            entry_type: params.entryType,
-            amount: params.amount,
-            reference_type: params.referenceType,
-            reference_id: params.referenceId,
-            balance_after: balanceAfter,
-            description: params.description,
+        let credits = 0
+        let debits = 0
+        for (const row of ledgerAgg) {
+            if (row.entry_type === 'CREDIT') credits = row._sum.amount || 0
+            else if (row.entry_type === 'DEBIT') debits = row._sum.amount || 0
         }
+        const currentLedgerBalance = credits - debits
+
+        // Calculate new balance
+        const balanceAfter = params.entryType === 'CREDIT'
+            ? currentLedgerBalance + params.amount
+            : currentLedgerBalance - params.amount
+
+        // Create immutable ledger entry
+        const entry = await tx.walletLedger.create({
+            data: {
+                seller_id: params.sellerId,
+                entry_type: params.entryType,
+                amount: params.amount,
+                reference_type: params.referenceType,
+                reference_id: params.referenceId,
+                balance_after: balanceAfter,
+                description: params.description,
+            }
+        })
+
+        return { ledgerId: entry.id, balanceAfter }
     })
 
     console.log('[Ledger] 📝 Entry recorded:', {
-        id: entry.id,
+        id: result.ledgerId,
         sellerId: params.sellerId,
         type: params.entryType,
         amount: `${params.amount / 100}€`,
-        balanceAfter: `${balanceAfter / 100}€`,
+        balanceAfter: `${result.balanceAfter / 100}€`,
         reference: `${params.referenceType}:${params.referenceId}`,
     })
 
-    return { ledgerId: entry.id, balanceAfter }
+    return result
 }
 
 /**
@@ -443,55 +461,84 @@ export async function requestGiftCard(request: GiftCardRequest): Promise<{
         }
     }
 
-    // Check balance from LEDGER (source of truth)
-    const ledgerBalance = await calculateLedgerBalance(request.sellerId)
+    try {
+        // === ALL IN ONE TRANSACTION to prevent double-spend ===
+        const result = await prisma.$transaction(async (tx) => {
+            // Check balance from LEDGER inside transaction (prevents race condition)
+            // Use raw aggregation inside tx to get accurate balance
+            const ledgerAgg = await tx.walletLedger.groupBy({
+                by: ['entry_type'],
+                where: { seller_id: request.sellerId },
+                _sum: { amount: true },
+            })
 
-    if (ledgerBalance < request.amount) {
+            let credits = 0
+            let debits = 0
+            for (const row of ledgerAgg) {
+                if (row.entry_type === 'CREDIT') credits = row._sum.amount || 0
+                else if (row.entry_type === 'DEBIT') debits = row._sum.amount || 0
+            }
+            const ledgerBalance = credits - debits
+
+            if (ledgerBalance < request.amount) {
+                throw new Error('INSUFFICIENT_BALANCE')
+            }
+
+            // Create redemption request
+            const redemption = await tx.giftCardRedemption.create({
+                data: {
+                    seller_id: request.sellerId,
+                    amount: request.amount,
+                    card_type: request.cardType,
+                    status: 'PENDING',
+                }
+            })
+
+            // Calculate new balance and create ledger entry
+            const balanceAfter = ledgerBalance - request.amount
+
+            await tx.walletLedger.create({
+                data: {
+                    seller_id: request.sellerId,
+                    entry_type: 'DEBIT',
+                    amount: request.amount,
+                    reference_type: 'GIFT_CARD_REDEMPTION',
+                    reference_id: redemption.id,
+                    balance_after: balanceAfter,
+                    description: `Gift card redemption: ${request.cardType} - ${request.amount / 100}€`,
+                }
+            })
+
+            // Sync SellerBalance with ledger
+            await tx.sellerBalance.update({
+                where: { seller_id: request.sellerId },
+                data: { balance: balanceAfter }
+            })
+
+            return { redemptionId: redemption.id, balanceAfter }
+        })
+
+        console.log('[PayoutService] 🎁 Gift card requested (atomic):', {
+            redemptionId: result.redemptionId,
+            partnerId: request.sellerId,
+            cardType: request.cardType,
+            amount: `${request.amount / 100}€`,
+            newBalance: `${result.balanceAfter / 100}€`,
+        })
+
+        return {
+            success: true,
+            redemptionId: result.redemptionId,
+        }
+    } catch (error) {
+        if (error instanceof Error && error.message === 'INSUFFICIENT_BALANCE') {
+            return { success: false, error: 'Insufficient platform balance' }
+        }
+        console.error('[PayoutService] ❌ Gift card request failed:', error)
         return {
             success: false,
-            error: 'Insufficient platform balance'
+            error: error instanceof Error ? error.message : 'Unknown error'
         }
-    }
-
-    // Create redemption request
-    const redemption = await prisma.giftCardRedemption.create({
-        data: {
-            seller_id: request.sellerId,
-            amount: request.amount,
-            card_type: request.cardType,
-            status: 'PENDING',
-        }
-    })
-
-    // Record DEBIT ledger entry
-    const { balanceAfter } = await recordLedgerEntry({
-        sellerId: request.sellerId,
-        entryType: 'DEBIT',
-        amount: request.amount,
-        referenceType: 'GIFT_CARD_REDEMPTION',
-        referenceId: redemption.id,
-        description: `Gift card redemption: ${request.cardType} - ${request.amount / 100}€`,
-    })
-
-    // Sync SellerBalance with ledger
-    await prisma.sellerBalance.update({
-        where: { seller_id: request.sellerId },
-        data: {
-            balance: balanceAfter,
-        }
-    })
-
-    console.log('[PayoutService] 🎁 Gift card requested with ledger:', {
-        redemptionId: redemption.id,
-        partnerId: request.sellerId,
-        cardType: request.cardType,
-        amount: `${request.amount / 100}€`,
-        newBalance: `${balanceAfter / 100}€`,
-    })
-
-    return {
-        success: true,
-        redemptionId: redemption.id,
     }
 }
 

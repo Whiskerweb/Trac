@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 import { revalidatePath } from 'next/cache'
 import { updateSellerBalance } from '@/lib/commission/engine'
+import { recordLedgerEntry } from '@/lib/payout-service'
 
 // =============================================
 // GET UNPAID COMMISSIONS FOR STARTUP
@@ -317,30 +318,39 @@ export async function createPaymentSession(commissionIds: string[]): Promise<{
 
 export async function confirmStartupPayment(paymentId: string, stripePaymentId: string): Promise<boolean> {
     try {
-        // IDEMPOTENCE: Check if already processed
-        const existing = await prisma.startupPayment.findUnique({
-            where: { id: paymentId },
-            select: { status: true }
-        })
-
-        if (existing?.status === 'PAID') {
-            console.log(`[Payouts] Payment ${paymentId} already confirmed, skipping`)
-            return true
-        }
-
-        if (!existing) {
-            console.error(`[Payouts] Payment ${paymentId} not found`)
-            return false
-        }
-
-        // Update payment status
-        const payment = await prisma.startupPayment.update({
-            where: { id: paymentId },
+        // ATOMIC IDEMPOTENCY: Update status ONLY if currently PENDING
+        // This prevents TOCTOU race condition (two webhooks reading PENDING simultaneously)
+        const updateResult = await prisma.startupPayment.updateMany({
+            where: {
+                id: paymentId,
+                status: 'PENDING'  // Only update if still PENDING (atomic check-and-set)
+            },
             data: {
                 status: 'PAID',
                 stripe_payment_id: stripePaymentId,
                 paid_at: new Date()
             }
+        })
+
+        // If no rows updated: either already PAID (idempotent) or not found
+        if (updateResult.count === 0) {
+            const existing = await prisma.startupPayment.findUnique({
+                where: { id: paymentId },
+                select: { status: true }
+            })
+
+            if (existing?.status === 'PAID') {
+                console.log(`[Payouts] Payment ${paymentId} already confirmed, skipping`)
+                return true
+            }
+
+            console.error(`[Payouts] Payment ${paymentId} not found or in unexpected status: ${existing?.status}`)
+            return false
+        }
+
+        // Fetch the payment for subsequent processing
+        const payment = await prisma.startupPayment.findUniqueOrThrow({
+            where: { id: paymentId }
         })
 
         // Get all commissions linked to this payment
@@ -408,27 +418,42 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
                     failedCommissionIds.push(...commissionIds)
                 }
             }
-            // OPTION 2: No Stripe Connect → Add to platform wallet
+            // OPTION 2: No Stripe Connect → Add to platform wallet with ledger audit trail
             else {
                 try {
                     console.log(`[Payouts] 💰 Seller ${sellerId} has no Stripe Connect, adding ${totalAmount / 100}€ to wallet`)
 
-                    // Add to seller's platform balance
+                    // Ensure SellerBalance exists
                     await prisma.sellerBalance.upsert({
                         where: { seller_id: sellerId },
                         create: {
                             seller_id: sellerId,
-                            balance: totalAmount,
+                            balance: 0,
                             pending: 0,
                             due: 0,
                             paid_total: 0
                         },
-                        update: {
-                            balance: { increment: totalAmount }
-                        }
+                        update: {}
                     })
 
-                    console.log(`[Payouts] ✅ Added ${totalAmount / 100}€ to seller ${sellerId} platform wallet`)
+                    // Record immutable ledger entry (audit trail)
+                    const batchRefId = `startup_payout_${payment.id}_${sellerId}`
+                    const { balanceAfter } = await recordLedgerEntry({
+                        sellerId,
+                        entryType: 'CREDIT',
+                        amount: totalAmount,
+                        referenceType: 'COMMISSION',
+                        referenceId: batchRefId,
+                        description: `Startup payout: ${sellerCommissions.length} commission(s) - ${totalAmount / 100}€`,
+                    })
+
+                    // Sync SellerBalance.balance with ledger
+                    await prisma.sellerBalance.update({
+                        where: { seller_id: sellerId },
+                        data: { balance: balanceAfter }
+                    })
+
+                    console.log(`[Payouts] ✅ Added ${totalAmount / 100}€ to seller ${sellerId} platform wallet (ledger balance: ${balanceAfter / 100}€)`)
                     successfulCommissionIds.push(...commissionIds)
                 } catch (err) {
                     console.error(`[Payouts] Error adding to wallet for seller ${sellerId}:`, err)

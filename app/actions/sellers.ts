@@ -1573,7 +1573,7 @@ export async function createNewStripeAccount(): Promise<{
  * Get the current seller's referral data (code, link, stats).
  * Lazily generates a referral_code if the seller doesn't have one.
  */
-export async function getMyReferralData() {
+export async function getMyReferralData(page: number = 1) {
     try {
         const user = await getCurrentUser()
         if (!user) return { success: false, error: 'Not authenticated' }
@@ -1616,7 +1616,86 @@ export async function getMyReferralData() {
             _count: true,
         })
 
-        // Get referred sellers list
+        // Earnings by generation (3 parallel queries)
+        const [gen1Agg, gen2Agg, gen3Agg] = await Promise.all([
+            prisma.commission.aggregate({
+                where: { seller_id: seller.id, referral_generation: 1 },
+                _sum: { commission_amount: true },
+                _count: true,
+            }),
+            prisma.commission.aggregate({
+                where: { seller_id: seller.id, referral_generation: 2 },
+                _sum: { commission_amount: true },
+                _count: true,
+            }),
+            prisma.commission.aggregate({
+                where: { seller_id: seller.id, referral_generation: 3 },
+                _sum: { commission_amount: true },
+                _count: true,
+            }),
+        ])
+
+        // Count referred sellers per generation
+        const gen1SellerIds = await prisma.seller.findMany({
+            where: { referred_by: seller.id },
+            select: { id: true },
+        })
+        const gen1Ids = gen1SellerIds.map(s => s.id)
+
+        let gen2ReferredCount = 0
+        let gen3ReferredCount = 0
+        if (gen1Ids.length > 0) {
+            const gen2Sellers = await prisma.seller.findMany({
+                where: { referred_by: { in: gen1Ids } },
+                select: { id: true },
+            })
+            gen2ReferredCount = gen2Sellers.length
+            const gen2Ids = gen2Sellers.map(s => s.id)
+            if (gen2Ids.length > 0) {
+                gen3ReferredCount = await prisma.seller.count({
+                    where: { referred_by: { in: gen2Ids } },
+                })
+            }
+        }
+
+        // Earnings per referred seller — fetch gen1 commissions, then resolve source seller IDs
+        const gen1Commissions = await prisma.commission.findMany({
+            where: { seller_id: seller.id, referral_generation: 1 },
+            select: {
+                commission_amount: true,
+                referral_source_commission_id: true,
+            }
+        })
+
+        // Batch-lookup the source commissions to get their seller_id
+        const sourceIds = gen1Commissions
+            .map(c => c.referral_source_commission_id)
+            .filter((id): id is string => id !== null)
+        const sourceCommissions = sourceIds.length > 0
+            ? await prisma.commission.findMany({
+                where: { id: { in: sourceIds } },
+                select: { id: true, seller_id: true },
+            })
+            : []
+        const sourceToSeller: Record<string, string> = {}
+        for (const sc of sourceCommissions) {
+            sourceToSeller[sc.id] = sc.seller_id
+        }
+
+        const earningsByReferral: Record<string, number> = {}
+        for (const c of gen1Commissions) {
+            const srcSellerId = c.referral_source_commission_id ? sourceToSeller[c.referral_source_commission_id] : null
+            if (srcSellerId) {
+                earningsByReferral[srcSellerId] = (earningsByReferral[srcSellerId] || 0) + c.commission_amount
+            }
+        }
+
+        // Paginated referred sellers list
+        const perPage = 20
+        const safePage = Math.max(1, Math.floor(page))
+        const totalReferredSellers = referralCount
+        const totalPages = Math.max(1, Math.ceil(totalReferredSellers / perPage))
+
         const referredSellers = await prisma.seller.findMany({
             where: { referred_by: seller.id },
             select: {
@@ -1628,7 +1707,8 @@ export async function getMyReferralData() {
                 _count: { select: { Commissions: { where: { referral_generation: null, org_parent_commission_id: null } } } }
             },
             orderBy: { created_at: 'desc' },
-            take: 50,
+            take: perPage,
+            skip: (safePage - 1) * perPage,
         })
 
         return {
@@ -1642,6 +1722,11 @@ export async function getMyReferralData() {
                 totalEarnings: referralEarnings._sum.commission_amount || 0,
                 totalCommissions: referralEarnings._count,
             },
+            earningsByGeneration: {
+                gen1: { count: gen1Agg._count, amount: gen1Agg._sum.commission_amount || 0, referredCount: gen1Ids.length },
+                gen2: { count: gen2Agg._count, amount: gen2Agg._sum.commission_amount || 0, referredCount: gen2ReferredCount },
+                gen3: { count: gen3Agg._count, amount: gen3Agg._sum.commission_amount || 0, referredCount: gen3ReferredCount },
+            },
             referredSellers: referredSellers.map(s => ({
                 id: s.id,
                 name: s.name,
@@ -1649,7 +1734,13 @@ export async function getMyReferralData() {
                 joinedAt: s.created_at,
                 status: s.status,
                 salesCount: s._count.Commissions,
+                earningsFromThem: earningsByReferral[s.id] || 0,
             })),
+            pagination: {
+                page: safePage,
+                totalPages,
+                total: totalReferredSellers,
+            },
         }
     } catch (error) {
         console.error('[Referral] Failed to get referral data:', error)

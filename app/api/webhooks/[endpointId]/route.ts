@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics/tinybird'
-import { waitUntil } from '@vercel/functions'
 import { createCommission, createOrgCommissions, findSellerForSale, handleClawback, getMissionCommissionConfig, getOrgMissionConfig, countRecurringCommissions, updateSellerBalance } from '@/lib/commission/engine'
 import { CommissionSource } from '@/lib/generated/prisma/client'
 import { sanitizeClickId, sanitizeUUID } from '@/lib/sql-sanitize'
@@ -118,48 +117,41 @@ export async function POST(
         if (session.metadata?.type === 'startup_payout') {
             console.log(`[Webhook] 💳 Startup payment detected for workspace ${endpoint.workspace_id}`)
 
-            waitUntil(
-                (async () => {
-                    try {
-                        const { confirmStartupPayment } = await import('@/app/actions/payouts')
+            try {
+                const { confirmStartupPayment } = await import('@/app/actions/payouts')
 
-                        const paymentId = session.metadata!.startup_payment_id
-                        const stripePaymentId = session.payment_intent as string
+                const paymentId = session.metadata!.startup_payment_id
+                const stripePaymentId = session.payment_intent as string
 
-                        if (!paymentId) {
-                            console.error('[Webhook] Missing startup_payment_id in metadata')
-                            return
-                        }
+                if (!paymentId) {
+                    console.error('[Webhook] Missing startup_payment_id in metadata')
+                    return NextResponse.json({ error: 'Missing payment ID' }, { status: 400 })
+                }
 
-                        console.log(`[Webhook] Processing startup payout:`, {
-                            paymentId,
-                            workspaceId: endpoint.workspace_id,
-                            stripePaymentId,
-                            amount: session.amount_total
-                        })
+                console.log(`[Webhook] Processing startup payout:`, {
+                    paymentId,
+                    workspaceId: endpoint.workspace_id,
+                    stripePaymentId,
+                    amount: session.amount_total
+                })
 
-                        const success = await confirmStartupPayment(paymentId, stripePaymentId)
+                const success = await confirmStartupPayment(paymentId, stripePaymentId)
 
-                        if (success) {
-                            console.log(`[Webhook] ✅ Startup payment ${paymentId} confirmed`)
-                        } else {
-                            console.error(`[Webhook] ❌ Failed to confirm startup payment ${paymentId}`)
-                        }
-                    } catch (err) {
-                        console.error('[Webhook] Error processing startup payment:', err)
-                    }
-                })()
-            )
-
-            // Return early - don't process as a customer sale
-            return NextResponse.json({ received: true }, { status: 200 })
+                if (success) {
+                    console.log(`[Webhook] ✅ Startup payment ${paymentId} confirmed`)
+                    return NextResponse.json({ received: true }, { status: 200 })
+                } else {
+                    console.error(`[Webhook] ❌ Failed to confirm startup payment ${paymentId}`)
+                    return NextResponse.json({ error: 'Payment confirmation failed' }, { status: 500 })
+                }
+            } catch (err) {
+                console.error('[Webhook] Error processing startup payment:', err)
+                return NextResponse.json({ error: 'Processing error' }, { status: 500 })
+            }
         }
 
-        // Use waitUntil for "Fire-and-Forget" reliability
-        // This ensures the response to Stripe is fast (ms) while processing continues
-        waitUntil(
-            (async () => {
-                try {
+        // Process synchronously — return 500 on failure so Stripe retries
+        try {
                     // ========================================
                     // IDEMPOTENCY CHECK (CRITICAL FOR PRODUCTION)
                     // ========================================
@@ -169,7 +161,7 @@ export async function POST(
 
                     if (existingEvent) {
                         console.log(`[Webhook] ⏭️ Event ${event.id} already processed, skipping`)
-                        return
+                        return NextResponse.json({ received: true }, { status: 200 })
                     }
 
                     // Extract core data
@@ -339,7 +331,7 @@ export async function POST(
                     }> = [];
 
                     try {
-                        // Note: This API call adds latency, which is why we must be inside waitUntil
+                        // Note: This API call adds latency but is needed for product detail tracking
                         const lineItemsResponse = await stripe.checkout.sessions.listLineItems(
                             session.id,
                             { expand: ['data.price.product'] }
@@ -703,13 +695,12 @@ export async function POST(
                         }
                     })
                     console.log(`[Webhook] ✅ Event ${event.id} processed and recorded`)
+                    return NextResponse.json({ received: true }, { status: 200 })
 
                 } catch (err) {
-                    // Start of the catch block for the async wrapper
-                    console.error('[Multi-Tenant Webhook] ❌ Async processing error:', err)
+                    console.error('[Multi-Tenant Webhook] ❌ Processing error:', err)
+                    return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
                 }
-            })()
-        )
     } else if (event.type === 'invoice.paid') {
         const invoice = event.data.object as Stripe.Invoice
 
@@ -719,9 +710,16 @@ export async function POST(
             return NextResponse.json({ received: true }, { status: 200 })
         }
 
-        waitUntil(
-            (async () => {
-                try {
+        try {
+                    // IDEMPOTENCY CHECK
+                    const existingInvoiceEvent = await prisma.processedEvent.findUnique({
+                        where: { event_id: event.id }
+                    })
+                    if (existingInvoiceEvent) {
+                        console.log(`[Webhook] ⏭️ Event ${event.id} already processed, skipping`)
+                        return NextResponse.json({ received: true }, { status: 200 })
+                    }
+
                     const workspaceId = endpoint.workspace_id
 
                     // 1. Recover Click ID from Customer Metadata
@@ -958,11 +956,24 @@ export async function POST(
                         console.log(`[Webhook] ℹ️ Invoice ${invoice.id} has no subscription - skipping recurring commission`)
                     }
 
+                    // Record processed event for idempotency
+                    await prisma.processedEvent.create({
+                        data: {
+                            event_id: event.id,
+                            event_type: event.type,
+                            workspace_id: workspaceId,
+                            amount_cents: grossAmount,
+                            net_cents: netAmount,
+                            stripe_fee: stripeFee
+                        }
+                    })
+                    console.log(`[Webhook] ✅ Invoice event ${event.id} processed and recorded`)
+                    return NextResponse.json({ received: true }, { status: 200 })
+
                 } catch (err) {
                     console.error('[Webhook] ❌ Invoice processing error:', err)
+                    return NextResponse.json({ error: 'Invoice processing failed' }, { status: 500 })
                 }
-            })()
-        )
 
     } else if (event.type === 'charge.refunded') {
         // ========================================
@@ -970,12 +981,29 @@ export async function POST(
         // ========================================
         const charge = event.data.object as Stripe.Charge
 
-        waitUntil(
-            (async () => {
-                try {
+        try {
+                    // IDEMPOTENCY CHECK
+                    const existingRefundEvent = await prisma.processedEvent.findUnique({
+                        where: { event_id: event.id }
+                    })
+                    if (existingRefundEvent) {
+                        console.log(`[Webhook] ⏭️ Event ${event.id} already processed, skipping`)
+                        return NextResponse.json({ received: true }, { status: 200 })
+                    }
+
                     console.log(`[Webhook] 🔙 Processing refund for charge ${charge.id}`)
 
                     const refundReason = charge.refunds?.data[0]?.reason || 'Customer refund'
+
+                    // Determine refund amounts for partial refund support
+                    const refundAmount = charge.amount_refunded || 0
+                    const originalAmount = charge.amount || 0
+                    const isPartialRefund = refundAmount > 0 && refundAmount < originalAmount
+
+                    if (isPartialRefund) {
+                        console.log(`[Webhook] 🔙 PARTIAL refund detected: ${refundAmount / 100}€ of ${originalAmount / 100}€`)
+                    }
+
                     let clawbackDone = false
 
                     // Strategy 1: Find via checkout session (one-time payments + first subscription month)
@@ -991,7 +1019,12 @@ export async function POST(
 
                         if (sessions.data.length > 0) {
                             const sessionId = sessions.data[0].id
-                            await handleClawback({ saleId: sessionId, reason: refundReason })
+                            await handleClawback({
+                                saleId: sessionId,
+                                reason: refundReason,
+                                refundAmount,
+                                originalAmount,
+                            })
                             console.log(`[Webhook] ✅ Clawback processed for session ${sessionId}`)
                             clawbackDone = true
                         }
@@ -1005,7 +1038,12 @@ export async function POST(
                             ? chargeInvoice
                             : chargeInvoice.id
 
-                        await handleClawback({ saleId: invoiceId, reason: refundReason })
+                        await handleClawback({
+                            saleId: invoiceId,
+                            reason: refundReason,
+                            refundAmount,
+                            originalAmount,
+                        })
                         console.log(`[Webhook] ✅ Clawback processed for invoice ${invoiceId}`)
                         clawbackDone = true
                     }
@@ -1013,18 +1051,44 @@ export async function POST(
                     if (!clawbackDone) {
                         console.log(`[Webhook] ⚠️ No commission found to clawback for charge ${charge.id}`)
                     }
+
+                    // Record processed event for idempotency
+                    await prisma.processedEvent.create({
+                        data: {
+                            event_id: event.id,
+                            event_type: event.type,
+                            workspace_id: endpoint.workspace_id,
+                            amount_cents: refundAmount,
+                        }
+                    })
+                    console.log(`[Webhook] ✅ Refund event ${event.id} processed and recorded`)
+                    return NextResponse.json({ received: true }, { status: 200 })
+
                 } catch (err) {
                     console.error('[Webhook] ❌ Clawback processing error:', err)
+                    return NextResponse.json({ error: 'Refund processing failed' }, { status: 500 })
                 }
-            })()
-        )
     } else if (event.type === 'customer.subscription.deleted') {
         const subscription = event.data.object as Stripe.Subscription
         console.log(`[Webhook] Subscription ${subscription.id} cancelled for workspace ${endpoint.workspace_id}`)
 
-        waitUntil(
-            (async () => {
-                try {
+        try {
+                    // IDEMPOTENCY CHECK
+                    const existingSubEvent = await prisma.processedEvent.findUnique({
+                        where: { event_id: event.id }
+                    })
+                    if (existingSubEvent) {
+                        console.log(`[Webhook] ⏭️ Event ${event.id} already processed, skipping`)
+                        return NextResponse.json({ received: true }, { status: 200 })
+                    }
+
+                    // Find affected sellers BEFORE deleting (needed for balance update)
+                    const affectedSellersBeforeDelete = await prisma.commission.findMany({
+                        where: { subscription_id: subscription.id, status: 'PENDING' },
+                        select: { seller_id: true },
+                        distinct: ['seller_id']
+                    })
+
                     // Delete all PENDING commissions for this subscription
                     // If still within the 30-day hold, the seller shouldn't be paid
                     const deleted = await prisma.commission.deleteMany({
@@ -1038,27 +1102,32 @@ export async function POST(
                         console.log(`[Webhook] 🗑️ Deleted ${deleted.count} PENDING commission(s) for cancelled subscription ${subscription.id}`)
 
                         // Update seller balances for affected sellers
-                        const affectedSellers = await prisma.commission.findMany({
-                            where: { subscription_id: subscription.id },
-                            select: { seller_id: true },
-                            distinct: ['seller_id']
-                        })
-
-                        for (const { seller_id } of affectedSellers) {
+                        for (const { seller_id } of affectedSellersBeforeDelete) {
                             await updateSellerBalance(seller_id)
                         }
                     } else {
                         console.log(`[Webhook] ℹ️ No PENDING commissions to delete for subscription ${subscription.id}`)
                     }
+
+                    // Record processed event for idempotency
+                    await prisma.processedEvent.create({
+                        data: {
+                            event_id: event.id,
+                            event_type: event.type,
+                            workspace_id: endpoint.workspace_id,
+                        }
+                    })
+                    console.log(`[Webhook] ✅ Subscription deleted event ${event.id} processed and recorded`)
+                    return NextResponse.json({ received: true }, { status: 200 })
+
                 } catch (err) {
                     console.error('[Webhook] ❌ Error cleaning up cancelled subscription:', err)
+                    return NextResponse.json({ error: 'Subscription cleanup failed' }, { status: 500 })
                 }
-            })()
-        )
     } else {
         console.log(`[Multi-Tenant Webhook] ⏭️ Ignoring event ${event.type}`)
     }
 
-    // Always return 200 OK immediately to Stripe
+    // Return 200 for unhandled event types (acknowledge receipt)
     return NextResponse.json({ received: true }, { status: 200 })
 }

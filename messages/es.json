@@ -2078,5 +2078,122 @@
         "contact": { "intro": "Si tiene alguna pregunta sobre los presentes T\u00e9rminos de Servicio:", "address1": "60 rue Amiral Romain-Desfoss\u00e9s", "address2": "29200 Brest, Francia" },
         "governing": { "p1": "Los presentes T\u00e9rminos se regir\u00e1n e interpretar\u00e1n de conformidad con las leyes de Francia, sin tener en cuenta sus disposiciones sobre conflictos de leyes.", "p2": "Cualquier litigio derivado de los presentes T\u00e9rminos o del uso del Servicio se someter\u00e1 a la jurisdicci\u00f3n exclusiva de los tribunales de Brest, Francia.", "note": "Para consumidores de la UE: nada en los presentes T\u00e9rminos afecta a sus derechos legales en virtud de la legislaci\u00f3n aplicable de protecci\u00f3n al consumidor." },
         "footer": { "copyright": "\u00a9 {year} Traaaction. Todos los derechos reservados.", "privacy": "Pol\u00edtica de privacidad", "home": "Inicio" }
+    },
+    "sellerReferral": {
+        "title": "Programa de referidos",
+        "subtitle": "Invita sellers y gana un porcentaje de cada venta que generen — de por vida.",
+        "howItWorks": "Como funciona",
+        "gen1": "Referido directo",
+        "gen2": "Sus referidos",
+        "gen3": "3ra generacion",
+        "generation": "Generacion",
+        "disclaimer": "Los porcentajes se calculan sobre el monto HT y son financiados por Traaaction — tus referidos ganan exactamente las mismas comisiones.",
+        "yourLink": "Tu enlace de referido",
+        "code": "Codigo",
+        "copy": "Copiar",
+        "copied": "Copiado",
+        "stats": {
+            "referred": "Sellers referidos",
+            "earned": "Total ganado",
+            "commissions": "Comisiones",
+            "pendingEarnings": "Pendiente"
+        },
+        "generations": {
+            "title": "Ganancias por generacion",
+            "sellers": "sellers",
+            "earned": "ganados",
+            "commissions": "comisiones"
+        },
+        "referredBy": "Fuiste referido por",
+        "yourReferrals": "Tus referidos",
+        "joined": "Inscrito el",
+        "sales": "ventas",
+        "earnedFromThem": "ganados",
+        "active": "Activo",
+        "noReferrals": "Aun no tienes referidos. Comparte tu enlace para empezar!",
+        "errorTitle": "No se pudieron cargar los datos de referidos",
+        "errorRetry": "Reintentar",
+        "learnMore": "Saber mas sobre el programa de referidos",
+        "page": "Pagina"
+    },
+    "affiliate": {
+        "badge": "Programa de referidos",
+        "hero": {
+            "title1": "Traaaction",
+            "title2": "Afiliacion",
+            "subtitle": "Invita sellers a Traaaction y recibe hasta el 10% del importe neto de cada venta — en 3 generaciones, de por vida. Financiado por Traaaction, no por tus referidos.",
+            "cta": "Ser seller",
+            "ctaSecondary": "Como funciona"
+        },
+        "tiers": {
+            "title": "Hasta un 10% por venta",
+            "subtitle": "3 niveles de comision, financiados integramente por Traaaction. Tus referidos nunca se ven afectados.",
+            "htLabel": "de la facturacion neta",
+            "gen1": {
+                "rate": "5%",
+                "label": "Generacion 1",
+                "tag": "Referido directo",
+                "desc": "Tu referido se registra a traves de tu enlace. Ganas el 5% del neto de cada una de sus ventas."
+            },
+            "gen2": {
+                "rate": "3%",
+                "label": "Generacion 2",
+                "tag": "Referido indirecto",
+                "desc": "El referido de tu referido. Cuando vende, ganas el 3% del neto — automaticamente."
+            },
+            "gen3": {
+                "rate": "2%",
+                "label": "Generacion 3",
+                "tag": "3er nivel",
+                "desc": "La 3a generacion de tu red. Cada venta te genera aun un 2% del neto."
+            }
+        },
+        "example": {
+            "label": "Ejemplo concreto",
+            "title": "En una venta de 100\u20ac netos por un seller de 3a generacion, asi se reparten las comisiones.",
+            "note": "El seller que vende cobra exactamente la misma comision que un seller no referido. Solo Traaaction reduce su margen para financiar el programa.",
+            "g1": "Referidor original",
+            "g2": "Referidor intermedio",
+            "g3": "Referidor de 3er nivel",
+            "seller": "El vendedor",
+            "sellerNote": "Comision sin cambios",
+            "platformKeeps": "Traaaction conserva"
+        },
+        "howItWorks": {
+            "title": "En 4 pasos",
+            "subtitle": "Desde el registro hasta tus primeras comisiones de referidos.",
+            "step1": { "title": "Registro", "desc": "Crea tu cuenta de seller y completa tu perfil. Tu enlace unico se genera automaticamente." },
+            "step2": { "title": "Comparte", "desc": "Envia tu enlace a otros creadores, influencers o comerciales." },
+            "step3": { "title": "Ventas", "desc": "Tus referidos se unen a misiones y generan ventas para las startups." },
+            "step4": { "title": "Comisiones", "desc": "Con cada venta, tu comision se calcula y se acredita. Visible en tiempo real." }
+        },
+        "benefits": {
+            "title": "Por que funciona",
+            "zeroImpact": { "title": "Cero impacto en tus referidos", "desc": "Los sellers referidos ganan exactamente lo mismo. Sin desventajas. Todo financiado por Traaaction con su margen." },
+            "lifetime": { "title": "Ingresos pasivos de por vida", "desc": "Sin limite de tiempo. Mientras tus referidos vendan, cobras tu comision de referido." },
+            "generations": { "title": "3 generaciones de profundidad", "desc": "No solo tus referidos directos: sus propios referidos y la siguiente generacion tambien te generan comisiones." },
+            "automatic": { "title": "Todo es automatico", "desc": "Sin papeleo, sin seguimiento manual. Las comisiones se calculan, acreditan y pagan automaticamente." }
+        },
+        "faq": {
+            "title": "Preguntas frecuentes",
+            "q1": { "q": "Como funciona el programa de referidos?", "a": "Cada seller de Traaaction tiene un enlace de referido unico. Cuando un nuevo seller se registra a traves de tu enlace y empieza a generar ventas, recibes automaticamente un porcentaje del importe neto de cada transaccion — de por vida." },
+            "q2": { "q": "De donde sale el dinero de las comisiones de referidos?", "a": "Las comisiones de referidos se financian con los honorarios de plataforma del 15% de Traaaction. El seller referido gana exactamente lo mismo que un seller no referido. Nada cambia para el, ni para la startup." },
+            "q3": { "q": "Cuantas generaciones puedo cobrar?", "a": "Hasta 3 generaciones. Cobras el 5% de las ventas de tus referidos directos, el 3% de las ventas de sus referidos, y el 2% de la 3a generacion. Maximo 10% del neto por venta." },
+            "q4": { "q": "Cuando recibo mis ganancias?", "a": "Las comisiones de referidos siguen el mismo ciclo que las comisiones normales: un periodo de retencion de 30 dias (proteccion contra reembolsos), luego estan disponibles para retirar via Stripe Connect, PayPal o transferencia bancaria." },
+            "q5": { "q": "Expira el programa de referidos?", "a": "No, el programa de referidos es de por vida. Mientras tu referido genere ventas en Traaaction, cobras tu comision de referido. Sin limite de tiempo." },
+            "q6": { "q": "Necesito ser un seller activo para referir?", "a": "Si, debes haber completado tu perfil de seller en Traaaction. Tu enlace de referido se genera automaticamente y es accesible desde tu dashboard, en la seccion Referral." },
+            "q7": { "q": "Que pasa en caso de reembolso?", "a": "Si una venta es reembolsada, todas las comisiones relacionadas (comision del seller + comisiones de referidos) se cancelan automaticamente. Si ya han sido pagadas, se aplica un saldo negativo." }
+        },
+        "cta": {
+            "title": "Listo para construir tu red?",
+            "subtitle": "Crea tu cuenta de seller, comparte tu enlace y empieza a ganar con cada venta de tu red.",
+            "button": "Empezar gratis",
+            "note": "Gratis. Sin compromiso. Enlace de referido generado al instante."
+        },
+        "network": {
+            "you": "Tu",
+            "gen1": "Gen 1",
+            "gen2": "Gen 2"
+        }
     }
 }
