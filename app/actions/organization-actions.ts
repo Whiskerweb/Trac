@@ -160,7 +160,19 @@ export async function getOrganizationDetail(orgId: string) {
                 },
                 Missions: {
                     include: {
-                        Mission: { select: { id: true, title: true, status: true, target_url: true } }
+                        Mission: {
+                            select: {
+                                id: true, title: true, status: true, target_url: true,
+                                industry: true, gain_type: true, reward: true,
+                                workspace_id: true,
+                                Workspace: {
+                                    select: {
+                                        id: true, name: true,
+                                        Profile: { select: { logo_url: true, industry: true, website_url: true } }
+                                    }
+                                }
+                            }
+                        }
                     },
                     orderBy: { created_at: 'desc' }
                 }
@@ -831,6 +843,13 @@ export async function getOrgMissionProposalsForLeader() {
                     select: {
                         id: true, title: true, description: true, target_url: true,
                         status: true, industry: true, gain_type: true,
+                        workspace_id: true,
+                        Workspace: {
+                            select: {
+                                id: true, name: true,
+                                Profile: { select: { logo_url: true, industry: true, website_url: true } }
+                            }
+                        }
                     }
                 }
             },
@@ -1203,6 +1222,50 @@ export async function getOrganizationCommissions(orgId: string) {
         return { success: true, commissions: commissionsWithMission }
     } catch (error) {
         console.error('[Org] Failed to get org commissions:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+/**
+ * Get per-mission commission stats for an org (leader only).
+ * Returns a map: { [orgMissionId]: { count, revenue, pending } }
+ */
+export async function getOrgMissionStats(orgId: string) {
+    try {
+        const seller = await getSellerForCurrentUser()
+        if (!seller) return { success: false, error: 'Not authenticated' }
+
+        const org = await prisma.organization.findUnique({ where: { id: orgId } })
+        if (!org || org.leader_id !== seller.id) {
+            return { success: false, error: 'Only the leader can view mission stats' }
+        }
+
+        const orgMissions = await prisma.organizationMission.findMany({
+            where: { organization_id: orgId },
+            select: { id: true }
+        })
+
+        const stats: Record<string, { count: number; revenue: number; pending: number }> = {}
+
+        for (const om of orgMissions) {
+            const commissions = await prisma.commission.findMany({
+                where: {
+                    organization_mission_id: om.id,
+                    org_parent_commission_id: null, // member commissions only
+                },
+                select: { commission_amount: true, status: true }
+            })
+
+            stats[om.id] = {
+                count: commissions.length,
+                revenue: commissions.reduce((s, c) => s + c.commission_amount, 0),
+                pending: commissions.filter(c => c.status === 'PENDING').reduce((s, c) => s + c.commission_amount, 0),
+            }
+        }
+
+        return { success: true, stats }
+    } catch (error) {
+        console.error('[Org] Failed to get mission stats:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
 }
