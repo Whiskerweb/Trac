@@ -11,7 +11,6 @@ function OrgStatusBadge({ status }: { status: string }) {
         PENDING: 'bg-orange-50 text-orange-700 border-orange-200',
         ACTIVE: 'bg-green-50 text-green-700 border-green-200',
         SUSPENDED: 'bg-red-50 text-red-700 border-red-200',
-        REJECTED: 'bg-red-50 text-red-500 border-red-200',
     }
     return (
         <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status] || 'bg-gray-100 text-gray-500 border-gray-200'}`}>

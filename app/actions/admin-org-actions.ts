@@ -20,7 +20,7 @@ async function requireAdminUser() {
 /**
  * Get all organizations with counts (admin view)
  */
-export async function getAllOrgs(filter?: 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED') {
+export async function getAllOrgs(filter?: 'PENDING' | 'ACTIVE' | 'SUSPENDED') {
     try {
         await requireAdminUser()
 
@@ -81,7 +81,10 @@ export async function approveOrg(orgId: string) {
     try {
         await requireAdminUser()
 
-        const org = await prisma.organization.findUnique({ where: { id: orgId } })
+        const org = await prisma.organization.findUnique({
+            where: { id: orgId },
+            include: { Leader: { select: { id: true, name: true } } }
+        })
         if (!org) return { success: false, error: 'Organization not found' }
         if (org.status !== 'PENDING') {
             return { success: false, error: 'Organization is not pending approval' }
@@ -92,7 +95,9 @@ export async function approveOrg(orgId: string) {
             data: { status: 'ACTIVE' }
         })
 
-        console.log(`[Admin Org] ✅ Approved org ${orgId} (${org.name})`)
+        await notifyOrgLeader(org, 'approved')
+
+        console.log(`[Admin Org] Approved org ${orgId} (${org.name})`)
         return { success: true }
     } catch (error) {
         console.error('[Admin Org] Failed to approve org:', error)
@@ -107,7 +112,10 @@ export async function suspendOrg(orgId: string) {
     try {
         await requireAdminUser()
 
-        const org = await prisma.organization.findUnique({ where: { id: orgId } })
+        const org = await prisma.organization.findUnique({
+            where: { id: orgId },
+            include: { Leader: { select: { id: true, name: true } } }
+        })
         if (!org) return { success: false, error: 'Organization not found' }
 
         await prisma.organization.update({
@@ -115,7 +123,9 @@ export async function suspendOrg(orgId: string) {
             data: { status: 'SUSPENDED' }
         })
 
-        console.log(`[Admin Org] ⚠️ Suspended org ${orgId} (${org.name})`)
+        await notifyOrgLeader(org, 'suspended')
+
+        console.log(`[Admin Org] Suspended org ${orgId} (${org.name})`)
         return { success: true }
     } catch (error) {
         console.error('[Admin Org] Failed to suspend org:', error)
@@ -130,7 +140,10 @@ export async function reactivateOrg(orgId: string) {
     try {
         await requireAdminUser()
 
-        const org = await prisma.organization.findUnique({ where: { id: orgId } })
+        const org = await prisma.organization.findUnique({
+            where: { id: orgId },
+            include: { Leader: { select: { id: true, name: true } } }
+        })
         if (!org) return { success: false, error: 'Organization not found' }
         if (org.status !== 'SUSPENDED') {
             return { success: false, error: 'Organization is not suspended' }
@@ -141,7 +154,9 @@ export async function reactivateOrg(orgId: string) {
             data: { status: 'ACTIVE' }
         })
 
-        console.log(`[Admin Org] ✅ Reactivated org ${orgId} (${org.name})`)
+        await notifyOrgLeader(org, 'reactivated')
+
+        console.log(`[Admin Org] Reactivated org ${orgId} (${org.name})`)
         return { success: true }
     } catch (error) {
         console.error('[Admin Org] Failed to reactivate org:', error)
@@ -157,7 +172,6 @@ const SUPPORT_WORKSPACE_SLUG = 'traaaction-support'
 
 /**
  * Get or create the "Traaaction Support" workspace used for platform notifications.
- * This workspace has no real owner — it only serves as a sender identity in conversations.
  */
 async function getOrCreateSupportWorkspace(): Promise<string> {
     const existing = await prisma.workspace.findUnique({
@@ -165,7 +179,6 @@ async function getOrCreateSupportWorkspace(): Promise<string> {
         include: { Profile: true }
     })
     if (existing) {
-        // Ensure profile with logo exists
         if (!existing.Profile) {
             await prisma.workspaceProfile.create({
                 data: {
@@ -186,7 +199,6 @@ async function getOrCreateSupportWorkspace(): Promise<string> {
         }
     })
 
-    // Create profile with Traaaction logo
     await prisma.workspaceProfile.create({
         data: {
             workspace_id: ws.id,
@@ -200,12 +212,10 @@ async function getOrCreateSupportWorkspace(): Promise<string> {
 
 /**
  * Send a support/system message to a seller.
- * Creates or reuses a conversation between "Traaaction Support" workspace and the seller.
  */
 async function sendSupportMessage(sellerId: string, content: string) {
     const workspaceId = await getOrCreateSupportWorkspace()
 
-    // Upsert conversation
     const conversation = await prisma.conversation.upsert({
         where: {
             workspace_id_seller_id: {
@@ -227,7 +237,6 @@ async function sendSupportMessage(sellerId: string, content: string) {
         }
     })
 
-    // Create message
     await prisma.message.create({
         data: {
             conversation_id: conversation.id,
@@ -237,6 +246,74 @@ async function sendSupportMessage(sellerId: string, content: string) {
     })
 
     console.log(`[Admin] Sent support message to seller ${sellerId}`)
+}
+
+// =============================================
+// I18N: Organization notification messages
+// =============================================
+
+type OrgLocale = 'fr' | 'en' | 'es'
+
+const FRENCH_COUNTRIES = ['france', 'fr', 'belgique', 'belgium', 'be', 'suisse', 'switzerland', 'ch', 'luxembourg', 'lu', 'canada', 'ca', 'monaco', 'mc']
+const SPANISH_COUNTRIES = ['espagne', 'spain', 'es', 'mexique', 'mexico', 'mx', 'argentine', 'argentina', 'ar', 'colombie', 'colombia', 'co', 'chili', 'chile', 'cl', 'perou', 'peru', 'pe']
+
+/**
+ * Detect seller locale from their profile country
+ */
+async function getSellerLocale(sellerId: string): Promise<OrgLocale> {
+    const profile = await prisma.sellerProfile.findUnique({
+        where: { seller_id: sellerId },
+        select: { country: true }
+    })
+    if (!profile?.country) return 'en'
+    const c = profile.country.toLowerCase().trim()
+    if (FRENCH_COUNTRIES.some(fc => c.includes(fc))) return 'fr'
+    if (SPANISH_COUNTRIES.some(sc => c.includes(sc))) return 'es'
+    return 'en'
+}
+
+const ORG_MESSAGES: Record<string, Record<OrgLocale, (name: string, orgName: string) => string>> = {
+    approved: {
+        fr: (name, orgName) =>
+            `Bonjour${name ? ` ${name}` : ''},\n\nBonne nouvelle ! Votre organisation "${orgName}" a été approuvée. Elle est maintenant active et visible sur la plateforme.\n\nVous pouvez dès à présent inviter des membres et accepter des missions depuis votre tableau de bord.\n\n— L'équipe Traaaction`,
+        en: (name, orgName) =>
+            `Hi${name ? ` ${name}` : ''},\n\nGreat news! Your organization "${orgName}" has been approved. It is now active and visible on the platform.\n\nYou can start inviting members and accepting missions from your dashboard.\n\n— The Traaaction Team`,
+        es: (name, orgName) =>
+            `Hola${name ? ` ${name}` : ''},\n\nBuenas noticias! Tu organización "${orgName}" ha sido aprobada. Ahora está activa y visible en la plataforma.\n\nYa puedes invitar miembros y aceptar misiones desde tu panel de control.\n\n— El equipo de Traaaction`,
+    },
+    rejected: {
+        fr: (name, orgName) =>
+            `Bonjour${name ? ` ${name}` : ''},\n\nNous avons examiné votre demande de création de l'organisation "${orgName}" et malheureusement, celle-ci n'a pas été approuvée.\n\nCela peut être dû à un manque de détails dans votre candidature ou à des critères qui ne correspondent pas à nos exigences actuelles.\n\nN'hésitez pas à soumettre une nouvelle demande avec plus de détails sur votre projet et votre équipe.\n\n— L'équipe Traaaction`,
+        en: (name, orgName) =>
+            `Hi${name ? ` ${name}` : ''},\n\nWe reviewed your application to create the organization "${orgName}" and unfortunately, it was not approved.\n\nThis may be due to insufficient details in your application or criteria that don't match our current requirements.\n\nFeel free to submit a new application with more details about your project and team.\n\n— The Traaaction Team`,
+        es: (name, orgName) =>
+            `Hola${name ? ` ${name}` : ''},\n\nHemos revisado tu solicitud para crear la organización "${orgName}" y lamentablemente no ha sido aprobada.\n\nEsto puede deberse a falta de detalles en tu solicitud o a criterios que no coinciden con nuestros requisitos actuales.\n\nNo dudes en enviar una nueva solicitud con más detalles sobre tu proyecto y equipo.\n\n— El equipo de Traaaction`,
+    },
+    suspended: {
+        fr: (name, orgName) =>
+            `Bonjour${name ? ` ${name}` : ''},\n\nVotre organisation "${orgName}" a été suspendue par notre équipe de modération.\n\nSi vous pensez qu'il s'agit d'une erreur, veuillez nous contacter pour clarifier la situation.\n\n— L'équipe Traaaction`,
+        en: (name, orgName) =>
+            `Hi${name ? ` ${name}` : ''},\n\nYour organization "${orgName}" has been suspended by our moderation team.\n\nIf you believe this is an error, please contact us to clarify the situation.\n\n— The Traaaction Team`,
+        es: (name, orgName) =>
+            `Hola${name ? ` ${name}` : ''},\n\nTu organización "${orgName}" ha sido suspendida por nuestro equipo de moderación.\n\nSi crees que se trata de un error, contáctanos para aclarar la situación.\n\n— El equipo de Traaaction`,
+    },
+    reactivated: {
+        fr: (name, orgName) =>
+            `Bonjour${name ? ` ${name}` : ''},\n\nVotre organisation "${orgName}" a été réactivée. Elle est à nouveau active et visible sur la plateforme.\n\nVous pouvez reprendre vos activités normalement.\n\n— L'équipe Traaaction`,
+        en: (name, orgName) =>
+            `Hi${name ? ` ${name}` : ''},\n\nYour organization "${orgName}" has been reactivated. It is active and visible on the platform again.\n\nYou can resume your activities as normal.\n\n— The Traaaction Team`,
+        es: (name, orgName) =>
+            `Hola${name ? ` ${name}` : ''},\n\nTu organización "${orgName}" ha sido reactivada. Está activa y visible en la plataforma nuevamente.\n\nPuedes retomar tus actividades con normalidad.\n\n— El equipo de Traaaction`,
+    },
+}
+
+/**
+ * Send a localized org notification to the leader
+ */
+async function notifyOrgLeader(org: { leader_id: string; name: string; Leader?: { name?: string | null } | null }, action: keyof typeof ORG_MESSAGES) {
+    const locale = await getSellerLocale(org.leader_id)
+    const message = ORG_MESSAGES[action][locale](org.Leader?.name || '', org.name)
+    await sendSupportMessage(org.leader_id, message)
 }
 
 // =============================================
@@ -259,18 +336,15 @@ export async function rejectOrg(orgId: string) {
             return { success: false, error: 'Organization is not pending' }
         }
 
-        // Update status
-        await prisma.organization.update({
+        // Send notification BEFORE deleting the org
+        await notifyOrgLeader(org, 'rejected')
+
+        // Delete the org (cascades to Members + Missions)
+        await prisma.organization.delete({
             where: { id: orgId },
-            data: { status: 'REJECTED' }
         })
 
-        // Send notification to the leader
-        const message = `Bonjour${org.Leader?.name ? ` ${org.Leader.name}` : ''},\n\nNous avons examiné votre demande de création de l'organisation "${org.name}" et malheureusement, celle-ci n'a pas été approuvée.\n\nCela peut être dû à un manque de détails dans votre candidature ou à des critères qui ne correspondent pas à nos exigences actuelles.\n\nN'hésitez pas à soumettre une nouvelle demande avec plus de détails sur votre projet et votre équipe.\n\n— L'équipe Traaaction`
-
-        await sendSupportMessage(org.leader_id, message)
-
-        console.log(`[Admin Org] Rejected org ${orgId} (${org.name})`)
+        console.log(`[Admin Org] Rejected & deleted org ${orgId} (${org.name})`)
         return { success: true }
     } catch (error) {
         console.error('[Admin Org] Failed to reject org:', error)

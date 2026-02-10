@@ -93,9 +93,9 @@ export async function getMyOrganizations() {
         const seller = await getSellerForCurrentUser()
         if (!seller) return { success: false, error: 'Not authenticated' }
 
-        // Orgs where user is leader
+        // Orgs where user is leader (exclude REJECTED — they get deleted, but filter just in case)
         const ledOrgs = await prisma.organization.findMany({
-            where: { leader_id: seller.id },
+            where: { leader_id: seller.id, status: { not: 'REJECTED' } },
             include: {
                 _count: { select: { Members: { where: { status: 'ACTIVE' } }, Missions: true } },
             },
