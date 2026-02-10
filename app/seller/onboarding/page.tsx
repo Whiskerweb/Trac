@@ -11,6 +11,7 @@ import {
     completeOnboarding,
     getOnboardingStatus
 } from '@/app/actions/seller-onboarding'
+import { createGlobalSeller } from '@/app/actions/sellers'
 
 const STEPS = [
     { number: 1, label: 'Profile' },
@@ -50,6 +51,39 @@ export default function SellerOnboardingPage() {
 
     // Load seller data — if ?new=1, this runs in the background while step 1 is already visible
     useEffect(() => {
+        // Safety net: if no seller record exists, create one automatically
+        // This prevents the /seller → /seller/onboarding → /seller loop
+        async function autoCreateSeller() {
+            try {
+                const { createClient } = await import('@/utils/supabase/client')
+                const supabase = createClient()
+                const { data: { user } } = await supabase.auth.getUser()
+                if (!user) {
+                    console.error('[Seller Onboarding] Cannot auto-create: not authenticated')
+                    return
+                }
+                console.log('[Seller Onboarding] Auto-creating seller for:', user.id)
+                const result = await createGlobalSeller({
+                    userId: user.id,
+                    email: user.email || '',
+                    name: user.user_metadata?.full_name || user.user_metadata?.name || ''
+                })
+                if (result.success) {
+                    console.log('[Seller Onboarding] Seller auto-created, reloading...')
+                    // Reload to pick up the new seller record
+                    window.location.reload()
+                } else {
+                    console.error('[Seller Onboarding] Auto-create failed:', result.error)
+                    setErrorMsg('Unable to create your account. Please try again.')
+                    setLoading(false)
+                }
+            } catch (err) {
+                console.error('[Seller Onboarding] Auto-create exception:', err)
+                setErrorMsg('Unable to create your account. Please try again.')
+                setLoading(false)
+            }
+        }
+
         async function loadStatus(retries = isNewSignup ? 10 : 5) {
             let result
             try {
@@ -60,7 +94,8 @@ export default function SellerOnboardingPage() {
                     await new Promise(r => setTimeout(r, 2000))
                     return loadStatus(retries - 1)
                 }
-                if (!isNewSignup) router.push('/seller')
+                // All retries failed — try to auto-create the seller record
+                await autoCreateSeller()
                 return
             }
 
@@ -72,8 +107,9 @@ export default function SellerOnboardingPage() {
                     await new Promise(r => setTimeout(r, 2000))
                     return loadStatus(retries - 1)
                 }
-                console.log('[Seller Onboarding] Seller not found after retries, redirecting to /seller')
-                if (!isNewSignup) router.push('/seller')
+                // All retries exhausted — auto-create the seller record as safety net
+                console.log('[Seller Onboarding] Seller not found after retries, auto-creating...')
+                await autoCreateSeller()
                 return
             }
 

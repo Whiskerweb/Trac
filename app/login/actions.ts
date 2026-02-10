@@ -115,6 +115,21 @@ export async function login(formData: FormData) {
         redirect('/seller')
     }
 
+    // If user explicitly chose "Seller" but has NO seller record -> create one & go to onboarding
+    if (roleIntent === 'seller' && !userRoles?.hasSeller) {
+        const { createGlobalSeller } = await import('@/app/actions/sellers')
+        const result = await createGlobalSeller({
+            userId: data.user!.id,
+            email: data.user!.email || email,
+            name: data.user!.user_metadata?.full_name || data.user!.user_metadata?.name || ''
+        })
+        if (result.success) {
+            console.log('[Auth] Auto-created seller for login with roleIntent=seller')
+            redirect('/seller/onboarding')
+        }
+        // If creation fails, fall through to smart detection
+    }
+
     // If user explicitly chose "Startup" and HAS workspace -> Go to /dashboard
     if (roleIntent === 'startup' && userRoles?.hasWorkspace) {
         redirect('/dashboard')
