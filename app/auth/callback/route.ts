@@ -60,6 +60,15 @@ export async function GET(request: NextRequest) {
         console.log('[Auth Callback] App subdomain detected, forcing roleIntent=startup')
     }
 
+    // =============================================
+    // SUBDOMAIN-AWARE REDIRECT ORIGINS
+    // In production, redirect directly to the correct subdomain
+    // to avoid cross-origin RSC fetch issues (CORS)
+    // =============================================
+    const isProduction = process.env.NODE_ENV === 'production'
+    const sellerOrigin = isProduction ? 'https://seller.traaaction.com' : origin
+    const appOrigin = isProduction ? 'https://app.traaaction.com' : origin
+
     console.log('[Auth Callback] Starting...', {
         code: !!code,
         redirectTo,
@@ -207,7 +216,7 @@ export async function GET(request: NextRequest) {
                         console.log('[Auth Callback] Auto-created Global Seller, redirecting to onboarding')
                         // ?new=1 tells the onboarding page to show step 1 immediately
                         // without waiting for the DB read (PgBouncer lag protection)
-                        return createRedirect(`${origin}/seller/onboarding?new=1`)
+                        return createRedirect(`${sellerOrigin}/seller/onboarding?new=1`)
                     } else {
                         console.error('[Auth Callback] Failed to create seller:', result.error)
                         return createRedirect(`${origin}/login?error=seller_creation_failed&message=${encodeURIComponent(result.error || 'Failed to create seller account')}`)
@@ -230,22 +239,22 @@ export async function GET(request: NextRequest) {
         // Dual Role User -> Auth Choice (Resume session)
         if (roles.hasWorkspace && roles.hasSeller) {
             if (roleIntent === 'seller') {
-                return createRedirect(`${origin}/seller`)
+                return createRedirect(`${sellerOrigin}/seller`)
             }
             if (roleIntent === 'startup') {
-                return createRedirect(`${origin}/dashboard`)
+                return createRedirect(`${appOrigin}/dashboard`)
             }
             return createRedirect(`${origin}/auth/choice`)
         }
 
         // Seller Only -> Seller Dashboard
         if (roles.hasSeller) {
-            return createRedirect(`${origin}/seller`)
+            return createRedirect(`${sellerOrigin}/seller`)
         }
 
         // Startup Only -> Dashboard
         if (roles.hasWorkspace) {
-            return createRedirect(`${origin}/dashboard`)
+            return createRedirect(`${appOrigin}/dashboard`)
         }
 
         // Fallback
