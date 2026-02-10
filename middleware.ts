@@ -319,6 +319,9 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     const isPartnersDomain = hostname === PARTNER_SUBDOMAIN ||
         (process.env.NODE_ENV === 'development' && hostname === 'seller.localhost')
 
+    const isAppDomain = hostname === 'app.traaaction.com' ||
+        (process.env.NODE_ENV === 'development' && hostname === 'app.localhost')
+
     // 🔄 SELLER PORTAL ROUTING (seller.traaaction.com)
     if (isPartnersDomain) {
         // Exclude shared pages (auth, assets) from rewriting — they work normally
@@ -337,6 +340,24 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             return NextResponse.rewrite(newUrl)
         }
         // Shared paths: fall through to normal middleware flow (login, auth, etc.)
+    }
+
+    // 🔄 APP PORTAL ROUTING (app.traaaction.com)
+    if (isAppDomain) {
+        const sharedPaths = ['/login', '/auth', '/onboarding', '/seller-terms',
+                             '/_next', '/api', '/Logotrac', '/favicon']
+        const isShared = sharedPaths.some(p => pathname.startsWith(p))
+
+        if (!isShared) {
+            const newUrl = request.nextUrl.clone()
+            if (pathname === '/') {
+                newUrl.pathname = '/dashboard'
+            } else if (!pathname.startsWith('/dashboard') && !pathname.startsWith('/admin')) {
+                newUrl.pathname = `/dashboard${pathname}`
+            }
+            console.log(`[Middleware] 🔀 Rewriting App Domain: ${hostname}${pathname} -> ${newUrl.pathname}`)
+            return NextResponse.rewrite(newUrl)
+        }
     }
 
     // ============================================
@@ -754,6 +775,13 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 
     // Protected routes - redirect to login if not authenticated
     if (pathname.startsWith('/dashboard')) {
+        // In production on the main domain, redirect to app subdomain
+        if (!isAppDomain && !isDev) {
+            const appUrl = new URL(pathname, 'https://app.traaaction.com')
+            appUrl.search = request.nextUrl.search
+            return NextResponse.redirect(appUrl)
+        }
+
         if (!user) {
             const loginUrl = new URL('/login', request.url)
             loginUrl.searchParams.set('redirectTo', pathname)

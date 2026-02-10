@@ -23,6 +23,15 @@ const nextConfig: NextConfig = {
           destination: '/seller/:path*',
         },
         // =============================================
+        // APP SUBDOMAIN REWRITE
+        // app.traaaction.com/* → /dashboard/*
+        // =============================================
+        {
+          source: '/:path*',
+          has: [{ type: 'host', value: 'app.traaaction.com' }],
+          destination: '/dashboard/:path*',
+        },
+        // =============================================
         // WHITE-LABEL PORTAL REWRITES
         // Seller portals serve Traaaction content while preserving their URL
         // =============================================

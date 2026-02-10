@@ -47,12 +47,23 @@ export default function LoginPage() {
         window.location.hostname === 'seller.localhost'
     )
 
+    // Detect app subdomain — auto-select startup role, skip role choice
+    const isAppDomain = typeof window !== 'undefined' && (
+        window.location.hostname === 'app.traaaction.com' ||
+        window.location.hostname === 'app.localhost'
+    )
+
     useEffect(() => {
         setMounted(true)
 
         // On seller subdomain, force seller role immediately
         if (isSellerDomain && !userType) {
             setUserType('seller')
+        }
+
+        // On app subdomain, force startup role immediately
+        if (isAppDomain && !userType) {
+            setUserType('startup')
         }
 
         // Check for error in URL params (from auth callback)
@@ -173,8 +184,8 @@ export default function LoginPage() {
             setViewState('form')
             setError('')
             setSuccessMessage('')
-        } else if (userType && !isSellerDomain) {
-            // On seller subdomain, don't allow going back to role selection
+        } else if (userType && !isSellerDomain && !isAppDomain) {
+            // On seller/app subdomain, don't allow going back to role selection
             setUserType(null)
             setError('')
             setSuccessMessage('')

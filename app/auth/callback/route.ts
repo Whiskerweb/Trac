@@ -24,8 +24,14 @@ export async function GET(request: NextRequest) {
 
     function createRedirect(url: string) {
         const response = NextResponse.redirect(url)
+        const isProduction = process.env.NODE_ENV === 'production'
+        const cookieDomain = isProduction ? '.traaaction.com' : undefined
+
         for (const { name, value, options } of cookiesToForward) {
-            response.cookies.set(name, value, options)
+            response.cookies.set(name, value, {
+                ...options,
+                ...(cookieDomain ? { domain: cookieDomain } : {}),
+            })
         }
         console.log(`[Auth Callback] Redirect → ${new URL(url).pathname} (${cookiesToForward.length} cookies forwarded: ${cookiesToForward.map(c => c.name).join(', ')})`)
         return response
@@ -43,6 +49,17 @@ export async function GET(request: NextRequest) {
         console.log('[Auth Callback] Seller subdomain detected, forcing roleIntent=seller')
     }
 
+    // =============================================
+    // APP SUBDOMAIN DETECTION
+    // If callback comes from app.traaaction.com, force startup role
+    // =============================================
+    const isAppDomain = callbackHostname === 'app.traaaction.com' || callbackHostname === 'app.localhost'
+
+    if (isAppDomain && !roleIntent) {
+        roleIntent = 'startup'
+        console.log('[Auth Callback] App subdomain detected, forcing roleIntent=startup')
+    }
+
     console.log('[Auth Callback] Starting...', {
         code: !!code,
         redirectTo,
@@ -50,6 +67,7 @@ export async function GET(request: NextRequest) {
         errorCode,
         errorDescription,
         isSellerDomain,
+        isAppDomain,
     })
 
     // =============================================

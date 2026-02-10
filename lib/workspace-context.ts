@@ -29,12 +29,14 @@ export async function getActiveWorkspaceId(): Promise<string | null> {
  */
 export async function setActiveWorkspaceId(workspaceId: string): Promise<void> {
     const cookieStore = await cookies()
+    const isProduction = process.env.NODE_ENV === 'production'
     cookieStore.set(WORKSPACE_COOKIE, workspaceId, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProduction,
         sameSite: 'lax',
         maxAge: COOKIE_MAX_AGE,
         path: '/',
+        ...(isProduction ? { domain: '.traaaction.com' } : {}),
     })
 }
 
