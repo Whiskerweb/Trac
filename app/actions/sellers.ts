@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/db'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 import { getCurrentUser } from '@/lib/auth'
+import { nanoid } from 'nanoid'
+import { cookies } from 'next/headers'
 
 // =============================================
 // GET MY SELLERS (Sellers who joined our missions)
@@ -734,14 +736,34 @@ export async function createGlobalSeller(data: {
             return { success: true, sellerId: existingSeller.id }
         }
 
-        // Create new seller
+        // Check referral cookie
+        let referredBy: string | null = null
+        try {
+            const cookieStore = await cookies()
+            const refCode = cookieStore.get('trac_ref')?.value
+            if (refCode) {
+                const referrer = await prisma.seller.findUnique({
+                    where: { referral_code: refCode },
+                    select: { id: true }
+                })
+                if (referrer) {
+                    referredBy = referrer.id
+                    console.log(`[Seller] Referral detected: ${refCode} → referrer ${referrer.id}`)
+                }
+            }
+        } catch { /* cookie read may fail in some contexts */ }
+
+        // Create new seller with referral code
         const seller = await prisma.seller.create({
             data: {
                 tenant_id: data.userId,
                 user_id: data.userId,
                 email: data.email,
                 name: data.name,
-                status: 'APPROVED'
+                status: 'APPROVED',
+                referral_code: nanoid(8),
+                referred_by: referredBy,
+                referred_at: referredBy ? new Date() : null,
             }
         })
 
@@ -1540,5 +1562,97 @@ export async function createNewStripeAccount(): Promise<{
     } catch (error) {
         console.error('[Stripe] Error creating new account:', error)
         return { success: false, error: 'Failed to create account' }
+    }
+}
+
+// =============================================
+// REFERRAL / PARRAINAGE
+// =============================================
+
+/**
+ * Get the current seller's referral data (code, link, stats).
+ * Lazily generates a referral_code if the seller doesn't have one.
+ */
+export async function getMyReferralData() {
+    try {
+        const user = await getCurrentUser()
+        if (!user) return { success: false, error: 'Not authenticated' }
+
+        let seller = await prisma.seller.findFirst({
+            where: { user_id: user.userId },
+            select: {
+                id: true,
+                referral_code: true,
+                referred_by: true,
+                referred_at: true,
+                Referrer: { select: { id: true, name: true, email: true } },
+            }
+        })
+
+        if (!seller) return { success: false, error: 'No seller found' }
+
+        // Lazy-generate referral code for existing sellers
+        if (!seller.referral_code) {
+            const code = nanoid(8)
+            await prisma.seller.update({
+                where: { id: seller.id },
+                data: { referral_code: code }
+            })
+            seller = { ...seller, referral_code: code }
+        }
+
+        // Count direct referrals (gen 1)
+        const referralCount = await prisma.seller.count({
+            where: { referred_by: seller.id }
+        })
+
+        // Get referral earnings (all commissions with referral_generation != null for this seller)
+        const referralEarnings = await prisma.commission.aggregate({
+            where: {
+                seller_id: seller.id,
+                referral_generation: { not: null },
+            },
+            _sum: { commission_amount: true },
+            _count: true,
+        })
+
+        // Get referred sellers list
+        const referredSellers = await prisma.seller.findMany({
+            where: { referred_by: seller.id },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                created_at: true,
+                status: true,
+                _count: { select: { Commissions: { where: { referral_generation: null, org_parent_commission_id: null } } } }
+            },
+            orderBy: { created_at: 'desc' },
+            take: 50,
+        })
+
+        return {
+            success: true,
+            referralCode: seller.referral_code,
+            referralLink: `${process.env.NEXT_PUBLIC_APP_URL}/r/${seller.referral_code}`,
+            referredBy: seller.Referrer ? { name: seller.Referrer.name, email: seller.Referrer.email } : null,
+            referredAt: seller.referred_at,
+            stats: {
+                totalReferred: referralCount,
+                totalEarnings: referralEarnings._sum.commission_amount || 0,
+                totalCommissions: referralEarnings._count,
+            },
+            referredSellers: referredSellers.map(s => ({
+                id: s.id,
+                name: s.name,
+                email: s.email,
+                joinedAt: s.created_at,
+                status: s.status,
+                salesCount: s._count.Commissions,
+            })),
+        }
+    } catch (error) {
+        console.error('[Referral] Failed to get referral data:', error)
+        return { success: false, error: 'Failed to load referral data' }
     }
 }

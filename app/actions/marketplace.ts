@@ -931,7 +931,7 @@ export async function getMyEnrollments(): Promise<{
         organization?: {
             id: string
             name: string
-            memberReward: string
+            memberReward: string | null
         } | null
         status: string
         created_at: Date
@@ -988,7 +988,7 @@ export async function getMyEnrollments(): Promise<{
             .map(e => e.organization_mission_id)
             .filter((id): id is string => !!id)
 
-        const orgMissionsMap = new Map<string, { id: string; name: string; memberReward: string }>()
+        const orgMissionsMap = new Map<string, { id: string; name: string; memberReward: string | null }>()
         if (orgMissionIds.length > 0) {
             const orgMissions = await prisma.organizationMission.findMany({
                 where: { id: { in: orgMissionIds } },

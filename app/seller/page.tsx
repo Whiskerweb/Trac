@@ -38,7 +38,7 @@ interface Enrollment {
     organization?: {
         id: string
         name: string
-        memberReward: string
+        memberReward: string | null
     } | null
     status: string
     created_at: Date

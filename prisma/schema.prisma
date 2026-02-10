@@ -412,6 +412,14 @@ model Seller {
   /// BIC/SWIFT code
   bic           String?
 
+  // === REFERRAL / PARRAINAGE ===
+  /// Seller who referred this seller (gen 1 parent)
+  referred_by   String?
+  /// Unique referral code for sharing (e.g. "ab12cd34")
+  referral_code String?   @unique
+  /// When this seller was referred (for 1-year expiry)
+  referred_at   DateTime?
+
   created_at          DateTime             @default(now())
   updated_at          DateTime             @updatedAt
   Commissions         Commission[]
@@ -422,12 +430,15 @@ model Seller {
   GiftCardRedemptions GiftCardRedemption[]
   LeadOrganizations   Organization[]       @relation("OrgLeader")
   OrgMemberships      OrganizationMember[]
+  Referrer            Seller?              @relation("SellerReferral", fields: [referred_by], references: [id], onDelete: SetNull)
+  Referrals           Seller[]             @relation("SellerReferral")
 
   @@unique([program_id, email])
   @@index([email])
   @@index([tenant_id])
   @@index([user_id])
   @@index([program_id])
+  @@index([referred_by])
 }
 
 /// Partner Profile - Onboarding data and social links
@@ -560,6 +571,12 @@ model Commission {
   /// Links to the OrganizationMission that generated this commission
   organization_mission_id  String?
 
+  // === REFERRAL TRACKING ===
+  /// Points to the original commission that triggered this referral bonus
+  referral_source_commission_id String?
+  /// Generation depth: 1 = direct referrer, 2 = gen2, 3 = gen3
+  referral_generation            Int?
+
   created_at     DateTime        @default(now())
   updated_at     DateTime        @updatedAt
   Seller         Seller          @relation(fields: [seller_id], references: [id], onDelete: Cascade)
@@ -575,6 +592,7 @@ model Commission {
   @@index([link_id])
   @@index([org_parent_commission_id])
   @@index([organization_mission_id])
+  @@index([referral_source_commission_id])
 }
 
 /// Partner Balance for tracking payouts and negative balances (clawbacks)
@@ -646,16 +664,12 @@ model OrganizationMission {
   organization_id String
   mission_id      String
 
-  /// Total commission rate negotiated with startup (e.g., "30%")
-  total_reward            String
-  /// Leader's cut per sale (e.g., "5%")
-  leader_reward           String
-  /// Member's cut per sale (e.g., "25%")
-  member_reward           String
-  /// Leader reward structure (FLAT or PERCENTAGE)
-  leader_reward_structure RewardStructure @default(PERCENTAGE)
-  /// Member reward structure (FLAT or PERCENTAGE)
-  member_reward_structure RewardStructure @default(PERCENTAGE)
+  /// Total commission offered by startup (e.g., "40%" or "10€") — includes 15% platform fee
+  total_reward  String
+  /// Leader's cut per sale, set by leader at acceptance (e.g., "5%" or "1.50€")
+  leader_reward String?
+  /// Member's cut per sale, auto-calculated at acceptance (e.g., "20%" or "7€")
+  member_reward String?
 
   status      OrgMissionStatus @default(PROPOSED)
   /// workspace_id of the startup that proposed
@@ -901,6 +915,8 @@ enum OrgMissionStatus {
   ACCEPTED
   /// Leader rejected
   REJECTED
+  /// Startup cancelled the arrangement
+  CANCELLED
 }
 
 // === PAYOUT METHOD ENUMS ===

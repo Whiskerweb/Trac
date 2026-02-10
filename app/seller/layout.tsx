@@ -19,7 +19,8 @@ import {
     Search,
     FolderOpen,
     Crown,
-    Loader2
+    Loader2,
+    Gift
 } from 'lucide-react'
 import ProfileCompletionBanner from '@/components/seller/ProfileCompletionBanner'
 import FeedbackWidget from '@/components/FeedbackWidget'
@@ -327,6 +328,7 @@ export default function SellerLayout({
                     ) : (
                         <NavItem href="/seller/wallet" icon={Wallet} label="Wallet" collapsed={collapsed} />
                     )}
+                    <NavItem href="/seller/referral" icon={Gift} label="Referral" collapsed={collapsed} />
                 </div>
 
                 {/* COMMUNICATION Section */}

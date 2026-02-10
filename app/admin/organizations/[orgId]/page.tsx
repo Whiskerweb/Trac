@@ -440,11 +440,11 @@ export default function AdminOrgDetailPage() {
                                         </div>
                                         <div>
                                             <p className="text-[11px] text-neutral-500">Leader Cut</p>
-                                            <p className="text-amber-400">{m.leader_reward}</p>
+                                            <p className="text-amber-400">{m.leader_reward || '—'}</p>
                                         </div>
                                         <div>
                                             <p className="text-[11px] text-neutral-500">Member Cut</p>
-                                            <p className="text-violet-400">{m.member_reward}</p>
+                                            <p className="text-violet-400">{m.member_reward || '—'}</p>
                                         </div>
                                     </div>
                                 </div>

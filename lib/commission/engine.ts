@@ -205,6 +205,25 @@ export async function createCommission(params: {
         // Update partner's pending balance
         await updateSellerBalance(partnerId)
 
+        // Create referral commissions for the seller's referral chain
+        await createReferralCommissions({
+            id: result.id,
+            seller_id: partnerId,
+            program_id: programId,
+            sale_id: saleId,
+            gross_amount: grossAmount,
+            net_amount: netAmount,
+            stripe_fee: stripeFee,
+            tax_amount: taxAmount,
+            currency: currency.toUpperCase(),
+            hold_days: holdDays,
+            commission_source: commissionSource as CommissionSource,
+            subscription_id: subscriptionId,
+            recurring_month: recurringMonth,
+            recurring_max: recurringMax,
+            ht_amount: htAmount,
+        })
+
         return { success: true, commission: { ...result, platform_fee: traaactionFee } }
 
     } catch (error) {
@@ -224,7 +243,8 @@ export async function countRecurringCommissions(subscriptionId: string): Promise
     return prisma.commission.count({
         where: {
             subscription_id: subscriptionId,
-            org_parent_commission_id: null  // Exclude leader cuts from count
+            org_parent_commission_id: null,  // Exclude leader cuts from count
+            referral_generation: null,       // Exclude referral bonuses from count
         }
     })
 }
@@ -282,6 +302,24 @@ export async function handleClawback(params: {
                     data: { balance: { decrement: leaderClawback } }
                 })
                 console.log(`[Commission] 🔙 Applied -${leaderClawback} leader clawback`)
+            }
+        }
+
+        // Cascade delete referral commissions linked to this sale
+        const referralCommissions = await prisma.commission.findMany({
+            where: { referral_source_commission_id: commission.id }
+        })
+        for (const refComm of referralCommissions) {
+            const refClawback = refComm.status === 'COMPLETE' ? refComm.commission_amount : 0
+            await prisma.commission.delete({ where: { id: refComm.id } })
+            console.log(`[Commission] 🔙 Deleted referral gen${refComm.referral_generation} commission ${refComm.id}`)
+            await updateSellerBalance(refComm.seller_id)
+            if (refClawback > 0) {
+                await prisma.sellerBalance.update({
+                    where: { seller_id: refComm.seller_id },
+                    data: { balance: { decrement: refClawback } }
+                })
+                console.log(`[Commission] 🔙 Applied -${refClawback} referral clawback for seller ${refComm.seller_id}`)
             }
         }
 
@@ -826,7 +864,10 @@ export async function getMissionCommissionConfig(params: {
 
 /**
  * Check if a sale link is tied to an organization enrollment.
- * Returns the org config (leader/member rewards) or null if not an org enrollment.
+ * Returns the org config (total deal + leader cut) or null if not an org enrollment.
+ *
+ * The platform fee (15%) is INSIDE the deal, not on top.
+ * Member reward is computed at commission time from: totalReward - 15% - leaderReward.
  */
 export async function getOrgMissionConfig(params: {
     linkId?: string | null
@@ -834,7 +875,7 @@ export async function getOrgMissionConfig(params: {
     isOrgEnrollment: boolean
     organizationMissionId: string
     leaderId: string
-    memberReward: string
+    totalReward: string
     leaderReward: string
 } | null> {
     const { linkId } = params
@@ -856,11 +897,14 @@ export async function getOrgMissionConfig(params: {
 
         if (!orgMission || orgMission.status !== 'ACCEPTED') return null
 
+        // leader_reward must be set (set at acceptance time)
+        if (!orgMission.leader_reward) return null
+
         return {
             isOrgEnrollment: true,
             organizationMissionId: orgMission.id,
             leaderId: orgMission.Organization.leader_id,
-            memberReward: orgMission.member_reward,
+            totalReward: orgMission.total_reward,
             leaderReward: orgMission.leader_reward
         }
     } catch (error) {
@@ -870,9 +914,22 @@ export async function getOrgMissionConfig(params: {
 }
 
 /**
- * Create dual commissions for an organization sale:
- * 1. Member commission (with platform fee)
- * 2. Leader commission (no platform fee, linked to member commission)
+ * Create dual commissions for an organization sale.
+ *
+ * KEY DIFFERENCE from standard commissions:
+ * Platform fee (15%) is INSIDE the deal, not on top.
+ *
+ * PERCENTAGE example (deal=40%, leader=5%):
+ *   platformFee = 15% of HT = 15€ (on 100€ HT)
+ *   leaderAmount = 5% of HT = 5€
+ *   memberAmount = (40-15-5)% of HT = 20€
+ *   Total startup pays = 40€ = exactly the deal
+ *
+ * FLAT example (deal=10€, leader=1.50€):
+ *   platformFee = 15% of 10€ = 1.50€
+ *   leaderAmount = 1.50€
+ *   memberAmount = 10 - 1.50 - 1.50 = 7€
+ *   Total startup pays = 10€ = exactly the deal
  */
 export async function createOrgCommissions(params: {
     memberId: string
@@ -885,7 +942,7 @@ export async function createOrgCommissions(params: {
     netAmount: number
     stripeFee: number
     taxAmount: number
-    memberReward: string
+    totalReward: string
     leaderReward: string
     currency: string
     organizationMissionId: string
@@ -903,38 +960,118 @@ export async function createOrgCommissions(params: {
     const {
         memberId, leaderId, programId, saleId, linkId,
         grossAmount, htAmount, netAmount, stripeFee, taxAmount,
-        memberReward, leaderReward, currency, organizationMissionId,
+        totalReward, leaderReward, currency, organizationMissionId,
         subscriptionId, recurringMonth, recurringMax,
         holdDays = 30, commissionSource = 'SALE'
     } = params
 
     try {
-        // 1. Create member commission (normal flow with platform fee)
-        const memberResult = await createCommission({
-            partnerId: memberId,
-            programId,
-            saleId,
-            linkId,
-            grossAmount, htAmount, netAmount, stripeFee, taxAmount,
-            missionReward: memberReward,
-            currency,
-            subscriptionId,
-            recurringMonth,
-            recurringMax,
-            holdDays,
-            commissionSource
-        })
-
-        if (!memberResult.success || !memberResult.commission) {
-            return { success: false, error: memberResult.error || 'Failed to create member commission' }
+        // =============================================
+        // RECURRING LIMIT ENFORCEMENT
+        // =============================================
+        if (commissionSource === 'RECURRING' && subscriptionId && recurringMax !== null && recurringMax !== undefined) {
+            const existingCount = await countRecurringCommissions(subscriptionId)
+            if (existingCount >= recurringMax) {
+                console.log(`[Commission] ⛔ Org recurring limit reached for subscription ${subscriptionId}: ${existingCount}/${recurringMax}`)
+                return { success: false, error: `Recurring limit reached (${existingCount}/${recurringMax})` }
+            }
         }
 
-        // 2. Create leader commission (no platform fee, linked to member)
-        const { amount: leaderRawCommission, type: leaderType } = calculateCommission({
-            netAmount: htAmount,
-            missionReward: leaderReward
+        // =============================================
+        // PARSE REWARDS & CALCULATE SPLIT
+        // Platform fee (15%) is INSIDE the deal
+        // =============================================
+        const totalParsed = parseReward(totalReward)
+        const leaderParsed = parseReward(leaderReward)
+
+        let memberAmount: number
+        let leaderAmount: number
+        let platformFee: number
+        let memberRateStr: string
+
+        if (totalParsed.type === 'PERCENTAGE') {
+            // PERCENTAGE DEAL: each component is X% of HT
+            const dealPct = totalParsed.value          // e.g., 40
+            const platformFeePct = 15                   // fixed 15 percentage points
+            const leaderPct = leaderParsed.value        // e.g., 5
+            const memberPct = dealPct - platformFeePct - leaderPct  // e.g., 20
+
+            if (memberPct < 0) {
+                return { success: false, error: `Invalid org deal: member % would be negative (${memberPct}%). Deal ${dealPct}% - 15% platform - ${leaderPct}% leader.` }
+            }
+
+            memberAmount = Math.floor(htAmount * memberPct / 100)
+            leaderAmount = Math.floor(htAmount * leaderPct / 100)
+            platformFee = Math.floor(htAmount * platformFeePct / 100)
+            memberRateStr = `${memberPct}%`
+
+            console.log(`[Commission] 💰 ORG PERCENTAGE Breakdown:`)
+            console.log(`  HT: ${htAmount / 100}€ | Deal: ${dealPct}%`)
+            console.log(`  Platform: ${platformFeePct}% = ${platformFee / 100}€`)
+            console.log(`  Leader: ${leaderPct}% = ${leaderAmount / 100}€`)
+            console.log(`  Member: ${memberPct}% = ${memberAmount / 100}€`)
+            console.log(`  Total: ${(memberAmount + leaderAmount + platformFee) / 100}€ (should = ${Math.floor(htAmount * dealPct / 100) / 100}€)`)
+        } else {
+            // FLAT DEAL: platform fee = 15% of the flat reward amount
+            const dealFlat = totalParsed.value                       // in cents, e.g., 1000
+            platformFee = Math.round(dealFlat * PLATFORM_FEE_RATE)   // e.g., 150
+            leaderAmount = leaderParsed.value                        // in cents, e.g., 150
+            memberAmount = dealFlat - platformFee - leaderAmount     // e.g., 700
+
+            if (memberAmount < 0) {
+                return { success: false, error: `Invalid org deal: member amount would be negative (${memberAmount / 100}€). Deal ${dealFlat / 100}€ - ${platformFee / 100}€ platform - ${leaderAmount / 100}€ leader.` }
+            }
+
+            memberRateStr = `${memberAmount / 100}€`
+
+            console.log(`[Commission] 💰 ORG FLAT Breakdown:`)
+            console.log(`  Deal: ${dealFlat / 100}€`)
+            console.log(`  Platform 15%: ${platformFee / 100}€`)
+            console.log(`  Leader: ${leaderAmount / 100}€`)
+            console.log(`  Member: ${memberAmount / 100}€`)
+            console.log(`  Total: ${(memberAmount + leaderAmount + platformFee) / 100}€ (should = ${dealFlat / 100}€)`)
+        }
+
+        // =============================================
+        // 1. CREATE MEMBER COMMISSION
+        // Platform fee tracked on member commission (for accounting)
+        // but it's INSIDE the deal, not charged on top
+        // =============================================
+        const memberResult = await prisma.commission.upsert({
+            where: { sale_id: saleId },
+            create: {
+                seller_id: memberId,
+                program_id: programId,
+                sale_id: saleId,
+                link_id: linkId,
+                gross_amount: grossAmount,
+                net_amount: netAmount,
+                stripe_fee: stripeFee,
+                tax_amount: taxAmount,
+                commission_amount: memberAmount,
+                platform_fee: platformFee,
+                commission_rate: memberRateStr,
+                commission_type: totalParsed.type,
+                currency: currency.toUpperCase(),
+                status: 'PENDING',
+                startup_payment_status: 'UNPAID',
+                commission_source: commissionSource,
+                subscription_id: subscriptionId,
+                recurring_month: recurringMonth,
+                recurring_max: recurringMax,
+                hold_days: holdDays,
+                organization_mission_id: organizationMissionId
+            },
+            update: {}
         })
 
+        await updateSellerBalance(memberId)
+
+        // =============================================
+        // 2. CREATE LEADER COMMISSION
+        // No platform fee (tracked on member commission)
+        // Linked to member via org_parent_commission_id
+        // =============================================
         const leaderSaleId = `${saleId}:orgcut`
 
         const leaderResult = await prisma.commission.upsert({
@@ -948,10 +1085,10 @@ export async function createOrgCommissions(params: {
                 net_amount: netAmount,
                 stripe_fee: 0,
                 tax_amount: 0,
-                commission_amount: leaderRawCommission,
-                platform_fee: 0,  // Platform fee already on member commission
+                commission_amount: leaderAmount,
+                platform_fee: 0,
                 commission_rate: leaderReward,
-                commission_type: leaderType,
+                commission_type: leaderParsed.type,
                 currency: currency.toUpperCase(),
                 status: 'PENDING',
                 startup_payment_status: 'UNPAID',
@@ -960,26 +1097,39 @@ export async function createOrgCommissions(params: {
                 recurring_month: recurringMonth,
                 recurring_max: recurringMax,
                 hold_days: holdDays,
-                org_parent_commission_id: memberResult.commission.id,
+                org_parent_commission_id: memberResult.id,
                 organization_mission_id: organizationMissionId
             },
             update: {}
         })
 
-        // Update member commission with org reference
-        await prisma.commission.update({
-            where: { id: memberResult.commission.id },
-            data: { organization_mission_id: organizationMissionId }
-        })
-
         await updateSellerBalance(leaderId)
 
-        console.log(`[Commission] ✅ Org split: member ${memberId} gets ${memberResult.commission.commission_amount / 100}€, leader ${leaderId} gets ${leaderRawCommission / 100}€`)
+        console.log(`[Commission] ✅ Org split (fees INSIDE deal): member ${memberId} gets ${memberAmount / 100}€, leader ${leaderId} gets ${leaderAmount / 100}€, platform ${platformFee / 100}€`)
+
+        // Create referral commissions for the member who made the sale
+        await createReferralCommissions({
+            id: memberResult.id,
+            seller_id: memberId,
+            program_id: programId,
+            sale_id: saleId,
+            gross_amount: grossAmount,
+            net_amount: netAmount,
+            stripe_fee: stripeFee,
+            tax_amount: taxAmount,
+            currency: currency.toUpperCase(),
+            hold_days: holdDays,
+            commission_source: commissionSource as CommissionSource,
+            subscription_id: subscriptionId ?? null,
+            recurring_month: recurringMonth ?? null,
+            recurring_max: recurringMax ?? null,
+            ht_amount: htAmount,
+        })
 
         return {
             success: true,
-            memberCommission: memberResult.commission,
-            leaderCommission: { id: leaderResult.id, commission_amount: leaderRawCommission, platform_fee: 0 }
+            memberCommission: { id: memberResult.id, commission_amount: memberAmount, platform_fee: platformFee },
+            leaderCommission: { id: leaderResult.id, commission_amount: leaderAmount, platform_fee: 0 }
         }
 
     } catch (error) {
@@ -988,5 +1138,133 @@ export async function createOrgCommissions(params: {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'
         }
+    }
+}
+
+// =============================================
+// REFERRAL / PARRAINAGE COMMISSIONS
+// =============================================
+
+/**
+ * Referral rates by generation (% of HT amount)
+ * Gen 1 (direct referrer): 5%
+ * Gen 2: 3%
+ * Gen 3: 1%
+ * Total max: 9% — deducted from Traaaction's 15% platform fee
+ */
+const REFERRAL_RATES: { generation: number; rate: number }[] = [
+    { generation: 1, rate: 0.05 },
+    { generation: 2, rate: 0.03 },
+    { generation: 3, rate: 0.01 },
+]
+
+/** Referral bonuses expire after 1 year */
+const REFERRAL_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000
+
+/**
+ * Create referral commissions for the ancestors of a seller who just earned a commission.
+ * Walks up the referred_by chain (max 3 generations).
+ *
+ * - Funded from Traaaction's 15% platform fee (seller earnings unchanged)
+ * - Expires 1 year after referral date
+ * - Idempotent via sale_id = "{original}:ref:gen{N}:{ancestorId}"
+ * - Same hold_days as the source commission
+ *
+ * @param sourceCommission - The original commission that triggers referral bonuses
+ */
+export async function createReferralCommissions(sourceCommission: {
+    id: string
+    seller_id: string
+    program_id: string
+    sale_id: string
+    gross_amount: number
+    net_amount: number
+    stripe_fee: number
+    tax_amount: number
+    currency: string
+    hold_days: number
+    commission_source: CommissionSource
+    subscription_id?: string | null
+    recurring_month?: number | null
+    recurring_max?: number | null
+    /** HT amount for calculating referral bonus (% of HT) */
+    ht_amount: number
+}): Promise<void> {
+    try {
+        const { seller_id, ht_amount } = sourceCommission
+
+        // No HT = no referral (e.g. pure LEAD with htAmount=0)
+        if (ht_amount <= 0) return
+
+        // Walk up the referral chain
+        let currentSellerId = seller_id
+
+        for (const { generation, rate } of REFERRAL_RATES) {
+            // Fetch the current seller's referrer
+            const seller = await prisma.seller.findUnique({
+                where: { id: currentSellerId },
+                select: { referred_by: true, referred_at: true }
+            })
+
+            if (!seller?.referred_by) break // No referrer → stop
+
+            // Check 1-year expiry
+            if (seller.referred_at) {
+                const expiresAt = new Date(seller.referred_at.getTime() + REFERRAL_EXPIRY_MS)
+                if (new Date() > expiresAt) {
+                    console.log(`[Referral] ⏰ Gen ${generation} expired for seller ${currentSellerId} (referred ${seller.referred_at.toISOString()})`)
+                    break // Expired → stop entire chain
+                }
+            }
+
+            const referrerId = seller.referred_by
+            const referralAmount = Math.floor(ht_amount * rate)
+
+            if (referralAmount <= 0) {
+                currentSellerId = referrerId
+                continue
+            }
+
+            const referralSaleId = `${sourceCommission.sale_id}:ref:gen${generation}:${referrerId}`
+
+            // Idempotent upsert
+            await prisma.commission.upsert({
+                where: { sale_id: referralSaleId },
+                create: {
+                    seller_id: referrerId,
+                    program_id: sourceCommission.program_id,
+                    sale_id: referralSaleId,
+                    gross_amount: sourceCommission.gross_amount,
+                    net_amount: sourceCommission.net_amount,
+                    stripe_fee: sourceCommission.stripe_fee,
+                    tax_amount: sourceCommission.tax_amount,
+                    commission_amount: referralAmount,
+                    platform_fee: 0,  // Funded from Traaaction's cut
+                    commission_rate: `ref:gen${generation}:${(rate * 100).toFixed(0)}%`,
+                    commission_type: 'PERCENTAGE',
+                    currency: sourceCommission.currency,
+                    status: 'PENDING',
+                    startup_payment_status: 'UNPAID',
+                    commission_source: sourceCommission.commission_source,
+                    subscription_id: sourceCommission.subscription_id,
+                    recurring_month: sourceCommission.recurring_month,
+                    recurring_max: sourceCommission.recurring_max,
+                    hold_days: sourceCommission.hold_days,
+                    referral_source_commission_id: sourceCommission.id,
+                    referral_generation: generation,
+                },
+                update: {}  // Idempotent
+            })
+
+            await updateSellerBalance(referrerId)
+
+            console.log(`[Referral] ✅ Gen ${generation}: ${referrerId} gets ${referralAmount / 100}€ (${(rate * 100).toFixed(0)}% of ${ht_amount / 100}€ HT)`)
+
+            // Move up the chain
+            currentSellerId = referrerId
+        }
+    } catch (error) {
+        // Non-blocking: referral failure should not break the main commission flow
+        console.error('[Referral] ❌ Failed to create referral commissions:', error)
     }
 }

@@ -5,6 +5,13 @@ import { getCurrentUser } from '@/lib/auth'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 import { nanoid } from 'nanoid'
 import { getAdminEmails } from '@/lib/admin'
+import {
+    notifyMembersOfMissionAccepted,
+    notifyOfMissionCancelled,
+    notifyLeaderOfNewMember,
+    notifyLeaderOfMemberLeft,
+    notifyMemberRemoved,
+} from '@/lib/org-notifications'
 
 // =============================================
 // ORGANIZATION SERVER ACTIONS
@@ -292,6 +299,13 @@ export async function applyToJoinOrg(orgId: string) {
                     orgMission.id
                 )
             }
+
+            // Notify leader of new member (non-blocking)
+            notifyLeaderOfNewMember(
+                org.leader_id,
+                org.name,
+                seller.name || seller.email || 'A seller'
+            ).catch(() => {})
         }
 
         return { success: true, membership, autoApproved: autoApprove }
@@ -376,6 +390,12 @@ export async function removeOrgMember(membershipId: string) {
             data: { status: 'REMOVED' }
         })
 
+        // Notify removed member (non-blocking)
+        notifyMemberRemoved(
+            membership.seller_id,
+            membership.Organization.name
+        ).catch(() => {})
+
         return { success: true }
     } catch (error) {
         console.error('[Org] Failed to remove member:', error)
@@ -394,7 +414,7 @@ export async function leaveOrganization(orgId: string) {
         // Fetch org to check leader + system-managed status
         const org = await prisma.organization.findUnique({
             where: { id: orgId },
-            select: { leader_id: true, slug: true }
+            select: { leader_id: true, slug: true, name: true }
         })
         if (!org) return { success: false, error: 'Organization not found' }
 
@@ -423,6 +443,13 @@ export async function leaveOrganization(orgId: string) {
             data: { status: 'REMOVED' }
         })
 
+        // Notify leader (non-blocking)
+        notifyLeaderOfMemberLeft(
+            org.leader_id,
+            org.name,
+            seller.name || seller.email || 'A seller'
+        ).catch(() => {})
+
         return { success: true }
     } catch (error) {
         console.error('[Org] Failed to leave org:', error)
@@ -437,12 +464,10 @@ export async function leaveOrganization(orgId: string) {
 /**
  * Startup proposes a mission to an organization
  */
-export async function proposeOrgMission({ orgId, missionId, totalReward, leaderReward, memberReward }: {
+export async function proposeOrgMission({ orgId, missionId, totalReward }: {
     orgId: string
     missionId: string
     totalReward: string
-    leaderReward: string
-    memberReward: string
 }) {
     try {
         const workspace = await getActiveWorkspaceForUser()
@@ -460,6 +485,15 @@ export async function proposeOrgMission({ orgId, missionId, totalReward, leaderR
             return { success: false, error: 'Organization not found or not active' }
         }
 
+        // Validate: for percentage deals, must be > 15% (otherwise nothing for the org)
+        const trimmed = totalReward.trim()
+        if (trimmed.endsWith('%')) {
+            const pct = parseFloat(trimmed.replace('%', ''))
+            if (pct <= 15) {
+                return { success: false, error: 'Deal must be greater than 15% (platform fee is 15% included)' }
+            }
+        }
+
         const orgMission = await prisma.organizationMission.upsert({
             where: {
                 organization_id_mission_id: {
@@ -471,15 +505,15 @@ export async function proposeOrgMission({ orgId, missionId, totalReward, leaderR
                 organization_id: orgId,
                 mission_id: missionId,
                 total_reward: totalReward,
-                leader_reward: leaderReward,
-                member_reward: memberReward,
+                leader_reward: null,
+                member_reward: null,
                 status: 'PROPOSED',
                 proposed_by: workspace.workspaceId,
             },
             update: {
                 total_reward: totalReward,
-                leader_reward: leaderReward,
-                member_reward: memberReward,
+                leader_reward: null,
+                member_reward: null,
                 status: 'PROPOSED',
             }
         })
@@ -520,9 +554,14 @@ export async function getOrgMissionProposals() {
 // =============================================
 
 /**
- * Leader accepts a proposed mission → auto-enroll all active members
+ * Leader accepts a proposed mission → sets their cut, auto-calculates member reward, auto-enrolls members.
+ *
+ * For PERCENTAGE deals: memberPct = dealPct - 15 (platform) - leaderPct
+ * For FLAT deals: memberFlat = dealFlat - 15% of dealFlat (platform) - leaderFlat
+ *
+ * Once accepted, the deal is IMMUTABLE (leader_reward and member_reward are locked).
  */
-export async function acceptOrgMission(orgMissionId: string) {
+export async function acceptOrgMission(orgMissionId: string, leaderCut: string) {
     try {
         const seller = await getSellerForCurrentUser()
         if (!seller) return { success: false, error: 'Not authenticated' }
@@ -542,16 +581,85 @@ export async function acceptOrgMission(orgMissionId: string) {
             return { success: false, error: 'Mission is not in proposed state' }
         }
 
-        // Mark as ACCEPTED
+        // Parse total reward and leader cut to compute member reward
+        const totalTrimmed = orgMission.total_reward.trim()
+        const leaderTrimmed = leaderCut.trim()
+
+        let memberReward: string
+
+        if (totalTrimmed.endsWith('%')) {
+            // PERCENTAGE DEAL
+            const dealPct = parseFloat(totalTrimmed.replace('%', ''))
+            const leaderPct = parseFloat(leaderTrimmed.replace('%', ''))
+
+            if (isNaN(dealPct) || isNaN(leaderPct)) {
+                return { success: false, error: 'Invalid reward format' }
+            }
+            if (leaderPct < 0) {
+                return { success: false, error: 'Leader cut cannot be negative' }
+            }
+
+            const orgShare = dealPct - 15 // 15% platform fee
+            if (leaderPct > orgShare) {
+                return { success: false, error: `Leader cut (${leaderPct}%) exceeds org share (${orgShare}%)` }
+            }
+
+            const memberPct = orgShare - leaderPct
+            memberReward = `${memberPct}%`
+        } else {
+            // FLAT DEAL
+            const dealMatch = totalTrimmed.match(/^(\d+(?:\.\d+)?)\s*[€$]?$|^[€$]?\s*(\d+(?:\.\d+)?)$/)
+            const leaderMatch = leaderTrimmed.match(/^(\d+(?:\.\d+)?)\s*[€$]?$|^[€$]?\s*(\d+(?:\.\d+)?)$/)
+
+            if (!dealMatch || !leaderMatch) {
+                return { success: false, error: 'Invalid reward format' }
+            }
+
+            const dealFlat = parseFloat(dealMatch[1] || dealMatch[2])
+            const leaderFlat = parseFloat(leaderMatch[1] || leaderMatch[2])
+
+            if (isNaN(dealFlat) || isNaN(leaderFlat)) {
+                return { success: false, error: 'Invalid reward values' }
+            }
+            if (leaderFlat < 0) {
+                return { success: false, error: 'Leader cut cannot be negative' }
+            }
+
+            const platformFee = dealFlat * 0.15
+            const orgShare = dealFlat - platformFee
+
+            if (leaderFlat > orgShare) {
+                return { success: false, error: `Leader cut (${leaderFlat}€) exceeds org share (${orgShare.toFixed(2)}€)` }
+            }
+
+            const memberFlat = orgShare - leaderFlat
+            // Format nicely: avoid trailing zeros for whole numbers
+            memberReward = memberFlat % 1 === 0 ? `${memberFlat}€` : `${memberFlat.toFixed(2)}€`
+        }
+
+        // Mark as ACCEPTED with leader_reward and member_reward locked
         await prisma.organizationMission.update({
             where: { id: orgMissionId },
-            data: { status: 'ACCEPTED', accepted_at: new Date() }
+            data: {
+                status: 'ACCEPTED',
+                accepted_at: new Date(),
+                leader_reward: leaderCut,
+                member_reward: memberReward,
+            }
         })
 
         // Auto-enroll all active members
         await enrollMembersInOrgMission(orgMission)
 
-        return { success: true }
+        // Notify all active members (non-blocking)
+        notifyMembersOfMissionAccepted(
+            orgMission.organization_id,
+            orgMission.Organization.name,
+            orgMission.Mission.title,
+            memberReward
+        ).catch(() => {})
+
+        return { success: true, memberReward }
     } catch (error) {
         console.error('[Org] Failed to accept mission:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -583,6 +691,123 @@ export async function rejectOrgMission(orgMissionId: string) {
         return { success: true }
     } catch (error) {
         console.error('[Org] Failed to reject mission:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+/**
+ * Startup cancels an accepted org mission arrangement.
+ *
+ * Guards:
+ * - Must have PROCEED + UNPAID commissions settled first
+ * - PENDING commissions are deleted + seller balances recalculated
+ * - COMPLETE commissions are preserved
+ *
+ * Actions:
+ * 1. OrganizationMission status → CANCELLED
+ * 2. Delete all PENDING commissions tied to this org mission
+ * 3. Recalculate seller balances
+ * 4. Notify leader + all members
+ */
+export async function cancelOrgMission(orgMissionId: string) {
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+        if (!workspace) return { success: false, error: 'Not authenticated' }
+
+        const orgMission = await prisma.organizationMission.findUnique({
+            where: { id: orgMissionId },
+            include: {
+                Organization: {
+                    include: {
+                        Members: { where: { status: 'ACTIVE' }, include: { Seller: true } }
+                    }
+                },
+                Mission: { select: { id: true, title: true } }
+            }
+        })
+
+        if (!orgMission) return { success: false, error: 'Mission arrangement not found' }
+        if (orgMission.proposed_by !== workspace.workspaceId) {
+            return { success: false, error: 'Only the proposing startup can cancel' }
+        }
+        if (orgMission.status !== 'ACCEPTED') {
+            return { success: false, error: 'Only accepted missions can be cancelled' }
+        }
+
+        // Guard: check for PROCEED + UNPAID commissions (must be settled first)
+        const unpaidProceed = await prisma.commission.count({
+            where: {
+                organization_mission_id: orgMissionId,
+                status: 'PROCEED',
+                startup_payment_status: 'UNPAID',
+            }
+        })
+
+        if (unpaidProceed > 0) {
+            // Calculate the total amount owed
+            const unpaidTotal = await prisma.commission.aggregate({
+                where: {
+                    organization_mission_id: orgMissionId,
+                    status: 'PROCEED',
+                    startup_payment_status: 'UNPAID',
+                },
+                _sum: { commission_amount: true, platform_fee: true }
+            })
+            const totalOwed = ((unpaidTotal._sum.commission_amount || 0) + (unpaidTotal._sum.platform_fee || 0)) / 100
+            return {
+                success: false,
+                error: `Cannot cancel: ${unpaidProceed} unpaid commission(s) totaling ${totalOwed.toFixed(2)}€ must be settled first.`
+            }
+        }
+
+        // 1. Mark as CANCELLED
+        await prisma.organizationMission.update({
+            where: { id: orgMissionId },
+            data: { status: 'CANCELLED' }
+        })
+
+        // 2. Delete all PENDING commissions tied to this org mission
+        const pendingCommissions = await prisma.commission.findMany({
+            where: {
+                organization_mission_id: orgMissionId,
+                status: 'PENDING',
+            },
+            select: { id: true, seller_id: true }
+        })
+
+        if (pendingCommissions.length > 0) {
+            // Collect unique seller IDs for balance recalculation
+            const affectedSellerIds = [...new Set(pendingCommissions.map(c => c.seller_id))]
+
+            await prisma.commission.deleteMany({
+                where: {
+                    organization_mission_id: orgMissionId,
+                    status: 'PENDING',
+                }
+            })
+
+            // 3. Recalculate balances for affected sellers
+            const { updateSellerBalance } = await import('@/lib/commission/engine')
+            for (const sellerId of affectedSellerIds) {
+                await updateSellerBalance(sellerId)
+            }
+
+            console.log(`[Org] Deleted ${pendingCommissions.length} PENDING commissions for cancelled mission ${orgMissionId}`)
+        }
+
+        console.log(`[Org] Mission ${orgMission.Mission.title} cancelled for org ${orgMission.Organization.id}`)
+
+        // Notify leader + all active members (non-blocking)
+        notifyOfMissionCancelled(
+            orgMission.organization_id,
+            orgMission.Organization.leader_id,
+            orgMission.Organization.name,
+            orgMission.Mission.title
+        ).catch(() => {})
+
+        return { success: true }
+    } catch (error) {
+        console.error('[Org] Failed to cancel mission:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
 }
@@ -690,7 +915,16 @@ export async function getActiveOrganizationsForStartup() {
                 _count: { select: { Members: { where: { status: 'ACTIVE' } }, Missions: { where: { status: 'ACCEPTED' } } } },
                 Missions: {
                     where: { proposed_by: workspace.workspaceId },
-                    select: { id: true, mission_id: true, status: true }
+                    select: {
+                        id: true,
+                        mission_id: true,
+                        status: true,
+                        total_reward: true,
+                        leader_reward: true,
+                        member_reward: true,
+                        accepted_at: true,
+                        Mission: { select: { id: true, title: true, reward: true, gain_type: true, status: true } }
+                    }
                 }
             },
             orderBy: { created_at: 'desc' }
@@ -808,6 +1042,13 @@ export async function joinOrgByInviteCode(code: string) {
                 )
             }
         }
+
+        // Notify leader of new member (non-blocking)
+        notifyLeaderOfNewMember(
+            org.leader_id,
+            org.name,
+            seller.name || seller.email || 'A seller'
+        ).catch(() => {})
 
         return { success: true, membership, organization: { id: org.id, name: org.name, slug: org.slug } }
     } catch (error) {

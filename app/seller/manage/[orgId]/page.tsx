@@ -131,21 +131,24 @@ function MemberDashboard({ org, stats }: { org: any; stats: any }) {
             {acceptedMissions.length > 0 && (
                 <div>
                     <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Active Missions</h2>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         {acceptedMissions.map((om: any) => (
-                            <div key={om.id} className="flex items-center justify-between px-4 py-3.5 bg-white border border-gray-100 rounded-xl">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
-                                        <Briefcase className="w-4 h-4 text-purple-600" />
+                            <div key={om.id} className="bg-white border border-gray-100 rounded-2xl p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                            <Briefcase className="w-4 h-4 text-emerald-600" />
+                                        </div>
+                                        <p className="text-sm font-semibold text-gray-900">{om.Mission?.title || 'Mission'}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-900">{om.Mission?.title || 'Mission'}</p>
-                                        {om.member_reward && (
-                                            <p className="text-xs text-gray-400">Your reward: {om.member_reward}</p>
-                                        )}
-                                    </div>
+                                    <span className="text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full font-medium border border-emerald-100">Active</span>
                                 </div>
-                                <span className="text-xs text-green-600 bg-green-50 px-2.5 py-1 rounded-full font-medium">Active</span>
+                                {om.member_reward && (
+                                    <div className="bg-emerald-50 rounded-xl px-4 py-2.5 flex items-center justify-between">
+                                        <span className="text-sm text-emerald-700">Your commission</span>
+                                        <span className="text-base font-bold text-emerald-700">{om.member_reward}</span>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
