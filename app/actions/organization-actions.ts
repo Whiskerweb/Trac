@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 import { nanoid } from 'nanoid'
+import { getAdminEmails } from '@/lib/admin'
 
 // =============================================
 // ORGANIZATION SERVER ACTIONS
@@ -1098,5 +1099,167 @@ async function enrollSingleMemberInMission(
         }
     })
 
-    console.log(`[Org] ✅ Enrolled seller ${seller.id} in mission ${mission.id} via org`)
+    console.log(`[Org] Enrolled seller ${seller.id} in mission ${mission.id} via org`)
+}
+
+// =============================================
+// TRAAACTION TOP TIERCE — Default Organization
+// =============================================
+
+const TRAAACTION_ORG_SLUG = 'traaaction-top-tierce'
+
+/**
+ * Get or create the "Traaaction Top Tierce" default organization.
+ * This org is system-managed: every seller joins it automatically on onboarding completion.
+ */
+async function getOrCreateTraaactionOrg(): Promise<string> {
+    const existing = await prisma.organization.findUnique({
+        where: { slug: TRAAACTION_ORG_SLUG }
+    })
+    if (existing) return existing.id
+
+    // Find an admin seller to serve as leader
+    const adminEmails = getAdminEmails()
+    const adminSeller = await prisma.seller.findFirst({
+        where: { email: { in: adminEmails } },
+        select: { id: true }
+    })
+    if (!adminSeller) {
+        throw new Error('No admin seller found — cannot create Traaaction org')
+    }
+
+    const org = await prisma.organization.create({
+        data: {
+            name: 'Traaaction Top Tierce',
+            description: 'Le classement general Traaaction. Accedez a des contrats de commission superieurs negocies directement par Traaaction aupres des meilleures startups. Tous les sellers ayant complete leur profil rejoignent automatiquement cette organisation.',
+            slug: TRAAACTION_ORG_SLUG,
+            invite_code: nanoid(12),
+            leader_id: adminSeller.id,
+            status: 'ACTIVE',
+            visibility: 'INVITE_ONLY',
+        }
+    })
+
+    console.log(`[Org] Created Traaaction Top Tierce org: ${org.id}`)
+    return org.id
+}
+
+/**
+ * Auto-join a seller into the Traaaction Top Tierce org.
+ * Called on onboarding completion (step 4). Idempotent.
+ */
+export async function autoJoinTraaactionOrg(sellerId: string) {
+    try {
+        const orgId = await getOrCreateTraaactionOrg()
+
+        const seller = await prisma.seller.findUnique({
+            where: { id: sellerId },
+            select: { id: true, user_id: true }
+        })
+        if (!seller?.user_id) return
+
+        // Upsert membership (idempotent)
+        await prisma.organizationMember.upsert({
+            where: {
+                organization_id_seller_id: {
+                    organization_id: orgId,
+                    seller_id: sellerId,
+                }
+            },
+            create: {
+                organization_id: orgId,
+                seller_id: sellerId,
+                status: 'ACTIVE',
+            },
+            update: {} // No-op if already member
+        })
+
+        // Enroll in all accepted missions of this org
+        const orgMissions = await prisma.organizationMission.findMany({
+            where: { organization_id: orgId, status: 'ACCEPTED' },
+            include: { Mission: { select: { id: true, title: true, target_url: true, workspace_id: true } } }
+        })
+
+        for (const orgMission of orgMissions) {
+            await enrollSingleMemberInMission(
+                seller as { id: string; user_id: string },
+                orgMission.Mission,
+                orgMission.id
+            )
+        }
+
+        console.log(`[Org] Auto-joined seller ${sellerId} into Traaaction Top Tierce`)
+    } catch (error) {
+        // Non-blocking — don't fail onboarding if this errors
+        console.error('[Org] Failed to auto-join Traaaction org:', error)
+    }
+}
+
+/**
+ * Get the Traaaction Top Tierce card data for the browse page.
+ * Returns org info, member count, mission count, and user status.
+ */
+export async function getTraaactionOrgCard() {
+    try {
+        const user = await getCurrentUser()
+
+        // Ensure the org exists (creates it on first visit if needed)
+        await getOrCreateTraaactionOrg()
+
+        const org = await prisma.organization.findUnique({
+            where: { slug: TRAAACTION_ORG_SLUG },
+            include: {
+                _count: {
+                    select: {
+                        Members: { where: { status: 'ACTIVE' } },
+                        Missions: { where: { status: 'ACCEPTED' } },
+                    }
+                }
+            }
+        })
+
+        if (!org) return { success: true, org: null }
+
+        let isMember = false
+        let profileComplete = false
+
+        if (user) {
+            // Find any seller for this user (regardless of status)
+            const seller = await prisma.seller.findFirst({
+                where: { user_id: user.userId },
+                select: { id: true, onboarding_step: true }
+            })
+
+            if (seller) {
+                profileComplete = seller.onboarding_step >= 4
+
+                const membership = await prisma.organizationMember.findUnique({
+                    where: {
+                        organization_id_seller_id: {
+                            organization_id: org.id,
+                            seller_id: seller.id,
+                        }
+                    }
+                })
+                isMember = membership?.status === 'ACTIVE'
+            }
+        }
+
+        return {
+            success: true,
+            org: {
+                id: org.id,
+                name: org.name,
+                description: org.description,
+                slug: org.slug,
+                memberCount: org._count.Members,
+                missionCount: org._count.Missions,
+                isMember,
+                profileComplete,
+            }
+        }
+    } catch (error) {
+        console.error('[Org] Failed to get Traaaction org card:', error)
+        return { success: true, org: null }
+    }
 }

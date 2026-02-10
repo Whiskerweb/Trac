@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, AlertCircle, ExternalLink, Copy, Check, ChevronRight, Link2 } from 'lucide-react'
+import { Loader2, AlertCircle, ExternalLink, Copy, Check, ChevronRight, Link2, Users } from 'lucide-react'
 import Link from 'next/link'
 import { getSellerDashboard } from '@/app/actions/sellers'
 import { getMyEnrollments, getMyGlobalStatsWithTimeseries } from '@/app/actions/marketplace'
@@ -34,6 +34,11 @@ interface Enrollment {
         leads: number
         sales: number
         revenue: number
+    } | null
+    organization?: {
+        id: string
+        name: string
+        memberReward: string
     } | null
     status: string
     created_at: Date
@@ -90,12 +95,18 @@ function MissionRow({ data }: { data: Enrollment }) {
                             <h3 className="text-sm font-medium text-gray-900 truncate group-hover:text-violet-600 transition-colors">
                                 {data.mission.title}
                             </h3>
+                            {data.organization && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-medium flex-shrink-0">
+                                    <Users className="w-2.5 h-2.5" />
+                                    {data.organization.name}
+                                </span>
+                            )}
                             <ChevronRight className="w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5">
                             <span className="text-gray-500">{data.startup.name}</span>
                             <span className="mx-1.5">·</span>
-                            {data.mission.reward} per conversion
+                            {data.organization ? data.organization.memberReward : data.mission.reward} per conversion
                         </p>
                     </div>
 

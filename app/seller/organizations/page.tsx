@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Search, Loader2, ArrowRight, Users, Lock, Globe } from 'lucide-react'
-import { getActiveOrganizations } from '@/app/actions/organization-actions'
+import { Search, Loader2, ArrowRight, Users, Lock, CheckCircle } from 'lucide-react'
+import { getActiveOrganizations, getTraaactionOrgCard } from '@/app/actions/organization-actions'
 
 function VisibilityBadge({ visibility }: { visibility: string }) {
     if (visibility === 'PRIVATE') {
@@ -90,12 +90,82 @@ function OrgRow({ org, index }: { org: any; index: number }) {
     )
 }
 
+function FeaturedOrgCard({ org }: { org: any }) {
+    return (
+        <div className="bg-white rounded-2xl border border-gray-100 px-6 py-6 mb-10">
+            <div className="flex items-start gap-4">
+                {/* Logo */}
+                <img
+                    src="/Logotrac/logo1.png"
+                    alt="Traaaction"
+                    className="w-11 h-11 rounded-xl object-contain flex-shrink-0"
+                />
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5 mb-1">
+                        <h3 className="text-sm font-semibold text-gray-900">{org.name}</h3>
+                        <span className="text-[10px] text-violet-600 uppercase tracking-wider px-1.5 py-0.5 bg-violet-50 rounded font-medium">
+                            Official
+                        </span>
+                    </div>
+                    <p className="text-[13px] text-gray-500 leading-relaxed mb-3 max-w-lg">
+                        {org.description}
+                    </p>
+
+                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                        <span>{org.memberCount} members</span>
+                        <span className="w-px h-3 bg-gray-200" />
+                        <span>{org.missionCount} missions</span>
+                    </div>
+                </div>
+
+                {/* CTA */}
+                <div className="flex-shrink-0 hidden sm:block">
+                    {org.isMember ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-green-600 font-medium">
+                            <CheckCircle className="w-3.5 h-3.5" /> Joined
+                        </span>
+                    ) : !org.profileComplete ? (
+                        <Link
+                            href="/seller/onboarding"
+                            className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                        >
+                            Complete profile to join &rarr;
+                        </Link>
+                    ) : null}
+                </div>
+            </div>
+
+            {/* Mobile CTA */}
+            {!org.isMember && !org.profileComplete && (
+                <div className="sm:hidden mt-4 pt-3 border-t border-gray-50">
+                    <Link
+                        href="/seller/onboarding"
+                        className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                    >
+                        Complete profile to join &rarr;
+                    </Link>
+                </div>
+            )}
+            {org.isMember && (
+                <div className="sm:hidden mt-4 pt-3 border-t border-gray-50">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-green-600 font-medium">
+                        <CheckCircle className="w-3.5 h-3.5" /> Joined
+                    </span>
+                </div>
+            )}
+        </div>
+    )
+}
+
 export default function BrowseOrganizationsPage() {
     const [organizations, setOrganizations] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [searchFocused, setSearchFocused] = useState(false)
     const searchRef = useRef<HTMLInputElement>(null)
+    const [featuredOrg, setFeaturedOrg] = useState<any>(null)
 
     async function loadOrgs() {
         setLoading(true)
@@ -105,6 +175,15 @@ export default function BrowseOrganizationsPage() {
         }
         setLoading(false)
     }
+
+    // Load featured org card
+    useEffect(() => {
+        getTraaactionOrgCard().then(result => {
+            if (result.success && result.org) {
+                setFeaturedOrg(result.org)
+            }
+        })
+    }, [])
 
     // Debounced search
     useEffect(() => {
@@ -147,6 +226,9 @@ export default function BrowseOrganizationsPage() {
                         Join a team and earn together
                     </p>
                 </header>
+
+                {/* Featured Traaaction Org */}
+                {featuredOrg && <FeaturedOrgCard org={featuredOrg} />}
 
                 {/* Search */}
                 <div className="max-w-xl mx-auto mb-12">

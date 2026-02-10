@@ -928,6 +928,11 @@ export async function getMyEnrollments(): Promise<{
             sales: number
             revenue: number
         } | null
+        organization?: {
+            id: string
+            name: string
+            memberReward: string
+        } | null
         status: string
         created_at: Date
     }[]
@@ -978,6 +983,26 @@ export async function getMyEnrollments(): Promise<{
         // Fetch real stats from Tinybird
         const tinybirdStats = await getAffiliateStatsFromTinybird(linkIds)
 
+        // Fetch organization info for org-enrolled missions
+        const orgMissionIds = enrollments
+            .map(e => e.organization_mission_id)
+            .filter((id): id is string => !!id)
+
+        const orgMissionsMap = new Map<string, { id: string; name: string; memberReward: string }>()
+        if (orgMissionIds.length > 0) {
+            const orgMissions = await prisma.organizationMission.findMany({
+                where: { id: { in: orgMissionIds } },
+                include: { Organization: { select: { id: true, name: true } } },
+            })
+            for (const om of orgMissions) {
+                orgMissionsMap.set(om.id, {
+                    id: om.Organization.id,
+                    name: om.Organization.name,
+                    memberReward: om.member_reward,
+                })
+            }
+        }
+
         return {
             success: true,
             enrollments: enrollments.map(e => {
@@ -989,6 +1014,11 @@ export async function getMyEnrollments(): Promise<{
 
                 // Get stats from Tinybird (or fallback to 0)
                 const stats = e.ShortLink ? tinybirdStats.get(e.ShortLink.id) : null
+
+                // Get organization info if enrolled via org
+                const orgInfo = e.organization_mission_id
+                    ? orgMissionsMap.get(e.organization_mission_id) || null
+                    : null
 
                 return {
                     id: e.id,
@@ -1010,6 +1040,7 @@ export async function getMyEnrollments(): Promise<{
                         sales: stats?.sales || 0,
                         revenue: stats?.revenue || 0,
                     } : null,
+                    organization: orgInfo,
                     status: e.status,
                     created_at: e.created_at,
                 }
