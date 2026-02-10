@@ -325,7 +325,8 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     // 🔄 SELLER PORTAL ROUTING (seller.traaaction.com)
     if (isPartnersDomain) {
         // Exclude shared pages (auth, assets) from rewriting — they work normally
-        const sharedPaths = ['/login', '/auth', '/onboarding', '/seller-terms',
+        // NOTE: /onboarding is NOT shared — seller.traaaction.com/onboarding → /seller/onboarding
+        const sharedPaths = ['/login', '/auth', '/seller-terms',
                              '/_next', '/api', '/Logotrac', '/favicon']
         const isShared = sharedPaths.some(p => pathname.startsWith(p))
 
@@ -344,7 +345,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 
     // 🔄 APP PORTAL ROUTING (app.traaaction.com)
     if (isAppDomain) {
-        const sharedPaths = ['/login', '/auth', '/onboarding', '/seller-terms',
+        const sharedPaths = ['/login', '/auth', '/onboarding',
                              '/_next', '/api', '/Logotrac', '/favicon']
         const isShared = sharedPaths.some(p => pathname.startsWith(p))
 
