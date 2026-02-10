@@ -12,35 +12,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       // beforeFiles rewrites are processed before pages/public files
-      beforeFiles: [
-        // =============================================
-        // SELLER SUBDOMAIN REWRITE
-        // seller.traaaction.com/* → /seller/*
-        // =============================================
-        {
-          source: '/:path*',
-          has: [{ type: 'host', value: 'seller.traaaction.com' }],
-          destination: '/seller/:path*',
-        },
-        // =============================================
-        // APP SUBDOMAIN REWRITE
-        // app.traaaction.com/* → /dashboard/*
-        // =============================================
-        {
-          source: '/:path*',
-          has: [{ type: 'host', value: 'app.traaaction.com' }],
-          destination: '/dashboard/:path*',
-        },
-        // =============================================
-        // WHITE-LABEL PORTAL REWRITES
-        // Seller portals serve Traaaction content while preserving their URL
-        // =============================================
-        {
-          source: '/:path*',
-          has: [{ type: 'host', value: 'partners.cardz.dev' }],
-          destination: '/seller/:path*',
-        },
-      ],
+      // NOTE: Subdomain rewrites (seller, app) are handled by middleware
+      // which correctly excludes /_next, /api, etc. beforeFiles rewrites
+      // would also rewrite static assets, causing 404s on JS/CSS chunks.
+      beforeFiles: [],
       // afterFiles rewrites run after pages check but before fallback
       afterFiles: [
         // Anti-adblock proxy: /_trac/api/* -> /api/*
