@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics/tinybird'
-import { createCommission, createOrgCommissions, findSellerForSale, handleClawback, getMissionCommissionConfig, getOrgMissionConfig, countRecurringCommissions, updateSellerBalance } from '@/lib/commission/engine'
+import { createCommission, createOrgCommissions, createGroupCommissions, findSellerForSale, handleClawback, getMissionCommissionConfig, getOrgMissionConfig, getGroupConfig, countRecurringCommissions, updateSellerBalance } from '@/lib/commission/engine'
 import { CommissionSource } from '@/lib/generated/prisma/client'
 import { sanitizeClickId, sanitizeUUID } from '@/lib/sql-sanitize'
 
@@ -548,9 +548,29 @@ export async function POST(
                                     })
 
                                     if (partnerId) {
-                                        // Check if this is an org enrollment → dual commissions
-                                        const orgConfig = await getOrgMissionConfig({ linkId })
-                                        if (orgConfig?.isOrgEnrollment) {
+                                        // Check group → org → standard (priority order)
+                                        const groupConfig = await getGroupConfig({ linkId })
+                                        const orgConfig = !groupConfig ? await getOrgMissionConfig({ linkId }) : null
+
+                                        if (groupConfig?.isGroupEnrollment) {
+                                            await createGroupCommissions({
+                                                sellerId: partnerId,
+                                                creatorId: groupConfig.creatorId,
+                                                groupId: groupConfig.groupId,
+                                                programId: workspaceId,
+                                                saleId: session.id,
+                                                linkId,
+                                                grossAmount, htAmount, netAmount, stripeFee, taxAmount: tax,
+                                                missionReward: missionConfig.recurringReward || '0',
+                                                currency,
+                                                subscriptionId: session.subscription as string,
+                                                recurringMonth: 1,
+                                                recurringMax: missionConfig.recurringDuration ?? undefined,
+                                                holdDays: 30,
+                                                commissionSource: CommissionSource.RECURRING
+                                            })
+                                            console.log(`[Webhook] 💰 GROUP RECURRING commission (month 1) → creator ${groupConfig.creatorId}`)
+                                        } else if (orgConfig?.isOrgEnrollment) {
                                             await createOrgCommissions({
                                                 memberId: partnerId,
                                                 leaderId: orgConfig.leaderId,
@@ -632,9 +652,26 @@ export async function POST(
                                         })
 
                                         if (partnerId) {
-                                            // Check if this is an org enrollment → dual commissions
-                                            const orgConfig = await getOrgMissionConfig({ linkId })
-                                            if (orgConfig?.isOrgEnrollment) {
+                                            // Check group → org → standard (priority order)
+                                            const groupConfig = await getGroupConfig({ linkId })
+                                            const orgConfig = !groupConfig ? await getOrgMissionConfig({ linkId }) : null
+
+                                            if (groupConfig?.isGroupEnrollment) {
+                                                await createGroupCommissions({
+                                                    sellerId: partnerId,
+                                                    creatorId: groupConfig.creatorId,
+                                                    groupId: groupConfig.groupId,
+                                                    programId: workspaceId,
+                                                    saleId: session.id,
+                                                    linkId,
+                                                    grossAmount, htAmount, netAmount, stripeFee, taxAmount: tax,
+                                                    missionReward: missionConfig.saleReward || '0',
+                                                    currency,
+                                                    holdDays: 30,
+                                                    commissionSource: CommissionSource.SALE
+                                                })
+                                                console.log(`[Webhook] 💰 GROUP SALE commission → creator ${groupConfig.creatorId}`)
+                                            } else if (orgConfig?.isOrgEnrollment) {
                                                 await createOrgCommissions({
                                                     memberId: partnerId,
                                                     leaderId: orgConfig.leaderId,
@@ -900,9 +937,29 @@ export async function POST(
                                             })
 
                                             if (partnerId) {
-                                                // Check if this is an org enrollment → dual commissions
-                                                const orgConfig = await getOrgMissionConfig({ linkId: customer.link_id })
-                                                if (orgConfig?.isOrgEnrollment) {
+                                                // Check group → org → standard (priority order)
+                                                const groupConfig = await getGroupConfig({ linkId: customer.link_id })
+                                                const orgConfig = !groupConfig ? await getOrgMissionConfig({ linkId: customer.link_id }) : null
+
+                                                if (groupConfig?.isGroupEnrollment) {
+                                                    await createGroupCommissions({
+                                                        sellerId: partnerId,
+                                                        creatorId: groupConfig.creatorId,
+                                                        groupId: groupConfig.groupId,
+                                                        programId: workspaceId,
+                                                        saleId: invoice.id,
+                                                        linkId: customer.link_id,
+                                                        grossAmount, htAmount, netAmount, stripeFee, taxAmount: tax,
+                                                        missionReward: missionConfig.recurringReward || '0',
+                                                        currency,
+                                                        subscriptionId,
+                                                        recurringMonth,
+                                                        recurringMax: missionConfig.recurringDuration ?? undefined,
+                                                        holdDays: 30,
+                                                        commissionSource: CommissionSource.RECURRING
+                                                    })
+                                                    console.log(`[Webhook] 💰 GROUP Recurring commission (month ${recurringMonth}) → creator ${groupConfig.creatorId}`)
+                                                } else if (orgConfig?.isOrgEnrollment) {
                                                     await createOrgCommissions({
                                                         memberId: partnerId,
                                                         leaderId: orgConfig.leaderId,

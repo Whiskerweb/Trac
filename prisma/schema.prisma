@@ -98,6 +98,7 @@ model Mission {
   MissionEnrollment    MissionEnrollment[]
   Requests             ProgramRequest[]
   OrganizationMissions OrganizationMission[]
+  GroupMissions        GroupMission[]
 
   @@index([status])
   @@index([visibility])
@@ -112,6 +113,8 @@ model MissionEnrollment {
   link_id    String?          @unique
   /// If enrolled via an organization
   organization_mission_id String?
+  /// If enrolled via a seller group
+  group_mission_id String?
   created_at DateTime         @default(now())
   updated_at DateTime         @updatedAt
   ShortLink  ShortLink?       @relation(fields: [link_id], references: [id])
@@ -121,6 +124,7 @@ model MissionEnrollment {
   @@index([mission_id])
   @@index([user_id])
   @@index([organization_mission_id])
+  @@index([group_mission_id])
 }
 
 model ShortLink {
@@ -430,6 +434,8 @@ model Seller {
   GiftCardRedemptions GiftCardRedemption[]
   LeadOrganizations   Organization[]       @relation("OrgLeader")
   OrgMemberships      OrganizationMember[]
+  GroupCreated        SellerGroup[]        @relation("GroupCreator")
+  GroupMembership     SellerGroupMember?
   Referrer            Seller?              @relation("SellerReferral", fields: [referred_by], references: [id], onDelete: SetNull)
   Referrals           Seller[]             @relation("SellerReferral")
 
@@ -571,6 +577,10 @@ model Commission {
   /// Links to the OrganizationMission that generated this commission
   organization_mission_id  String?
 
+  // === GROUP ===
+  /// SellerGroup ID if this commission is from a group sale (all revenue goes to group creator)
+  group_id                       String?
+
   // === REFERRAL TRACKING ===
   /// Points to the original commission that triggered this referral bonus
   referral_source_commission_id String?
@@ -593,6 +603,7 @@ model Commission {
   @@index([org_parent_commission_id])
   @@index([organization_mission_id])
   @@index([referral_source_commission_id])
+  @@index([group_id])
 }
 
 /// Partner Balance for tracking payouts and negative balances (clawbacks)
@@ -1111,4 +1122,72 @@ model Feedback {
   @@index([user_type])
   @@index([status])
   @@index([created_at])
+}
+
+// === SELLER GROUPS (EQUAL SPLIT) ===
+
+enum SellerGroupStatus {
+  /// Group is active and can receive commissions
+  ACTIVE
+  /// Group archived (creator left or manual archive)
+  ARCHIVED
+}
+
+enum GroupMemberStatus {
+  /// Active member receiving split
+  ACTIVE
+  /// Removed from group
+  REMOVED
+}
+
+/// Seller group — equal split of commissions among members
+model SellerGroup {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  /// Seller.id of the group creator
+  creator_id  String
+  status      SellerGroupStatus @default(ACTIVE)
+  /// Shareable invite code (nanoid(8))
+  invite_code String?           @unique
+  max_members Int               @default(10)
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+
+  Creator  Seller              @relation("GroupCreator", fields: [creator_id], references: [id])
+  Members  SellerGroupMember[]
+  Missions GroupMission[]
+
+  @@index([creator_id])
+  @@index([status])
+}
+
+/// Membership linking a seller to a group (ONE group per seller)
+model SellerGroupMember {
+  id        String            @id @default(cuid())
+  group_id  String
+  seller_id String            @unique  // ONE GROUP PER SELLER
+  status    GroupMemberStatus @default(ACTIVE)
+  joined_at DateTime          @default(now())
+
+  Group  SellerGroup @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  Seller Seller      @relation(fields: [seller_id], references: [id])
+
+  @@index([group_id])
+}
+
+/// Group enrollment in a mission — all active members get ShortLinks
+model GroupMission {
+  id          String   @id @default(cuid())
+  group_id    String
+  mission_id  String
+  /// Seller.id who enrolled the group
+  enrolled_by String
+  created_at  DateTime @default(now())
+
+  Group   SellerGroup @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  Mission Mission     @relation(fields: [mission_id], references: [id])
+
+  @@unique([group_id, mission_id])
+  @@index([mission_id])
 }

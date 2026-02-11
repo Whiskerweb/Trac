@@ -10,7 +10,8 @@ import {
     Send, Sparkles
 } from 'lucide-react'
 import { getMissionDetailForMarketplace } from '@/app/actions/marketplace-actions'
-import { joinMission } from '@/app/actions/marketplace'
+import { joinMission, joinMissionWithGroup } from '@/app/actions/marketplace'
+import { getMyGroup } from '@/app/actions/group-actions'
 
 // =============================================
 // TYPES
@@ -124,17 +125,30 @@ export default function MissionDetailPage() {
     const [joining, setJoining] = useState(false)
     const [joinSuccess, setJoinSuccess] = useState<'enrolled' | 'requested' | null>(null)
     const [copied, setCopied] = useState(false)
+    // Group toggle state
+    const [hasGroup, setHasGroup] = useState(false)
+    const [groupName, setGroupName] = useState<string | null>(null)
+    const [joinAsGroup, setJoinAsGroup] = useState(false)
 
     useEffect(() => {
         async function load() {
             setLoading(true)
-            const result = await getMissionDetailForMarketplace(missionId)
+            const [result, groupResult] = await Promise.all([
+                getMissionDetailForMarketplace(missionId),
+                getMyGroup()
+            ])
 
             if (result.success) {
                 setData(result as MissionDetail)
             } else {
                 setError(result.error || 'Mission not found')
             }
+
+            if (groupResult.success && groupResult.group && groupResult.group.status === 'ACTIVE') {
+                setHasGroup(true)
+                setGroupName(groupResult.group.name)
+            }
+
             setLoading(false)
         }
         load()
@@ -142,10 +156,14 @@ export default function MissionDetailPage() {
 
     async function handleJoin() {
         setJoining(true)
-        const result = await joinMission(missionId)
+        setError(null)
+
+        const result = joinAsGroup
+            ? await joinMissionWithGroup(missionId)
+            : await joinMission(missionId)
 
         if (result.success) {
-            setJoinSuccess(result.type || 'enrolled')
+            setJoinSuccess(joinAsGroup ? 'enrolled' : ((result as any).type || 'enrolled'))
             // Reload data to get updated enrollment status
             const updated = await getMissionDetailForMarketplace(missionId)
             if (updated.success) {
@@ -519,11 +537,42 @@ export default function MissionDetailPage() {
                                         </>
                                     ) : (
                                         <>
+                                            {/* Group toggle (only for PUBLIC missions when seller has a group) */}
+                                            {hasGroup && !isPrivate && (
+                                                <div className="mb-4 p-3 bg-gray-50 rounded-xl">
+                                                    <label className="flex items-center justify-between cursor-pointer">
+                                                        <div>
+                                                            <p className="text-sm font-medium text-gray-900">
+                                                                {joinAsGroup ? 'Join with group' : 'Join solo'}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">
+                                                                {joinAsGroup ? `All ${groupName} members will be enrolled` : 'Only you will be enrolled'}
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setJoinAsGroup(!joinAsGroup)}
+                                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                                                joinAsGroup ? 'bg-violet-600' : 'bg-gray-300'
+                                                            }`}
+                                                        >
+                                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                                                joinAsGroup ? 'translate-x-6' : 'translate-x-1'
+                                                            }`} />
+                                                        </button>
+                                                    </label>
+                                                </div>
+                                            )}
+
                                             {/* Not enrolled - show join button */}
                                             <button
                                                 onClick={handleJoin}
                                                 disabled={joining}
-                                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                    joinAsGroup
+                                                        ? 'bg-violet-600 text-white hover:bg-violet-700'
+                                                        : 'bg-gray-900 text-white hover:bg-black'
+                                                }`}
                                             >
                                                 {joining ? (
                                                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -531,6 +580,11 @@ export default function MissionDetailPage() {
                                                     <>
                                                         <Send className="w-4 h-4" />
                                                         Request to join
+                                                    </>
+                                                ) : joinAsGroup ? (
+                                                    <>
+                                                        <Users className="w-4 h-4" />
+                                                        Join with {groupName}
                                                     </>
                                                 ) : (
                                                     <>

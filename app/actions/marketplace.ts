@@ -904,6 +904,18 @@ export async function joinMission(missionId: string): Promise<{
 }
 
 /**
+ * Join a mission with the seller's group.
+ * Creates GroupMission + enrolls all active members.
+ */
+export async function joinMissionWithGroup(missionId: string): Promise<{
+    success: boolean
+    error?: string
+}> {
+    const { enrollGroupInMission } = await import('@/app/actions/group-actions')
+    return enrollGroupInMission(missionId)
+}
+
+/**
  * Get user's enrollments with performance stats
  */
 export async function getMyEnrollments(): Promise<{

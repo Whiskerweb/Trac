@@ -403,7 +403,7 @@ export async function handleClawback(params: {
                     }
                 }
 
-                // 3. Delete the member commission
+                // 3. Delete the source commission
                 const clawbackAmount = commission.status === 'COMPLETE' ? commission.commission_amount : 0
                 await tx.commission.delete({ where: { id: commission.id } })
                 console.log(`[Commission] 🔙 Deleted ${commission.status} commission ${commission.id} due to refund`)
@@ -1237,6 +1237,188 @@ export async function createOrgCommissions(params: {
 
     } catch (error) {
         console.error('[Commission] ❌ Org commission creation failed:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }
+    }
+}
+
+// =============================================
+// GROUP COMMISSION SPLIT (EQUAL POOL)
+// =============================================
+
+/**
+ * Check if a sale link is tied to a group enrollment.
+ * Returns the group config (creator ID) or null if not a group enrollment.
+ */
+export async function getGroupConfig(params: {
+    linkId?: string | null
+}): Promise<{
+    isGroupEnrollment: boolean
+    groupId: string
+    creatorId: string
+} | null> {
+    const { linkId } = params
+    if (!linkId) return null
+
+    try {
+        const enrollment = await prisma.missionEnrollment.findFirst({
+            where: { link_id: linkId, group_mission_id: { not: null } }
+        })
+
+        if (!enrollment?.group_mission_id) return null
+
+        const groupMission = await prisma.groupMission.findUnique({
+            where: { id: enrollment.group_mission_id },
+            include: {
+                Group: {
+                    select: { id: true, creator_id: true, status: true }
+                }
+            }
+        })
+
+        if (!groupMission || groupMission.Group.status !== 'ACTIVE') return null
+
+        return {
+            isGroupEnrollment: true,
+            groupId: groupMission.group_id,
+            creatorId: groupMission.Group.creator_id,
+        }
+    } catch (error) {
+        console.error('[Commission] ❌ Error checking group config:', error)
+        return null
+    }
+}
+
+/**
+ * Create a single commission for the group creator.
+ *
+ * All group revenue goes to the creator's account — they redistribute manually.
+ * This avoids N transfers and associated fees. Groups represent small agencies
+ * or friend groups selling together.
+ *
+ * Platform fee = 15% of HT, charged once.
+ * Referral commissions are based on HT amount and credited to the creator's referrer.
+ */
+export async function createGroupCommissions(params: {
+    sellerId: string       // The seller who made the sale (for tracking)
+    creatorId: string      // The group creator who receives the commission
+    groupId: string
+    programId: string
+    saleId: string
+    linkId?: string | null
+    grossAmount: number
+    htAmount: number
+    netAmount: number
+    stripeFee: number
+    taxAmount: number
+    missionReward: string
+    currency: string
+    subscriptionId?: string | null
+    recurringMonth?: number
+    recurringMax?: number
+    holdDays?: number
+    commissionSource?: CommissionSource
+}): Promise<{
+    success: boolean
+    commission?: { id: string; commission_amount: number; platform_fee: number }
+    error?: string
+}> {
+    const {
+        sellerId, creatorId, groupId, programId, saleId, linkId,
+        grossAmount, htAmount, netAmount, stripeFee, taxAmount,
+        missionReward, currency,
+        subscriptionId, recurringMonth, recurringMax,
+        holdDays = 30, commissionSource = 'SALE'
+    } = params
+
+    try {
+        // Recurring limit enforcement
+        if (commissionSource === 'RECURRING' && subscriptionId && recurringMax !== null && recurringMax !== undefined) {
+            const existingCount = await countRecurringCommissions(subscriptionId)
+            if (existingCount >= recurringMax) {
+                console.log(`[Commission] ⛔ Group recurring limit reached for subscription ${subscriptionId}: ${existingCount}/${recurringMax}`)
+                return { success: false, error: `Recurring limit reached (${existingCount}/${recurringMax})` }
+            }
+        }
+
+        // Calculate total commission (full amount goes to creator)
+        const { amount: totalCommission, type } = calculateCommission({ netAmount: htAmount, missionReward })
+
+        // Platform fee: 15% of HT
+        const isLeadCommission = htAmount === 0 && totalCommission > 0
+        let platformFee: number
+        if (isLeadCommission) {
+            platformFee = Math.floor(totalCommission * PLATFORM_FEE_RATE)
+        } else {
+            platformFee = Math.floor(htAmount * PLATFORM_FEE_RATE)
+        }
+
+        console.log(`[Commission] 💰 GROUP sale (all to creator ${creatorId}, sold by ${sellerId}):`)
+        console.log(`  HT: ${htAmount / 100}€ | Reward: ${missionReward}`)
+        console.log(`  Commission: ${totalCommission / 100}€`)
+        console.log(`  Platform fee: ${platformFee / 100}€`)
+
+        // Create single commission for the group creator
+        const result = await prisma.commission.upsert({
+            where: { sale_id: saleId },
+            create: {
+                seller_id: creatorId,
+                program_id: programId,
+                sale_id: saleId,
+                link_id: linkId,
+                gross_amount: grossAmount,
+                net_amount: netAmount,
+                stripe_fee: stripeFee,
+                tax_amount: taxAmount,
+                commission_amount: totalCommission,
+                platform_fee: platformFee,
+                commission_rate: missionReward,
+                commission_type: type,
+                currency: currency.toUpperCase(),
+                status: 'PENDING',
+                startup_payment_status: 'UNPAID',
+                commission_source: commissionSource,
+                subscription_id: subscriptionId,
+                recurring_month: recurringMonth,
+                recurring_max: recurringMax,
+                hold_days: holdDays,
+                group_id: groupId,
+            },
+            update: {}
+        })
+
+        await updateSellerBalance(creatorId)
+
+        console.log(`[Commission] ✅ Group commission: ${totalCommission / 100}€ → creator ${creatorId}, platform ${platformFee / 100}€`)
+
+        // Create referral commissions based on HT (credited to creator's referrer)
+        await createReferralCommissions({
+            id: result.id,
+            seller_id: creatorId,
+            program_id: programId,
+            sale_id: saleId,
+            gross_amount: grossAmount,
+            net_amount: netAmount,
+            stripe_fee: stripeFee,
+            tax_amount: taxAmount,
+            currency: currency.toUpperCase(),
+            hold_days: holdDays,
+            commission_source: commissionSource as CommissionSource,
+            subscription_id: subscriptionId,
+            recurring_month: recurringMonth,
+            recurring_max: recurringMax,
+            ht_amount: htAmount,
+        })
+
+        return {
+            success: true,
+            commission: { id: result.id, commission_amount: totalCommission, platform_fee: platformFee },
+        }
+
+    } catch (error) {
+        console.error('[Commission] ❌ Group commission creation failed:', error)
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'

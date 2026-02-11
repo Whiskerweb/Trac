@@ -318,6 +318,7 @@ export default function SellerLayout({
                     {managedOrgs.map(org => (
                         <NavItem key={org.id} href={`/seller/manage/${org.id}`} icon={Crown} label={org.name} collapsed={collapsed} />
                     ))}
+                    <NavItem href="/seller/groups" icon={Users} label="Groups" collapsed={collapsed} />
                 </div>
 
                 {/* GAINS Section - Conditional: Stripe Connect = Payouts, No Stripe = Wallet */}

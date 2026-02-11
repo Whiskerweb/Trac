@@ -17,7 +17,7 @@ const prisma = new PrismaClient({ adapter })
 
 // Test IDs
 const TEST_PREFIX = 'test_recurring_'
-const WORKSPACE_ID = '1fea94cc-a129-4915-93f0-a05b31d6a23c' // "Contact" workspace
+const WORKSPACE_ID = '1cb82621-45af-414f-b0d7-487587917fe4' // "Reevy" workspace
 const TEST_USER_ID = TEST_PREFIX + 'user_001'
 const TEST_SELLER_ID = TEST_PREFIX + 'seller_001'
 const TEST_MISSION_ID = TEST_PREFIX + 'mission_001'
@@ -523,6 +523,7 @@ async function main() {
 
     } catch (err) {
         console.error('\n💥 FATAL ERROR:', err)
+        failed++
         await cleanup().catch(() => {})
     }
 

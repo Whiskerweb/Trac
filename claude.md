@@ -91,6 +91,9 @@ scripts/
 ├── test-recurring.ts       # 30 tests — scenarios core recurring
 ├── test-recurring-edge.ts  # 47 tests — edge cases (limites, concurrence, devises)
 ├── test-recurring-ui.ts    # 69 tests — integrite donnees UI (dashboards, wallet, payouts)
+├── test-referral.ts        # 25 tests (61 assertions) — referral/parrainage system
+├── test-referral-ui.ts     # 24 tests (100 assertions) — referral UI data integrity
+├── test-group-commissions.ts # 34 tests — group equal split, clawback, constraints
 └── [autres]                # migrations, diagnostics, infra tests
 ```
 
@@ -107,7 +110,9 @@ User → WorkspaceMember → Workspace → Mission → MissionEnrollment
 
 Seller → SellerProfile, SellerBalance, Commission, GiftCardRedemption
        → Organization (as Leader), OrganizationMember (as Member)
+       → SellerGroup (as Creator), SellerGroupMember (1:1, un seul groupe)
 Organization → OrganizationMember[], OrganizationMission[]
+SellerGroup → SellerGroupMember[], GroupMission[]
 Feedback (standalone) → user feedback avec attachments
 ```
 
@@ -124,6 +129,9 @@ Feedback (standalone) → user feedback avec attachments
 | **OrganizationMember** | Liaison seller ↔ org (PENDING/ACTIVE/REMOVED) |
 | **OrganizationMission** | Contrat startup ↔ org : total_reward, leader_reward, member_reward |
 | **Feedback** | Feedback utilisateur MVP (message, attachments, voice, status) |
+| **SellerGroup** | Pool egalitaire de sellers (max 10, un seul groupe par seller) |
+| **SellerGroupMember** | Liaison seller ↔ group (ACTIVE/REMOVED, seller_id @unique) |
+| **GroupMission** | Inscription groupe dans mission (@@unique group_id+mission_id) |
 
 ### Champs Commission (recurring + org)
 ```
@@ -137,6 +145,7 @@ matured_at                DateTime?        — date de passage PROCEED
 startup_payment_status    String?          — UNPAID | PAID
 org_parent_commission_id  String?          — lie leader commission → member commission
 organization_mission_id   String?          — lie au contrat OrganizationMission
+group_id                  String?          — SellerGroup.id (revenu va au createur)
 ```
 
 ### Enums critiques
@@ -151,6 +160,8 @@ FeedbackStatus: NEW, REVIEWED, RESOLVED, ARCHIVED
 OrganizationStatus: PENDING, ACTIVE, SUSPENDED
 OrgMemberStatus: PENDING, ACTIVE, REMOVED
 OrgMissionStatus: PROPOSED, ACCEPTED, REJECTED
+SellerGroupStatus: ACTIVE, ARCHIVED
+GroupMemberStatus: ACTIVE, REMOVED
 ```
 
 ---
@@ -347,7 +358,7 @@ Responsabilites:
 - [x] Negative balance sur refund COMPLETE
 - [x] Guard grossAmount <= 0 (trials, credits)
 - [x] Annulation abonnement → suppression PENDING
-- [x] 146 tests automatises (core + edge + UI)
+- [x] 195 tests automatises (core + edge + UI + referral)
 
 ### Integration page
 - [x] Guide Stripe metadata (mode payment + subscription)
@@ -394,6 +405,19 @@ Responsabilites:
 - [x] **Auto-enrollment** : acceptation mission → tous les membres inscrits (ShortLink + Redis + MissionEnrollment)
 - [x] **I18n** : `organizations` ajoute dans sidebar (FR/EN/ES)
 
+### Groups — Petites Agences (Fevrier 2026)
+- [x] **Schema** : SellerGroup, SellerGroupMember, GroupMission + champ `group_id` sur Commission
+- [x] **All-to-creator** : toute la commission va au createur du groupe (pas de split, moins de transferts)
+- [x] **Commission engine** : `getGroupConfig()` (retourne `creatorId`), `createGroupCommissions()` (1 seule commission)
+- [x] **Webhook** : branch group (priorite sur org) dans checkout.session.completed + invoice.paid
+- [x] **Actions** : `group-actions.ts` (createGroup, joinGroup, leaveGroup, enrollGroupInMission, etc.)
+- [x] **UI Seller** : `/seller/groups` (mon groupe) + `/create` + `[id]` (detail) + `/join/[code]` (invitation)
+- [x] **Marketplace** : Toggle "solo/groupe" sur page mission detail
+- [x] **Auto-enrollment** : nouveau membre auto-inscrit dans toutes les GroupMissions existantes
+- [x] **Contraintes** : 1 seul groupe par seller (`seller_id @unique`), max 10 membres, createur quitte → archive
+- [x] **I18n** : `groups` ajoute dans sidebar + traductions (FR/EN/ES)
+- [x] **Tests** : 35 tests (`test-group-commissions.ts`)
+
 ---
 
 ## 12. REGLES METIER CRITIQUES
@@ -420,6 +444,15 @@ Responsabilites:
 | Org enrollment | Leader accepte mission → tous membres ACTIVE auto-inscrits |
 | Org multi-membre | Un seller peut etre dans plusieurs orgs |
 | Org clawback | Refund supprime les 2 commissions (membre + leader via cascade) |
+| Group creation | Seller cree librement (pas d'approbation admin) |
+| Group commission | Toute la commission va au createur du groupe (pas de split) |
+| Group enrollment | Tout membre ACTIVE peut inscrire le groupe dans une mission |
+| Group mono-membre | Un seller ne peut etre que dans 1 seul groupe (`seller_id @unique`) |
+| Group max taille | 10 membres par defaut |
+| Group createur quitte | Groupe ARCHIVED, commissions existantes continuent lifecycle |
+| Group clawback | Standard (1 seule commission a supprimer) |
+| Group referral | Base sur HT total, creditee au referrer du createur |
+| Group priorite webhook | Check group avant org (group prend priorite) |
 
 ---
 
@@ -433,11 +466,14 @@ npm run db:generate      # Generate Prisma client
 npm run lint             # ESLint
 ```
 
-### Tests recurring
+### Tests
 ```bash
 npx tsx scripts/test-recurring.ts       # 30 tests core
 npx tsx scripts/test-recurring-edge.ts  # 47 tests edge cases
 npx tsx scripts/test-recurring-ui.ts    # 69 tests UI data integrity
+npx tsx scripts/test-referral.ts        # 25 tests referral system
+npx tsx scripts/test-referral-ui.ts     # 24 tests referral UI data integrity
+npx tsx scripts/test-group-commissions.ts  # 35 tests group all-to-creator
 ```
 
 ---
