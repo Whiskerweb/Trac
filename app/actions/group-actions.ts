@@ -314,6 +314,11 @@ export async function enrollGroupInMission(missionId: string): Promise<{
 
         const group = membership.Group
 
+        // Only the group creator can enroll the group in missions
+        if (group.creator_id !== seller.id) {
+            return { success: false, error: 'Only the group creator can enroll the group in missions' }
+        }
+
         // Verify mission exists, is active, and is PUBLIC (groups can only join public missions)
         const mission = await prisma.mission.findFirst({
             where: { id: missionId, status: 'ACTIVE' }

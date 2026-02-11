@@ -1083,7 +1083,11 @@
             "alreadyInGroup": "Ya estás en un grupo",
             "status": "Estado",
             "active": "Activo",
-            "archived": "Archivado"
+            "archived": "Archivado",
+            "revenueNotice": "Todas las comisiones de misiones de grupo van a {creatorName}",
+            "groupCreator": "Creador del grupo",
+            "yourMissions": "Tus misiones de grupo",
+            "enrollMissionsCreatorOnly": "Solo el creador puede inscribir al grupo en nuevas misiones"
         },
         "programs": {
             "title": "Mis programas",

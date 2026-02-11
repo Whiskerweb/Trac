@@ -129,6 +129,7 @@ export default function MissionDetailPage() {
     const [hasGroup, setHasGroup] = useState(false)
     const [groupName, setGroupName] = useState<string | null>(null)
     const [joinAsGroup, setJoinAsGroup] = useState(false)
+    const [isGroupCreator, setIsGroupCreator] = useState(false)
 
     useEffect(() => {
         async function load() {
@@ -147,6 +148,7 @@ export default function MissionDetailPage() {
             if (groupResult.success && groupResult.group && groupResult.group.status === 'ACTIVE') {
                 setHasGroup(true)
                 setGroupName(groupResult.group.name)
+                setIsGroupCreator(groupResult.isCreator || false)
             }
 
             setLoading(false)
@@ -538,7 +540,7 @@ export default function MissionDetailPage() {
                                     ) : (
                                         <>
                                             {/* Group toggle (only for PUBLIC missions when seller has a group) */}
-                                            {hasGroup && !isPrivate && (
+                                            {hasGroup && isGroupCreator && !isPrivate && (
                                                 <div className="mb-4 p-3 bg-gray-50 rounded-xl">
                                                     <label className="flex items-center justify-between cursor-pointer">
                                                         <div>

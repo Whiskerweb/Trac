@@ -26,7 +26,7 @@ export default function CreateGroupPage() {
         const result = await createGroup({ name: name.trim(), description: description.trim() || undefined })
 
         if (result.success && result.groupId) {
-            router.push(`/seller/groups/${result.groupId}`)
+            router.push('/seller/groups')
         } else {
             setError(result.error || 'Failed to create group')
             setLoading(false)

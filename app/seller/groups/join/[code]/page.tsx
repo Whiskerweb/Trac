@@ -27,7 +27,7 @@ export default function JoinGroupPage() {
         if (result.success && result.groupId) {
             setJoined(true)
             setTimeout(() => {
-                router.push(`/seller/groups/${result.groupId}`)
+                router.push('/seller/groups')
             }, 1000)
         } else {
             setError(result.error || 'Failed to join group')
