@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Loader2, AlertCircle, ExternalLink, Copy, Check, ChevronRight, Link2, Users } from 'lucide-react'
 import Link from 'next/link'
 import { getSellerDashboard } from '@/app/actions/sellers'
@@ -196,6 +196,8 @@ export default function PartnerDashboardPage() {
     const [sellerId, setSellerId] = useState<string | null>(null)
     const [globalStats, setGlobalStats] = useState({ clicks: 0, leads: 0, sales: 0, revenue: 0 })
     const [timeseries, setTimeseries] = useState<Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }>>([])
+    const [selectedDays, setSelectedDays] = useState(30)
+    const [loadingTimeseries, setLoadingTimeseries] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
@@ -232,6 +234,24 @@ export default function PartnerDashboardPage() {
             }
         }
         load()
+    }, [])
+
+    const handleRangeChange = useCallback(async (days: number) => {
+        setSelectedDays(days)
+        setLoadingTimeseries(true)
+        try {
+            const res = await getMyGlobalStatsWithTimeseries(days)
+            if ('stats' in res && res.stats) {
+                setGlobalStats(res.stats)
+            }
+            if ('timeseries' in res && res.timeseries) {
+                setTimeseries(res.timeseries)
+            }
+        } catch (e) {
+            console.error('Failed to fetch timeseries:', e)
+        } finally {
+            setLoadingTimeseries(false)
+        }
     }, [])
 
     if (loading) {
@@ -274,6 +294,9 @@ export default function PartnerDashboardPage() {
                         sales={sales}
                         revenue={revenue}
                         timeseries={timeseries}
+                        selectedDays={selectedDays}
+                        onRangeChange={handleRangeChange}
+                        loadingTimeseries={loadingTimeseries}
                     />
                 </div>
 

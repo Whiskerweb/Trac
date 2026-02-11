@@ -11,7 +11,7 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from 'recharts'
-import { TrendingUp, Flag, Check } from 'lucide-react'
+import { TrendingUp, Flag, Check, Loader2 } from 'lucide-react'
 
 /**
  * Analytics Chart with Funnel & Timeline Views
@@ -32,6 +32,10 @@ interface AnalyticsChartProps {
     }>
     activeEventTypes?: Set<string>
     onEventTypeToggle?: (type: 'clicks' | 'leads' | 'sales') => void
+    /** If provided, shows period selector buttons in the chart */
+    selectedDays?: number
+    onRangeChange?: (days: number) => void
+    loadingTimeseries?: boolean
 }
 
 function formatNumber(n: number): string {
@@ -107,6 +111,13 @@ function ViewToggle({ view, onChange }: { view: 'funnel' | 'timeline'; onChange:
 // MAIN COMPONENT
 // =============================================
 
+const RANGE_OPTIONS = [
+    { days: 7, label: '7j' },
+    { days: 30, label: '30j' },
+    { days: 90, label: '90j' },
+    { days: 365, label: '1an' },
+]
+
 export function AnalyticsChart({
     clicks,
     leads,
@@ -114,7 +125,10 @@ export function AnalyticsChart({
     revenue,
     timeseries = [],
     activeEventTypes = new Set(['clicks', 'leads', 'sales']),
-    onEventTypeToggle
+    onEventTypeToggle,
+    selectedDays,
+    onRangeChange,
+    loadingTimeseries,
 }: AnalyticsChartProps) {
     const [view, setView] = useState<'funnel' | 'timeline'>('funnel')
     const [saleUnit, setSaleUnit] = useState<'currency' | 'count'>('currency')
@@ -274,8 +288,25 @@ export function AnalyticsChart({
 
             {/* Chart Area */}
             <div className="bg-gradient-to-b from-slate-50 to-white relative">
-                {/* View Toggle - positioned in chart area */}
-                <div className="absolute top-4 right-4 z-10">
+                {/* Controls - positioned in chart area */}
+                <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+                    {onRangeChange && selectedDays !== undefined && (
+                        <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                            {RANGE_OPTIONS.map(opt => (
+                                <button
+                                    key={opt.days}
+                                    onClick={() => onRangeChange(opt.days)}
+                                    className={`px-2.5 py-2 text-xs font-medium transition-colors ${
+                                        selectedDays === opt.days
+                                            ? 'bg-gray-100 text-gray-900'
+                                            : 'text-gray-400 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     <ViewToggle view={view} onChange={setView} />
                 </div>
 
@@ -348,7 +379,12 @@ export function AnalyticsChart({
                     </svg>
                 ) : (
                     /* Timeline Line Chart */
-                    <div className="p-6 pt-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="p-6 pt-12 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+                        {loadingTimeseries && (
+                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 rounded-b-xl">
+                                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                            </div>
+                        )}
                         <ResponsiveContainer width="100%" height={220}>
                             <AreaChart data={timeseries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <defs>
