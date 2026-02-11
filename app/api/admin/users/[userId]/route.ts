@@ -6,6 +6,7 @@
 
 import { NextResponse, NextRequest } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { prisma } from '@/lib/db'
 import { isAdmin } from '@/lib/admin'
 
@@ -27,8 +28,13 @@ export async function GET(
 
         const { userId } = await params
 
-        // Fetch Supabase auth user
-        const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId)
+        // Fetch Supabase auth user via service role (anon key can't access admin API)
+        const supabaseAdmin = createSupabaseClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            { auth: { autoRefreshToken: false, persistSession: false } }
+        )
+        const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(userId)
 
         // Fetch Prisma data in parallel
         const [seller, workspaceMemberships, missions] = await Promise.all([

@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { prisma } from '@/lib/db'
 import { isAdmin } from '@/lib/admin'
 
@@ -127,8 +128,13 @@ export async function GET() {
             }
         }
 
-        // Fetch emails for startup users via Supabase auth admin
-        const { data: { users: supabaseUsers } } = await supabase.auth.admin.listUsers({
+        // Fetch emails for startup users via Supabase auth admin (requires service role key)
+        const supabaseAdmin = createSupabaseClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            { auth: { autoRefreshToken: false, persistSession: false } }
+        )
+        const { data: { users: supabaseUsers } } = await supabaseAdmin.auth.admin.listUsers({
             perPage: 1000,
         })
 
