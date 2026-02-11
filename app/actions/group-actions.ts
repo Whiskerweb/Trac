@@ -314,11 +314,14 @@ export async function enrollGroupInMission(missionId: string): Promise<{
 
         const group = membership.Group
 
-        // Verify mission exists and is active
+        // Verify mission exists, is active, and is PUBLIC (groups can only join public missions)
         const mission = await prisma.mission.findFirst({
             where: { id: missionId, status: 'ACTIVE' }
         })
         if (!mission) return { success: false, error: 'Mission not found or inactive' }
+        if (mission.visibility !== 'PUBLIC') {
+            return { success: false, error: 'Groups can only join public missions' }
+        }
 
         // Check if group already enrolled in this mission
         const existingGroupMission = await prisma.groupMission.findUnique({

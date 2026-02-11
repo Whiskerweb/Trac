@@ -211,7 +211,7 @@ export default function MissionDetailPage() {
     const { mission, startup, resources, enrollment, pendingRequest, canSeeResources } = data
     const isEnrolled = enrollment?.status === 'APPROVED'
     const isPending = pendingRequest?.status === 'PENDING'
-    const isPrivate = mission.visibility === 'PRIVATE'
+    const isPrivate = mission.visibility === 'PRIVATE' || mission.visibility === 'INVITE_ONLY'
 
     return (
         <div className="min-h-screen bg-[#FAFAFA]">
