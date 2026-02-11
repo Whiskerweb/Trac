@@ -40,6 +40,11 @@ interface Enrollment {
         name: string
         memberReward: string | null
     } | null
+    group?: {
+        id: string
+        name: string
+        creatorId: string
+    } | null
     status: string
     created_at: Date
 }
@@ -52,7 +57,7 @@ function formatCurrency(cents: number): string {
 // MISSION ROW - Minimalist table row design
 // =============================================
 
-function MissionRow({ data }: { data: Enrollment }) {
+function MissionRow({ data, sellerId }: { data: Enrollment; sellerId: string | null }) {
     const [copied, setCopied] = useState(false)
 
     const copyLink = (e: React.MouseEvent) => {
@@ -101,6 +106,12 @@ function MissionRow({ data }: { data: Enrollment }) {
                                     {data.organization.name}
                                 </span>
                             )}
+                            {data.group && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-violet-50 text-violet-700 rounded text-[10px] font-medium flex-shrink-0">
+                                    <Users className="w-2.5 h-2.5" />
+                                    {data.group.name}
+                                </span>
+                            )}
                             <ChevronRight className="w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5">
@@ -108,6 +119,16 @@ function MissionRow({ data }: { data: Enrollment }) {
                             <span className="mx-1.5">·</span>
                             {data.organization ? data.organization.memberReward : data.mission.reward} per conversion
                         </p>
+                        {data.group && sellerId && data.group.creatorId !== sellerId && (
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                                Revenue → {data.group.name} creator
+                            </p>
+                        )}
+                        {data.group && sellerId && data.group.creatorId === sellerId && (
+                            <p className="text-[10px] text-violet-500 mt-0.5">
+                                All group revenue → you
+                            </p>
+                        )}
                     </div>
 
                     {/* Stats - Compact inline */}
@@ -172,6 +193,7 @@ export default function PartnerDashboardPage() {
     const [loading, setLoading] = useState(true)
     const [stats, setStats] = useState<Stats | null>(null)
     const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+    const [sellerId, setSellerId] = useState<string | null>(null)
     const [globalStats, setGlobalStats] = useState({ clicks: 0, leads: 0, sales: 0, revenue: 0 })
     const [timeseries, setTimeseries] = useState<Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }>>([])
     const [error, setError] = useState<string | null>(null)
@@ -190,6 +212,9 @@ export default function PartnerDashboardPage() {
                 }
                 if ('enrollments' in enrollmentsRes && enrollmentsRes.enrollments) {
                     setEnrollments(enrollmentsRes.enrollments as Enrollment[])
+                }
+                if ('sellerId' in enrollmentsRes && enrollmentsRes.sellerId) {
+                    setSellerId(enrollmentsRes.sellerId as string)
                 }
                 if ('stats' in globalStatsRes && globalStatsRes.stats) {
                     setGlobalStats(globalStatsRes.stats)
@@ -274,7 +299,7 @@ export default function PartnerDashboardPage() {
                     {enrollments.length > 0 ? (
                         <div className="divide-y divide-gray-50">
                             {enrollments.map((enrollment) => (
-                                <MissionRow key={enrollment.id} data={enrollment} />
+                                <MissionRow key={enrollment.id} data={enrollment} sellerId={sellerId} />
                             ))}
                         </div>
                     ) : (

@@ -945,9 +945,15 @@ export async function getMyEnrollments(): Promise<{
             name: string
             memberReward: string | null
         } | null
+        group?: {
+            id: string
+            name: string
+            creatorId: string
+        } | null
         status: string
         created_at: Date
     }[]
+    sellerId?: string | null
     error?: string
 }> {
     // Mock mode: return fake enrollments for UX testing
@@ -966,6 +972,12 @@ export async function getMyEnrollments(): Promise<{
     }
 
     try {
+        // Fetch seller ID for group creator comparison
+        const seller = await prisma.seller.findFirst({
+            where: { user_id: user.id },
+            select: { id: true },
+        })
+
         const enrollments = await prisma.missionEnrollment.findMany({
             where: { user_id: user.id },
             include: {
@@ -1015,8 +1027,29 @@ export async function getMyEnrollments(): Promise<{
             }
         }
 
+        // Fetch group info for group-enrolled missions
+        const groupMissionIds = enrollments
+            .map(e => e.group_mission_id)
+            .filter((id): id is string => !!id)
+
+        const groupMissionsMap = new Map<string, { id: string; name: string; creatorId: string }>()
+        if (groupMissionIds.length > 0) {
+            const groupMissions = await prisma.groupMission.findMany({
+                where: { id: { in: groupMissionIds } },
+                include: { Group: { select: { id: true, name: true, creator_id: true } } },
+            })
+            for (const gm of groupMissions) {
+                groupMissionsMap.set(gm.id, {
+                    id: gm.Group.id,
+                    name: gm.Group.name,
+                    creatorId: gm.Group.creator_id,
+                })
+            }
+        }
+
         return {
             success: true,
+            sellerId: seller?.id || null,
             enrollments: enrollments.map(e => {
                 // Get custom domain for this mission's workspace
                 const customDomain = e.Mission.Workspace.Domain?.[0]?.name
@@ -1053,6 +1086,9 @@ export async function getMyEnrollments(): Promise<{
                         revenue: stats?.revenue || 0,
                     } : null,
                     organization: orgInfo,
+                    group: e.group_mission_id
+                        ? groupMissionsMap.get(e.group_mission_id) || null
+                        : null,
                     status: e.status,
                     created_at: e.created_at,
                 }
