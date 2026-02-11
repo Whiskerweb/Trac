@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import {
     Users,
     Building2,
@@ -9,7 +10,8 @@ import {
     Search,
     Loader2,
     UserX,
-    Layers
+    Layers,
+    ChevronRight
 } from 'lucide-react'
 
 interface UserEntry {
@@ -182,47 +184,53 @@ export default function AdminUsersPage() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: Math.min(index * 0.015, 0.5) }}
-                            className="flex items-center justify-between p-4 bg-neutral-900 border border-neutral-800 rounded-xl"
                         >
-                            <div className="flex items-center gap-4">
-                                {/* Avatar */}
-                                <div className="w-10 h-10 bg-neutral-800 rounded-full flex items-center justify-center">
-                                    <span className="text-sm font-medium text-neutral-400">
-                                        {(user.name || user.email || '?').charAt(0).toUpperCase()}
-                                    </span>
-                                </div>
-
-                                {/* Info */}
-                                <div>
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="font-medium text-white">
-                                            {user.name || user.email || user.userId.slice(0, 8)}
+                            <Link
+                                href={`/admin/users/${user.userId}`}
+                                className="flex items-center justify-between p-4 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    {/* Avatar */}
+                                    <div className="w-10 h-10 bg-neutral-800 rounded-full flex items-center justify-center">
+                                        <span className="text-sm font-medium text-neutral-400">
+                                            {(user.name || user.email || '?').charAt(0).toUpperCase()}
                                         </span>
-                                        <RoleBadge role={user.role} />
-                                        {user.sellerStatus && user.sellerStatus !== 'APPROVED' && (
-                                            <span className="px-2 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded-full">
-                                                {user.sellerStatus}
+                                    </div>
+
+                                    {/* Info */}
+                                    <div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-medium text-white">
+                                                {user.name || user.email || user.userId.slice(0, 8)}
                                             </span>
-                                        )}
+                                            <RoleBadge role={user.role} />
+                                            {user.sellerStatus && user.sellerStatus !== 'APPROVED' && (
+                                                <span className="px-2 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded-full">
+                                                    {user.sellerStatus}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-neutral-500">{user.email}</p>
                                     </div>
-                                    <p className="text-sm text-neutral-500">{user.email}</p>
                                 </div>
-                            </div>
 
-                            <div className="flex items-center gap-6">
-                                {/* Workspace */}
-                                {user.workspaceName && (
-                                    <div className="text-right hidden md:block">
-                                        <p className="text-sm text-white">{user.workspaceName}</p>
-                                        <p className="text-xs text-neutral-500">workspace</p>
+                                <div className="flex items-center gap-6">
+                                    {/* Workspace */}
+                                    {user.workspaceName && (
+                                        <div className="text-right hidden md:block">
+                                            <p className="text-sm text-white">{user.workspaceName}</p>
+                                            <p className="text-xs text-neutral-500">workspace</p>
+                                        </div>
+                                    )}
+
+                                    {/* Date */}
+                                    <div className="text-right">
+                                        <p className="text-sm text-neutral-400">{formatDate(user.createdAt)}</p>
                                     </div>
-                                )}
 
-                                {/* Date */}
-                                <div className="text-right">
-                                    <p className="text-sm text-neutral-400">{formatDate(user.createdAt)}</p>
+                                    <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-neutral-400 transition-colors" />
                                 </div>
-                            </div>
+                            </Link>
                         </motion.div>
                     ))
                 )}
