@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Users, Plus, Copy, Check, ArrowRight, Info, Link2, Wallet, Shield, Loader2 } from 'lucide-react'
+import { Users, Plus, Copy, Check, ArrowRight, Loader2 } from 'lucide-react'
 import { getMyGroup } from '@/app/actions/group-actions'
 import { useTranslations } from 'next-intl'
 
@@ -38,249 +38,274 @@ export default function GroupsPage() {
         setTimeout(() => setCopied(false), 2000)
     }
 
-    // Loading skeleton
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#FAFAFA]">
-                <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
-                    <div className="animate-pulse space-y-6">
-                        <div>
-                            <div className="h-7 bg-gray-200 rounded w-40 mb-2" />
-                            <div className="h-4 bg-gray-100 rounded w-80" />
-                        </div>
-                        <div className="bg-white rounded-xl border border-gray-100 p-5 h-20" />
-                        <div className="grid grid-cols-3 gap-3">
-                            <div className="bg-white rounded-xl border border-gray-100 p-4 h-20" />
-                            <div className="bg-white rounded-xl border border-gray-100 p-4 h-20" />
-                            <div className="bg-white rounded-xl border border-gray-100 p-4 h-20" />
-                        </div>
-                        <div className="bg-white rounded-xl border border-gray-100 p-5 h-48" />
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    // No group → empty state
-    if (!group) {
-        return (
-            <div className="min-h-screen bg-[#FAFAFA]">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.4 }}
-                    className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16"
-                >
-                    <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">{t('title')}</h1>
-                    <p className="text-gray-500 text-[15px] mt-1 mb-10">{t('noGroupDesc')}</p>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <Link
-                            href="/seller/groups/create"
-                            className="flex items-start gap-4 p-5 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200 group"
-                        >
-                            <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-100 transition-colors">
-                                <Plus className="w-5 h-5 text-violet-600" />
-                            </div>
-                            <div>
-                                <p className="font-medium text-gray-900 text-[15px]">{t('create')}</p>
-                                <p className="text-sm text-gray-500 mt-0.5">{t('createDesc')}</p>
-                            </div>
-                        </Link>
-
-                        <div className="flex items-start gap-4 p-5 bg-white rounded-xl border border-gray-100">
-                            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
-                                <Users className="w-5 h-5 text-gray-400" />
-                            </div>
-                            <div>
-                                <p className="font-medium text-gray-900 text-[15px]">{t('join')}</p>
-                                <p className="text-sm text-gray-500 mt-0.5">{t('joinDesc')}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-10 bg-white rounded-xl border border-gray-100 p-5">
-                        <p className="text-sm font-medium text-gray-900 mb-3">{t('howItWorks')}</p>
-                        <div className="grid sm:grid-cols-2 gap-3">
-                            {[
-                                { icon: Link2, text: t('howItWorksPoints.links') },
-                                { icon: Wallet, text: t('howItWorksPoints.revenue') },
-                                { icon: Shield, text: t('howItWorksPoints.separate') },
-                                { icon: Users, text: t('howItWorksPoints.limit') },
-                            ].map((item, i) => (
-                                <div key={i} className="flex items-start gap-2.5">
-                                    <item.icon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                                    <p className="text-sm text-gray-500">{item.text}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+            <div className="min-h-[80vh] flex items-center justify-center">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-3">
+                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                    <span className="text-xs text-neutral-400 tracking-wide">Loading</span>
                 </motion.div>
             </div>
         )
     }
 
-    // Has group → dashboard view
-    const memberCount = group._count?.Members || group.Members?.length || 0
-    const missionCount = group.Missions?.length || 0
-
-    return (
-        <div className="min-h-screen bg-[#FAFAFA]">
+    // No group — empty state
+    if (!group) {
+        return (
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4 }}
-                className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16"
+                className="max-w-2xl mx-auto py-8"
             >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-8">
-                    <div>
-                        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">{group.name}</h1>
-                        {group.description && <p className="text-gray-500 text-[15px] mt-1">{group.description}</p>}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1, duration: 0.5 }}
+                    className="text-center mb-16"
+                >
+                    <p className="text-xs uppercase tracking-[0.2em] text-neutral-400 mb-4">{t('title')}</p>
+                    <h1 className="text-3xl md:text-4xl font-extralight tracking-tight text-neutral-900 mb-3">
+                        {t('noGroup')}
+                    </h1>
+                    <p className="text-sm text-neutral-400 max-w-md mx-auto leading-relaxed">
+                        {t('noGroupDesc')}
+                    </p>
+                </motion.div>
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="space-y-3 mb-16"
+                >
+                    <Link
+                        href="/seller/groups/create"
+                        className="group flex items-center justify-between py-5 px-5 -mx-1 rounded-2xl hover:bg-neutral-50 transition-colors"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center">
+                                <Plus className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-neutral-900">{t('create')}</p>
+                                <p className="text-xs text-neutral-400 mt-0.5">{t('createDesc')}</p>
+                            </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500 group-hover:translate-x-0.5 transition-all" />
+                    </Link>
+
+                    <div className="flex items-center gap-4 py-5 px-5 -mx-1">
+                        <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+                            <Users className="w-4 h-4 text-neutral-400" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-neutral-900">{t('join')}</p>
+                            <p className="text-xs text-neutral-400 mt-0.5">{t('joinDesc')}</p>
+                        </div>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${
-                        group.status === 'ACTIVE'
-                            ? 'bg-green-50 text-green-600 border border-green-100'
-                            : 'bg-gray-100 text-gray-500 border border-gray-200'
-                    }`}>
+                </motion.div>
+
+                {/* How it works */}
+                <motion.details
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="group"
+                >
+                    <summary className="text-xs uppercase tracking-[0.15em] text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors list-none flex items-center gap-2">
+                        <span className="w-4 h-px bg-neutral-200 group-open:rotate-90 transition-transform" />
+                        {t('howItWorks')}
+                    </summary>
+                    <div className="mt-6 pl-6 space-y-4 text-sm text-neutral-500 border-l border-neutral-100">
+                        <p><span className="text-neutral-400">1.</span> {t('howItWorksPoints.links')}</p>
+                        <p><span className="text-neutral-400">2.</span> {t('howItWorksPoints.revenue')}</p>
+                        <p><span className="text-neutral-400">3.</span> {t('howItWorksPoints.separate')}</p>
+                        <p><span className="text-neutral-400">4.</span> {t('howItWorksPoints.limit')}</p>
+                    </div>
+                </motion.details>
+            </motion.div>
+        )
+    }
+
+    // Has group — dashboard
+    const memberCount = group._count?.Members || group.Members?.length || 0
+    const missionCount = group.Missions?.length || 0
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="max-w-2xl mx-auto py-8"
+        >
+            {/* Hero */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.5 }}
+                className="text-center mb-16"
+            >
+                <p className="text-xs uppercase tracking-[0.2em] text-neutral-400 mb-4">{t('title')}</p>
+                <h1 className="text-3xl md:text-4xl font-extralight tracking-tight text-neutral-900">
+                    {group.name}
+                </h1>
+                {group.description && (
+                    <p className="text-sm text-neutral-400 mt-3">{group.description}</p>
+                )}
+                <div className="inline-flex items-center gap-1.5 mt-4">
+                    <div className={`w-1.5 h-1.5 rounded-full ${group.status === 'ACTIVE' ? 'bg-green-500' : 'bg-neutral-300'}`} />
+                    <span className="text-xs text-neutral-400">
                         {group.status === 'ACTIVE' ? t('active') : t('archived')}
                     </span>
                 </div>
+            </motion.div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                    {[
-                        { label: t('members'), value: `${memberCount}/${group.max_members}`, icon: Users },
-                        { label: t('activeMissions'), value: missionCount, icon: ArrowRight },
-                        { label: 'Role', value: isCreator ? t('creator') : t('member'), icon: Shield },
-                    ].map((stat, i) => (
-                        <motion.div
-                            key={i}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 * i }}
-                            className="bg-white rounded-xl border border-gray-100 p-4"
+            {/* Stats */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="grid grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-12"
+            >
+                <div className="bg-white p-6 text-center">
+                    <p className="text-2xl font-light text-neutral-900 tabular-nums">{memberCount}<span className="text-neutral-300">/{group.max_members}</span></p>
+                    <p className="text-xs text-neutral-400 mt-1">{t('members')}</p>
+                </div>
+                <div className="bg-white p-6 text-center">
+                    <p className="text-2xl font-light text-neutral-900 tabular-nums">{missionCount}</p>
+                    <p className="text-xs text-neutral-400 mt-1">{t('activeMissions')}</p>
+                </div>
+                <div className="bg-white p-6 text-center">
+                    <p className="text-2xl font-light text-neutral-900">{isCreator ? t('creator') : t('member')}</p>
+                    <p className="text-xs text-neutral-400 mt-1">Role</p>
+                </div>
+            </motion.div>
+
+            {/* Invite link */}
+            {group.invite_code && group.status === 'ACTIVE' && origin && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="mb-12"
+                >
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xs uppercase tracking-[0.15em] text-neutral-400">{t('inviteLink')}</h2>
+                    </div>
+                    <div className="flex items-center justify-between py-4 px-4 -mx-4 rounded-xl bg-neutral-50">
+                        <p className="text-sm text-neutral-500 font-mono truncate mr-4">
+                            {origin}/seller/groups/join/{group.invite_code}
+                        </p>
+                        <button
+                            onClick={copyInviteLink}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 text-white text-xs font-medium hover:bg-black transition-colors flex-shrink-0"
                         >
-                            <stat.icon className="w-4 h-4 text-gray-300 mb-2" />
-                            <p className="text-xl font-semibold text-gray-900 tabular-nums">{stat.value}</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5">{stat.label}</p>
+                            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                            {copied ? t('copied') : t('copyLink')}
+                        </button>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Members */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.35 }}
+                className="mb-12"
+            >
+                <h2 className="text-xs uppercase tracking-[0.15em] text-neutral-400 mb-6">{t('members')}</h2>
+                <div className="space-y-1">
+                    {group.Members?.map((member: any, index: number) => (
+                        <motion.div
+                            key={member.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.04 * index }}
+                            className="flex items-center justify-between py-3 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                {member.Seller?.Profile?.avatar_url ? (
+                                    <img src={member.Seller.Profile.avatar_url} className="w-7 h-7 rounded-full object-cover" alt="" />
+                                ) : (
+                                    <div className="w-7 h-7 rounded-full bg-neutral-200 flex items-center justify-center">
+                                        <span className="text-[10px] font-medium text-neutral-500">
+                                            {(member.Seller?.name || member.Seller?.email || '?').charAt(0).toUpperCase()}
+                                        </span>
+                                    </div>
+                                )}
+                                <span className="text-sm text-neutral-600">{member.Seller?.name || member.Seller?.email}</span>
+                            </div>
+                            {member.seller_id === group.creator_id && (
+                                <span className="text-[10px] uppercase tracking-[0.1em] text-neutral-400">{t('creator')}</span>
+                            )}
                         </motion.div>
                     ))}
                 </div>
+            </motion.div>
 
-                {/* Invite link */}
-                {group.invite_code && group.status === 'ACTIVE' && origin && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="mb-6 bg-white rounded-xl border border-gray-100 p-4"
-                    >
-                        <div className="flex items-center justify-between">
-                            <div className="min-w-0 flex-1">
-                                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">{t('inviteLink')}</p>
-                                <p className="text-sm text-gray-600 font-mono truncate">{origin}/seller/groups/join/{group.invite_code}</p>
-                            </div>
-                            <button
-                                onClick={copyInviteLink}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium hover:bg-gray-800 transition-colors flex-shrink-0 ml-4"
+            {/* Missions */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="mb-12"
+            >
+                <h2 className="text-xs uppercase tracking-[0.15em] text-neutral-400 mb-6">{t('groupMissions')}</h2>
+                {missionCount > 0 ? (
+                    <div className="space-y-1">
+                        {group.Missions.map((gm: any, index: number) => (
+                            <motion.div
+                                key={gm.id}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.04 * index }}
+                                className="flex items-center justify-between py-3 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors"
                             >
-                                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                                {copied ? t('copied') : t('copyLink')}
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* Members */}
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="mb-6 bg-white rounded-xl border border-gray-100"
-                >
-                    <div className="px-4 py-3 border-b border-gray-50">
-                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{t('members')}</p>
-                    </div>
-                    <div className="divide-y divide-gray-50">
-                        {group.Members?.map((member: any, i: number) => (
-                            <div key={member.id} className="flex items-center justify-between px-4 py-3">
                                 <div className="flex items-center gap-3">
-                                    {member.Seller?.Profile?.avatar_url ? (
-                                        <img src={member.Seller.Profile.avatar_url} className="w-8 h-8 rounded-full object-cover" alt="" />
+                                    {gm.Mission?.logo_url ? (
+                                        <img src={gm.Mission.logo_url} className="w-7 h-7 rounded-lg object-cover" alt="" />
                                     ) : (
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                                            <span className="text-xs font-medium text-white">{(member.Seller?.name || member.Seller?.email || '?').charAt(0).toUpperCase()}</span>
+                                        <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center">
+                                            <span className="text-[10px] font-bold text-neutral-400">
+                                                {gm.Mission?.company_name?.charAt(0) || 'M'}
+                                            </span>
                                         </div>
                                     )}
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">{member.Seller?.name || member.Seller?.email}</p>
-                                        {member.seller_id === group.creator_id && (
-                                            <p className="text-[11px] text-violet-500 font-medium">{t('creator')}</p>
-                                        )}
+                                        <p className="text-sm text-neutral-600">{gm.Mission?.title}</p>
+                                        <p className="text-[11px] text-neutral-400">{gm.Mission?.company_name}</p>
                                     </div>
                                 </div>
-                            </div>
+                                <span className="text-xs text-neutral-400 tabular-nums">{gm.Mission?.reward}</span>
+                            </motion.div>
                         ))}
                     </div>
-                </motion.div>
-
-                {/* Missions */}
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="mb-6 bg-white rounded-xl border border-gray-100"
-                >
-                    <div className="px-4 py-3 border-b border-gray-50">
-                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{t('groupMissions')}</p>
+                ) : (
+                    <div className="text-center py-12">
+                        <p className="text-neutral-400 text-sm">{t('noMissions')}</p>
+                        <Link href="/seller/marketplace" className="text-xs text-neutral-500 hover:text-neutral-700 transition-colors mt-1 inline-block">
+                            {t('browseMarketplace')} →
+                        </Link>
                     </div>
-                    {missionCount > 0 ? (
-                        <div className="divide-y divide-gray-50">
-                            {group.Missions.map((gm: any) => (
-                                <div key={gm.id} className="flex items-center justify-between px-4 py-3">
-                                    <div className="flex items-center gap-3">
-                                        {gm.Mission?.logo_url ? (
-                                            <img src={gm.Mission.logo_url} className="w-8 h-8 rounded-lg object-cover" alt="" />
-                                        ) : (
-                                            <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
-                                                <span className="text-xs font-bold text-violet-600">{gm.Mission?.company_name?.charAt(0) || 'M'}</span>
-                                            </div>
-                                        )}
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{gm.Mission?.title}</p>
-                                            <p className="text-xs text-gray-400">{gm.Mission?.company_name} &middot; {gm.Mission?.reward}</p>
-                                        </div>
-                                    </div>
-                                    <ArrowRight className="w-4 h-4 text-gray-300" />
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="px-4 py-8 text-center">
-                            <Users className="w-8 h-8 text-gray-200 mx-auto mb-3" />
-                            <p className="text-sm text-gray-400 mb-1">{t('noMissions')}</p>
-                            <Link href="/seller/marketplace" className="text-xs text-violet-500 hover:text-violet-600 font-medium">
-                                {t('browseMarketplace')} &rarr;
-                            </Link>
-                        </div>
-                    )}
-                </motion.div>
-
-                {/* Actions */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.6 }}
-                >
-                    <Link
-                        href={`/seller/groups/${group.id}`}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-medium text-gray-900 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                        {t('manageGroup')} <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-                </motion.div>
+                )}
             </motion.div>
-        </div>
+
+            {/* Manage */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+            >
+                <Link
+                    href={`/seller/groups/${group.id}`}
+                    className="group inline-flex items-center gap-2 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                >
+                    {t('manageGroup')}
+                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+            </motion.div>
+        </motion.div>
     )
 }
