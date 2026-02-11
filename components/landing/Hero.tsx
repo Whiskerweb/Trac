@@ -47,7 +47,7 @@ export function Hero() {
                 {/* CTA Buttons */}
                 <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
                     <Link
-                        href="/dashboard"
+                        href="/login"
                         className="w-full sm:w-auto inline-flex items-center justify-center h-12 px-8 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors shadow-lg hover:shadow-xl shadow-blue-900/20"
                     >
                         {t('ctaPrimary')}

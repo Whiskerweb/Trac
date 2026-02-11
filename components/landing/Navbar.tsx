@@ -78,7 +78,7 @@ export function Navbar() {
                                 {t('common.signIn')}
                             </Link>
                             <Link
-                                href="/dashboard"
+                                href="/login"
                                 className="inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-white bg-gradient-to-b from-neutral-700 to-neutral-900 border border-neutral-700 rounded-xl hover:from-neutral-600 hover:to-neutral-800 transition-all shadow-[0px_2px_4px_rgba(0,0,0,0.2),0px_1px_0px_rgba(255,255,255,0.1)_inset] hover:shadow-[0px_4px_8px_rgba(0,0,0,0.3),0px_1px_0px_rgba(255,255,255,0.1)_inset]"
                             >
                                 {t('common.getStarted')} <ArrowRight className="ml-2 w-4 h-4 text-neutral-300" />
