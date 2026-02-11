@@ -39,8 +39,7 @@ export async function getMyGroup() {
                             where: { status: 'ACTIVE' },
                             include: {
                                 Seller: {
-                                    select: { id: true, name: true, email: true },
-                                    include: { Profile: { select: { avatar_url: true } } }
+                                    select: { id: true, name: true, email: true, Profile: { select: { avatar_url: true } } }
                                 }
                             },
                             orderBy: { joined_at: 'asc' }
