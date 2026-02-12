@@ -350,28 +350,77 @@ export async function POST(request: NextRequest) {
                         // 4. Build reward string (e.g., "5€") - LEAD is always FLAT
                         const rewardString = `${leadRewardAmount}€`
 
-                        // 5. Create commission with LEAD source
-                        const { createCommission } = await import('@/lib/commission/engine')
+                        // 5. Create commission — check group → org → standard (same priority as webhook)
+                        const { createCommission, createGroupCommissions, getGroupConfig, createOrgCommissions, getOrgMissionConfig } = await import('@/lib/commission/engine')
                         const { CommissionSource } = await import('@/lib/generated/prisma/client')
 
-                        const commissionResult = await createCommission({
-                            partnerId: seller.id,
-                            programId: mission.workspace_id,
-                            saleId: leadEvent.id,  // Use LeadEvent ID for deduplication
-                            linkId: customer.link_id,
-                            grossAmount: 0,         // LEAD = no revenue
-                            htAmount: 0,            // LEAD = no HT (triggers LEAD logic in engine)
-                            netAmount: 0,
-                            stripeFee: 0,
-                            taxAmount: 0,
-                            missionReward: rewardString,
-                            currency: 'EUR',
-                            holdDays: 3,            // LEAD: 3 days only (no refund risk)
-                            commissionSource: CommissionSource.LEAD  // ✅ NEW: Track commission source
-                        })
+                        const groupConfig = await getGroupConfig({ linkId: customer.link_id })
+                        const orgConfig = !groupConfig ? await getOrgMissionConfig({ linkId: customer.link_id }) : null
+
+                        let commissionResult: { success: boolean; error?: string }
+
+                        if (groupConfig?.isGroupEnrollment) {
+                            // GROUP LEAD → commission goes to group creator
+                            commissionResult = await createGroupCommissions({
+                                sellerId: seller.id,
+                                creatorId: groupConfig.creatorId,
+                                groupId: groupConfig.groupId,
+                                programId: mission.workspace_id,
+                                saleId: leadEvent.id,
+                                linkId: customer.link_id,
+                                grossAmount: 0,
+                                htAmount: 0,
+                                netAmount: 0,
+                                stripeFee: 0,
+                                taxAmount: 0,
+                                missionReward: rewardString,
+                                currency: 'EUR',
+                                holdDays: 3,
+                                commissionSource: CommissionSource.LEAD
+                            })
+                            console.log(`[track/lead] 💰 GROUP LEAD commission → creator ${groupConfig.creatorId}`)
+                        } else if (orgConfig?.isOrgEnrollment) {
+                            // ORG LEAD → dual commission (member + leader)
+                            commissionResult = await createOrgCommissions({
+                                memberId: seller.id,
+                                leaderId: orgConfig.leaderId,
+                                programId: mission.workspace_id,
+                                saleId: leadEvent.id,
+                                linkId: customer.link_id,
+                                grossAmount: 0,
+                                htAmount: 0,
+                                netAmount: 0,
+                                stripeFee: 0,
+                                taxAmount: 0,
+                                totalReward: rewardString,
+                                leaderReward: orgConfig.leaderReward,
+                                currency: 'EUR',
+                                organizationMissionId: orgConfig.organizationMissionId,
+                                holdDays: 3,
+                                commissionSource: CommissionSource.LEAD
+                            })
+                            console.log(`[track/lead] 💰 ORG LEAD commission → member ${seller.id} + leader ${orgConfig.leaderId}`)
+                        } else {
+                            // STANDARD LEAD → individual seller
+                            commissionResult = await createCommission({
+                                partnerId: seller.id,
+                                programId: mission.workspace_id,
+                                saleId: leadEvent.id,
+                                linkId: customer.link_id,
+                                grossAmount: 0,
+                                htAmount: 0,
+                                netAmount: 0,
+                                stripeFee: 0,
+                                taxAmount: 0,
+                                missionReward: rewardString,
+                                currency: 'EUR',
+                                holdDays: 3,
+                                commissionSource: CommissionSource.LEAD
+                            })
+                        }
 
                         if (commissionResult.success) {
-                            console.log(`[track/lead] 💰 LEAD commission created: mission=${mission.id}, seller=${seller.id}, amount=${commissionResult.commission?.commission_amount}, lead_enabled=${mission.lead_enabled}`)
+                            console.log(`[track/lead] 💰 LEAD commission created: mission=${mission.id}, seller=${seller.id}, lead_enabled=${mission.lead_enabled}`)
                         } else {
                             console.error(`[track/lead] ⚠️ Failed to create commission: ${commissionResult.error}`)
                         }
