@@ -1383,13 +1383,12 @@ async function enrollSingleMemberInMission(
 ) {
     if (!seller.user_id) return
 
-    // Check if already enrolled (individual or another org)
-    const existing = await prisma.missionEnrollment.findUnique({
+    // Check if already enrolled via this org mission
+    const existing = await prisma.missionEnrollment.findFirst({
         where: {
-            mission_id_user_id: {
-                mission_id: mission.id,
-                user_id: seller.user_id,
-            }
+            mission_id: mission.id,
+            user_id: seller.user_id,
+            organization_mission_id: organizationMissionId,
         }
     })
     if (existing) return // Already enrolled — skip

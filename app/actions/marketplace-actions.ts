@@ -656,25 +656,23 @@ export async function approveProgramRequest(requestId: string): Promise<{
             sellerId: shortLink.affiliate_id,
         }, customDomain || undefined)
 
-        // 5. Create or update enrollment with link
-        const enrollment = await prisma.missionEnrollment.upsert({
-            where: {
-                mission_id_user_id: {
-                    mission_id: request.mission_id,
-                    user_id: request.Seller.user_id
-                }
-            },
-            create: {
-                mission_id: request.mission_id,
-                user_id: request.Seller.user_id,
-                status: 'APPROVED',
-                link_id: shortLink.id
-            },
-            update: {
-                status: 'APPROVED',
-                link_id: shortLink.id
-            }
+        // 5. Create or update solo enrollment with link
+        const existingSolo = await prisma.missionEnrollment.findFirst({
+            where: { mission_id: request.mission_id, user_id: request.Seller.user_id, group_mission_id: null }
         })
+        const enrollment = existingSolo
+            ? await prisma.missionEnrollment.update({
+                where: { id: existingSolo.id },
+                data: { status: 'APPROVED', link_id: shortLink.id }
+            })
+            : await prisma.missionEnrollment.create({
+                data: {
+                    mission_id: request.mission_id,
+                    user_id: request.Seller.user_id,
+                    status: 'APPROVED',
+                    link_id: shortLink.id
+                }
+            })
 
         const linkUrl = `${baseUrl}/s/${fullSlug}`
         console.log(`[Marketplace] ✅ Approved request: seller=${request.Seller.id}, mission=${request.mission_id}, link=${linkUrl}`)

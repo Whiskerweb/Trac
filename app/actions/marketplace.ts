@@ -705,9 +705,9 @@ export async function joinMission(missionId: string): Promise<{
             return { success: false, error: 'This mission is not available in your country' }
         }
 
-        // 2. Check if already enrolled
+        // 2. Check if already enrolled solo (group enrollment is separate)
         const existingEnrollment = await prisma.missionEnrollment.findFirst({
-            where: { mission_id: missionId, user_id: user.id }
+            where: { mission_id: missionId, user_id: user.id, group_mission_id: null }
         })
 
         if (existingEnrollment) {
@@ -1167,9 +1167,9 @@ export async function joinMissionByInviteCode(inviteCode: string): Promise<{
             return { success: false, error: 'This mission is not available in your country' }
         }
 
-        // 3. Check if already enrolled
+        // 3. Check if already enrolled solo (group enrollment is separate)
         const existingEnrollment = await prisma.missionEnrollment.findFirst({
-            where: { mission_id: mission.id, user_id: user.id }
+            where: { mission_id: mission.id, user_id: user.id, group_mission_id: null }
         })
 
         if (existingEnrollment) {
@@ -1307,11 +1307,11 @@ export async function getMissionByInviteCode(inviteCode: string): Promise<{
             return { success: false, error: 'Invalid or expired invitation code' }
         }
 
-        // Check if user is already enrolled
+        // Check if user is already enrolled solo (group enrollment is separate)
         let isEnrolled = false
         if (user) {
             const existingEnrollment = await prisma.missionEnrollment.findFirst({
-                where: { mission_id: mission.id, user_id: user.id }
+                where: { mission_id: mission.id, user_id: user.id, group_mission_id: null }
             })
             isEnrolled = !!existingEnrollment
         }

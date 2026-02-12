@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Users, Plus, Copy, Check, ArrowRight, Loader2, LogOut, X } from 'lucide-react'
-import { getMyGroup, leaveGroup, removeGroupMember } from '@/app/actions/group-actions'
+import { getMyGroup, leaveGroup, removeGroupMember, getAvailableMissionsForGroup, enrollGroupInMission } from '@/app/actions/group-actions'
 import { useTranslations } from 'next-intl'
 
 // =============================================
@@ -275,6 +275,10 @@ function CreatorView({ group, sellerId, t }: { group: any; sellerId: string; t: 
     const [origin, setOrigin] = useState('')
     const [refreshKey, setRefreshKey] = useState(0)
     const [currentGroup, setCurrentGroup] = useState(group)
+    const [showAddMission, setShowAddMission] = useState(false)
+    const [availableMissions, setAvailableMissions] = useState<any[]>([])
+    const [loadingMissions, setLoadingMissions] = useState(false)
+    const [addingMissionId, setAddingMissionId] = useState<string | null>(null)
 
     useEffect(() => { setOrigin(window.location.origin) }, [])
 
@@ -312,6 +316,33 @@ function CreatorView({ group, sellerId, t }: { group: any; sellerId: string; t: 
             alert(result.error || 'Failed to remove member')
         }
         setActionLoading(null)
+    }
+
+    const openAddMissionModal = async () => {
+        setShowAddMission(true)
+        setLoadingMissions(true)
+        const result = await getAvailableMissionsForGroup()
+        if (result.success && result.missions) {
+            setAvailableMissions(result.missions)
+        }
+        setLoadingMissions(false)
+    }
+
+    const handleAddMission = async (missionId: string) => {
+        setAddingMissionId(missionId)
+        const result = await enrollGroupInMission(missionId)
+        if (result.success) {
+            setShowAddMission(false)
+            setAvailableMissions([])
+            // Reload group data
+            const refreshed = await getMyGroup()
+            if (refreshed.success && refreshed.group) {
+                setCurrentGroup(refreshed.group)
+            }
+        } else {
+            alert(result.error || 'Failed to add mission')
+        }
+        setAddingMissionId(null)
     }
 
     const memberCount = currentGroup._count?.Members || currentGroup.Members?.length || 0
@@ -445,7 +476,18 @@ function CreatorView({ group, sellerId, t }: { group: any; sellerId: string; t: 
                 transition={{ delay: 0.35 }}
                 className="mb-12"
             >
-                <h2 className="text-xs uppercase tracking-[0.15em] text-neutral-400 mb-4">{t('groupMissions')}</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xs uppercase tracking-[0.15em] text-neutral-400">{t('groupMissions')}</h2>
+                    {currentGroup.status === 'ACTIVE' && (
+                        <button
+                            onClick={openAddMissionModal}
+                            className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-700 transition-colors"
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                            {t('addMission')}
+                        </button>
+                    )}
+                </div>
                 {missionCount > 0 ? (
                     <div className="space-y-1">
                         {currentGroup.Missions.map((gm: any, index: number) => (
@@ -479,12 +521,92 @@ function CreatorView({ group, sellerId, t }: { group: any; sellerId: string; t: 
                     <div className="text-center py-12">
                         <p className="text-neutral-400 text-sm">{t('noMissions')}</p>
                         <p className="text-xs text-neutral-300 mt-1 mb-3">{t('noMissionsDesc')}</p>
-                        <Link href="/seller/marketplace" className="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">
-                            {t('browseMarketplace')} →
-                        </Link>
+                        <button
+                            onClick={openAddMissionModal}
+                            className="text-xs text-neutral-500 hover:text-neutral-700 transition-colors"
+                        >
+                            {t('addMission')} →
+                        </button>
                     </div>
                 )}
             </motion.div>
+
+            {/* Add Mission Modal */}
+            {showAddMission && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowAddMission(false)} />
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col"
+                    >
+                        <div className="flex items-center justify-between p-5 border-b border-neutral-100">
+                            <div>
+                                <h3 className="text-sm font-medium text-neutral-900">{t('selectMission')}</h3>
+                                <p className="text-xs text-neutral-400 mt-0.5">{t('addMissionDesc')}</p>
+                            </div>
+                            <button onClick={() => setShowAddMission(false)} className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto p-3 flex-1">
+                            {loadingMissions ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                                </div>
+                            ) : availableMissions.length > 0 ? (
+                                <div className="space-y-1">
+                                    {availableMissions.map((mission: any) => (
+                                        <div
+                                            key={mission.id}
+                                            className="flex items-center justify-between py-3 px-3 rounded-xl hover:bg-neutral-50 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                {mission.logo_url ? (
+                                                    <img src={mission.logo_url} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" alt="" />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-[10px] font-bold text-neutral-400">
+                                                            {mission.company_name?.charAt(0) || 'M'}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <div className="min-w-0">
+                                                    <p className="text-sm text-neutral-700 truncate">{mission.title}</p>
+                                                    <p className="text-[11px] text-neutral-400">{mission.company_name} · {mission.reward}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => handleAddMission(mission.id)}
+                                                disabled={addingMissionId === mission.id}
+                                                className="flex-shrink-0 ml-3 px-3 py-1.5 rounded-lg bg-neutral-900 text-white text-xs font-medium hover:bg-black transition-colors disabled:opacity-50"
+                                            >
+                                                {addingMissionId === mission.id ? (
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                ) : (
+                                                    t('addToGroup')
+                                                )}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <p className="text-sm text-neutral-500">{t('noAvailableMissions')}</p>
+                                    <p className="text-xs text-neutral-400 mt-1 mb-3">{t('noAvailableMissionsDesc')}</p>
+                                    <Link
+                                        href="/seller/marketplace"
+                                        onClick={() => setShowAddMission(false)}
+                                        className="text-xs text-neutral-500 hover:text-neutral-700 transition-colors"
+                                    >
+                                        {t('browseMarketplace')} →
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                </div>
+            )}
 
             {/* Leave & Archive */}
             <motion.div

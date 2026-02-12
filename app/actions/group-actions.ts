@@ -428,23 +428,23 @@ async function enrollSellerInGroupMission(
     groupMission: { id: string; mission_id: string; Mission: { workspace_id: string; target_url: string; title: string } }
 ) {
     try {
-        // Check if already enrolled in this mission
+        // Check if already enrolled in this mission VIA THIS GROUP (solo enrollment is OK)
         const existing = await prisma.missionEnrollment.findFirst({
-            where: { mission_id: groupMission.mission_id, user_id: userId }
+            where: { mission_id: groupMission.mission_id, user_id: userId, group_mission_id: groupMission.id }
         })
         if (existing) {
-            console.log(`[Group] Seller ${seller.id} already enrolled in mission ${groupMission.mission_id}, skipping`)
+            console.log(`[Group] Seller ${seller.id} already enrolled in mission ${groupMission.mission_id} via group, skipping`)
             return
         }
 
-        // Generate slug
+        // Generate slug with -g suffix to differentiate from solo link
         const missionSlug = groupMission.Mission.title
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-|-$/g, '')
             .slice(0, 20)
         const affiliateCode = userId.slice(0, 8)
-        const fullSlug = `${missionSlug}/${affiliateCode}`
+        let fullSlug = `${missionSlug}/${affiliateCode}-g`
 
         // Check for custom domain
         const verifiedDomain = await prisma.domain.findFirst({
@@ -452,16 +452,35 @@ async function enrollSellerInGroupMission(
         })
         const customDomain = verifiedDomain?.name || null
 
-        // Create ShortLink
-        const shortLink = await prisma.shortLink.create({
-            data: {
-                slug: fullSlug,
-                original_url: groupMission.Mission.target_url,
-                workspace_id: groupMission.Mission.workspace_id,
-                affiliate_id: userId,
-                clicks: 0,
+        // Create ShortLink (handle slug collision with nanoid fallback)
+        let shortLink
+        try {
+            shortLink = await prisma.shortLink.create({
+                data: {
+                    slug: fullSlug,
+                    original_url: groupMission.Mission.target_url,
+                    workspace_id: groupMission.Mission.workspace_id,
+                    affiliate_id: userId,
+                    clicks: 0,
+                }
+            })
+        } catch (slugError: any) {
+            if (slugError?.code === 'P2002') {
+                // Slug collision — append nanoid
+                fullSlug = `${missionSlug}/${affiliateCode}-g-${nanoid(4)}`
+                shortLink = await prisma.shortLink.create({
+                    data: {
+                        slug: fullSlug,
+                        original_url: groupMission.Mission.target_url,
+                        workspace_id: groupMission.Mission.workspace_id,
+                        affiliate_id: userId,
+                        clicks: 0,
+                    }
+                })
+            } else {
+                throw slugError
             }
-        })
+        }
 
         // Set in Redis
         const { setLinkInRedis } = await import('@/lib/redis')
@@ -486,5 +505,66 @@ async function enrollSellerInGroupMission(
         console.log(`[Group] ✅ Enrolled seller ${seller.id} in mission ${groupMission.mission_id} (group)`)
     } catch (error) {
         console.error(`[Group] ❌ Failed to enroll seller ${seller.id}:`, error)
+    }
+}
+
+// =============================================
+// GET AVAILABLE MISSIONS FOR GROUP
+// Returns solo-enrolled missions that can be added to the group
+// =============================================
+
+export async function getAvailableMissionsForGroup(): Promise<{
+    success: boolean
+    missions?: { id: string; title: string; company_name: string | null; logo_url: string | null; reward: string | null }[]
+    error?: string
+}> {
+    try {
+        const seller = await getSellerForCurrentUser()
+        if (!seller) return { success: false, error: 'Not authenticated' }
+        const user = await getCurrentUser()
+        if (!user) return { success: false, error: 'Not authenticated' }
+
+        // Must be creator of an ACTIVE group
+        const membership = await prisma.sellerGroupMember.findUnique({
+            where: { seller_id: seller.id },
+            include: { Group: { include: { Missions: true } } }
+        })
+
+        if (!membership || membership.status !== 'ACTIVE' || membership.Group.status !== 'ACTIVE') {
+            return { success: false, error: 'Not in an active group' }
+        }
+        if (membership.Group.creator_id !== seller.id) {
+            return { success: false, error: 'Only the group creator can add missions' }
+        }
+
+        // Get mission IDs already in the group
+        const groupMissionIds = membership.Group.Missions.map(gm => gm.mission_id)
+
+        // Find solo enrollments (APPROVED, group_mission_id = null) for missions NOT already in the group
+        const soloEnrollments = await prisma.missionEnrollment.findMany({
+            where: {
+                user_id: user.userId,
+                status: 'APPROVED',
+                group_mission_id: null,
+                organization_mission_id: null,
+                mission_id: groupMissionIds.length > 0 ? { notIn: groupMissionIds } : undefined,
+                Mission: {
+                    status: 'ACTIVE',
+                    visibility: 'PUBLIC',
+                }
+            },
+            include: {
+                Mission: {
+                    select: { id: true, title: true, company_name: true, logo_url: true, reward: true }
+                }
+            }
+        })
+
+        const missions = soloEnrollments.map(e => e.Mission)
+
+        return { success: true, missions }
+    } catch (error) {
+        console.error('[Group] Failed to get available missions:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
 }

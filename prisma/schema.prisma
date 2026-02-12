@@ -120,7 +120,7 @@ model MissionEnrollment {
   ShortLink  ShortLink?       @relation(fields: [link_id], references: [id])
   Mission    Mission          @relation(fields: [mission_id], references: [id], onDelete: Cascade)
 
-  @@unique([mission_id, user_id])
+  @@unique([mission_id, user_id, group_mission_id])
   @@index([mission_id])
   @@index([user_id])
   @@index([organization_mission_id])
