@@ -1387,6 +1387,14 @@ export async function getMyStripeAccountInfo(): Promise<{
         const hasPastDue = (stripeAccount.requirements?.past_due?.length || 0) > 0
         const hasPendingVerification = (stripeAccount.requirements?.pending_verification?.length || 0) > 0
 
+        // Sync DB if Stripe says payouts enabled but DB doesn't reflect it
+        if (stripeAccount.payouts_enabled && !seller.payouts_enabled_at) {
+            await prisma.seller.update({
+                where: { id: seller.id },
+                data: { payouts_enabled_at: new Date() }
+            })
+        }
+
         return {
             success: true,
             account: {
