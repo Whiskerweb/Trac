@@ -85,6 +85,11 @@ export async function createGroup(params: {
         const seller = await getSellerForCurrentUser()
         if (!seller) return { success: false, error: 'Not authenticated' }
 
+        // Stripe Connect required to receive group commissions
+        if (!seller.stripe_connect_id || !seller.payouts_enabled_at) {
+            return { success: false, error: 'stripe_required' }
+        }
+
         // Check if already in a group
         const existingMembership = await prisma.sellerGroupMember.findUnique({
             where: { seller_id: seller.id }

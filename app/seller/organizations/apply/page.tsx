@@ -1,14 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, AlertTriangle } from 'lucide-react'
 import { applyToCreateOrg } from '@/app/actions/organization-actions'
+import { getMyStripeAccountInfo } from '@/app/actions/sellers'
+import { useTranslations } from 'next-intl'
 
 const AUDIENCE_OPTIONS = ['< 10', '10-50', '50-200', '200+']
 
 export default function ApplyCreateOrgPage() {
+    const t = useTranslations('seller.groups')
     const router = useRouter()
     const [name, setName] = useState('')
     const [description, setDescription] = useState('')
@@ -16,6 +19,17 @@ export default function ApplyCreateOrgPage() {
     const [estimatedAudience, setEstimatedAudience] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [stripeReady, setStripeReady] = useState<boolean | null>(null)
+
+    useEffect(() => {
+        getMyStripeAccountInfo().then((res) => {
+            if (res.success && res.account) {
+                setStripeReady(res.account.connected && res.account.payoutsEnabled)
+            } else {
+                setStripeReady(false)
+            }
+        })
+    }, [])
 
     const canSubmit = name.trim().length > 0 && description.trim().length > 0 && motivation.trim().length > 0
 
@@ -38,6 +52,50 @@ export default function ApplyCreateOrgPage() {
             setError(result.error || 'Something went wrong')
         }
         setSubmitting(false)
+    }
+
+    // Loading state
+    if (stripeReady === null) {
+        return (
+            <div className="flex items-center justify-center py-32">
+                <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+            </div>
+        )
+    }
+
+    // Stripe not configured
+    if (!stripeReady) {
+        return (
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
+                <Link href="/seller/organizations" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-8">
+                    <ArrowLeft className="w-4 h-4" /> Back to browse
+                </Link>
+
+                <div className="flex flex-col items-center text-center pt-8">
+                    <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mb-6">
+                        <AlertTriangle className="w-6 h-6 text-amber-500" />
+                    </div>
+                    <h1 className="text-xl font-semibold text-gray-900 mb-2">
+                        {t('stripeRequired')}
+                    </h1>
+                    <p className="text-sm text-gray-500 max-w-sm mb-8">
+                        {t('stripeRequiredDesc')}
+                    </p>
+                    <Link
+                        href="/seller/settings"
+                        className="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors"
+                    >
+                        {t('setupStripe')}
+                    </Link>
+                    <Link
+                        href="/seller/organizations"
+                        className="mt-4 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                        Back to browse
+                    </Link>
+                </div>
+            </div>
+        )
     }
 
     return (

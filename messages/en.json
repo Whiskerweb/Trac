@@ -1087,7 +1087,10 @@
             "revenueNotice": "All commissions from group missions go to {creatorName}",
             "groupCreator": "Group creator",
             "yourMissions": "Your group missions",
-            "enrollMissionsCreatorOnly": "Only the creator can enroll the group in new missions"
+            "enrollMissionsCreatorOnly": "Only the creator can enroll the group in new missions",
+            "stripeRequired": "Stripe Connect required",
+            "stripeRequiredDesc": "You need to connect and verify your Stripe account before creating a group. Group mission commissions are paid to the creator.",
+            "setupStripe": "Set up Stripe"
         },
         "programs": {
             "title": "My Programs",

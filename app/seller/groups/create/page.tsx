@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Loader2, ArrowLeft } from 'lucide-react'
+import { Loader2, ArrowLeft, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { createGroup } from '@/app/actions/group-actions'
+import { getMyStripeAccountInfo } from '@/app/actions/sellers'
 import { useTranslations } from 'next-intl'
 
 export default function CreateGroupPage() {
@@ -15,6 +16,17 @@ export default function CreateGroupPage() {
     const [description, setDescription] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [stripeReady, setStripeReady] = useState<boolean | null>(null)
+
+    useEffect(() => {
+        getMyStripeAccountInfo().then((res) => {
+            if (res.success && res.account) {
+                setStripeReady(res.account.connected && res.account.payoutsEnabled)
+            } else {
+                setStripeReady(false)
+            }
+        })
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -31,6 +43,63 @@ export default function CreateGroupPage() {
             setError(result.error || 'Failed to create group')
             setLoading(false)
         }
+    }
+
+    // Loading state
+    if (stripeReady === null) {
+        return (
+            <div className="flex items-center justify-center py-32">
+                <Loader2 className="w-5 h-5 animate-spin text-neutral-300" />
+            </div>
+        )
+    }
+
+    // Stripe not configured
+    if (!stripeReady) {
+        return (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+                className="max-w-lg mx-auto py-8"
+            >
+                <Link
+                    href="/seller/groups"
+                    className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-600 transition-colors mb-12"
+                >
+                    <ArrowLeft className="w-3.5 h-3.5" /> {t('backToGroups')}
+                </Link>
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1, duration: 0.5 }}
+                    className="flex flex-col items-center text-center pt-8"
+                >
+                    <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mb-6">
+                        <AlertTriangle className="w-6 h-6 text-amber-500" />
+                    </div>
+                    <h1 className="text-xl font-medium tracking-tight text-neutral-900 mb-2">
+                        {t('stripeRequired')}
+                    </h1>
+                    <p className="text-sm text-neutral-400 max-w-sm mb-8">
+                        {t('stripeRequiredDesc')}
+                    </p>
+                    <Link
+                        href="/seller/settings"
+                        className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium rounded-lg hover:bg-black transition-colors"
+                    >
+                        {t('setupStripe')}
+                    </Link>
+                    <Link
+                        href="/seller/groups"
+                        className="mt-4 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                    >
+                        {t('backToGroups')}
+                    </Link>
+                </motion.div>
+            </motion.div>
+        )
     }
 
     return (

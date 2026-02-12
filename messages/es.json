@@ -1087,7 +1087,10 @@
             "revenueNotice": "Todas las comisiones de misiones de grupo van a {creatorName}",
             "groupCreator": "Creador del grupo",
             "yourMissions": "Tus misiones de grupo",
-            "enrollMissionsCreatorOnly": "Solo el creador puede inscribir al grupo en nuevas misiones"
+            "enrollMissionsCreatorOnly": "Solo el creador puede inscribir al grupo en nuevas misiones",
+            "stripeRequired": "Stripe Connect requerido",
+            "stripeRequiredDesc": "Debes conectar y verificar tu cuenta de Stripe antes de crear un grupo. Las comisiones de misiones de grupo se pagan al creador.",
+            "setupStripe": "Configurar Stripe"
         },
         "programs": {
             "title": "Mis programas",

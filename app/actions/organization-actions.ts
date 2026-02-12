@@ -68,6 +68,11 @@ export async function applyToCreateOrg({ name, description, motivation, estimate
         const seller = await getSellerForCurrentUser()
         if (!seller) return { success: false, error: 'Not authenticated or not an approved seller' }
 
+        // Stripe Connect required to receive org commissions as leader
+        if (!seller.stripe_connect_id || !seller.payouts_enabled_at) {
+            return { success: false, error: 'stripe_required' }
+        }
+
         const slug = await ensureUniqueSlug(generateSlug(name))
         const invite_code = nanoid(12)
 
