@@ -254,7 +254,7 @@ export default function CommissionsPage() {
                 ) : (
                     <div className="divide-y divide-gray-50">
                         {filteredCommissions.map((commission) => (
-                            <div key={commission.id}>
+                            <Link key={commission.id} href={`/dashboard/commissions/${commission.id}`} className="block">
                                 {/* Desktop Table Row */}
                                 <div className="hidden lg:grid grid-cols-7 gap-4 px-6 py-4 items-center hover:bg-gray-50 cursor-pointer transition-colors group">
                                     <div className="col-span-2 flex items-center gap-3">
@@ -350,7 +350,7 @@ export default function CommissionsPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 )}

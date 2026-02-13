@@ -342,6 +342,240 @@ export async function getWorkspaceCommissions(
 }
 
 // =============================================
+// GET COMMISSION DETAIL (For Startup Dashboard)
+// =============================================
+
+export interface CommissionDetail {
+    // Core
+    id: string
+    saleId: string
+    status: 'PENDING' | 'PROCEED' | 'COMPLETE'
+    commissionSource: 'SALE' | 'LEAD' | 'RECURRING' | null
+
+    // Financial
+    grossAmount: number
+    netAmount: number
+    stripeFee: number
+    taxAmount: number
+    commissionAmount: number
+    platformFee: number
+    commissionRate: string
+    commissionType: string | null
+    currency: string
+
+    // Seller
+    seller: {
+        id: string
+        name: string | null
+        email: string
+        avatar: string | null
+        country: string | null
+        profileType: string | null
+        status: string
+    }
+
+    // Mission
+    mission: {
+        id: string
+        title: string
+        status: string
+        reward: string
+    } | null
+
+    // Recurring
+    subscriptionId: string | null
+    recurringMonth: number | null
+    recurringMax: number | null
+
+    // Lifecycle
+    holdDays: number
+    maturedAt: Date | null
+    paidAt: Date | null
+    createdAt: Date
+
+    // Startup payment
+    startupPaymentStatus: string | null
+
+    // Org
+    orgInfo: { name: string; isLeaderCut: boolean } | null
+
+    // Group
+    groupInfo: { name: string; id: string } | null
+
+    // Referral
+    referralInfo: { generation: number; sourceCommissionId: string } | null
+
+    // Link
+    linkSlug: string | null
+    linkClicks: number | null
+}
+
+export async function getCommissionDetail(commissionId: string): Promise<{
+    success: boolean
+    commission?: CommissionDetail
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
+    try {
+        const commission = await prisma.commission.findFirst({
+            where: {
+                id: commissionId,
+                program_id: workspace.workspaceId
+            },
+            include: {
+                Seller: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        status: true,
+                        Profile: {
+                            select: {
+                                avatar_url: true,
+                                country: true,
+                                profile_type: true,
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+        if (!commission) {
+            return { success: false, error: 'Commission not found' }
+        }
+
+        // Fetch mission info via link_id → ShortLink → MissionEnrollment → Mission
+        let mission: { id: string; title: string; status: string; reward: string } | null = null
+        let linkSlug: string | null = null
+        let linkClicks: number | null = null
+
+        if (commission.link_id) {
+            const shortLink = await prisma.shortLink.findUnique({
+                where: { id: commission.link_id },
+                include: {
+                    MissionEnrollment: {
+                        include: {
+                            Mission: {
+                                select: { id: true, title: true, status: true, reward: true }
+                            }
+                        }
+                    }
+                }
+            })
+
+            if (shortLink) {
+                linkSlug = shortLink.slug
+                linkClicks = shortLink.clicks
+                if (shortLink.MissionEnrollment?.Mission) {
+                    mission = shortLink.MissionEnrollment.Mission
+                }
+            }
+        }
+
+        // Determine org info
+        let orgInfo: { name: string; isLeaderCut: boolean } | null = null
+        if (commission.organization_mission_id) {
+            const orgMission = await prisma.organizationMission.findUnique({
+                where: { id: commission.organization_mission_id },
+                include: { Organization: { select: { name: true } } }
+            })
+            if (orgMission) {
+                orgInfo = {
+                    name: orgMission.Organization.name,
+                    isLeaderCut: !!commission.org_parent_commission_id || commission.sale_id.endsWith(':orgcut')
+                }
+            }
+        }
+
+        // Determine group info
+        let groupInfo: { name: string; id: string } | null = null
+        if (commission.group_id) {
+            const group = await prisma.sellerGroup.findUnique({
+                where: { id: commission.group_id },
+                select: { id: true, name: true }
+            })
+            if (group) {
+                groupInfo = { name: group.name, id: group.id }
+            }
+        }
+
+        // Determine referral info
+        let referralInfo: { generation: number; sourceCommissionId: string } | null = null
+        if (commission.referral_generation && commission.referral_source_commission_id) {
+            referralInfo = {
+                generation: commission.referral_generation,
+                sourceCommissionId: commission.referral_source_commission_id
+            }
+        }
+
+        return {
+            success: true,
+            commission: {
+                id: commission.id,
+                saleId: commission.sale_id,
+                status: commission.status as 'PENDING' | 'PROCEED' | 'COMPLETE',
+                commissionSource: (commission.commission_source as 'SALE' | 'LEAD' | 'RECURRING') || null,
+
+                grossAmount: commission.gross_amount,
+                netAmount: commission.net_amount,
+                stripeFee: commission.stripe_fee,
+                taxAmount: commission.tax_amount,
+                commissionAmount: commission.commission_amount,
+                platformFee: commission.platform_fee,
+                commissionRate: commission.commission_rate,
+                commissionType: commission.commission_type,
+                currency: commission.currency,
+
+                seller: {
+                    id: commission.Seller?.id || commission.seller_id,
+                    name: commission.Seller?.name || null,
+                    email: commission.Seller?.email || 'Unknown',
+                    avatar: commission.Seller?.Profile?.avatar_url || null,
+                    country: commission.Seller?.Profile?.country || null,
+                    profileType: commission.Seller?.Profile?.profile_type || null,
+                    status: commission.Seller?.status || 'PENDING',
+                },
+
+                mission,
+
+                subscriptionId: commission.subscription_id,
+                recurringMonth: commission.recurring_month,
+                recurringMax: commission.recurring_max,
+
+                holdDays: commission.hold_days,
+                maturedAt: commission.matured_at,
+                paidAt: commission.paid_at,
+                createdAt: commission.created_at,
+
+                startupPaymentStatus: commission.startup_payment_status,
+
+                orgInfo,
+                groupInfo,
+                referralInfo,
+
+                linkSlug,
+                linkClicks,
+            }
+        }
+    } catch (error) {
+        console.error('[getCommissionDetail] Error:', error)
+        return { success: false, error: 'Failed to fetch commission detail' }
+    }
+}
+
+// =============================================
 // GET PENDING GIFT CARD REQUESTS (For Admin)
 // =============================================
 

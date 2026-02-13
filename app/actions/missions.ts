@@ -545,7 +545,8 @@ export async function updateMissionStatus(
 }
 
 /**
- * Delete a mission
+ * Archive a mission (soft-delete)
+ * Sets mission status to ARCHIVED, archives enrollments, removes ShortLinks from Redis
  */
 export async function deleteMission(missionId: string): Promise<{
     success: boolean
@@ -565,34 +566,50 @@ export async function deleteMission(missionId: string): Promise<{
     }
 
     try {
-        // Verify ownership
+        // Verify ownership and fetch enrollments with their ShortLinks
         const mission = await prisma.mission.findFirst({
-            where: { id: missionId, workspace_id: workspace.workspaceId } // ✅ FIXED
+            where: { id: missionId, workspace_id: workspace.workspaceId },
+            include: {
+                MissionEnrollment: {
+                    where: { status: 'APPROVED' },
+                    include: {
+                        ShortLink: { select: { slug: true } }
+                    }
+                }
+            }
         })
 
         if (!mission) {
             return { success: false, error: 'Mission not found' }
         }
 
-        // Delete related records without cascade
-        await prisma.organizationMission.deleteMany({
-            where: { mission_id: missionId }
-        })
-        await prisma.groupMission.deleteMany({
-            where: { mission_id: missionId }
+        // 1. Archive mission
+        await prisma.mission.update({
+            where: { id: missionId },
+            data: { status: 'ARCHIVED' }
         })
 
-        await prisma.mission.delete({
-            where: { id: missionId }
+        // 2. Archive all APPROVED enrollments
+        await prisma.missionEnrollment.updateMany({
+            where: { mission_id: missionId, status: 'APPROVED' },
+            data: { status: 'ARCHIVED' }
         })
 
-        console.log('[Mission] 🗑️ Deleted:', missionId)
+        // 3. Remove ShortLinks from Redis (no more new clicks)
+        const { deleteLinkFromRedis } = await import('@/lib/redis')
+        for (const enrollment of mission.MissionEnrollment) {
+            if (enrollment.ShortLink?.slug) {
+                await deleteLinkFromRedis(enrollment.ShortLink.slug)
+            }
+        }
+
+        console.log('[Mission] 📦 Archived:', missionId, `(${mission.MissionEnrollment.length} enrollments archived)`)
 
         return { success: true }
 
     } catch (error) {
-        console.error('[Mission] ❌ Error deleting:', error)
-        return { success: false, error: 'Failed to delete mission' }
+        console.error('[Mission] ❌ Error archiving:', error)
+        return { success: false, error: 'Failed to archive mission' }
     }
 }
 

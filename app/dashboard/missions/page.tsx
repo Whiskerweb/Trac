@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
     Plus, Loader2, Target, Users, MousePointer2,
-    MoreHorizontal, Archive, Trash2, Globe, Lock,
+    MoreHorizontal, Archive, Globe, Lock,
     Sparkles, Clock, AlertCircle,
     Copy, Activity, Eye, Zap, ArrowUpRight, Circle, Check, ChevronRight
 } from 'lucide-react'
@@ -13,7 +13,6 @@ import { DNSGatekeeper } from '@/components/dashboard/DNSGatekeeper'
 import {
     getMissionsWithFullStats,
     getRecentMissionActivity,
-    updateMissionStatus,
     deleteMission,
     type MissionWithStats,
     type ActivityItem
@@ -136,14 +135,6 @@ function MissionRow({
     const [copied, setCopied] = useState(false)
 
     async function handleArchive() {
-        setLoading(true)
-        await updateMissionStatus(mission.id, 'ARCHIVED')
-        setMenuOpen(false)
-        onRefresh()
-        setLoading(false)
-    }
-
-    async function handleDelete() {
         if (!confirm(t('deleteConfirm'))) return
         setLoading(true)
         try {
@@ -152,10 +143,10 @@ function MissionRow({
                 setMenuOpen(false)
                 onRefresh()
             } else {
-                alert(result.error || 'Failed to delete mission')
+                alert(result.error || 'Failed to archive mission')
             }
         } catch {
-            alert('Failed to delete mission')
+            alert('Failed to archive mission')
         } finally {
             setLoading(false)
         }
@@ -252,14 +243,6 @@ function MissionRow({
                                         >
                                             <Archive className="w-4 h-4" />
                                             {t('archive')}
-                                        </button>
-                                        <button
-                                            onClick={handleDelete}
-                                            disabled={loading}
-                                            className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                            {t('delete')}
                                         </button>
                                     </div>
                                 </>
