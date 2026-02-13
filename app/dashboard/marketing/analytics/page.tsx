@@ -12,6 +12,10 @@ import {
     Check,
     ChevronDown,
     X,
+    TrendingUp,
+    MousePointerClick,
+    DollarSign,
+    Users2,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
@@ -105,7 +109,7 @@ const DATE_RANGE_KEYS = [
 ]
 
 // =============================================
-// COUNTRY INFO
+// GEO DATA MAPS
 // =============================================
 
 const COUNTRY_INFO: Record<string, { name: string; flag: string }> = {
@@ -164,6 +168,7 @@ const CITY_TO_REGION: Record<string, string> = {
 // =============================================
 
 function formatNumber(n: number): string {
+    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
     if (n >= 1000) return `${(n / 1000).toFixed(1)}K`
     return n.toLocaleString()
 }
@@ -215,7 +220,7 @@ function Dropdown({ trigger, children, isOpen, onClose }: {
         <div ref={ref} className="relative">
             {trigger}
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[200px] py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute top-full left-0 mt-1.5 bg-white/80 backdrop-blur-xl border border-gray-200/60 rounded-2xl shadow-lg shadow-black/[0.03] z-50 min-w-[220px] py-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
                     {children}
                 </div>
             )}
@@ -224,25 +229,25 @@ function Dropdown({ trigger, children, isOpen, onClose }: {
 }
 
 // =============================================
-// FILTER BADGE
+// FILTER BADGE — pill style
 // =============================================
 
 function FilterBadge({ filter, onRemove, isText }: { filter: ActiveFilter; onRemove: () => void; isText: string }) {
     return (
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm animate-in fade-in slide-in-from-left-2 duration-200">
+        <div className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 bg-white border border-gray-200/80 rounded-full text-[13px] shadow-sm shadow-black/[0.02] animate-in fade-in zoom-in-95 duration-200">
             {filter.icon}
-            <span className="text-gray-500 capitalize">{filter.type}</span>
-            <span className="text-gray-400">{isText}</span>
-            <span className="font-semibold text-gray-900">{filter.label}</span>
-            <button onClick={onRemove} className="ml-1 p-0.5 rounded hover:bg-gray-200 transition-colors">
-                <X className="w-3.5 h-3.5 text-gray-500" />
+            <span className="text-gray-400">{filter.type}</span>
+            <span className="text-gray-300">{isText}</span>
+            <span className="font-medium text-gray-800">{filter.label}</span>
+            <button onClick={onRemove} className="ml-0.5 p-1 rounded-full hover:bg-gray-100 transition-colors">
+                <X className="w-3 h-3 text-gray-400" />
             </button>
         </div>
     )
 }
 
 // =============================================
-// SIMPLE LIST ITEM
+// LIST ITEM — refined row
 // =============================================
 
 function SimpleListItem({ icon, label, count, percentage = 100, isSelected, onClick }: {
@@ -251,24 +256,33 @@ function SimpleListItem({ icon, label, count, percentage = 100, isSelected, onCl
     return (
         <div
             onClick={onClick}
-            className={`relative flex items-center justify-between px-4 py-2.5 cursor-pointer transition-colors duration-150
-                ${isSelected ? 'border-l-2 border-blue-500' : 'hover:bg-gray-50/50 border-l-2 border-transparent'}`}
+            className={`group relative flex items-center justify-between px-4 py-2.5 cursor-pointer transition-all duration-200
+                ${isSelected
+                    ? 'bg-purple-50/60'
+                    : 'hover:bg-gray-50/60'
+                }`}
         >
+            {/* Progress bar — very subtle */}
             <div
-                className={`absolute top-1 bottom-1 left-0 rounded-r transition-all duration-300 ${isSelected ? 'bg-violet-100' : 'bg-violet-50'}`}
-                style={{ width: `${Math.min(percentage * 0.6, 60)}%` }}
+                className={`absolute inset-y-0 left-0 transition-all duration-500 ease-out ${isSelected ? 'bg-purple-100/50' : 'bg-gray-100/40 group-hover:bg-gray-100/60'}`}
+                style={{ width: `${Math.min(percentage * 0.55, 55)}%` }}
             />
-            <div className="relative flex items-center gap-3">
+            {/* Left indicator */}
+            {isSelected && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-purple-500 rounded-full" />}
+
+            <div className="relative flex items-center gap-2.5">
                 {icon}
-                <span className={`text-sm ${isSelected ? 'font-medium text-gray-900' : 'text-gray-700'}`}>{label}</span>
+                <span className={`text-[13px] ${isSelected ? 'font-semibold text-gray-900' : 'text-gray-700 font-medium'}`}>{label}</span>
             </div>
-            <span className="relative text-sm text-gray-500">{formatNumber(count)}</span>
+            <span className={`relative text-[13px] tabular-nums ${isSelected ? 'font-semibold text-purple-700' : 'text-gray-400 font-medium'}`}>
+                {formatNumber(count)}
+            </span>
         </div>
     )
 }
 
 // =============================================
-// ANALYTICS CARD WITH TABS
+// ANALYTICS CARD — Apple-style section
 // =============================================
 
 function AnalyticsCard({ title, tabs, activeTab, onTabChange, children, settingsLabel }: {
@@ -276,26 +290,64 @@ function AnalyticsCard({ title, tabs, activeTab, onTabChange, children, settings
     onTabChange?: (tab: string) => void; children: React.ReactNode; settingsLabel?: string
 }) {
     return (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100">
+        <div className="bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-2xl overflow-hidden shadow-sm shadow-black/[0.02]">
+            <div className="px-5 py-3.5 border-b border-gray-100/80">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
                         {tabs ? tabs.map((tab) => (
                             <button
                                 key={tab.key}
                                 onClick={() => onTabChange?.(tab.key)}
-                                className={`text-sm font-medium transition-colors ${activeTab === tab.key ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}
+                                className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200 ${
+                                    activeTab === tab.key
+                                        ? 'bg-gray-900 text-white shadow-sm'
+                                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                                }`}
                             >
                                 {tab.label}
                             </button>
                         )) : (
-                            <span className="font-semibold text-gray-900">{title}</span>
+                            <span className="text-sm font-semibold text-gray-900">{title}</span>
                         )}
                     </div>
-                    {settingsLabel && <span className="text-xs text-gray-400 uppercase tracking-wider">{settingsLabel}</span>}
+                    {settingsLabel && (
+                        <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest">{settingsLabel}</span>
+                    )}
                 </div>
             </div>
-            <div className="divide-y divide-gray-50">{children}</div>
+            <div className="divide-y divide-gray-50/80">{children}</div>
+        </div>
+    )
+}
+
+// =============================================
+// CHANNEL BAR — refined
+// =============================================
+
+function ChannelBar({ label, icon, color, count, total }: {
+    label: string; icon: React.ReactNode; color: string; count: number; total: number
+}) {
+    const pct = total > 0 ? (count / total) * 100 : 0
+    return (
+        <div className="group">
+            <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2.5">
+                    <div className={`w-7 h-7 rounded-lg ${color} flex items-center justify-center shadow-sm`}>
+                        {icon}
+                    </div>
+                    <span className="text-[13px] font-medium text-gray-700">{label}</span>
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                    <span className="text-[13px] font-semibold text-gray-900 tabular-nums">{count.toLocaleString()}</span>
+                    <span className="text-[11px] text-gray-400 tabular-nums">{pct.toFixed(0)}%</span>
+                </div>
+            </div>
+            <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                    className={`h-full rounded-full ${color} transition-all duration-700 ease-out`}
+                    style={{ width: `${Math.max(pct, 1)}%` }}
+                />
+            </div>
         </div>
     )
 }
@@ -553,26 +605,26 @@ export default function MarketingAnalyticsPage() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{tm('analytics.title')}</h1>
-                <p className="text-sm text-gray-500 mt-1">{tm('analytics.subtitle')}</p>
-            </div>
+            {/* ===== HEADER ===== */}
+            <div className="flex items-end justify-between">
+                <div>
+                    <h1 className="text-[22px] font-semibold text-gray-900 tracking-tight">{tm('analytics.title')}</h1>
+                    <p className="text-[13px] text-gray-400 mt-0.5">{tm('analytics.subtitle')}</p>
+                </div>
 
-            {/* Date Range Bar */}
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                    {/* Date Range — pill selector */}
                     <Dropdown
                         isOpen={dateRangeOpen}
                         onClose={() => setDateRangeOpen(false)}
                         trigger={
                             <button
                                 onClick={() => setDateRangeOpen(!dateRangeOpen)}
-                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-300 transition-colors"
+                                className="flex items-center gap-2 px-3.5 py-2 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl text-[13px] font-medium text-gray-600 hover:border-gray-300 hover:bg-white transition-all shadow-sm shadow-black/[0.02]"
                             >
-                                <Calendar className="w-4 h-4 text-gray-500" />
+                                <Calendar className="w-3.5 h-3.5 text-gray-400" />
                                 {selectedRange.label}
-                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                                <ChevronDown className="w-3.5 h-3.5 text-gray-300" />
                             </button>
                         }
                     >
@@ -580,36 +632,43 @@ export default function MarketingAnalyticsPage() {
                             <button
                                 key={range.value}
                                 onClick={() => handleSelectRange(range)}
-                                className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                className={`w-full flex items-center justify-between px-4 py-2 text-[13px] transition-colors rounded-lg mx-1 ${
+                                    selectedRange.value === range.value
+                                        ? 'text-gray-900 font-medium bg-gray-50'
+                                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                                }`}
+                                style={{ width: 'calc(100% - 8px)' }}
                             >
                                 {range.label}
-                                {selectedRange.value === range.value && <Check className="w-4 h-4 text-violet-600" />}
+                                {selectedRange.value === range.value && <Check className="w-3.5 h-3.5 text-purple-500" />}
                             </button>
                         ))}
                     </Dropdown>
+
+                    {/* Refresh */}
+                    <button
+                        onClick={() => mutate()}
+                        disabled={isValidating}
+                        className={`p-2 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl text-gray-400 hover:text-gray-600 hover:border-gray-300 hover:bg-white transition-all shadow-sm shadow-black/[0.02] ${isValidating ? 'animate-spin' : ''}`}
+                    >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
                 </div>
-                <button
-                    onClick={() => mutate()}
-                    disabled={isValidating}
-                    className={`p-2 bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors ${isValidating ? 'animate-spin' : ''}`}
-                >
-                    <RefreshCw className="w-4 h-4" />
-                </button>
             </div>
 
-            {/* Active Filters Bar */}
+            {/* ===== ACTIVE FILTERS ===== */}
             {(activeFilters.length > 0 || activeEventTypes.size < 3) && (
-                <div className="flex items-center gap-3 flex-wrap animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2 flex-wrap animate-in fade-in slide-in-from-top-1 duration-200">
                     {activeEventTypes.size < 3 && (
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-100 border border-violet-200 rounded-lg">
-                            <span className="text-sm text-violet-700 font-medium">
+                        <div className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-purple-50 border border-purple-200/50 rounded-full text-[13px]">
+                            <span className="text-purple-600 font-medium">
                                 {t('filters.showing')}: {Array.from(activeEventTypes).join(', ')}
                             </span>
                             <button
                                 onClick={() => setActiveEventTypes(new Set(['clicks', 'leads', 'sales']))}
-                                className="text-violet-500 hover:text-violet-700 transition-colors"
+                                className="p-1 rounded-full text-purple-400 hover:text-purple-600 hover:bg-purple-100 transition-colors"
                             >
-                                <X className="w-3.5 h-3.5" />
+                                <X className="w-3 h-3" />
                             </button>
                         </div>
                     )}
@@ -623,15 +682,15 @@ export default function MarketingAnalyticsPage() {
                     ))}
                     <button
                         onClick={clearAllFilters}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 transition-colors"
                     >
                         {t('filters.clearFilters')}
-                        <span className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">ESC</span>
+                        <kbd className="ml-0.5 px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono text-gray-400">esc</kbd>
                     </button>
                 </div>
             )}
 
-            {/* Analytics Chart (KPIs + timeseries) */}
+            {/* ===== ANALYTICS CHART (KPIs + funnel/timeseries) ===== */}
             <AnalyticsChart
                 clicks={kpi.clicks}
                 leads={kpi.leads}
@@ -642,9 +701,9 @@ export default function MarketingAnalyticsPage() {
                 onEventTypeToggle={toggleEventType}
             />
 
-            {/* Locations & Devices Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Locations Card */}
+            {/* ===== BREAKDOWNS GRID ===== */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Locations */}
                 <AnalyticsCard
                     title={t('locations.title')}
                     tabs={[
@@ -660,7 +719,7 @@ export default function MarketingAnalyticsPage() {
                     {locationTab === 'countries' && displayLocations.map((loc) => (
                         <SimpleListItem
                             key={loc.code}
-                            icon={<span className="text-lg">{loc.flag}</span>}
+                            icon={<span className="text-base leading-none">{loc.flag}</span>}
                             label={loc.name}
                             count={loc.count}
                             percentage={(loc.count / maxLocation) * 100}
@@ -671,7 +730,7 @@ export default function MarketingAnalyticsPage() {
                     {locationTab === 'cities' && displayCities.map((city) => (
                         <SimpleListItem
                             key={city.name}
-                            icon={<span className="text-lg">{city.flag}</span>}
+                            icon={<span className="text-base leading-none">{city.flag}</span>}
                             label={city.name}
                             count={city.count}
                             percentage={(city.count / maxCity) * 100}
@@ -682,7 +741,7 @@ export default function MarketingAnalyticsPage() {
                     {locationTab === 'regions' && displayRegions.map((region) => (
                         <SimpleListItem
                             key={region.name}
-                            icon={<span className="text-lg">{region.flag}</span>}
+                            icon={<span className="text-base leading-none">{region.flag}</span>}
                             label={region.name}
                             count={region.count}
                             percentage={(region.count / maxRegion) * 100}
@@ -693,7 +752,7 @@ export default function MarketingAnalyticsPage() {
                     {locationTab === 'continents' && displayContinents.map((cont) => (
                         <SimpleListItem
                             key={cont.name}
-                            icon={<span className="text-lg">{cont.flag}</span>}
+                            icon={<span className="text-base leading-none">{cont.flag}</span>}
                             label={cont.name}
                             count={cont.count}
                             percentage={(cont.count / maxContinent) * 100}
@@ -703,7 +762,7 @@ export default function MarketingAnalyticsPage() {
                     ))}
                 </AnalyticsCard>
 
-                {/* Devices Card */}
+                {/* Devices */}
                 <AnalyticsCard
                     title={t('devices.title')}
                     tabs={[
@@ -720,89 +779,106 @@ export default function MarketingAnalyticsPage() {
                         return (
                             <SimpleListItem
                                 key={device.name}
-                                icon={<Icon className="w-4 h-4 text-gray-500" />}
+                                icon={<Icon className="w-4 h-4 text-gray-400" />}
                                 label={device.name}
                                 count={device.count}
                                 percentage={(device.count / maxDevice) * 100}
                                 isSelected={activeFilters.some(f => f.type === 'device' && f.value === device.name)}
-                                onClick={() => toggleFilter('device', device.name, device.name, <Icon className="w-3.5 h-3.5 text-gray-500" />)}
+                                onClick={() => toggleFilter('device', device.name, device.name, <Icon className="w-3.5 h-3.5 text-gray-400" />)}
                             />
                         )
                     })}
                     {deviceTab === 'browsers' && displayBrowsers.map((browser) => (
                         <SimpleListItem
                             key={browser.name}
-                            icon={<Globe className="w-4 h-4 text-gray-500" />}
+                            icon={<Globe className="w-4 h-4 text-gray-400" />}
                             label={browser.name}
                             count={browser.count}
                             percentage={(browser.count / maxBrowser) * 100}
                             isSelected={activeFilters.some(f => f.type === 'browser' && f.value === browser.name)}
-                            onClick={() => toggleFilter('browser', browser.name, browser.name, <Globe className="w-3.5 h-3.5 text-gray-500" />)}
+                            onClick={() => toggleFilter('browser', browser.name, browser.name, <Globe className="w-3.5 h-3.5 text-gray-400" />)}
                         />
                     ))}
                     {deviceTab === 'os' && displayOS.map((os) => (
                         <SimpleListItem
                             key={os.name}
-                            icon={<Monitor className="w-4 h-4 text-gray-500" />}
+                            icon={<Monitor className="w-4 h-4 text-gray-400" />}
                             label={os.name}
                             count={os.count}
                             percentage={(os.count / maxOS) * 100}
                             isSelected={activeFilters.some(f => f.type === 'os' && f.value === os.name)}
-                            onClick={() => toggleFilter('os', os.name, os.name, <Monitor className="w-3.5 h-3.5 text-gray-500" />)}
+                            onClick={() => toggleFilter('os', os.name, os.name, <Monitor className="w-3.5 h-3.5 text-gray-400" />)}
                         />
                     ))}
                 </AnalyticsCard>
             </div>
 
-            {/* Channel & Campaign Breakdowns */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Channel Breakdown */}
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <h2 className="text-base font-semibold text-gray-900 mb-4">{tm('analytics.byChannel')}</h2>
+            {/* ===== CHANNEL & CAMPAIGN ===== */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Channels */}
+                <div className="bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-2xl p-6 shadow-sm shadow-black/[0.02]">
+                    <div className="flex items-center justify-between mb-5">
+                        <h2 className="text-sm font-semibold text-gray-900">{tm('analytics.byChannel')}</h2>
+                        <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest">
+                            {t('kpi.clicks').toUpperCase()}
+                        </span>
+                    </div>
                     {channelBreakdown.length === 0 ? (
-                        <p className="text-sm text-gray-400 py-8 text-center">{tm('analytics.noData')}</p>
+                        <div className="flex flex-col items-center justify-center py-10">
+                            <div className="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center mb-3">
+                                <TrendingUp className="w-4 h-4 text-gray-300" />
+                            </div>
+                            <p className="text-[13px] text-gray-400">{tm('analytics.noData')}</p>
+                        </div>
                     ) : (
-                        <div className="space-y-3">
-                            {channelBreakdown.map(({ channel, clicks, config }) => {
-                                const pct = totalDbClicks > 0 ? (clicks / totalDbClicks) * 100 : 0
-                                return (
-                                    <div key={channel}>
-                                        <div className="flex items-center justify-between mb-1">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-6 h-6 rounded-md ${config.color} flex items-center justify-center`}>
-                                                    <Globe className={`w-3 h-3 ${config.textColor}`} />
-                                                </div>
-                                                <span className="text-sm font-medium text-gray-700">{config.label}</span>
-                                            </div>
-                                            <span className="text-sm text-gray-500 tabular-nums">{clicks.toLocaleString()} ({pct.toFixed(0)}%)</span>
-                                        </div>
-                                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                            <div className={`h-full rounded-full ${config.color}`} style={{ width: `${pct}%` }} />
-                                        </div>
-                                    </div>
-                                )
-                            })}
+                        <div className="space-y-4">
+                            {channelBreakdown.map(({ channel, clicks, config }) => (
+                                <ChannelBar
+                                    key={channel}
+                                    label={config.label}
+                                    icon={<Globe className={`w-3.5 h-3.5 ${config.textColor}`} />}
+                                    color={config.color}
+                                    count={clicks}
+                                    total={totalDbClicks}
+                                />
+                            ))}
                         </div>
                     )}
                 </div>
 
-                {/* Campaign Breakdown */}
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <h2 className="text-base font-semibold text-gray-900 mb-4">{tm('analytics.byCampaign')}</h2>
+                {/* Campaigns */}
+                <div className="bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-2xl p-6 shadow-sm shadow-black/[0.02]">
+                    <div className="flex items-center justify-between mb-5">
+                        <h2 className="text-sm font-semibold text-gray-900">{tm('analytics.byCampaign')}</h2>
+                        <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest">
+                            {t('kpi.clicks').toUpperCase()}
+                        </span>
+                    </div>
                     {campaignBreakdown.length === 0 ? (
-                        <p className="text-sm text-gray-400 py-8 text-center">{tm('analytics.noData')}</p>
+                        <div className="flex flex-col items-center justify-center py-10">
+                            <div className="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center mb-3">
+                                <TrendingUp className="w-4 h-4 text-gray-300" />
+                            </div>
+                            <p className="text-[13px] text-gray-400">{tm('analytics.noData')}</p>
+                        </div>
                     ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             {campaignBreakdown.map(({ name, clicks }) => {
                                 const pct = totalDbClicks > 0 ? (clicks / totalDbClicks) * 100 : 0
                                 return (
-                                    <div key={name}>
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className="text-sm font-medium text-gray-700">{name}</span>
-                                            <span className="text-sm text-gray-500 tabular-nums">{clicks.toLocaleString()} ({pct.toFixed(0)}%)</span>
+                                    <div key={name} className="group">
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <span className="text-[13px] font-medium text-gray-700">{name}</span>
+                                            <div className="flex items-baseline gap-1.5">
+                                                <span className="text-[13px] font-semibold text-gray-900 tabular-nums">{clicks.toLocaleString()}</span>
+                                                <span className="text-[11px] text-gray-400 tabular-nums">{pct.toFixed(0)}%</span>
+                                            </div>
                                         </div>
-                                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                            <div className="h-full rounded-full bg-purple-500" style={{ width: `${pct}%` }} />
+                                        <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full bg-purple-500 transition-all duration-700 ease-out"
+                                                style={{ width: `${Math.max(pct, 1)}%` }}
+                                            />
                                         </div>
                                     </div>
                                 )

@@ -91,6 +91,7 @@ const marketingNavigationConfig: NavSection[] = [
     {
         titleKey: 'configuration',
         items: [
+            { nameKey: 'integration', href: '/dashboard/integration', icon: Puzzle, external: true },
             { nameKey: 'domains', href: '/dashboard/domains', icon: Globe },
             { nameKey: 'settings', href: '/dashboard/settings', icon: Settings },
         ]
