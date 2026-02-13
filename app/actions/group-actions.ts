@@ -508,7 +508,35 @@ async function enrollSellerInGroupMission(
             where: { mission_id: groupMission.mission_id, user_id: userId, group_mission_id: groupMission.id }
         })
         if (existing && existing.status === 'ARCHIVED') {
-            // Reactivate: create new ShortLink, set in Redis, update enrollment
+            // Try to reuse old ShortLink to preserve Tinybird history (clicks/leads/sales)
+            if (existing.link_id) {
+                const oldLink = await prisma.shortLink.findUnique({
+                    where: { id: existing.link_id }
+                })
+                if (oldLink) {
+                    // Re-add old link to Redis and reactivate enrollment with same link_id
+                    const verifiedDomainOld = await prisma.domain.findFirst({
+                        where: { workspace_id: groupMission.Mission.workspace_id, verified: true }
+                    })
+                    const { setLinkInRedis } = await import('@/lib/redis')
+                    await setLinkInRedis(oldLink.slug, {
+                        url: oldLink.original_url,
+                        linkId: oldLink.id,
+                        workspaceId: oldLink.workspace_id,
+                        sellerId: oldLink.affiliate_id,
+                    }, verifiedDomainOld?.name || undefined)
+
+                    await prisma.missionEnrollment.update({
+                        where: { id: existing.id },
+                        data: { status: 'APPROVED' }
+                    })
+
+                    console.log(`[Group] ♻️ Reactivated ARCHIVED group enrollment for seller ${seller.id} in mission ${groupMission.mission_id} (reused old ShortLink)`)
+                    return
+                }
+            }
+
+            // Fallback: old ShortLink was deleted, create a new one
             const verifiedDomainReactivate = await prisma.domain.findFirst({
                 where: { workspace_id: groupMission.Mission.workspace_id, verified: true }
             })
@@ -550,8 +578,8 @@ async function enrollSellerInGroupMission(
                 }
             }
 
-            const { setLinkInRedis } = await import('@/lib/redis')
-            await setLinkInRedis(shortLinkReactivate.slug, {
+            const { setLinkInRedis: setLinkInRedisFallback } = await import('@/lib/redis')
+            await setLinkInRedisFallback(shortLinkReactivate.slug, {
                 url: shortLinkReactivate.original_url,
                 linkId: shortLinkReactivate.id,
                 workspaceId: shortLinkReactivate.workspace_id,
@@ -563,7 +591,7 @@ async function enrollSellerInGroupMission(
                 data: { status: 'APPROVED', link_id: shortLinkReactivate.id }
             })
 
-            console.log(`[Group] ♻️ Reactivated ARCHIVED group enrollment for seller ${seller.id} in mission ${groupMission.mission_id}`)
+            console.log(`[Group] ♻️ Reactivated ARCHIVED group enrollment for seller ${seller.id} in mission ${groupMission.mission_id} (new ShortLink)`)
             return
         }
         if (existing) {

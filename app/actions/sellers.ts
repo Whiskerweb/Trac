@@ -1678,7 +1678,7 @@ export async function getMyCommissionDetail(commissionId: string) {
         }
 
         // Org info
-        let orgInfo: { name: string; isLeaderCut: boolean } | null = null
+        let orgInfo: { name: string; isLeaderCut: boolean; originSeller: { name: string | null; email: string } | null } | null = null
         if (commission.organization_mission_id) {
             const orgMission = await prisma.organizationMission.findUnique({
                 where: { id: commission.organization_mission_id },
@@ -1686,9 +1686,29 @@ export async function getMyCommissionDetail(commissionId: string) {
                     Organization: { select: { name: true } }
                 }
             })
+
+            // For leader cuts, find the member who generated the sale
+            let orgOriginSeller: { name: string | null; email: string } | null = null
+            if (commission.org_parent_commission_id) {
+                const memberCommission = await prisma.commission.findUnique({
+                    where: { id: commission.org_parent_commission_id },
+                    select: { seller_id: true }
+                })
+                if (memberCommission) {
+                    const memberSeller = await prisma.seller.findUnique({
+                        where: { id: memberCommission.seller_id },
+                        select: { name: true, email: true }
+                    })
+                    if (memberSeller) {
+                        orgOriginSeller = { name: memberSeller.name, email: memberSeller.email }
+                    }
+                }
+            }
+
             orgInfo = {
                 name: orgMission?.Organization?.name || 'Unknown organization',
                 isLeaderCut: !!commission.org_parent_commission_id,
+                originSeller: orgOriginSeller,
             }
         }
 

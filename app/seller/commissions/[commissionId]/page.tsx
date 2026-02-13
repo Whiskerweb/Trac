@@ -213,6 +213,11 @@ export default function CommissionDetailPage() {
                             {commission.orgInfo.isLeaderCut && (
                                 <p className="text-xs text-neutral-400 mt-1">{t('leaderCut')}</p>
                             )}
+                            {commission.orgInfo.originSeller && (
+                                <p className="text-sm text-neutral-500 mt-1">
+                                    {t('generatedBy')} <span className="text-neutral-700">{commission.orgInfo.originSeller.name || commission.orgInfo.originSeller.email}</span>
+                                </p>
+                            )}
                         </motion.div>
                     )}
 
