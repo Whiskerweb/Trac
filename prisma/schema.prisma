@@ -135,12 +135,23 @@ model ShortLink {
   clicks            Int                @default(0)
   created_at        DateTime           @default(now())
   affiliate_id      String?
+  channel           String?
+  campaign          String?
+  link_type         String             @default("affiliate")
+  utm_source        String?
+  utm_medium        String?
+  utm_campaign      String?
+  utm_term          String?
+  utm_content       String?
   MissionEnrollment MissionEnrollment?
   Workspace         Workspace          @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
   @@index([affiliate_id])
   @@index([slug])
   @@index([workspace_id])
+  @@index([link_type])
+  @@index([channel])
+  @@index([campaign])
 }
 
 model User {

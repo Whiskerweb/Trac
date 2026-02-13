@@ -4,11 +4,13 @@ import {
     Home, MessageSquare, CreditCard, Users, UserPlus,
     Contact, Coins, Shield, Globe, Settings,
     Puzzle, User, ExternalLink, Target,
-    ChevronLeft, ChevronRight
+    ChevronLeft, ChevronRight, ChevronDown, Check,
+    Link2, BarChart3, Tag, QrCode, Megaphone,
+    LayoutGrid
 } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useState, useEffect, useCallback } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { getUnreadCount } from '@/app/actions/messaging'
 
@@ -28,7 +30,7 @@ interface NavSection {
     items: NavItem[]
 }
 
-const navigationConfig: NavSection[] = [
+const sellerNavigationConfig: NavSection[] = [
     {
         titleKey: 'sellerProgram',
         items: [
@@ -64,22 +66,66 @@ const navigationConfig: NavSection[] = [
     },
 ]
 
+const marketingNavigationConfig: NavSection[] = [
+    {
+        titleKey: 'marketingLinks',
+        items: [
+            { nameKey: 'marketingOverview', href: '/dashboard/marketing', icon: Home },
+            { nameKey: 'marketingAllLinks', href: '/dashboard/marketing/links', icon: Link2 },
+            { nameKey: 'marketingCreateLink', href: '/dashboard/marketing/links/create', icon: Megaphone },
+        ]
+    },
+    {
+        titleKey: 'marketingOrganize',
+        items: [
+            { nameKey: 'marketingChannels', href: '/dashboard/marketing/channels', icon: LayoutGrid },
+            { nameKey: 'marketingCampaigns', href: '/dashboard/marketing/campaigns', icon: Tag },
+        ]
+    },
+    {
+        titleKey: 'marketingAnalytics',
+        items: [
+            { nameKey: 'marketingAnalyticsPage', href: '/dashboard/marketing/analytics', icon: BarChart3 },
+            { nameKey: 'marketingQrCodes', href: '/dashboard/marketing/qr', icon: QrCode },
+        ]
+    },
+    {
+        titleKey: 'configuration',
+        items: [
+            { nameKey: 'domains', href: '/dashboard/domains', icon: Globe },
+            { nameKey: 'settings', href: '/dashboard/settings', icon: Settings },
+        ]
+    },
+]
+
 // =============================================
 // SIDEBAR COMPONENT
 // =============================================
+
+export type DashboardMode = 'seller' | 'marketing'
 
 interface SidebarProps {
     collapsed?: boolean
     onToggleCollapse?: () => void
     isMobile?: boolean
+    dashboardMode?: DashboardMode
+    onSwitchMode?: (mode: DashboardMode) => void
 }
 
-export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false }: SidebarProps) {
+export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false, dashboardMode = 'seller', onSwitchMode }: SidebarProps) {
     const pathname = usePathname()
+    const router = useRouter()
     const t = useTranslations('dashboard.sidebarNav')
     const [userEmail, setUserEmail] = useState<string>('')
     const [startupName, setStartupName] = useState<string>(t('sellerProgram'))
     const [unreadMessages, setUnreadMessages] = useState(0)
+    const [switcherOpen, setSwitcherOpen] = useState(false)
+    const switcherRef = useRef<HTMLDivElement>(null)
+
+    // Auto-detect mode from pathname
+    const effectiveMode = pathname.startsWith('/dashboard/marketing') ? 'marketing' : dashboardMode
+
+    const navigationConfig = effectiveMode === 'marketing' ? marketingNavigationConfig : sellerNavigationConfig
 
     const loadUnread = useCallback(async () => {
         try {
@@ -103,8 +149,31 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
         return () => clearInterval(interval)
     }, [loadUnread])
 
+    // Close switcher on click outside
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
+                setSwitcherOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    const handleSwitchMode = (mode: DashboardMode) => {
+        setSwitcherOpen(false)
+        onSwitchMode?.(mode)
+        if (mode === 'marketing') {
+            router.push('/dashboard/marketing')
+        } else {
+            router.push('/dashboard')
+        }
+    }
+
     // Don't show collapse button on mobile drawer
     const showCollapseButton = !isMobile && onToggleCollapse
+
+    const subtitleLabel = effectiveMode === 'marketing' ? t('marketingMode') : t('startupProgram')
 
     return (
         <aside className={`
@@ -121,9 +190,41 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                         className={`rounded-lg object-contain transition-all duration-300 ${collapsed ? 'w-10 h-10' : 'w-12 h-12'}`}
                     />
                     {!collapsed && (
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 relative" ref={switcherRef}>
                             <p className="text-sm font-semibold text-gray-900 truncate">{startupName}</p>
-                            <p className="text-xs text-gray-500 truncate">{t('startupProgram')}</p>
+                            <button
+                                onClick={() => setSwitcherOpen(!switcherOpen)}
+                                className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            >
+                                <span className="truncate">{subtitleLabel}</span>
+                                <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${switcherOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Mode Switcher Popover */}
+                            {switcherOpen && (
+                                <div className="absolute top-full left-0 mt-1 w-52 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-[60]">
+                                    <button
+                                        onClick={() => handleSwitchMode('seller')}
+                                        className="flex items-center justify-between w-full px-3 py-2.5 text-sm text-left hover:bg-gray-50 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Users className="w-4 h-4 text-gray-500" />
+                                            <span className="font-medium text-gray-900">{t('sellerProgramLabel')}</span>
+                                        </div>
+                                        {effectiveMode === 'seller' && <Check className="w-4 h-4 text-purple-600" />}
+                                    </button>
+                                    <button
+                                        onClick={() => handleSwitchMode('marketing')}
+                                        className="flex items-center justify-between w-full px-3 py-2.5 text-sm text-left hover:bg-gray-50 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Megaphone className="w-4 h-4 text-gray-500" />
+                                            <span className="font-medium text-gray-900">{t('marketingLabel')}</span>
+                                        </div>
+                                        {effectiveMode === 'marketing' && <Check className="w-4 h-4 text-purple-600" />}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -148,7 +249,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                         <ul className="space-y-0.5">
                             {section.items.map((item) => {
                                 // Routes that need exact matching (have sub-routes that should NOT trigger parent active state)
-                                const exactMatchRoutes = ['/dashboard/sellers']
+                                const exactMatchRoutes = ['/dashboard/sellers', '/dashboard/marketing']
                                 const needsExactMatch = exactMatchRoutes.includes(item.href)
 
                                 const isActive = needsExactMatch
