@@ -162,6 +162,7 @@ export async function GET(request: NextRequest) {
 
         // Parse date range from query params
         const { searchParams } = new URL(request.url)
+        const source = searchParams.get('source')
         const dateFromParam = searchParams.get('date_from')
         const dateToParam = searchParams.get('date_to')
 
@@ -201,6 +202,19 @@ export async function GET(request: NextRequest) {
                     sales: Math.floor(Math.random() * 3),
                     revenue: Math.floor(Math.random() * 5000) + 500,
                 })
+            }
+        }
+
+        // Reduce values for marketing source (fewer links = fewer events)
+        if (source === 'marketing') {
+            for (let i = 0; i < timeseries.length; i++) {
+                timeseries[i] = {
+                    ...timeseries[i],
+                    clicks: Math.max(1, Math.floor(timeseries[i].clicks * 0.3)),
+                    leads: Math.max(0, Math.floor(timeseries[i].leads * 0.2)),
+                    sales: Math.random() > 0.8 ? 1 : 0,
+                    revenue: Math.random() > 0.8 ? Math.floor(Math.random() * 2000) + 300 : 0,
+                }
             }
         }
 
@@ -309,6 +323,32 @@ export async function GET(request: NextRequest) {
         // ========================================
         // Get date range from query params (sent by frontend DateRangePicker)
         const { searchParams } = new URL(request.url)
+
+        // ========================================
+        // SOURCE FILTER: Marketing links only
+        // ========================================
+        const source = searchParams.get('source')
+        let linkIdFilter = ''
+        if (source === 'marketing') {
+            const { prisma } = await import('@/lib/db')
+            const marketingLinks = await prisma.shortLink.findMany({
+                where: { workspace_id: workspaceId, link_type: 'marketing' },
+                select: { id: true },
+            })
+            if (marketingLinks.length === 0) {
+                // No marketing links — return zeros
+                return NextResponse.json({
+                    meta: [],
+                    data: [{ clicks: 0, leads: 0, sales: 0, revenue: 0, conversion_rate: 0, timeseries: [] }],
+                    rows: 1,
+                    statistics: { elapsed: 0, rows_read: 0, bytes_read: 0 },
+                }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate' } })
+            }
+            const ids = marketingLinks.map(l => `'${l.id}'`).join(',')
+            linkIdFilter = `AND link_id IN (${ids})`
+            console.log(`[KPI Proxy] 🎯 Marketing filter: ${marketingLinks.length} link IDs`)
+        }
+
         const dateFrom = searchParams.get('date_from') || '2020-01-01'
         // ✅ Append T23:59:59 to include the FULL day (Tinybird parses 2026-01-07 as midnight, excluding clicks at 10:53)
         let dateTo = searchParams.get('date_to') || '2030-12-31'
@@ -341,7 +381,7 @@ export async function GET(request: NextRequest) {
         // IF EVENT_TYPE FILTERING OR DIMENSIONAL FILTERS: Use direct SQL queries
         // ========================================
         const hasDimensionalFilters = !!(countryFilter || cityFilter || regionFilter || continentFilter || deviceFilter || browserFilter || osFilter)
-        const needsSQLFiltering = (eventTypeFilter && eventTypes.length < 3) || hasDimensionalFilters
+        const needsSQLFiltering = (eventTypeFilter && eventTypes.length < 3) || hasDimensionalFilters || !!linkIdFilter
 
         if (needsSQLFiltering) {
             console.log('[KPI Proxy] 🔍 Using direct SQL (event_type or dimensional filters active)')
@@ -361,6 +401,7 @@ export async function GET(request: NextRequest) {
                 workspace_id = '${workspaceId}'
                 AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
                 AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+                ${linkIdFilter}
                 ${buildClicksFilterSQL(filters)}
             `
 

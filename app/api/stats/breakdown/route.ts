@@ -160,44 +160,47 @@ function buildFilterClauses(filters: Filters): string {
 }
 
 // SQL queries for each dimension (FORMAT JSON required for proper response)
-const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, dateTo: string, filters: Filters) => string> = {
-    countries: (workspaceId, dateFrom, dateTo, filters) => `
+const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, dateTo: string, filters: Filters, linkIdFilter?: string) => string> = {
+    countries: (workspaceId, dateFrom, dateTo, filters, linkIdFilter = '') => `
         SELECT country, count() as clicks
         FROM clicks
         WHERE workspace_id = '${workspaceId}'
           AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+          ${linkIdFilter}
           ${buildFilterClauses(filters)}
         GROUP BY country
         ORDER BY clicks DESC
         LIMIT 20
         FORMAT JSON
     `,
-    cities: (workspaceId, dateFrom, dateTo, filters) => `
+    cities: (workspaceId, dateFrom, dateTo, filters, linkIdFilter = '') => `
         SELECT city, country, count() as clicks
         FROM clicks
         WHERE workspace_id = '${workspaceId}'
           AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+          ${linkIdFilter}
           ${buildFilterClauses(filters)}
         GROUP BY city, country
         ORDER BY clicks DESC
         LIMIT 20
         FORMAT JSON
     `,
-    devices: (workspaceId, dateFrom, dateTo, filters) => `
+    devices: (workspaceId, dateFrom, dateTo, filters, linkIdFilter = '') => `
         SELECT device, count() as clicks
         FROM clicks
         WHERE workspace_id = '${workspaceId}'
           AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+          ${linkIdFilter}
           ${buildFilterClauses(filters)}
         GROUP BY device
         ORDER BY clicks DESC
         FORMAT JSON
     `,
-    browsers: (workspaceId, dateFrom, dateTo, filters) => `
-        SELECT 
+    browsers: (workspaceId, dateFrom, dateTo, filters, linkIdFilter = '') => `
+        SELECT
             CASE
                 WHEN positionCaseInsensitive(user_agent, 'Chrome') > 0 AND positionCaseInsensitive(user_agent, 'Edg') = 0 THEN 'Chrome'
                 WHEN positionCaseInsensitive(user_agent, 'Firefox') > 0 THEN 'Firefox'
@@ -211,13 +214,14 @@ const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, 
         WHERE workspace_id = '${workspaceId}'
           AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+          ${linkIdFilter}
           ${buildFilterClauses(filters)}
         GROUP BY browser
         ORDER BY clicks DESC
         FORMAT JSON
     `,
-    os: (workspaceId, dateFrom, dateTo, filters) => `
-        SELECT 
+    os: (workspaceId, dateFrom, dateTo, filters, linkIdFilter = '') => `
+        SELECT
             CASE
                 WHEN positionCaseInsensitive(user_agent, 'Windows') > 0 THEN 'Windows'
                 WHEN positionCaseInsensitive(user_agent, 'Mac OS X') > 0 OR positionCaseInsensitive(user_agent, 'Macintosh') > 0 THEN 'macOS'
@@ -231,6 +235,7 @@ const DIMENSION_QUERIES: Record<string, (workspaceId: string, dateFrom: string, 
         WHERE workspace_id = '${workspaceId}'
           AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
           AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+          ${linkIdFilter}
           ${buildFilterClauses(filters)}
         GROUP BY os
         ORDER BY clicks DESC
@@ -253,39 +258,41 @@ export async function GET(request: NextRequest) {
     if (process.env.TINYBIRD_MOCK_MODE === 'true') {
         const { searchParams } = new URL(request.url)
         const dimension = searchParams.get('dimension') || 'countries'
+        const source = searchParams.get('source')
+        const scale = source === 'marketing' ? 0.3 : 1
 
         const mockData: Record<string, any[]> = {
             countries: [
-                { name: 'France', flag: '🇫🇷', clicks: 847 },
-                { name: 'United States', flag: '🇺🇸', clicks: 423 },
-                { name: 'Germany', flag: '🇩🇪', clicks: 312 },
-                { name: 'United Kingdom', flag: '🇬🇧', clicks: 189 },
-                { name: 'Spain', flag: '🇪🇸', clicks: 145 },
+                { name: 'France', flag: '🇫🇷', clicks: Math.floor(847 * scale) },
+                { name: 'United States', flag: '🇺🇸', clicks: Math.floor(423 * scale) },
+                { name: 'Germany', flag: '🇩🇪', clicks: Math.floor(312 * scale) },
+                { name: 'United Kingdom', flag: '🇬🇧', clicks: Math.floor(189 * scale) },
+                { name: 'Spain', flag: '🇪🇸', clicks: Math.floor(145 * scale) },
             ],
             cities: [
-                { name: 'Paris', country: 'France', flag: '🇫🇷', clicks: 420 },
-                { name: 'Lyon', country: 'France', flag: '🇫🇷', clicks: 147 },
-                { name: 'New York', country: 'United States', flag: '🇺🇸', clicks: 235 },
-                { name: 'Berlin', country: 'Germany', flag: '🇩🇪', clicks: 188 },
-                { name: 'London', country: 'United Kingdom', flag: '🇬🇧', clicks: 144 },
+                { name: 'Paris', country: 'France', flag: '🇫🇷', clicks: Math.floor(420 * scale) },
+                { name: 'Lyon', country: 'France', flag: '🇫🇷', clicks: Math.floor(147 * scale) },
+                { name: 'New York', country: 'United States', flag: '🇺🇸', clicks: Math.floor(235 * scale) },
+                { name: 'Berlin', country: 'Germany', flag: '🇩🇪', clicks: Math.floor(188 * scale) },
+                { name: 'London', country: 'United Kingdom', flag: '🇬🇧', clicks: Math.floor(144 * scale) },
             ],
             devices: [
-                { name: 'Desktop', clicks: 1245 },
-                { name: 'Mobile', clicks: 671 },
+                { name: 'Desktop', clicks: Math.floor(1245 * scale) },
+                { name: 'Mobile', clicks: Math.floor(671 * scale) },
             ],
             browsers: [
-                { name: 'Chrome', clicks: 892 },
-                { name: 'Safari', clicks: 534 },
-                { name: 'Firefox', clicks: 287 },
-                { name: 'Edge', clicks: 156 },
-                { name: 'Other', clicks: 47 },
+                { name: 'Chrome', clicks: Math.floor(892 * scale) },
+                { name: 'Safari', clicks: Math.floor(534 * scale) },
+                { name: 'Firefox', clicks: Math.floor(287 * scale) },
+                { name: 'Edge', clicks: Math.floor(156 * scale) },
+                { name: 'Other', clicks: Math.floor(47 * scale) },
             ],
             os: [
-                { name: 'Windows', clicks: 678 },
-                { name: 'macOS', clicks: 489 },
-                { name: 'iOS', clicks: 412 },
-                { name: 'Android', clicks: 259 },
-                { name: 'Linux', clicks: 78 },
+                { name: 'Windows', clicks: Math.floor(678 * scale) },
+                { name: 'macOS', clicks: Math.floor(489 * scale) },
+                { name: 'iOS', clicks: Math.floor(412 * scale) },
+                { name: 'Android', clicks: Math.floor(259 * scale) },
+                { name: 'Linux', clicks: Math.floor(78 * scale) },
             ],
         }
 
@@ -344,6 +351,26 @@ export async function GET(request: NextRequest) {
 
     try {
         const { searchParams } = new URL(request.url)
+
+        // ========================================
+        // SOURCE FILTER: Marketing links only
+        // ========================================
+        const source = searchParams.get('source')
+        let linkIdFilter = ''
+        if (source === 'marketing') {
+            const { prisma } = await import('@/lib/db')
+            const marketingLinks = await prisma.shortLink.findMany({
+                where: { workspace_id: workspaceId, link_type: 'marketing' },
+                select: { id: true },
+            })
+            if (marketingLinks.length === 0) {
+                return NextResponse.json({ data: [], dimension: searchParams.get('dimension') || 'countries' })
+            }
+            const ids = marketingLinks.map(l => `'${l.id}'`).join(',')
+            linkIdFilter = `AND link_id IN (${ids})`
+            console.log(`[Breakdown API] 🎯 Marketing filter: ${marketingLinks.length} link IDs`)
+        }
+
         const dimension = searchParams.get('dimension') || 'countries'
         const dateFrom = searchParams.get('date_from') || '2020-01-01'
         let dateTo = searchParams.get('date_to') || '2030-12-31'
@@ -409,6 +436,7 @@ export async function GET(request: NextRequest) {
                 workspace_id = '${workspaceId}'
                 AND timestamp >= parseDateTimeBestEffort('${dateFrom}')
                 AND timestamp <= parseDateTimeBestEffort('${dateTo}')
+                ${linkIdFilter}
                 ${filterClauses}
             `
 
@@ -419,7 +447,7 @@ export async function GET(request: NextRequest) {
             // Query clicks (if included)
             if (eventTypes.includes('clicks')) {
                 // Use filters excluding current dimension for cross-filtering
-                const sql = queryBuilder(workspaceId, dateFrom, dateTo, filtersExcludingDimension)
+                const sql = queryBuilder(workspaceId, dateFrom, dateTo, filtersExcludingDimension, linkIdFilter)
                 console.log('[Breakdown API] Executing clicks SQL')
                 const result = await executeTinybirdSQL(sql)
                 const clicksData = result.data || []
@@ -519,7 +547,7 @@ export async function GET(request: NextRequest) {
             // ========================================
             // LEGACY: Single event type (clicks only)
             // ========================================
-            const sql = queryBuilder(workspaceId, dateFrom, dateTo, filters)
+            const sql = queryBuilder(workspaceId, dateFrom, dateTo, filters, linkIdFilter)
             console.log('[Breakdown API] Executing SQL:', sql)
 
             const response = await fetch(`${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(sql)}`, {
