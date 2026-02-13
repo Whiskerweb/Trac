@@ -613,6 +613,7 @@ type MissionMemberBreakdown = {
     revenue: number
     salesCount: number
     leadsCount: number
+    clicks: number
 }
 
 type GroupMissionStats = {
@@ -624,6 +625,10 @@ type GroupMissionStats = {
     totalRevenue: number
     totalSales: number
     totalLeads: number
+    clicks: number
+    tinybirdLeads: number
+    tinybirdSales: number
+    tinybirdRevenue: number
     memberBreakdown: MissionMemberBreakdown[]
 }
 
@@ -823,38 +828,113 @@ export async function getGroupStats(): Promise<{
         }
         members.sort((a, b) => b.totalRevenue - a.totalRevenue)
 
+        // =============================================
+        // TINYBIRD STATS: Fetch real clicks/leads/sales per link
+        // =============================================
+        const { getAffiliateStatsFromTinybird } = await import('@/app/actions/marketplace')
+
+        // Get all MissionEnrollments linked to GroupMissions
+        const groupMissionIds = group.Missions.map(gm => gm.id)
+        const groupEnrollments = groupMissionIds.length > 0
+            ? await prisma.missionEnrollment.findMany({
+                where: {
+                    group_mission_id: { in: groupMissionIds },
+                    status: 'APPROVED',
+                },
+                select: {
+                    id: true,
+                    user_id: true,
+                    mission_id: true,
+                    link_id: true,
+                    group_mission_id: true,
+                }
+            })
+            : []
+
+        // Collect all link IDs for Tinybird lookup
+        const allEnrollmentLinkIds = groupEnrollments
+            .map(e => e.link_id)
+            .filter((id): id is string => !!id)
+
+        const tinybirdStats = await getAffiliateStatsFromTinybird(allEnrollmentLinkIds)
+
+        // Build a map: missionId → userId → tinybird stats (aggregated from all links)
+        const tinybirdByMissionMember = new Map<string, Map<string, { clicks: number; leads: number; sales: number; revenue: number }>>()
+        for (const enrollment of groupEnrollments) {
+            if (!enrollment.link_id) continue
+            const stats = tinybirdStats.get(enrollment.link_id)
+            if (!stats) continue
+
+            if (!tinybirdByMissionMember.has(enrollment.mission_id)) {
+                tinybirdByMissionMember.set(enrollment.mission_id, new Map())
+            }
+            const missionMap2 = tinybirdByMissionMember.get(enrollment.mission_id)!
+            const existing = missionMap2.get(enrollment.user_id) || { clicks: 0, leads: 0, sales: 0, revenue: 0 }
+            existing.clicks += stats.clicks
+            existing.leads += stats.leads
+            existing.sales += stats.sales
+            existing.revenue += stats.revenue
+            missionMap2.set(enrollment.user_id, existing)
+        }
+
         // Build mission stats (all group missions, even those with 0 commissions)
         const missions: GroupMissionStats[] = []
         for (const gm of group.Missions) {
             const missionId = gm.Mission.id
             const agg = missionAgg.get(missionId)
             const mInfo = missionMap.get(missionId)!
+            const tinybirdMission = tinybirdByMissionMember.get(missionId)
+
+            // Aggregate Tinybird stats for mission total
+            let missionClicks = 0, missionTbLeads = 0, missionTbSales = 0, missionTbRevenue = 0
+            if (tinybirdMission) {
+                for (const [, tbStats] of tinybirdMission) {
+                    missionClicks += tbStats.clicks
+                    missionTbLeads += tbStats.leads
+                    missionTbSales += tbStats.sales
+                    missionTbRevenue += tbStats.revenue
+                }
+            }
 
             const memberBreakdown: MissionMemberBreakdown[] = []
+            // Merge commission-based and tinybird-based member data
+            const allMemberUserIds = new Set<string>()
             if (agg) {
-                for (const [userId, mbStats] of agg.byMember) {
-                    const info = membersByUserId.get(userId)
-                    memberBreakdown.push({
-                        sellerId: info?.sellerId || userId,
-                        name: info?.name || userId,
-                        avatarUrl: info?.avatarUrl || null,
-                        revenue: mbStats.revenue,
-                        salesCount: mbStats.sales,
-                        leadsCount: mbStats.leads,
-                    })
-                }
-                memberBreakdown.sort((a, b) => b.revenue - a.revenue)
+                for (const userId of agg.byMember.keys()) allMemberUserIds.add(userId)
             }
+            if (tinybirdMission) {
+                for (const userId of tinybirdMission.keys()) allMemberUserIds.add(userId)
+            }
+
+            for (const userId of allMemberUserIds) {
+                const info = membersByUserId.get(userId)
+                const commStats = agg?.byMember.get(userId)
+                const tbStats = tinybirdMission?.get(userId)
+                memberBreakdown.push({
+                    sellerId: info?.sellerId || userId,
+                    name: info?.name || userId,
+                    avatarUrl: info?.avatarUrl || null,
+                    revenue: commStats?.revenue || 0,
+                    salesCount: commStats?.sales || 0,
+                    leadsCount: commStats?.leads || 0,
+                    clicks: tbStats?.clicks || 0,
+                })
+            }
+            memberBreakdown.sort((a, b) => b.revenue - a.revenue)
 
             missions.push({
                 ...mInfo,
                 totalRevenue: agg?.total || 0,
                 totalSales: agg?.sales || 0,
                 totalLeads: agg?.leads || 0,
+                clicks: missionClicks,
+                tinybirdLeads: missionTbLeads,
+                tinybirdSales: missionTbSales,
+                tinybirdRevenue: missionTbRevenue,
                 memberBreakdown,
             })
         }
-        missions.sort((a, b) => b.totalRevenue - a.totalRevenue)
+        missions.sort((a, b) => b.tinybirdRevenue - a.tinybirdRevenue || b.totalRevenue - a.totalRevenue)
 
         const totalRevenue = commissions.reduce((sum, c) => sum + c.commission_amount, 0)
         const totalSales = commissions.filter(c => c.commission_source === 'SALE' || c.commission_source === 'RECURRING').length
@@ -926,6 +1006,211 @@ export async function getAvailableMissionsForGroup(): Promise<{
         return { success: true, missions }
     } catch (error) {
         console.error('[Group] Failed to get available missions:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+// =============================================
+// GET GROUP MISSION DETAIL
+// Returns detailed stats + timeseries for a specific group mission
+// =============================================
+
+export type GroupMissionDetail = {
+    mission: {
+        id: string
+        title: string
+        companyName: string | null
+        logoUrl: string | null
+        reward: string | null
+        lead_enabled: boolean
+        sale_enabled: boolean
+        recurring_enabled: boolean
+        lead_reward_amount: number | null
+        sale_reward_amount: number | null
+        sale_reward_structure: string | null
+        recurring_reward_amount: number | null
+        recurring_reward_structure: string | null
+    }
+    stats: { clicks: number; leads: number; sales: number; revenue: number }
+    timeseries: Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }>
+    memberBreakdown: MissionMemberBreakdown[]
+}
+
+export async function getGroupMissionDetail(missionId: string): Promise<{
+    success: boolean
+    detail?: GroupMissionDetail
+    error?: string
+}> {
+    try {
+        const seller = await getSellerForCurrentUser()
+        if (!seller) return { success: false, error: 'Not authenticated' }
+
+        // Check membership
+        const membership = await prisma.sellerGroupMember.findUnique({
+            where: { seller_id: seller.id },
+            include: {
+                Group: {
+                    include: {
+                        Members: {
+                            where: { status: 'ACTIVE' },
+                            include: {
+                                Seller: {
+                                    select: {
+                                        id: true, user_id: true, name: true, email: true,
+                                        Profile: { select: { avatar_url: true } }
+                                    }
+                                }
+                            }
+                        },
+                        Missions: {
+                            where: { mission_id: missionId },
+                            include: {
+                                Mission: {
+                                    select: {
+                                        id: true, title: true, company_name: true, logo_url: true, reward: true,
+                                        lead_enabled: true, sale_enabled: true, recurring_enabled: true,
+                                        lead_reward_amount: true, sale_reward_amount: true, sale_reward_structure: true,
+                                        recurring_reward_amount: true, recurring_reward_structure: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+        if (!membership || membership.status === 'REMOVED') {
+            return { success: false, error: 'Not in a group' }
+        }
+
+        const group = membership.Group
+        const groupMission = group.Missions[0]
+        if (!groupMission) {
+            return { success: false, error: 'Mission not found in group' }
+        }
+
+        const mission = groupMission.Mission
+
+        // Get all enrollments for this group mission
+        const enrollments = await prisma.missionEnrollment.findMany({
+            where: {
+                group_mission_id: groupMission.id,
+                status: 'APPROVED',
+            },
+            select: { user_id: true, link_id: true }
+        })
+
+        const enrollmentLinkIds = enrollments
+            .map(e => e.link_id)
+            .filter((id): id is string => !!id)
+
+        // Fetch Tinybird stats per link
+        const { getAffiliateStatsFromTinybird } = await import('@/app/actions/marketplace')
+        const tinybirdStats = await getAffiliateStatsFromTinybird(enrollmentLinkIds)
+
+        // Aggregate stats + per-member breakdown
+        const membersByUserId = new Map(
+            group.Members.map(m => [m.Seller.user_id, {
+                sellerId: m.Seller.id,
+                name: m.Seller.name || m.Seller.email || '',
+                avatarUrl: m.Seller.Profile?.avatar_url || null,
+            }])
+        )
+
+        let totalClicks = 0, totalLeads = 0, totalSales = 0, totalRevenue = 0
+        const memberStatsMap = new Map<string, { clicks: number; leads: number; sales: number; revenue: number }>()
+
+        for (const enrollment of enrollments) {
+            if (!enrollment.link_id) continue
+            const stats = tinybirdStats.get(enrollment.link_id)
+            if (!stats) continue
+
+            totalClicks += stats.clicks
+            totalLeads += stats.leads
+            totalSales += stats.sales
+            totalRevenue += stats.revenue
+
+            const existing = memberStatsMap.get(enrollment.user_id) || { clicks: 0, leads: 0, sales: 0, revenue: 0 }
+            existing.clicks += stats.clicks
+            existing.leads += stats.leads
+            existing.sales += stats.sales
+            existing.revenue += stats.revenue
+            memberStatsMap.set(enrollment.user_id, existing)
+        }
+
+        // Build member breakdown
+        const memberBreakdown: MissionMemberBreakdown[] = []
+        for (const [userId, mStats] of memberStatsMap) {
+            const info = membersByUserId.get(userId)
+            memberBreakdown.push({
+                sellerId: info?.sellerId || userId,
+                name: info?.name || userId,
+                avatarUrl: info?.avatarUrl || null,
+                revenue: mStats.revenue,
+                salesCount: mStats.sales,
+                leadsCount: mStats.leads,
+                clicks: mStats.clicks,
+            })
+        }
+        memberBreakdown.sort((a, b) => b.clicks - a.clicks)
+
+        // Fetch timeseries (aggregate all links)
+        const { getLinkTimeseries } = await import('@/app/actions/marketplace-actions')
+        const days = 30
+
+        // Initialize date map
+        const dateMap = new Map<string, { clicks: number; leads: number; sales: number; revenue: number }>()
+        for (let i = 0; i <= days; i++) {
+            const d = new Date()
+            d.setDate(d.getDate() - (days - i))
+            const dateStr = d.toISOString().split('T')[0]
+            dateMap.set(dateStr, { clicks: 0, leads: 0, sales: 0, revenue: 0 })
+        }
+
+        // Fetch timeseries for each link and aggregate
+        for (const linkId of enrollmentLinkIds) {
+            const ts = await getLinkTimeseries(linkId, days)
+            for (const point of ts) {
+                const existing = dateMap.get(point.date)
+                if (existing) {
+                    existing.clicks += point.clicks
+                    existing.leads += point.leads
+                    existing.sales += point.sales
+                    existing.revenue += point.revenue
+                }
+            }
+        }
+
+        const timeseries = Array.from(dateMap.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([date, data]) => ({ date, ...data }))
+
+        return {
+            success: true,
+            detail: {
+                mission: {
+                    id: mission.id,
+                    title: mission.title,
+                    companyName: mission.company_name,
+                    logoUrl: mission.logo_url,
+                    reward: mission.reward,
+                    lead_enabled: mission.lead_enabled,
+                    sale_enabled: mission.sale_enabled,
+                    recurring_enabled: mission.recurring_enabled,
+                    lead_reward_amount: mission.lead_reward_amount,
+                    sale_reward_amount: mission.sale_reward_amount,
+                    sale_reward_structure: mission.sale_reward_structure,
+                    recurring_reward_amount: mission.recurring_reward_amount,
+                    recurring_reward_structure: mission.recurring_reward_structure,
+                },
+                stats: { clicks: totalClicks, leads: totalLeads, sales: totalSales, revenue: totalRevenue },
+                timeseries,
+                memberBreakdown,
+            }
+        }
+    } catch (error) {
+        console.error('[Group] Failed to get group mission detail:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
 }

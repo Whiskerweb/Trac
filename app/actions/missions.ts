@@ -596,6 +596,9 @@ export interface EnrollmentWithStats {
     user_id: string
     status: string
     created_at: Date
+    enrollmentType: 'SOLO' | 'GROUP' | 'ORG'
+    groupName?: string | null
+    orgName?: string | null
     seller: {
         name: string | null
         email: string
@@ -727,6 +730,38 @@ export async function getMissionDetails(missionId: string): Promise<{
             }
         }
 
+        // Fetch group info for group-enrolled missions
+        const groupMissionIds = mission.MissionEnrollment
+            .map(e => e.group_mission_id)
+            .filter((id): id is string => !!id)
+
+        const groupMissionsMap = new Map<string, string>()
+        if (groupMissionIds.length > 0) {
+            const groupMissions = await prisma.groupMission.findMany({
+                where: { id: { in: groupMissionIds } },
+                include: { Group: { select: { name: true } } },
+            })
+            for (const gm of groupMissions) {
+                groupMissionsMap.set(gm.id, gm.Group.name)
+            }
+        }
+
+        // Fetch org info for org-enrolled missions
+        const orgMissionIds = mission.MissionEnrollment
+            .map(e => e.organization_mission_id)
+            .filter((id): id is string => !!id)
+
+        const orgMissionsMap = new Map<string, string>()
+        if (orgMissionIds.length > 0) {
+            const orgMissions = await prisma.organizationMission.findMany({
+                where: { id: { in: orgMissionIds } },
+                include: { Organization: { select: { name: true } } },
+            })
+            for (const om of orgMissions) {
+                orgMissionsMap.set(om.id, om.Organization.name)
+            }
+        }
+
         // Map enrollments with seller info and stats
         const enrollmentsWithStats: EnrollmentWithStats[] = mission.MissionEnrollment.map(e => {
             const seller = sellerMap.get(e.user_id)
@@ -737,6 +772,9 @@ export async function getMissionDetails(missionId: string): Promise<{
                 user_id: e.user_id,
                 status: e.status,
                 created_at: e.created_at,
+                enrollmentType: e.group_mission_id ? 'GROUP' as const : e.organization_mission_id ? 'ORG' as const : 'SOLO' as const,
+                groupName: e.group_mission_id ? groupMissionsMap.get(e.group_mission_id) || null : null,
+                orgName: e.organization_mission_id ? orgMissionsMap.get(e.organization_mission_id) || null : null,
                 seller: seller ? {
                     name: seller.name,
                     email: seller.email,

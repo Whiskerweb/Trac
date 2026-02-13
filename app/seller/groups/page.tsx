@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Users, Plus, Copy, Check, ArrowRight, Loader2, LogOut, X } from 'lucide-react'
+import { Users, Plus, Copy, Check, ArrowRight, Loader2, LogOut, X, MousePointerClick, ChevronRight } from 'lucide-react'
 import { getMyGroup, joinGroup, leaveGroup, removeGroupMember, getAvailableMissionsForGroup, enrollGroupInMission, getGroupStats } from '@/app/actions/group-actions'
 import type { GroupStats } from '@/app/actions/group-actions'
 import { useTranslations } from 'next-intl'
@@ -444,7 +444,8 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.04 * index }}
-                                className="rounded-xl border border-neutral-100 overflow-hidden"
+                                className="rounded-xl border border-neutral-100 overflow-hidden cursor-pointer hover:border-neutral-200 transition-colors"
+                                onClick={() => router.push(`/seller/groups/mission/${mission.missionId}`)}
                             >
                                 {/* Mission header */}
                                 <div className="flex items-center justify-between p-4 bg-neutral-50/50">
@@ -463,17 +464,21 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                                             <p className="text-[11px] text-neutral-400">{mission.companyName} · {mission.reward}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right flex-shrink-0 ml-3">
-                                        <p className="text-sm font-medium text-neutral-900 tabular-nums">{formatCurrency(mission.totalRevenue)}</p>
-                                        <p className="text-[11px] text-neutral-400">
-                                            {mission.totalSales} {t('stats.sales')} · {mission.totalLeads} {t('stats.leads')}
-                                        </p>
+                                    <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                                        <div className="text-right">
+                                            <div className="flex items-center gap-3 text-xs text-neutral-500 tabular-nums">
+                                                <span>{mission.clicks} {t('stats.clicks')}</span>
+                                                <span>{mission.tinybirdSales} {t('stats.sales')}</span>
+                                                <span className="text-sm font-medium text-neutral-900">{formatCurrency(mission.tinybirdRevenue)}</span>
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 text-neutral-300" />
                                     </div>
                                 </div>
 
                                 {/* Member breakdown */}
                                 {mission.memberBreakdown.length > 0 && (
-                                    <div className="divide-y divide-neutral-50">
+                                    <div className="divide-y divide-neutral-50" onClick={(e) => e.stopPropagation()}>
                                         {mission.memberBreakdown.map(mb => (
                                             <div key={mb.sellerId} className="flex items-center justify-between py-2.5 px-4">
                                                 <div className="flex items-center gap-2.5 min-w-0">
@@ -489,8 +494,8 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                                                     <span className="text-xs text-neutral-600 truncate">{mb.name}</span>
                                                 </div>
                                                 <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-                                                    <span className="text-xs text-neutral-400">
-                                                        {mb.salesCount} {t('stats.sales')} · {mb.leadsCount} {t('stats.leads')}
+                                                    <span className="text-xs text-neutral-400 tabular-nums">
+                                                        {mb.clicks} {t('stats.clicks')} · {mb.salesCount} {t('stats.sales')}
                                                     </span>
                                                     <span className="text-xs font-medium text-neutral-700 tabular-nums">
                                                         {formatCurrency(mb.revenue)}
@@ -504,10 +509,14 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                         ))}
                     </div>
                 ) : currentGroup.Missions?.length > 0 ? (
-                    /* Has missions but 0 commissions */
+                    /* Has missions but 0 stats */
                     <div className="space-y-3">
                         {currentGroup.Missions.map((gm: any) => (
-                            <div key={gm.id} className="flex items-center justify-between py-3 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors">
+                            <div
+                                key={gm.id}
+                                onClick={() => router.push(`/seller/groups/mission/${gm.Mission?.id}`)}
+                                className="flex items-center justify-between py-3 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors cursor-pointer"
+                            >
                                 <div className="flex items-center gap-3">
                                     {gm.Mission?.logo_url ? (
                                         <img src={gm.Mission.logo_url} className="w-7 h-7 rounded-lg object-cover" alt="" />
@@ -523,7 +532,10 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                                         <p className="text-[11px] text-neutral-400">{gm.Mission?.company_name}</p>
                                     </div>
                                 </div>
-                                <span className="text-xs text-neutral-400 tabular-nums">{gm.Mission?.reward}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-neutral-400 tabular-nums">{gm.Mission?.reward}</span>
+                                    <ChevronRight className="w-4 h-4 text-neutral-300" />
+                                </div>
                             </div>
                         ))}
                     </div>

@@ -40,6 +40,9 @@ interface MissionDetails {
         user_id: string
         status: string
         created_at: Date
+        enrollmentType: 'SOLO' | 'GROUP' | 'ORG'
+        groupName?: string | null
+        orgName?: string | null
         seller: {
             name: string | null
             email: string
@@ -86,10 +89,28 @@ function ParticipantStatusBadge({ status }: { status: string }) {
         APPROVED: 'bg-green-50 text-green-700',
         PENDING: 'bg-orange-50 text-orange-700',
         REJECTED: 'bg-red-50 text-red-700',
+        ARCHIVED: 'bg-gray-100 text-gray-500',
     }
     return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
-            {t(status as 'APPROVED' | 'PENDING' | 'REJECTED')}
+            {t(status as 'APPROVED' | 'PENDING' | 'REJECTED' | 'ARCHIVED')}
+        </span>
+    )
+}
+
+function EnrollmentTypeBadge({ type, name }: { type: 'SOLO' | 'GROUP' | 'ORG'; name?: string | null }) {
+    const t = useTranslations('dashboard.missions.detail')
+    if (type === 'SOLO') return null
+    if (type === 'GROUP') {
+        return (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700">
+                {t('groupTag')}{name ? `: ${name}` : ''}
+            </span>
+        )
+    }
+    return (
+        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+            {t('orgTag')}{name ? `: ${name}` : ''}
         </span>
     )
 }
@@ -814,7 +835,7 @@ export default function MissionDetailPage({
                                         {t('sortClicks')}
                                         {sortField === 'clicks' ? (sortOrder === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                                     </button>
-                                    <div className="w-24 text-right">{t('status')}</div>
+                                    <div className="w-40 text-right">{t('status')}</div>
                                 </div>
 
                                 {/* Table Rows - Desktop */}
@@ -854,8 +875,9 @@ export default function MissionDetailPage({
                                             <div className="w-16 text-right">
                                                 <span className={`text-sm ${enrollment.stats.clicks > 0 ? 'text-gray-600' : 'text-gray-400'}`}>{formatNumber(enrollment.stats.clicks)}</span>
                                             </div>
-                                            {/* Status */}
-                                            <div className="w-24 flex items-center justify-end gap-1.5">
+                                            {/* Status + Type */}
+                                            <div className="w-40 flex items-center justify-end gap-1.5 flex-wrap">
+                                                <EnrollmentTypeBadge type={enrollment.enrollmentType} name={enrollment.enrollmentType === 'GROUP' ? enrollment.groupName : enrollment.orgName} />
                                                 <ParticipantStatusBadge status={enrollment.status} />
                                                 {enrollment.link && (
                                                     <button onClick={() => handleCopyLink(enrollment.link!.full_url)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="Copier le lien">
@@ -893,7 +915,8 @@ export default function MissionDetailPage({
                                                         {enrollment.seller?.name || enrollment.seller?.email?.split('@')[0] || 'Unknown'}
                                                     </div>
                                                     <div className="text-xs text-gray-400 truncate">{enrollment.seller?.email}</div>
-                                                    <div className="flex items-center gap-2 mt-1.5">
+                                                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                        <EnrollmentTypeBadge type={enrollment.enrollmentType} name={enrollment.enrollmentType === 'GROUP' ? enrollment.groupName : enrollment.orgName} />
                                                         <ParticipantStatusBadge status={enrollment.status} />
                                                         {enrollment.link && (
                                                             <button onClick={() => handleCopyLink(enrollment.link!.full_url)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded text-xs">

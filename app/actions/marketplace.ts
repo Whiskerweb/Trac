@@ -57,7 +57,7 @@ interface MissionWithEnrollment {
  * Fetch affiliate stats from Tinybird for given link IDs
  * Returns clicks, sales count, and revenue for each link (properly attributed)
  */
-async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<string, AffiliateStats>> {
+export async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<Map<string, AffiliateStats>> {
     const statsMap = new Map<string, AffiliateStats>()
 
     if (linkIds.length === 0 || !TINYBIRD_TOKEN) {
@@ -832,16 +832,42 @@ export async function joinMission(missionId: string): Promise<{
             })
         }
 
-        // 5. Create the ShortLink with DUAL ATTRIBUTION
-        const shortLink = await prisma.shortLink.create({
-            data: {
-                slug: fullSlug,
-                original_url: mission.target_url,
-                workspace_id: mission.workspace_id, // Startup owner
-                affiliate_id: user.id,               // Affiliate owner
-                clicks: 0,
+        // 5. Create the ShortLink with DUAL ATTRIBUTION (handle slug collision)
+        let shortLink
+        try {
+            shortLink = await prisma.shortLink.create({
+                data: {
+                    slug: fullSlug,
+                    original_url: mission.target_url,
+                    workspace_id: mission.workspace_id, // Startup owner
+                    affiliate_id: user.id,               // Affiliate owner
+                    clicks: 0,
+                }
+            })
+        } catch (slugError: any) {
+            if (slugError?.code === 'P2002') {
+                // Slug exists — reuse if owned by same user
+                const existing = await prisma.shortLink.findUnique({ where: { slug: fullSlug } })
+                if (existing && existing.affiliate_id === user.id) {
+                    shortLink = existing
+                    console.log('[Marketplace] ♻️ Reusing existing ShortLink:', fullSlug)
+                } else {
+                    // Different user — append nanoid fallback (should be extremely rare)
+                    shortLink = await prisma.shortLink.create({
+                        data: {
+                            slug: `${fullSlug}-${nanoid(4)}`,
+                            original_url: mission.target_url,
+                            workspace_id: mission.workspace_id,
+                            affiliate_id: user.id,
+                            clicks: 0,
+                        }
+                    })
+                    console.log('[Marketplace] 🔀 Slug collision with different user, created fallback:', shortLink.slug)
+                }
+            } else {
+                throw slugError
             }
-        })
+        }
 
         // 6. ✅ REDIS with CUSTOM DOMAIN: shortlink:[domain]:[slug]
         const { setLinkInRedis, buildLinkKey } = await import('@/lib/redis')
@@ -1205,16 +1231,39 @@ export async function joinMissionByInviteCode(inviteCode: string): Promise<{
             })
         }
 
-        // 7. Create ShortLink
-        const shortLink = await prisma.shortLink.create({
-            data: {
-                slug: fullSlug,
-                original_url: mission.target_url,
-                workspace_id: mission.workspace_id,
-                affiliate_id: user.id,
-                clicks: 0,
+        // 7. Create ShortLink (handle slug collision)
+        let shortLink
+        try {
+            shortLink = await prisma.shortLink.create({
+                data: {
+                    slug: fullSlug,
+                    original_url: mission.target_url,
+                    workspace_id: mission.workspace_id,
+                    affiliate_id: user.id,
+                    clicks: 0,
+                }
+            })
+        } catch (slugError: any) {
+            if (slugError?.code === 'P2002') {
+                const existing = await prisma.shortLink.findUnique({ where: { slug: fullSlug } })
+                if (existing && existing.affiliate_id === user.id) {
+                    shortLink = existing
+                    console.log('[Marketplace] ♻️ Reusing existing ShortLink (invite):', fullSlug)
+                } else {
+                    shortLink = await prisma.shortLink.create({
+                        data: {
+                            slug: `${fullSlug}-${nanoid(4)}`,
+                            original_url: mission.target_url,
+                            workspace_id: mission.workspace_id,
+                            affiliate_id: user.id,
+                            clicks: 0,
+                        }
+                    })
+                }
+            } else {
+                throw slugError
             }
-        })
+        }
 
         // 8. Add to Redis
         const { setLinkInRedis } = await import('@/lib/redis')
@@ -1332,5 +1381,67 @@ export async function getMissionByInviteCode(inviteCode: string): Promise<{
     } catch (error) {
         console.error('[Marketplace] ❌ Error fetching mission by invite code:', error)
         return { success: false, error: 'Failed to fetch mission' }
+    }
+}
+
+/**
+ * Leave a solo mission — archives enrollment and removes link from Redis.
+ * Only works for solo enrollments (not group/org — those use leaveGroup/leaveOrg).
+ * Existing commissions are NOT affected.
+ */
+export async function leaveMission(missionId: string): Promise<{
+    success: boolean
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    if (!isValidUUID(missionId)) {
+        return { success: false, error: 'Invalid mission ID' }
+    }
+
+    try {
+        // Find solo enrollment (no group, no org)
+        const enrollment = await prisma.missionEnrollment.findFirst({
+            where: {
+                mission_id: missionId,
+                user_id: user.id,
+                group_mission_id: null,
+                organization_mission_id: null,
+                status: 'APPROVED',
+            },
+            include: { ShortLink: true }
+        })
+
+        if (!enrollment) {
+            return { success: false, error: 'Solo enrollment not found' }
+        }
+
+        // Archive enrollment (don't delete — preserves commission history)
+        await prisma.missionEnrollment.update({
+            where: { id: enrollment.id },
+            data: { status: 'ARCHIVED' }
+        })
+
+        // Remove link from Redis so clicks return 404
+        if (enrollment.ShortLink?.slug) {
+            const { deleteLinkFromRedis } = await import('@/lib/redis')
+            await deleteLinkFromRedis(enrollment.ShortLink.slug)
+        }
+
+        console.log(`[Marketplace] 🚪 Seller ${user.id} left mission ${missionId}`)
+
+        revalidatePath('/seller')
+        revalidatePath('/seller/marketplace')
+
+        return { success: true }
+
+    } catch (error) {
+        console.error('[Marketplace] ❌ Error leaving mission:', error)
+        return { success: false, error: 'Failed to leave mission' }
     }
 }

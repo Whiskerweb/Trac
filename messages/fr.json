@@ -594,6 +594,8 @@
                     "private": "Privé",
                     "inviteOnly": "Sur invitation"
                 },
+                "groupTag": "Groupe",
+                "orgTag": "Org",
                 "statusLabels": {
                     "ACTIVE": "Actif",
                     "DRAFT": "Brouillon",
@@ -1106,8 +1108,11 @@
                 "sales": "ventes",
                 "leads": "leads",
                 "noStats": "Aucune commission générée",
-                "noStatsDesc": "Les stats apparaîtront ici quand le groupe générera des ventes."
+                "noStatsDesc": "Les stats apparaîtront ici quand le groupe générera des ventes.",
+                "clicks": "clics",
+                "bySeller": "Par seller"
             },
+            "missionDetail": "Détail mission",
             "enterCode": "Entrer le code d'invitation"
         },
         "programs": {
@@ -1125,7 +1130,12 @@
                 "leads": "Leads",
                 "sales": "Ventes",
                 "earnings": "Gains"
-            }
+            },
+            "leaveMission": "Quitter",
+            "leaveMissionTitle": "Quitter cette mission ?",
+            "leaveMissionDescription": "Votre lien d'affiliation sera désactivé. Les commissions existantes ne seront pas affectées.",
+            "leaveMissionCancel": "Annuler",
+            "leaveMissionConfirm": "Quitter la mission"
         },
         "marketplace": {
             "title": "Marketplace",

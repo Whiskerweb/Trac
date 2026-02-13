@@ -594,6 +594,8 @@
                     "private": "Private",
                     "inviteOnly": "Invite Only"
                 },
+                "groupTag": "Group",
+                "orgTag": "Org",
                 "statusLabels": {
                     "ACTIVE": "Active",
                     "DRAFT": "Draft",
@@ -1106,8 +1108,11 @@
                 "sales": "sales",
                 "leads": "leads",
                 "noStats": "No commissions yet",
-                "noStatsDesc": "Stats will appear here as sales are generated."
+                "noStatsDesc": "Stats will appear here as sales are generated.",
+                "clicks": "clicks",
+                "bySeller": "By seller"
             },
+            "missionDetail": "Mission detail",
             "enterCode": "Enter invite code"
         },
         "programs": {
@@ -1125,7 +1130,12 @@
                 "leads": "Leads",
                 "sales": "Sales",
                 "earnings": "Earnings"
-            }
+            },
+            "leaveMission": "Leave",
+            "leaveMissionTitle": "Leave this mission?",
+            "leaveMissionDescription": "Your affiliate link will be deactivated. Existing commissions will not be affected.",
+            "leaveMissionCancel": "Cancel",
+            "leaveMissionConfirm": "Leave mission"
         },
         "marketplace": {
             "title": "Marketplace",

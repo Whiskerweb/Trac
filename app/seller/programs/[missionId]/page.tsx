@@ -13,11 +13,14 @@ import {
     Link2,
     Loader2,
     AlertCircle,
-    MessageSquare
+    MessageSquare,
+    LogOut
 } from 'lucide-react'
 import { getEnrolledMissionDetail } from '@/app/actions/marketplace-actions'
+import { leaveMission } from '@/app/actions/marketplace'
 import { getOrCreateConversationForSeller } from '@/app/actions/messaging'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
+import { useTranslations } from 'next-intl'
 
 // =============================================
 // TYPES
@@ -57,6 +60,7 @@ interface MissionData {
         link_slug: string | null
         link_url: string | null
         created_at: string
+        isSoloEnrollment: boolean
     }
     stats: {
         clicks: number
@@ -135,6 +139,9 @@ export default function SellerProgramDetailPage() {
     const [data, setData] = useState<MissionData | null>(null)
     const [copied, setCopied] = useState(false)
     const [startingChat, setStartingChat] = useState(false)
+    const [showLeaveModal, setShowLeaveModal] = useState(false)
+    const [leaving, setLeaving] = useState(false)
+    const t = useTranslations('seller.programs')
 
     useEffect(() => {
         async function load() {
@@ -174,6 +181,24 @@ export default function SellerProgramDetailPage() {
             console.error('Failed to start conversation:', err)
         } finally {
             setStartingChat(false)
+        }
+    }
+
+    const handleLeaveMission = async () => {
+        setLeaving(true)
+        try {
+            const result = await leaveMission(missionId)
+            if (result.success) {
+                router.push('/seller/marketplace')
+            } else {
+                setError(result.error || 'Failed to leave mission')
+                setShowLeaveModal(false)
+            }
+        } catch (err) {
+            console.error('Failed to leave mission:', err)
+            setShowLeaveModal(false)
+        } finally {
+            setLeaving(false)
         }
     }
 
@@ -291,6 +316,17 @@ export default function SellerProgramDetailPage() {
                             )}
                             Message
                         </button>
+
+                        {/* Leave mission button (solo enrollments only) */}
+                        {enrollment.isSoloEnrollment && (
+                            <button
+                                onClick={() => setShowLeaveModal(true)}
+                                className="flex items-center gap-2 px-4 py-2 text-red-600 text-sm font-medium rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                {t('leaveMission')}
+                            </button>
+                        )}
 
                         {/* External link to startup website */}
                         {startup.website_url && (
@@ -464,6 +500,38 @@ export default function SellerProgramDetailPage() {
                     </div>
                 )}
             </div>
+
+            {/* Leave Mission Confirmation Modal */}
+            {showLeaveModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40" onClick={() => !leaving && setShowLeaveModal(false)} />
+                    <div className="relative bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            {t('leaveMissionTitle')}
+                        </h3>
+                        <p className="text-sm text-gray-500 mb-6">
+                            {t('leaveMissionDescription')}
+                        </p>
+                        <div className="flex items-center gap-3 justify-end">
+                            <button
+                                onClick={() => setShowLeaveModal(false)}
+                                disabled={leaving}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl transition-colors disabled:opacity-50"
+                            >
+                                {t('leaveMissionCancel')}
+                            </button>
+                            <button
+                                onClick={handleLeaveMission}
+                                disabled={leaving}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {leaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {t('leaveMissionConfirm')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

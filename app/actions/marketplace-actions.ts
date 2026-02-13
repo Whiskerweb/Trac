@@ -936,7 +936,7 @@ async function getLinkStats(linkId: string): Promise<{ clicks: number; leads: nu
 /**
  * Get timeseries data for a specific link from Tinybird
  */
-async function getLinkTimeseries(linkId: string, days: number = 30): Promise<Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }>> {
+export async function getLinkTimeseries(linkId: string, days: number = 30): Promise<Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }>> {
     const timeseries: Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }> = []
 
     if (!linkId || !TINYBIRD_TOKEN || !isValidUUID(linkId)) {
@@ -1141,7 +1141,8 @@ export async function getEnrolledMissionDetail(missionId: string) {
                 status: enrollment.status,
                 link_slug: enrollment.ShortLink?.slug || null,
                 link_url: enrollment.ShortLink ? `${baseUrl}/s/${enrollment.ShortLink.slug}` : null,
-                created_at: enrollment.created_at
+                created_at: enrollment.created_at,
+                isSoloEnrollment: !enrollment.group_mission_id && !enrollment.organization_mission_id,
             },
             stats,
             timeseries,
