@@ -1097,7 +1097,17 @@
             "enrollMissionsCreatorOnly": "Only the creator can enroll the group in new missions",
             "stripeRequired": "Stripe Connect required",
             "stripeRequiredDesc": "You need to connect and verify your Stripe account before creating a group. Group mission commissions are paid to the creator.",
-            "setupStripe": "Set up Stripe"
+            "setupStripe": "Set up Stripe",
+            "stats": {
+                "totalRevenue": "Total Revenue",
+                "totalSales": "Sales",
+                "performance": "Performance",
+                "byMission": "By Mission",
+                "sales": "sales",
+                "leads": "leads",
+                "noStats": "No commissions yet",
+                "noStatsDesc": "Stats will appear here as sales are generated."
+            }
         },
         "programs": {
             "title": "My Programs",

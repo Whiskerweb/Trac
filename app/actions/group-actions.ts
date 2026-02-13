@@ -506,6 +506,293 @@ async function enrollSellerInGroupMission(
 }
 
 // =============================================
+// GET GROUP STATS
+// =============================================
+
+type MemberMissionStats = {
+    missionId: string
+    missionTitle: string
+    revenue: number
+    salesCount: number
+    leadsCount: number
+}
+
+type GroupMemberStats = {
+    sellerId: string
+    name: string
+    avatarUrl: string | null
+    isCreator: boolean
+    totalRevenue: number
+    salesCount: number
+    leadsCount: number
+    byMission: MemberMissionStats[]
+}
+
+type MissionMemberBreakdown = {
+    sellerId: string
+    name: string
+    avatarUrl: string | null
+    revenue: number
+    salesCount: number
+    leadsCount: number
+}
+
+type GroupMissionStats = {
+    missionId: string
+    missionTitle: string
+    companyName: string | null
+    logoUrl: string | null
+    reward: string | null
+    totalRevenue: number
+    totalSales: number
+    totalLeads: number
+    memberBreakdown: MissionMemberBreakdown[]
+}
+
+export type GroupStats = {
+    totalRevenue: number
+    totalSales: number
+    totalLeads: number
+    members: GroupMemberStats[]
+    missions: GroupMissionStats[]
+}
+
+export async function getGroupStats(): Promise<{
+    success: boolean
+    stats?: GroupStats
+    error?: string
+}> {
+    try {
+        const seller = await getSellerForCurrentUser()
+        if (!seller) return { success: false, error: 'Not authenticated' }
+
+        // Check membership
+        const membership = await prisma.sellerGroupMember.findUnique({
+            where: { seller_id: seller.id },
+            include: {
+                Group: {
+                    include: {
+                        Members: {
+                            where: { status: 'ACTIVE' },
+                            include: {
+                                Seller: {
+                                    select: {
+                                        id: true, user_id: true, name: true, email: true,
+                                        Profile: { select: { avatar_url: true } }
+                                    }
+                                }
+                            }
+                        },
+                        Missions: {
+                            include: {
+                                Mission: {
+                                    select: { id: true, title: true, company_name: true, logo_url: true, reward: true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+        if (!membership || membership.status === 'REMOVED') {
+            return { success: false, error: 'Not in a group' }
+        }
+
+        const group = membership.Group
+        const groupId = group.id
+
+        // Fetch all group commissions (exclude referral cuts and org leader cuts)
+        const commissions = await prisma.commission.findMany({
+            where: {
+                group_id: groupId,
+                referral_generation: null,
+                org_parent_commission_id: null,
+            },
+            select: {
+                id: true,
+                link_id: true,
+                program_id: true,
+                commission_amount: true,
+                commission_source: true,
+            }
+        })
+
+        // Batch-lookup ShortLinks to resolve link_id → affiliate_id
+        const linkIds = [...new Set(commissions.map(c => c.link_id).filter(Boolean))] as string[]
+        const shortLinks = linkIds.length > 0
+            ? await prisma.shortLink.findMany({
+                where: { id: { in: linkIds } },
+                select: { id: true, affiliate_id: true }
+            })
+            : []
+
+        const linkToAffiliate = new Map(shortLinks.map(sl => [sl.id, sl.affiliate_id]))
+
+        // Build member map: user_id → member info
+        const membersByUserId = new Map(
+            group.Members.map(m => [m.Seller.user_id, {
+                sellerId: m.Seller.id,
+                name: m.Seller.name || m.Seller.email || '',
+                avatarUrl: m.Seller.Profile?.avatar_url || null,
+                isCreator: m.seller_id === group.creator_id,
+            }])
+        )
+
+        // Find creator user_id for fallback
+        const creatorMember = group.Members.find(m => m.seller_id === group.creator_id)
+        const creatorUserId = creatorMember?.Seller.user_id || null
+
+        // Build mission map from group missions
+        const missionMap = new Map(
+            group.Missions.map(gm => [gm.Mission.id, {
+                missionId: gm.Mission.id,
+                missionTitle: gm.Mission.title,
+                companyName: gm.Mission.company_name,
+                logoUrl: gm.Mission.logo_url,
+                reward: gm.Mission.reward,
+            }])
+        )
+
+        // Aggregate by member and mission
+        // memberAgg: userId → { total, sales, leads, byMission: missionId → { revenue, sales, leads } }
+        const memberAgg = new Map<string, { total: number; sales: number; leads: number; byMission: Map<string, { revenue: number; sales: number; leads: number }> }>()
+        // missionAgg: missionId → { total, sales, leads, byMember: userId → { revenue, sales, leads } }
+        const missionAgg = new Map<string, { total: number; sales: number; leads: number; byMember: Map<string, { revenue: number; sales: number; leads: number }> }>()
+
+        for (const c of commissions) {
+            // Resolve which member generated this commission
+            let affiliateUserId: string | null = null
+            if (c.link_id) {
+                affiliateUserId = linkToAffiliate.get(c.link_id) || null
+            }
+            // Fallback: attribute to creator
+            if (!affiliateUserId) {
+                affiliateUserId = creatorUserId
+            }
+            if (!affiliateUserId) continue
+
+            const isLead = c.commission_source === 'LEAD'
+            const isSaleOrRecurring = c.commission_source === 'SALE' || c.commission_source === 'RECURRING'
+
+            // Member aggregation
+            if (!memberAgg.has(affiliateUserId)) {
+                memberAgg.set(affiliateUserId, { total: 0, sales: 0, leads: 0, byMission: new Map() })
+            }
+            const ma = memberAgg.get(affiliateUserId)!
+            ma.total += c.commission_amount
+            if (isLead) ma.leads++
+            if (isSaleOrRecurring) ma.sales++
+
+            // Per-mission within member
+            if (!ma.byMission.has(c.program_id)) {
+                ma.byMission.set(c.program_id, { revenue: 0, sales: 0, leads: 0 })
+            }
+            const mmAgg = ma.byMission.get(c.program_id)!
+            mmAgg.revenue += c.commission_amount
+            if (isLead) mmAgg.leads++
+            if (isSaleOrRecurring) mmAgg.sales++
+
+            // Mission aggregation
+            if (!missionAgg.has(c.program_id)) {
+                missionAgg.set(c.program_id, { total: 0, sales: 0, leads: 0, byMember: new Map() })
+            }
+            const mAgg = missionAgg.get(c.program_id)!
+            mAgg.total += c.commission_amount
+            if (isLead) mAgg.leads++
+            if (isSaleOrRecurring) mAgg.sales++
+
+            // Per-member within mission
+            if (!mAgg.byMember.has(affiliateUserId)) {
+                mAgg.byMember.set(affiliateUserId, { revenue: 0, sales: 0, leads: 0 })
+            }
+            const mbAgg = mAgg.byMember.get(affiliateUserId)!
+            mbAgg.revenue += c.commission_amount
+            if (isLead) mbAgg.leads++
+            if (isSaleOrRecurring) mbAgg.sales++
+        }
+
+        // Build member stats (all active members, even those with 0 commissions)
+        const members: GroupMemberStats[] = []
+        for (const m of group.Members) {
+            const userId = m.Seller.user_id
+            if (!userId) continue
+            const agg = memberAgg.get(userId)
+            const info = membersByUserId.get(userId)!
+
+            const byMission: MemberMissionStats[] = []
+            if (agg) {
+                for (const [missionId, mStats] of agg.byMission) {
+                    const mInfo = missionMap.get(missionId)
+                    byMission.push({
+                        missionId,
+                        missionTitle: mInfo?.missionTitle || missionId,
+                        revenue: mStats.revenue,
+                        salesCount: mStats.sales,
+                        leadsCount: mStats.leads,
+                    })
+                }
+                byMission.sort((a, b) => b.revenue - a.revenue)
+            }
+
+            members.push({
+                ...info,
+                totalRevenue: agg?.total || 0,
+                salesCount: agg?.sales || 0,
+                leadsCount: agg?.leads || 0,
+                byMission,
+            })
+        }
+        members.sort((a, b) => b.totalRevenue - a.totalRevenue)
+
+        // Build mission stats (all group missions, even those with 0 commissions)
+        const missions: GroupMissionStats[] = []
+        for (const gm of group.Missions) {
+            const missionId = gm.Mission.id
+            const agg = missionAgg.get(missionId)
+            const mInfo = missionMap.get(missionId)!
+
+            const memberBreakdown: MissionMemberBreakdown[] = []
+            if (agg) {
+                for (const [userId, mbStats] of agg.byMember) {
+                    const info = membersByUserId.get(userId)
+                    memberBreakdown.push({
+                        sellerId: info?.sellerId || userId,
+                        name: info?.name || userId,
+                        avatarUrl: info?.avatarUrl || null,
+                        revenue: mbStats.revenue,
+                        salesCount: mbStats.sales,
+                        leadsCount: mbStats.leads,
+                    })
+                }
+                memberBreakdown.sort((a, b) => b.revenue - a.revenue)
+            }
+
+            missions.push({
+                ...mInfo,
+                totalRevenue: agg?.total || 0,
+                totalSales: agg?.sales || 0,
+                totalLeads: agg?.leads || 0,
+                memberBreakdown,
+            })
+        }
+        missions.sort((a, b) => b.totalRevenue - a.totalRevenue)
+
+        const totalRevenue = commissions.reduce((sum, c) => sum + c.commission_amount, 0)
+        const totalSales = commissions.filter(c => c.commission_source === 'SALE' || c.commission_source === 'RECURRING').length
+        const totalLeads = commissions.filter(c => c.commission_source === 'LEAD').length
+
+        return {
+            success: true,
+            stats: { totalRevenue, totalSales, totalLeads, members, missions }
+        }
+    } catch (error) {
+        console.error('[Group] Failed to get group stats:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+// =============================================
 // GET AVAILABLE MISSIONS FOR GROUP
 // Returns solo-enrolled missions that can be added to the group
 // =============================================

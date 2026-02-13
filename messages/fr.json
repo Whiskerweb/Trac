@@ -1097,7 +1097,17 @@
             "enrollMissionsCreatorOnly": "Seul le créateur peut inscrire le groupe à de nouvelles missions",
             "stripeRequired": "Stripe Connect requis",
             "stripeRequiredDesc": "Vous devez connecter et vérifier votre compte Stripe avant de pouvoir créer un groupe. Les commissions des missions de groupe sont versées au créateur.",
-            "setupStripe": "Configurer Stripe"
+            "setupStripe": "Configurer Stripe",
+            "stats": {
+                "totalRevenue": "Revenu total",
+                "totalSales": "Ventes",
+                "performance": "Performance",
+                "byMission": "Par mission",
+                "sales": "ventes",
+                "leads": "leads",
+                "noStats": "Aucune commission générée",
+                "noStatsDesc": "Les stats apparaîtront ici quand le groupe générera des ventes."
+            }
         },
         "programs": {
             "title": "Mes programmes",

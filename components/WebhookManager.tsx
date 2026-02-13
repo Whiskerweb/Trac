@@ -241,7 +241,7 @@ export function WebhookManager({ onStatusChange }: WebhookManagerProps) {
 
             {/* Instructions - Stripe Connect Multi-Tenant Tutorial */}
             <div className="space-y-3 sm:space-y-4">
-                {/* Info Alert - V2 Requirement */}
+                {/* Info Alert - Account Events */}
                 <div className="p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2 sm:gap-3">
                     <div className="p-1.5 bg-blue-100 rounded-lg flex-shrink-0">
                         <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -249,9 +249,9 @@ export function WebhookManager({ onStatusChange }: WebhookManagerProps) {
                         </svg>
                     </div>
                     <div className="min-w-0">
-                        <p className="text-blue-800 font-semibold text-xs sm:text-sm">Configuration Multi-Tenant requise</p>
+                        <p className="text-blue-800 font-semibold text-xs sm:text-sm">Configuration requise</p>
                         <p className="text-blue-700 text-xs sm:text-sm mt-1">
-                            You must select <strong>&quot;Connected accounts and v2&quot;</strong> to allow Traaaction to track sales in an isolated and secure way.
+                            You must select <strong>&quot;Your account&quot;</strong> to allow Traaaction to track sales from your direct payments.
                         </p>
                     </div>
                 </div>
@@ -278,17 +278,17 @@ export function WebhookManager({ onStatusChange }: WebhookManagerProps) {
 
                     <h4 className="font-semibold text-slate-900 flex items-center gap-2 pt-2 text-sm sm:text-base">
                         <span className="w-6 h-6 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
-                        The strategic choice (V2)
+                        Event source
                     </h4>
                     <div className="ml-0 sm:ml-8 p-2 sm:p-3 bg-amber-50 border border-amber-200 rounded-lg">
                         <p className="text-amber-800 text-xs sm:text-sm font-medium flex items-start gap-2">
                             <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
-                            <span>Select &quot;Connected accounts and v2&quot;</span>
+                            <span>Select &quot;Your account&quot;</span>
                         </p>
                         <p className="text-amber-700 text-xs mt-1 ml-0 sm:ml-6">
-                            This allows Traaaction to track sales from all your customers in an isolated way via our Stripe Connect infrastructure.
+                            This ensures Traaaction receives events for all direct payments on your Stripe account (sales, subscriptions, refunds).
                         </p>
                     </div>
 
