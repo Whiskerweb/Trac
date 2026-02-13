@@ -80,7 +80,7 @@ function MissionRow({ data, sellerId }: { data: Enrollment; sellerId: string | n
     const revenue = data.link?.revenue || 0
 
     return (
-        <Link href={`/seller/programs/${data.mission.id}`}>
+        <Link href={`/seller/programs/${data.mission.id}?eid=${data.id}`}>
             <div className="group px-6 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-6">
                     {/* Startup Logo */}

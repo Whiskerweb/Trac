@@ -1041,7 +1041,7 @@ export async function getLinkTimeseries(linkId: string, days: number = 30): Prom
  * Get full details for an enrolled mission - for /seller/programs/[missionId]
  * Includes startup info, seller's personal stats, timeseries for chart, and resources
  */
-export async function getEnrolledMissionDetail(missionId: string) {
+export async function getEnrolledMissionDetail(missionId: string, enrollmentId?: string) {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -1053,6 +1053,7 @@ export async function getEnrolledMissionDetail(missionId: string) {
         // Check enrollment exists and is approved
         const enrollment = await prisma.missionEnrollment.findFirst({
             where: {
+                ...(enrollmentId ? { id: enrollmentId } : {}),
                 mission_id: missionId,
                 user_id: user.id,
                 status: 'APPROVED'

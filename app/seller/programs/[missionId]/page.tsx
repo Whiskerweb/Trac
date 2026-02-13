@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
     ArrowLeft,
@@ -132,7 +132,9 @@ function getResourceIcon(type: string) {
 export default function SellerProgramDetailPage() {
     const params = useParams()
     const router = useRouter()
+    const searchParams = useSearchParams()
     const missionId = params.missionId as string
+    const enrollmentId = searchParams.get('eid') || undefined
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -146,7 +148,7 @@ export default function SellerProgramDetailPage() {
     useEffect(() => {
         async function load() {
             setLoading(true)
-            const result = await getEnrolledMissionDetail(missionId)
+            const result = await getEnrolledMissionDetail(missionId, enrollmentId)
 
             if (!result.success) {
                 if (result.error === 'NOT_ENROLLED') {
@@ -160,7 +162,7 @@ export default function SellerProgramDetailPage() {
             setLoading(false)
         }
         load()
-    }, [missionId, router])
+    }, [missionId, enrollmentId, router])
 
     const copyLink = () => {
         if (!data?.enrollment.link_url) return
@@ -345,9 +347,16 @@ export default function SellerProgramDetailPage() {
                 {/* Tracking Link Card */}
                 {enrollment.link_url && (
                     <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 mb-8">
-                        <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-2">
-                            Your affiliate link
-                        </p>
+                        <div className="flex items-center mb-2">
+                            <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">
+                                Your affiliate link
+                            </p>
+                            {!enrollment.isSoloEnrollment && (
+                                <span className="ml-2 px-2 py-0.5 bg-violet-50 text-violet-600 rounded-full text-[10px] font-medium">
+                                    Group
+                                </span>
+                            )}
+                        </div>
                         <div className="flex items-center gap-3">
                             <code className="flex-1 text-xs sm:text-sm text-gray-700 bg-gray-50 px-4 py-2.5 rounded-xl font-mono truncate">
                                 {enrollment.link_url}
