@@ -60,10 +60,12 @@ function formatCurrency(cents: number): string {
 function MissionRow({ data, sellerId }: { data: Enrollment; sellerId: string | null }) {
     const [copied, setCopied] = useState(false)
 
+    const isArchived = data.status === 'ARCHIVED'
+
     const copyLink = (e: React.MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
-        if (!data.link) return
+        if (!data.link || isArchived) return
         navigator.clipboard.writeText(data.link.full_url)
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
@@ -151,8 +153,8 @@ function MissionRow({ data, sellerId }: { data: Enrollment; sellerId: string | n
                         </div>
                     )}
 
-                    {/* Copy Link Button */}
-                    {data.link && (
+                    {/* Copy Link Button — hidden for archived enrollments */}
+                    {data.link && !isArchived && (
                         <button
                             onClick={copyLink}
                             className={`flex-shrink-0 p-2 rounded-lg transition-all ${
@@ -301,47 +303,73 @@ export default function PartnerDashboardPage() {
                 </div>
 
                 {/* Missions Section - Minimalist Table Design */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    {/* Header */}
-                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-sm font-semibold text-gray-900">Programmes</h2>
-                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                {enrollments.length}
-                            </span>
-                        </div>
-                        <Link
-                            href="/seller/marketplace"
-                            className="text-xs text-gray-500 hover:text-gray-900 font-medium flex items-center gap-1 transition-colors"
-                        >
-                            Explore
-                            <ChevronRight className="w-3 h-3" />
-                        </Link>
-                    </div>
+                {(() => {
+                    const activeEnrollments = enrollments.filter(e => e.status !== 'ARCHIVED')
+                    const archivedEnrollments = enrollments.filter(e => e.status === 'ARCHIVED')
 
-                    {enrollments.length > 0 ? (
-                        <div className="divide-y divide-gray-50">
-                            {enrollments.map((enrollment) => (
-                                <MissionRow key={enrollment.id} data={enrollment} sellerId={sellerId} />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="px-6 py-16 text-center">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-violet-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                                <Link2 className="w-5 h-5 text-violet-500" />
+                    return (
+                        <>
+                            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                                {/* Header */}
+                                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <h2 className="text-sm font-semibold text-gray-900">Programmes</h2>
+                                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                            {activeEnrollments.length}
+                                        </span>
+                                    </div>
+                                    <Link
+                                        href="/seller/marketplace"
+                                        className="text-xs text-gray-500 hover:text-gray-900 font-medium flex items-center gap-1 transition-colors"
+                                    >
+                                        Explore
+                                        <ChevronRight className="w-3 h-3" />
+                                    </Link>
+                                </div>
+
+                                {activeEnrollments.length > 0 ? (
+                                    <div className="divide-y divide-gray-50">
+                                        {activeEnrollments.map((enrollment) => (
+                                            <MissionRow key={enrollment.id} data={enrollment} sellerId={sellerId} />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="px-6 py-16 text-center">
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-violet-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                            <Link2 className="w-5 h-5 text-violet-500" />
+                                        </div>
+                                        <p className="text-sm text-gray-500 mb-4">
+                                            No programs joined yet
+                                        </p>
+                                        <Link
+                                            href="/seller/marketplace"
+                                            className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black transition-colors w-full sm:w-auto"
+                                        >
+                                            Discover programs
+                                        </Link>
+                                    </div>
+                                )}
                             </div>
-                            <p className="text-sm text-gray-500 mb-4">
-                                No programs joined yet
-                            </p>
-                            <Link
-                                href="/seller/marketplace"
-                                className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black transition-colors w-full sm:w-auto"
-                            >
-                                Discover programs
-                            </Link>
-                        </div>
-                    )}
-                </div>
+
+                            {/* Archived enrollments */}
+                            {archivedEnrollments.length > 0 && (
+                                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mt-6 opacity-60">
+                                    <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+                                        <h2 className="text-sm font-semibold text-gray-500">Archived</h2>
+                                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                            {archivedEnrollments.length}
+                                        </span>
+                                    </div>
+                                    <div className="divide-y divide-gray-50">
+                                        {archivedEnrollments.map((enrollment) => (
+                                            <MissionRow key={enrollment.id} data={enrollment} sellerId={sellerId} />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )
+                })()}
             </div>
         </div>
     )

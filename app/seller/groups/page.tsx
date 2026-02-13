@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Users, Plus, Copy, Check, ArrowRight, Loader2, LogOut, X } from 'lucide-react'
-import { getMyGroup, leaveGroup, removeGroupMember, getAvailableMissionsForGroup, enrollGroupInMission, getGroupStats } from '@/app/actions/group-actions'
+import { getMyGroup, joinGroup, leaveGroup, removeGroupMember, getAvailableMissionsForGroup, enrollGroupInMission, getGroupStats } from '@/app/actions/group-actions'
 import type { GroupStats } from '@/app/actions/group-actions'
 import { useTranslations } from 'next-intl'
 
@@ -22,6 +22,26 @@ const formatCurrency = (cents: number) =>
 // =============================================
 
 function EmptyState({ t }: { t: any }) {
+    const router = useRouter()
+    const [code, setCode] = useState('')
+    const [joining, setJoining] = useState(false)
+    const [joinError, setJoinError] = useState<string | null>(null)
+
+    const handleJoinWithCode = async () => {
+        const trimmed = code.trim()
+        if (!trimmed) return
+        setJoining(true)
+        setJoinError(null)
+        const result = await joinGroup(trimmed)
+        if (result.success) {
+            router.refresh()
+            window.location.reload()
+        } else {
+            setJoinError(result.error || 'Failed to join group')
+        }
+        setJoining(false)
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -66,14 +86,36 @@ function EmptyState({ t }: { t: any }) {
                     <ArrowRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500 group-hover:translate-x-0.5 transition-all" />
                 </Link>
 
-                <div className="flex items-center gap-4 py-5 px-5 -mx-1">
-                    <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-                        <Users className="w-4 h-4 text-neutral-400" />
+                <div className="py-5 px-5 -mx-1">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+                            <Users className="w-4 h-4 text-neutral-400" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-neutral-900">{t('join')}</p>
+                            <p className="text-xs text-neutral-400 mt-0.5">{t('joinDesc')}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-sm font-medium text-neutral-900">{t('join')}</p>
-                        <p className="text-xs text-neutral-400 mt-0.5">{t('joinDesc')}</p>
+                    <div className="flex items-center gap-2 pl-14">
+                        <input
+                            type="text"
+                            value={code}
+                            onChange={(e) => { setCode(e.target.value); setJoinError(null) }}
+                            onKeyDown={(e) => e.key === 'Enter' && handleJoinWithCode()}
+                            placeholder={t('enterCode')}
+                            className="flex-1 px-3 py-2 text-sm font-mono bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-neutral-400 placeholder:text-neutral-300"
+                        />
+                        <button
+                            onClick={handleJoinWithCode}
+                            disabled={joining || !code.trim()}
+                            className="px-4 py-2 text-sm font-medium bg-neutral-900 text-white rounded-lg hover:bg-black transition-colors disabled:opacity-40 flex-shrink-0"
+                        >
+                            {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : t('join')}
+                        </button>
                     </div>
+                    {joinError && (
+                        <p className="text-xs text-red-500 mt-2 pl-14">{joinError}</p>
+                    )}
                 </div>
             </motion.div>
 

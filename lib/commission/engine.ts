@@ -1264,7 +1264,7 @@ export async function getGroupConfig(params: {
 
     try {
         const enrollment = await prisma.missionEnrollment.findFirst({
-            where: { link_id: linkId, group_mission_id: { not: null } }
+            where: { link_id: linkId, group_mission_id: { not: null }, status: 'APPROVED' }
         })
 
         if (!enrollment?.group_mission_id) return null

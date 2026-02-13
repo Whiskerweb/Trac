@@ -111,7 +111,8 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
                 const enrollments = await prisma.missionEnrollment.findMany({
                     where: {
                         user_id: user.id,
-                        mission_id: { in: missions.map(m => m.id) }
+                        mission_id: { in: missions.map(m => m.id) },
+                        group_mission_id: null
                     },
                     include: {
                         ShortLink: true
@@ -293,12 +294,13 @@ export async function getMissionWithResources(missionId: string) {
             return { success: false, error: 'Mission not found' }
         }
 
-        // Check enrollment/access
+        // Check enrollment/access (solo only — exclude group enrollments)
         const enrollment = await prisma.missionEnrollment.findFirst({
             where: {
                 mission_id: missionId,
                 user_id: user.id,
-                status: 'APPROVED'
+                status: 'APPROVED',
+                group_mission_id: null
             },
             include: {
                 ShortLink: true
@@ -415,11 +417,12 @@ export async function getMissionDetailForMarketplace(missionId: string) {
             return { success: false, error: 'ACCESS_DENIED' }
         }
 
-        // Check enrollment status
+        // Check enrollment status (solo only — exclude group enrollments)
         const enrollment = await prisma.missionEnrollment.findFirst({
             where: {
                 mission_id: missionId,
-                user_id: user.id
+                user_id: user.id,
+                group_mission_id: null
             },
             include: {
                 ShortLink: true

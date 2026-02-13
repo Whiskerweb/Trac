@@ -1107,7 +1107,8 @@
                 "leads": "leads",
                 "noStats": "Sin comisiones",
                 "noStatsDesc": "Las estadísticas aparecerán cuando se generen ventas."
-            }
+            },
+            "enterCode": "Ingresa el codigo de invitacion"
         },
         "programs": {
             "title": "Mis programas",

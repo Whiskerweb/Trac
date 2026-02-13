@@ -21,6 +21,54 @@ async function getSellerForCurrentUser() {
 }
 
 // =============================================
+// HELPER: Deactivate group enrollments on leave/remove
+// =============================================
+
+async function deactivateGroupEnrollments(userId: string, groupId: string) {
+    try {
+        // Find all GroupMissions for this group
+        const groupMissions = await prisma.groupMission.findMany({
+            where: { group_id: groupId },
+            select: { id: true }
+        })
+
+        if (groupMissions.length === 0) return
+
+        const groupMissionIds = groupMissions.map(gm => gm.id)
+
+        // Find APPROVED enrollments for this user linked to these group missions
+        const enrollments = await prisma.missionEnrollment.findMany({
+            where: {
+                user_id: userId,
+                group_mission_id: { in: groupMissionIds },
+                status: 'APPROVED'
+            },
+            include: { ShortLink: true }
+        })
+
+        if (enrollments.length === 0) return
+
+        // Archive enrollments
+        await prisma.missionEnrollment.updateMany({
+            where: { id: { in: enrollments.map(e => e.id) } },
+            data: { status: 'ARCHIVED' }
+        })
+
+        // Delete from Redis to stop tracking immediately
+        const { deleteLinkFromRedis } = await import('@/lib/redis')
+        for (const enrollment of enrollments) {
+            if (enrollment.ShortLink?.slug) {
+                await deleteLinkFromRedis(enrollment.ShortLink.slug)
+            }
+        }
+
+        console.log(`[Group] Archived ${enrollments.length} group enrollments for user ${userId} in group ${groupId}`)
+    } catch (error) {
+        console.error(`[Group] Failed to deactivate enrollments for user ${userId}:`, error)
+    }
+}
+
+// =============================================
 // GET MY GROUP
 // =============================================
 
@@ -220,6 +268,9 @@ export async function leaveGroup(): Promise<{ success: boolean; error?: string }
             return { success: false, error: 'Not in a group' }
         }
 
+        const isCreator = membership.Group.creator_id === seller.id
+        const groupId = membership.Group.id
+
         await prisma.$transaction(async (tx) => {
             // Mark member as REMOVED
             await tx.sellerGroupMember.update({
@@ -228,16 +279,33 @@ export async function leaveGroup(): Promise<{ success: boolean; error?: string }
             })
 
             // If creator leaves → archive the group
-            if (membership.Group.creator_id === seller.id) {
+            if (isCreator) {
                 await tx.sellerGroup.update({
-                    where: { id: membership.Group.id },
+                    where: { id: groupId },
                     data: { status: 'ARCHIVED' }
                 })
-                console.log(`[Group] Creator ${seller.id} left → group ${membership.Group.id} archived`)
+                console.log(`[Group] Creator ${seller.id} left → group ${groupId} archived`)
             }
         })
 
+        // Deactivate group enrollments for the leaving seller
+        await deactivateGroupEnrollments(seller.user_id!, groupId)
+
+        // If creator left (group archived), deactivate ALL remaining active members' enrollments
+        if (isCreator) {
+            const remainingMembers = await prisma.sellerGroupMember.findMany({
+                where: { group_id: groupId, status: 'ACTIVE' },
+                include: { Seller: { select: { user_id: true } } }
+            })
+            for (const member of remainingMembers) {
+                if (member.Seller.user_id) {
+                    await deactivateGroupEnrollments(member.Seller.user_id, groupId)
+                }
+            }
+        }
+
         revalidatePath('/seller/groups')
+        revalidatePath('/seller')
         return { success: true }
 
     } catch (error) {
@@ -278,7 +346,17 @@ export async function removeGroupMember(memberId: string): Promise<{ success: bo
             data: { status: 'REMOVED' }
         })
 
+        // Deactivate group enrollments for the removed member
+        const removedSeller = await prisma.seller.findFirst({
+            where: { id: memberId },
+            select: { user_id: true }
+        })
+        if (removedSeller?.user_id) {
+            await deactivateGroupEnrollments(removedSeller.user_id, targetMembership.Group.id)
+        }
+
         revalidatePath('/seller/groups')
+        revalidatePath('/seller')
         return { success: true }
 
     } catch (error) {
