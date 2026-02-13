@@ -710,6 +710,86 @@ export async function joinMission(missionId: string): Promise<{
             where: { mission_id: missionId, user_id: user.id, group_mission_id: null }
         })
 
+        if (existingEnrollment && existingEnrollment.status === 'ARCHIVED') {
+            // Reactivate: create new ShortLink, set in Redis, update enrollment
+            const verifiedDomainReactivate = await prisma.domain.findFirst({
+                where: { workspace_id: mission.workspace_id, verified: true }
+            })
+            const customDomainReactivate = verifiedDomainReactivate?.name || null
+
+            const missionSlugReactivate = mission.title
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '')
+                .slice(0, 20)
+            const affiliateCodeReactivate = user.id.slice(0, 8)
+            const fullSlugReactivate = `${missionSlugReactivate}/${affiliateCodeReactivate}`
+
+            let shortLinkReactivate
+            try {
+                shortLinkReactivate = await prisma.shortLink.create({
+                    data: {
+                        slug: fullSlugReactivate,
+                        original_url: mission.target_url,
+                        workspace_id: mission.workspace_id,
+                        affiliate_id: user.id,
+                        clicks: 0,
+                    }
+                })
+            } catch (slugError: any) {
+                if (slugError?.code === 'P2002') {
+                    const existing = await prisma.shortLink.findUnique({ where: { slug: fullSlugReactivate } })
+                    if (existing && existing.affiliate_id === user.id) {
+                        shortLinkReactivate = existing
+                    } else {
+                        shortLinkReactivate = await prisma.shortLink.create({
+                            data: {
+                                slug: `${fullSlugReactivate}-${nanoid(4)}`,
+                                original_url: mission.target_url,
+                                workspace_id: mission.workspace_id,
+                                affiliate_id: user.id,
+                                clicks: 0,
+                            }
+                        })
+                    }
+                } else {
+                    throw slugError
+                }
+            }
+
+            const { setLinkInRedis } = await import('@/lib/redis')
+            await setLinkInRedis(shortLinkReactivate.slug, {
+                url: shortLinkReactivate.original_url,
+                linkId: shortLinkReactivate.id,
+                workspaceId: shortLinkReactivate.workspace_id,
+                sellerId: shortLinkReactivate.affiliate_id,
+            }, customDomainReactivate || undefined)
+
+            await prisma.missionEnrollment.update({
+                where: { id: existingEnrollment.id },
+                data: { status: 'APPROVED', link_id: shortLinkReactivate.id }
+            })
+
+            const baseUrlReactivate = customDomainReactivate
+                ? `https://${customDomainReactivate}`
+                : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+
+            console.log(`[Marketplace] ♻️ Reactivated ARCHIVED enrollment ${existingEnrollment.id} for mission ${missionId}`)
+
+            revalidatePath('/seller')
+            revalidatePath('/seller/marketplace')
+
+            return {
+                success: true,
+                type: 'enrolled',
+                enrollment: {
+                    id: existingEnrollment.id,
+                    link_url: `${baseUrlReactivate}/s/${shortLinkReactivate.slug}`,
+                    has_custom_domain: !!customDomainReactivate,
+                }
+            }
+        }
+
         if (existingEnrollment) {
             return { success: false, error: 'Already enrolled in this mission' }
         }
@@ -1198,6 +1278,89 @@ export async function joinMissionByInviteCode(inviteCode: string): Promise<{
             where: { mission_id: mission.id, user_id: user.id, group_mission_id: null }
         })
 
+        if (existingEnrollment && existingEnrollment.status === 'ARCHIVED') {
+            // Reactivate: create new ShortLink, set in Redis, update enrollment
+            const verifiedDomainReactivate = await prisma.domain.findFirst({
+                where: { workspace_id: mission.workspace_id, verified: true }
+            })
+            const customDomainReactivate = verifiedDomainReactivate?.name || null
+
+            const missionSlugReactivate = mission.title
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '')
+                .slice(0, 20)
+            const affiliateCodeReactivate = user.id.slice(0, 8)
+            const fullSlugReactivate = `${missionSlugReactivate}/${affiliateCodeReactivate}`
+
+            let shortLinkReactivate
+            try {
+                shortLinkReactivate = await prisma.shortLink.create({
+                    data: {
+                        slug: fullSlugReactivate,
+                        original_url: mission.target_url,
+                        workspace_id: mission.workspace_id,
+                        affiliate_id: user.id,
+                        clicks: 0,
+                    }
+                })
+            } catch (slugError: any) {
+                if (slugError?.code === 'P2002') {
+                    const existing = await prisma.shortLink.findUnique({ where: { slug: fullSlugReactivate } })
+                    if (existing && existing.affiliate_id === user.id) {
+                        shortLinkReactivate = existing
+                    } else {
+                        shortLinkReactivate = await prisma.shortLink.create({
+                            data: {
+                                slug: `${fullSlugReactivate}-${nanoid(4)}`,
+                                original_url: mission.target_url,
+                                workspace_id: mission.workspace_id,
+                                affiliate_id: user.id,
+                                clicks: 0,
+                            }
+                        })
+                    }
+                } else {
+                    throw slugError
+                }
+            }
+
+            const { setLinkInRedis } = await import('@/lib/redis')
+            await setLinkInRedis(shortLinkReactivate.slug, {
+                url: shortLinkReactivate.original_url,
+                linkId: shortLinkReactivate.id,
+                workspaceId: shortLinkReactivate.workspace_id,
+                sellerId: shortLinkReactivate.affiliate_id,
+            }, customDomainReactivate || undefined)
+
+            await prisma.missionEnrollment.update({
+                where: { id: existingEnrollment.id },
+                data: { status: 'APPROVED', link_id: shortLinkReactivate.id }
+            })
+
+            const baseUrlReactivate = customDomainReactivate
+                ? `https://${customDomainReactivate}`
+                : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+
+            console.log(`[Marketplace] ♻️ Reactivated ARCHIVED enrollment (invite) ${existingEnrollment.id} for mission ${mission.id}`)
+
+            revalidatePath('/seller')
+            revalidatePath('/seller/marketplace')
+
+            return {
+                success: true,
+                enrollment: {
+                    id: existingEnrollment.id,
+                    link_url: `${baseUrlReactivate}/s/${shortLinkReactivate.slug}`,
+                    has_custom_domain: !!customDomainReactivate,
+                },
+                mission: {
+                    id: mission.id,
+                    title: mission.title
+                }
+            }
+        }
+
         if (existingEnrollment) {
             return { success: false, error: 'Already enrolled in this mission' }
         }
@@ -1357,10 +1520,11 @@ export async function getMissionByInviteCode(inviteCode: string): Promise<{
         }
 
         // Check if user is already enrolled solo (group enrollment is separate)
+        // Exclude ARCHIVED enrollments so the preview shows "joinable"
         let isEnrolled = false
         if (user) {
             const existingEnrollment = await prisma.missionEnrollment.findFirst({
-                where: { mission_id: mission.id, user_id: user.id, group_mission_id: null }
+                where: { mission_id: mission.id, user_id: user.id, group_mission_id: null, status: { not: 'ARCHIVED' } }
             })
             isEnrolled = !!existingEnrollment
         }

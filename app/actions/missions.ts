@@ -469,7 +469,7 @@ export async function getWorkspaceMissions(): Promise<{
             where: { workspace_id: workspace.workspaceId }, // ✅ FIXED: Use workspace ID
             include: {
                 _count: {
-                    select: { MissionEnrollment: true }
+                    select: { MissionEnrollment: { where: { status: { not: 'ARCHIVED' } } } }
                 }
             },
             orderBy: { created_at: 'desc' }

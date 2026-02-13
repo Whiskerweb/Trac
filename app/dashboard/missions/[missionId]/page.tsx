@@ -297,7 +297,8 @@ export default function MissionDetailPage({
     // Sorted enrollments for participants list
     const sortedEnrollments = useMemo(() => {
         if (!mission) return []
-        const enrollments = [...mission.enrollments]
+        // Only show non-ARCHIVED enrollments in the main list
+        const enrollments = mission.enrollments.filter(e => e.status !== 'ARCHIVED')
 
         enrollments.sort((a, b) => {
             let aVal: number, bVal: number
@@ -368,12 +369,16 @@ export default function MissionDetailPage({
         )
     }
 
-    // Calculate totals from enrollment stats
-    const totalClicks = mission.enrollments.reduce((sum, e) => sum + (e.stats?.clicks || e.link?.clicks || 0), 0)
-    const totalParticipants = mission.enrollments.length
-    const activeParticipants = mission.enrollments.filter(e => e.status === 'APPROVED').length
-    const totalSales = mission.enrollments.reduce((sum, e) => sum + (e.stats?.sales || 0), 0)
-    const totalRevenue = mission.enrollments.reduce((sum, e) => sum + (e.stats?.revenue || 0), 0)
+    // Separate active vs archived enrollments
+    const activeEnrollments = mission.enrollments.filter(e => e.status !== 'ARCHIVED')
+    const archivedEnrollments = mission.enrollments.filter(e => e.status === 'ARCHIVED')
+
+    // Calculate totals from ACTIVE enrollment stats only
+    const totalClicks = activeEnrollments.reduce((sum, e) => sum + (e.stats?.clicks || e.link?.clicks || 0), 0)
+    const totalParticipants = activeEnrollments.length
+    const activeParticipants = activeEnrollments.filter(e => e.status === 'APPROVED').length
+    const totalSales = activeEnrollments.reduce((sum, e) => sum + (e.stats?.sales || 0), 0)
+    const totalRevenue = activeEnrollments.reduce((sum, e) => sum + (e.stats?.revenue || 0), 0)
 
     return (
         <div className="space-y-4 sm:space-y-6">
@@ -810,7 +815,7 @@ export default function MissionDetailPage({
                             </h2>
                         </div>
 
-                        {mission.enrollments.length === 0 ? (
+                        {activeEnrollments.length === 0 ? (
                             <div className="px-4 sm:px-6 py-12 text-center">
                                 <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                                 <p className="text-gray-900 font-medium">{t('noParticipants')}</p>

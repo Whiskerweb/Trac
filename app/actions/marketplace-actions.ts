@@ -90,7 +90,7 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
                 },
                 _count: {
                     select: {
-                        MissionEnrollment: true
+                        MissionEnrollment: { where: { status: { not: 'ARCHIVED' } } }
                     }
                 }
             }
@@ -107,12 +107,13 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
             })
 
             if (partner) {
-                // Get enrollments
+                // Get enrollments (exclude ARCHIVED so quitted missions show as joinable)
                 const enrollments = await prisma.missionEnrollment.findMany({
                     where: {
                         user_id: user.id,
                         mission_id: { in: missions.map(m => m.id) },
-                        group_mission_id: null
+                        group_mission_id: null,
+                        status: { not: 'ARCHIVED' }
                     },
                     include: {
                         ShortLink: true
