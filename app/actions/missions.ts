@@ -574,6 +574,14 @@ export async function deleteMission(missionId: string): Promise<{
             return { success: false, error: 'Mission not found' }
         }
 
+        // Delete related records without cascade
+        await prisma.organizationMission.deleteMany({
+            where: { mission_id: missionId }
+        })
+        await prisma.groupMission.deleteMany({
+            where: { mission_id: missionId }
+        })
+
         await prisma.mission.delete({
             where: { id: missionId }
         })

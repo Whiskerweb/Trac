@@ -146,8 +146,19 @@ function MissionRow({
     async function handleDelete() {
         if (!confirm(t('deleteConfirm'))) return
         setLoading(true)
-        await deleteMission(mission.id)
-        onRefresh()
+        try {
+            const result = await deleteMission(mission.id)
+            if (result.success) {
+                setMenuOpen(false)
+                onRefresh()
+            } else {
+                alert(result.error || 'Failed to delete mission')
+            }
+        } catch {
+            alert('Failed to delete mission')
+        } finally {
+            setLoading(false)
+        }
     }
 
     function handleCopyInviteLink() {

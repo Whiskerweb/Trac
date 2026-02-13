@@ -230,8 +230,11 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
         setAddingMissionId(missionId)
         const result = await enrollGroupInMission(missionId)
         if (result.success) {
-            setShowAddMission(false)
-            setAvailableMissions([])
+            setAvailableMissions(prev => {
+                const updated = prev.filter(m => m.id !== missionId)
+                if (updated.length === 0) setShowAddMission(false)
+                return updated
+            })
             const refreshed = await getMyGroup()
             if (refreshed.success && refreshed.group) {
                 setCurrentGroup(refreshed.group)
