@@ -760,20 +760,43 @@ export default function LoginPage() {
                                     )}
                                 </AnimatePresence>
 
-                                <button
+                                <motion.button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full h-12 bg-neutral-900 hover:bg-neutral-800 disabled:bg-neutral-400 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2 mt-2"
+                                    whileTap={{ scale: 0.98 }}
+                                    className={`w-full h-12 text-white font-medium rounded-xl transition-colors duration-200 flex items-center justify-center gap-2 mt-2 ${
+                                        loading
+                                            ? 'bg-neutral-900 opacity-90 pointer-events-none'
+                                            : 'bg-neutral-900 hover:bg-neutral-800'
+                                    }`}
                                 >
-                                    {loading ? (
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                    ) : (
-                                        <>
-                                            {mode === 'login' ? t('login.title') : t('signup.title')}
-                                            <ArrowRight className="w-4 h-4" />
-                                        </>
-                                    )}
-                                </button>
+                                    <AnimatePresence mode="wait">
+                                        {loading ? (
+                                            <motion.span
+                                                key="loader"
+                                                initial={{ opacity: 0, x: 10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0, x: -10 }}
+                                                transition={{ duration: 0.15 }}
+                                                className="flex items-center justify-center"
+                                            >
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                            </motion.span>
+                                        ) : (
+                                            <motion.span
+                                                key="text"
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0, x: 10 }}
+                                                transition={{ duration: 0.15 }}
+                                                className="flex items-center justify-center gap-2"
+                                            >
+                                                {mode === 'login' ? t('login.title') : t('signup.title')}
+                                                <ArrowRight className="w-4 h-4" />
+                                            </motion.span>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.button>
                             </form>
 
                             {/* Toggle Login/Signup */}
