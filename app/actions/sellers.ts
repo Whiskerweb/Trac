@@ -1574,6 +1574,173 @@ export async function createNewStripeAccount(): Promise<{
 }
 
 // =============================================
+// GET MY COMMISSION DETAIL (For /seller/commissions/[id])
+// =============================================
+
+export async function getMyCommissionDetail(commissionId: string) {
+    try {
+        const user = await getCurrentUser()
+        if (!user) return { success: false, error: 'Not authenticated' }
+
+        // Find the seller for this user
+        const seller = await prisma.seller.findFirst({
+            where: { user_id: user.userId },
+            select: { id: true }
+        })
+        if (!seller) return { success: false, error: 'Seller not found' }
+
+        // Fetch commission with auth check (seller_id must match)
+        const commission = await prisma.commission.findFirst({
+            where: {
+                id: commissionId,
+                seller_id: seller.id,
+            },
+        })
+
+        if (!commission) return { success: false, error: 'Commission not found' }
+
+        // Fetch link info + mission via enrollment
+        let mission: { id: string; title: string; status: string; reward: string; companyName: string | null; logoUrl: string | null } | null = null
+        let linkSlug: string | null = null
+        let linkClicks: number = 0
+        let originSeller: { name: string | null; email: string } | null = null
+
+        if (commission.link_id) {
+            const link = await prisma.shortLink.findUnique({
+                where: { id: commission.link_id },
+                select: {
+                    slug: true,
+                    clicks: true,
+                    affiliate_id: true,
+                    MissionEnrollment: {
+                        select: {
+                            user_id: true,
+                            Mission: {
+                                select: {
+                                    id: true,
+                                    title: true,
+                                    status: true,
+                                    reward: true,
+                                    company_name: true,
+                                    logo_url: true,
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+
+            if (link) {
+                linkSlug = link.slug
+                linkClicks = link.clicks
+
+                if (link.MissionEnrollment?.Mission) {
+                    const m = link.MissionEnrollment.Mission
+                    mission = {
+                        id: m.id,
+                        title: m.title,
+                        status: m.status,
+                        reward: m.reward,
+                        companyName: m.company_name,
+                        logoUrl: m.logo_url,
+                    }
+                }
+
+                // For group commissions: the link owner (affiliate_id) is the actual seller who shared the link
+                // but the commission seller_id is the group creator
+                if (commission.group_id && link.MissionEnrollment?.user_id) {
+                    const linkOwnerUserId = link.MissionEnrollment.user_id
+                    // Only fetch if link owner is different from commission seller
+                    if (linkOwnerUserId !== user.userId) {
+                        const linkSeller = await prisma.seller.findFirst({
+                            where: { user_id: linkOwnerUserId },
+                            select: { name: true, email: true }
+                        })
+                        if (linkSeller) {
+                            originSeller = { name: linkSeller.name, email: linkSeller.email }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Group info
+        let groupInfo: { groupName: string; originSeller: { name: string | null; email: string } | null } | null = null
+        if (commission.group_id) {
+            const group = await prisma.sellerGroup.findUnique({
+                where: { id: commission.group_id },
+                select: { name: true }
+            })
+            groupInfo = {
+                groupName: group?.name || 'Unknown group',
+                originSeller,
+            }
+        }
+
+        // Org info
+        let orgInfo: { name: string; isLeaderCut: boolean } | null = null
+        if (commission.organization_mission_id) {
+            const orgMission = await prisma.organizationMission.findUnique({
+                where: { id: commission.organization_mission_id },
+                select: {
+                    Organization: { select: { name: true } }
+                }
+            })
+            orgInfo = {
+                name: orgMission?.Organization?.name || 'Unknown organization',
+                isLeaderCut: !!commission.org_parent_commission_id,
+            }
+        }
+
+        // Referral info
+        let referralInfo: { generation: number } | null = null
+        if (commission.referral_generation) {
+            referralInfo = { generation: commission.referral_generation }
+        }
+
+        return {
+            success: true,
+            commission: {
+                id: commission.id,
+                saleId: commission.sale_id,
+                status: commission.status,
+                commissionSource: commission.commission_source,
+
+                grossAmount: commission.gross_amount,
+                netAmount: commission.net_amount,
+                stripeFee: commission.stripe_fee,
+                taxAmount: commission.tax_amount,
+                commissionAmount: commission.commission_amount,
+                platformFee: commission.platform_fee,
+                commissionRate: commission.commission_rate,
+                currency: commission.currency,
+
+                mission,
+
+                subscriptionId: commission.subscription_id,
+                recurringMonth: commission.recurring_month,
+                recurringMax: commission.recurring_max,
+
+                holdDays: commission.hold_days,
+                maturedAt: commission.matured_at,
+                paidAt: commission.paid_at,
+                createdAt: commission.created_at,
+
+                groupInfo,
+                orgInfo,
+                referralInfo,
+
+                linkSlug,
+                linkClicks,
+            }
+        }
+    } catch (error) {
+        console.error('[getMyCommissionDetail] Error:', error)
+        return { success: false, error: 'Failed to load commission details' }
+    }
+}
+
+// =============================================
 // REFERRAL / PARRAINAGE
 // =============================================
 

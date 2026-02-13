@@ -301,12 +301,12 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                 </motion.div>
             )}
 
-            {/* Overview Stats — 3 cards */}
+            {/* Overview Stats — 4 cards */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="grid grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-10"
+                className="grid grid-cols-4 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-10"
             >
                 <div className="bg-white p-5 text-center">
                     {statsLoading ? (
@@ -323,6 +323,14 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                         <p className="text-2xl font-light text-neutral-900 tabular-nums">{stats?.totalSales || 0}</p>
                     )}
                     <p className="text-xs text-neutral-400 mt-1">{t('stats.totalSales')}</p>
+                </div>
+                <div className="bg-white p-5 text-center">
+                    {statsLoading ? (
+                        <div className="h-8 flex items-center justify-center"><Loader2 className="w-4 h-4 animate-spin text-neutral-300" /></div>
+                    ) : (
+                        <p className="text-2xl font-light text-neutral-900 tabular-nums">{stats?.totalLeads || 0}</p>
+                    )}
+                    <p className="text-xs text-neutral-400 mt-1">{t('stats.leads')}</p>
                 </div>
                 <div className="bg-white p-5 text-center">
                     <p className="text-2xl font-light text-neutral-900 tabular-nums">{memberCount}<span className="text-neutral-300">/{currentGroup.max_members}</span></p>
@@ -498,7 +506,7 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                                                 </div>
                                                 <div className="flex items-center gap-3 flex-shrink-0 ml-3">
                                                     <span className="text-xs text-neutral-400 tabular-nums">
-                                                        {mb.clicks} {t('stats.clicks')} · {mb.salesCount} {t('stats.sales')}
+                                                        {mb.clicks} {t('stats.clicks')} · {mb.salesCount} {t('stats.sales')} · {mb.leadsCount} {t('stats.leads')}
                                                     </span>
                                                     <span className="text-xs font-medium text-neutral-700 tabular-nums">
                                                         {formatCurrency(mb.revenue)}

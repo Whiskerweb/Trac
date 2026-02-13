@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { ArrowUpRight, Loader2, Gift, Zap, X, AlertTriangle, CreditCard } from 'lucide-react'
+import { ArrowUpRight, Loader2, Gift, Zap, X, AlertTriangle, CreditCard, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -280,37 +280,41 @@ export default function SellerWalletPage() {
                             {wallet.commissions.slice(0, 10).map((commission, index) => {
                                 const timeInfo = getTimeUntilAvailable(commission)
                                 return (
-                                    <motion.div
-                                        key={commission.id}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.05 * index }}
-                                        className="group flex items-center justify-between py-4 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors cursor-default"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${
-                                                commission.status === 'COMPLETE' ? 'bg-neutral-300' :
-                                                commission.status === 'PROCEED' ? 'bg-green-500' :
-                                                'bg-amber-400'
-                                            }`} />
-                                            <div>
-                                                <p className="text-sm text-neutral-600">
-                                                    {getStatusLabel(commission.status)}
-                                                    {timeInfo && (
-                                                        <span className="text-neutral-400 ml-2 text-xs">
-                                                            {timeInfo.text}
-                                                        </span>
-                                                    )}
-                                                </p>
-                                                <p className="text-xs text-neutral-400">
-                                                    {formatDate(commission.created_at)}
-                                                </p>
+                                    <Link key={commission.id} href={`/seller/commissions/${commission.id}`}>
+                                        <motion.div
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.05 * index }}
+                                            className="group flex items-center justify-between py-4 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors cursor-pointer"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                                    commission.status === 'COMPLETE' ? 'bg-neutral-300' :
+                                                    commission.status === 'PROCEED' ? 'bg-green-500' :
+                                                    'bg-amber-400'
+                                                }`} />
+                                                <div>
+                                                    <p className="text-sm text-neutral-600">
+                                                        {getStatusLabel(commission.status)}
+                                                        {timeInfo && (
+                                                            <span className="text-neutral-400 ml-2 text-xs">
+                                                                {timeInfo.text}
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                    <p className="text-xs text-neutral-400">
+                                                        {formatDate(commission.created_at)}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <p className="font-medium text-neutral-900 tabular-nums">
-                                            +{formatCurrency(commission.commission_amount)} EUR
-                                        </p>
-                                    </motion.div>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-medium text-neutral-900 tabular-nums">
+                                                    +{formatCurrency(commission.commission_amount)} EUR
+                                                </p>
+                                                <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500 transition-colors" />
+                                            </div>
+                                        </motion.div>
+                                    </Link>
                                 )
                             })}
                         </AnimatePresence>

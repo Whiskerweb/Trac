@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Zap, ArrowRight } from 'lucide-react'
+import { Loader2, Zap, ArrowRight, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -288,33 +288,37 @@ export default function PayoutsPage() {
                                 const timeInfo = getTimeUntilAvailable(commission)
 
                                 return (
-                                    <motion.div
-                                        key={commission.id}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.05 * index }}
-                                        className="group flex items-center justify-between py-4 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-2 h-2 rounded-full ${statusInfo.color}`} />
-                                            <div>
-                                                <p className="text-sm text-neutral-700">
-                                                    {statusInfo.label}
-                                                    {timeInfo && (
-                                                        <span className="text-neutral-400 ml-2 text-xs">
-                                                            {timeInfo.text}
-                                                        </span>
-                                                    )}
-                                                </p>
-                                                <p className="text-xs text-neutral-400">
-                                                    {formatDate(commission.created_at)}
-                                                </p>
+                                    <Link key={commission.id} href={`/seller/commissions/${commission.id}`}>
+                                        <motion.div
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.05 * index }}
+                                            className="group flex items-center justify-between py-4 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors cursor-pointer"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-2 h-2 rounded-full ${statusInfo.color}`} />
+                                                <div>
+                                                    <p className="text-sm text-neutral-700">
+                                                        {statusInfo.label}
+                                                        {timeInfo && (
+                                                            <span className="text-neutral-400 ml-2 text-xs">
+                                                                {timeInfo.text}
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                    <p className="text-xs text-neutral-400">
+                                                        {formatDate(commission.created_at)}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <p className="font-medium text-neutral-900 tabular-nums">
-                                            +{formatCurrency(commission.commission_amount)} EUR
-                                        </p>
-                                    </motion.div>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-medium text-neutral-900 tabular-nums">
+                                                    +{formatCurrency(commission.commission_amount)} EUR
+                                                </p>
+                                                <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500 transition-colors" />
+                                            </div>
+                                        </motion.div>
+                                    </Link>
                                 )
                             })}
                         </AnimatePresence>
