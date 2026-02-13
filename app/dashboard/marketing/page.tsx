@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { getMarketingOverview } from '@/app/actions/marketing-links'
 import { getChannelConfig } from '@/lib/marketing/channels'
+import { CreateLinkModal } from '@/components/marketing/CreateLinkModal'
 
 interface OverviewData {
     totalClicks: number
@@ -41,6 +42,7 @@ export default function MarketingOverviewPage() {
     const router = useRouter()
     const [data, setData] = useState<OverviewData | null>(null)
     const [loading, setLoading] = useState(true)
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
     useEffect(() => {
         getMarketingOverview().then(res => {
@@ -83,7 +85,7 @@ export default function MarketingOverviewPage() {
                     <p className="text-sm text-gray-500 mt-1">{t('overview.subtitle')}</p>
                 </div>
                 <button
-                    onClick={() => router.push('/dashboard/marketing/links/create')}
+                    onClick={() => setIsCreateModalOpen(true)}
                     className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors"
                 >
                     <Plus className="w-4 h-4" />
@@ -166,7 +168,7 @@ export default function MarketingOverviewPage() {
                         <Link2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                         <p className="text-sm text-gray-500 mb-4">{t('overview.noLinksYet')}</p>
                         <button
-                            onClick={() => router.push('/dashboard/marketing/links/create')}
+                            onClick={() => setIsCreateModalOpen(true)}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
                         >
                             <Plus className="w-4 h-4" />
@@ -209,6 +211,21 @@ export default function MarketingOverviewPage() {
                     </div>
                 )}
             </div>
+            <CreateLinkModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={() => {
+                    setIsCreateModalOpen(false)
+                    // Reload overview data
+                    setLoading(true)
+                    getMarketingOverview().then(res => {
+                        if (res.success && res.data) {
+                            setData(res.data as unknown as OverviewData)
+                        }
+                        setLoading(false)
+                    })
+                }}
+            />
         </div>
     )
 }

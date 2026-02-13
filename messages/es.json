@@ -1105,6 +1105,19 @@
                 "submit": "Crear enlace",
                 "errorUrlRequired": "La URL es obligatoria"
             },
+            "modal": {
+                "shortLink": "Enlace corto",
+                "randomize": "Aleatorio",
+                "qrPreview": "Código QR",
+                "tags": "Etiquetas",
+                "customDomainActive": "Dominio personalizado activo",
+                "linkCreated": "Enlace creado",
+                "allSet": "¡Todo listo!",
+                "linkReady": "Tu enlace de marketing está listo para compartir.",
+                "close": "Cerrar",
+                "createAnother": "Crear otro",
+                "cancel": "Cancelar"
+            },
             "detail": {
                 "notFound": "Enlace no encontrado",
                 "backToLinks": "Volver a enlaces",

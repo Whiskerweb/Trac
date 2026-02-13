@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { getMarketingLinks, deleteMarketingLink } from '@/app/actions/marketing-links'
 import { PREDEFINED_CHANNELS, getChannelConfig } from '@/lib/marketing/channels'
+import { CreateLinkModal } from '@/components/marketing/CreateLinkModal'
 
 interface MarketingLink {
     id: string
@@ -31,6 +32,7 @@ export default function MarketingLinksPage() {
     const [activeChannel, setActiveChannel] = useState<string | null>(null)
     const [copiedId, setCopiedId] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
     const loadLinks = useCallback(async () => {
         const res = await getMarketingLinks({
@@ -77,7 +79,7 @@ export default function MarketingLinksPage() {
                     </p>
                 </div>
                 <button
-                    onClick={() => router.push('/dashboard/marketing/links/create')}
+                    onClick={() => setIsCreateModalOpen(true)}
                     className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors shadow-sm"
                 >
                     <Plus className="w-4 h-4" />
@@ -147,7 +149,7 @@ export default function MarketingLinksPage() {
                     <h3 className="text-base font-semibold text-gray-900 mb-1">{t('links.empty')}</h3>
                     <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">{t('links.emptyDesc')}</p>
                     <button
-                        onClick={() => router.push('/dashboard/marketing/links/create')}
+                        onClick={() => setIsCreateModalOpen(true)}
                         className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors"
                     >
                         <Plus className="w-4 h-4" />
@@ -232,6 +234,15 @@ export default function MarketingLinksPage() {
                     })}
                 </div>
             )}
+
+            <CreateLinkModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={() => {
+                    setIsCreateModalOpen(false)
+                    loadLinks()
+                }}
+            />
         </div>
     )
 }
