@@ -197,6 +197,20 @@ export const ORG_MEMBER_MESSAGES: Record<string, Record<OrgLocale, (leaderName: 
     },
 }
 
+// Group lifecycle messages
+type GroupClosedMessageFn = (groupName: string, totalRevenue: string, creatorName: string) => string
+
+export const GROUP_MESSAGES: Record<string, Record<OrgLocale, GroupClosedMessageFn>> = {
+    group_closed: {
+        fr: (groupName, totalRevenue, creatorName) =>
+            `Le groupe "${groupName}" a été fermé par son créateur.\n\nAu total, le groupe a généré ${totalRevenue}€ de commissions, reversées sur le compte de ${creatorName}.\n\nVos liens de groupe ne sont plus actifs. Vous pouvez continuer à vendre en solo ou rejoindre un autre groupe.\n\n— L'équipe Traaaction`,
+        en: (groupName, totalRevenue, creatorName) =>
+            `The group "${groupName}" has been closed by its creator.\n\nIn total, the group generated ${totalRevenue}€ in commissions, paid to ${creatorName}'s account.\n\nYour group links are no longer active. You can continue selling solo or join another group.\n\n— The Traaaction Team`,
+        es: (groupName, totalRevenue, creatorName) =>
+            `El grupo "${groupName}" ha sido cerrado por su creador.\n\nEn total, el grupo generó ${totalRevenue}€ en comisiones, transferidas a la cuenta de ${creatorName}.\n\nTus enlaces de grupo ya no están activos. Puedes seguir vendiendo en solitario o unirte a otro grupo.\n\n— El equipo de Traaaction`,
+    },
+}
+
 // =============================================
 // HIGH-LEVEL NOTIFICATION FUNCTIONS
 // =============================================
@@ -316,6 +330,44 @@ export async function notifyLeaderOfMemberLeft(
         console.log(`[Org Notify] Notified leader of member left: ${sellerName}`)
     } catch (error) {
         console.error(`[Org Notify] Failed to notify leader of member left:`, error)
+    }
+}
+
+/**
+ * Notify all active members when a group is closed (creator leaves).
+ * Must be called BEFORE members are deactivated.
+ */
+export async function notifyGroupClosed(
+    groupId: string,
+    groupName: string,
+    creatorName: string
+) {
+    try {
+        // Get active members (excluding creator — they're already REMOVED by the transaction)
+        const members = await prisma.sellerGroupMember.findMany({
+            where: { group_id: groupId, status: 'ACTIVE' },
+            select: { seller_id: true }
+        })
+
+        if (members.length === 0) return
+
+        // Calculate total group revenue
+        const aggregate = await prisma.commission.aggregate({
+            where: { group_id: groupId },
+            _sum: { commission_amount: true }
+        })
+        const totalCents = aggregate._sum.commission_amount || 0
+        const totalRevenue = (totalCents / 100).toFixed(2)
+
+        for (const member of members) {
+            const locale = await getSellerLocale(member.seller_id)
+            const message = GROUP_MESSAGES.group_closed[locale](groupName, totalRevenue, creatorName)
+            await sendSupportMessage(member.seller_id, message)
+        }
+
+        console.log(`[Group Notify] Notified ${members.length} members of group closed: ${groupName}`)
+    } catch (error) {
+        console.error(`[Group Notify] Failed to notify group closed:`, error)
     }
 }
 

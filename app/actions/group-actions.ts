@@ -288,6 +288,12 @@ export async function leaveGroup(): Promise<{ success: boolean; error?: string }
             }
         })
 
+        // Notify remaining members BEFORE deactivating their enrollments
+        if (isCreator) {
+            const { notifyGroupClosed } = await import('@/lib/org-notifications')
+            await notifyGroupClosed(groupId, membership.Group.name, seller.name || seller.email)
+        }
+
         // Deactivate group enrollments for the leaving seller
         await deactivateGroupEnrollments(seller.user_id!, groupId)
 
