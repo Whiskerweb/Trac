@@ -53,40 +53,131 @@ export default function MarketingQRPage() {
         })
     }, [])
 
-    const downloadQR = useCallback((linkSlug: string, linkId: string, format: 'png' | 'svg') => {
+    const downloadQR = useCallback(async (linkSlug: string, linkId: string, format: 'png' | 'svg') => {
         const svgEl = document.getElementById(`qr-${linkId}`)
         if (!svgEl) return
-
         const svg = svgEl.querySelector('svg')
         if (!svg) return
 
+        const logoSrc = startupLogo || '/logos/28e3dff9-d0d8-4239-bdd4-810b36b7023a_1769596124427.png'
+
+        const loadImage = (src: string): Promise<HTMLImageElement> =>
+            new Promise((resolve, reject) => {
+                const img = new Image()
+                if (src.startsWith('http')) img.crossOrigin = 'anonymous'
+                img.onload = () => resolve(img)
+                img.onerror = reject
+                img.src = src
+            })
+
+        const svgData = new XMLSerializer().serializeToString(svg)
+
         if (format === 'svg') {
-            const svgData = new XMLSerializer().serializeToString(svg)
-            const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `qr-${linkSlug}.svg`
-            a.click()
-            URL.revokeObjectURL(url)
-        } else {
-            const svgData = new XMLSerializer().serializeToString(svg)
-            const canvas = document.createElement('canvas')
-            canvas.width = qrSize * 2
-            canvas.height = qrSize * 2
-            const ctx = canvas.getContext('2d')
-            const img = new Image()
-            img.onload = () => {
-                ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
-                const pngUrl = canvas.toDataURL('image/png')
+            try {
+                // Convert logo to data URL for embedding in SVG
+                const logoImg = await loadImage(logoSrc)
+                const tmpCanvas = document.createElement('canvas')
+                tmpCanvas.width = logoImg.naturalWidth
+                tmpCanvas.height = logoImg.naturalHeight
+                tmpCanvas.getContext('2d')!.drawImage(logoImg, 0, 0)
+                const logoDataUrl = tmpCanvas.toDataURL('image/png')
+
+                const svgClone = svg.cloneNode(true) as SVGSVGElement
+                const vbSize = svgClone.viewBox?.baseVal?.width || 256
+                const logoSize = Math.round(vbSize * 0.22)
+                const logoPadding = Math.round(logoSize * 0.15)
+                const totalArea = logoSize + logoPadding * 2
+                const center = vbSize / 2
+
+                let defs = svgClone.querySelector('defs')
+                if (!defs) {
+                    defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs')
+                    svgClone.insertBefore(defs, svgClone.firstChild)
+                }
+
+                const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath')
+                clipPath.setAttribute('id', 'logo-clip')
+                const clipCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+                clipCircle.setAttribute('cx', String(center))
+                clipCircle.setAttribute('cy', String(center))
+                clipCircle.setAttribute('r', String(logoSize / 2))
+                clipPath.appendChild(clipCircle)
+                defs.appendChild(clipPath)
+
+                const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+                bgCircle.setAttribute('cx', String(center))
+                bgCircle.setAttribute('cy', String(center))
+                bgCircle.setAttribute('r', String(totalArea / 2))
+                bgCircle.setAttribute('fill', '#FFFFFF')
+                svgClone.appendChild(bgCircle)
+
+                const imageEl = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+                imageEl.setAttribute('x', String(center - logoSize / 2))
+                imageEl.setAttribute('y', String(center - logoSize / 2))
+                imageEl.setAttribute('width', String(logoSize))
+                imageEl.setAttribute('height', String(logoSize))
+                imageEl.setAttribute('href', logoDataUrl)
+                imageEl.setAttribute('clip-path', 'url(#logo-clip)')
+                svgClone.appendChild(imageEl)
+
+                const finalSvg = new XMLSerializer().serializeToString(svgClone)
+                const blob = new Blob([finalSvg], { type: 'image/svg+xml;charset=utf-8' })
+                const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
-                a.href = pngUrl
-                a.download = `qr-${linkSlug}.png`
+                a.href = url
+                a.download = `qr-${linkSlug}.svg`
                 a.click()
+                URL.revokeObjectURL(url)
+            } catch {
+                // Fallback: SVG without logo
+                const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `qr-${linkSlug}.svg`
+                a.click()
+                URL.revokeObjectURL(url)
             }
-            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)))
+        } else {
+            const canvasSize = qrSize * 2
+            const canvas = document.createElement('canvas')
+            canvas.width = canvasSize
+            canvas.height = canvasSize
+            const ctx = canvas.getContext('2d')!
+
+            const qrImg = await loadImage('data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData))))
+            ctx.drawImage(qrImg, 0, 0, canvasSize, canvasSize)
+
+            // Draw logo overlay
+            try {
+                const logoImg = await loadImage(logoSrc)
+                const logoSize = Math.round(canvasSize * 0.22)
+                const logoPadding = Math.round(logoSize * 0.15)
+                const totalArea = logoSize + logoPadding * 2
+                const center = canvasSize / 2
+
+                ctx.beginPath()
+                ctx.arc(center, center, totalArea / 2, 0, Math.PI * 2)
+                ctx.fillStyle = '#FFFFFF'
+                ctx.fill()
+
+                ctx.save()
+                ctx.beginPath()
+                ctx.arc(center, center, logoSize / 2, 0, Math.PI * 2)
+                ctx.clip()
+                ctx.drawImage(logoImg, center - logoSize / 2, center - logoSize / 2, logoSize, logoSize)
+                ctx.restore()
+            } catch {
+                // Logo failed to load, export QR without it
+            }
+
+            const pngUrl = canvas.toDataURL('image/png')
+            const a = document.createElement('a')
+            a.href = pngUrl
+            a.download = `qr-${linkSlug}.png`
+            a.click()
         }
-    }, [qrSize])
+    }, [qrSize, startupLogo])
 
     return (
         <div className="space-y-6">
