@@ -61,33 +61,33 @@ export default function ManageOrgSettings() {
     return (
         <div className="space-y-8 max-w-2xl">
             {/* Name & Description */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-6 space-y-5">
-                <h2 className="text-sm font-semibold text-gray-900">General</h2>
+            <div className="bg-white border border-neutral-200/60 rounded-2xl shadow-sm p-6 space-y-5">
+                <h2 className="text-[15px] font-semibold text-neutral-900">General</h2>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Organization Name</label>
+                    <label className="block text-[13px] font-medium text-neutral-700 mb-2">Organization Name</label>
                     <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-300"
+                        className="w-full h-11 px-4 bg-neutral-50/50 border border-neutral-200 rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-neutral-900/5 focus:border-neutral-300 transition-all"
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                    <label className="block text-[13px] font-medium text-neutral-700 mb-2">Description</label>
                     <textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         rows={4}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-300 resize-none"
+                        className="w-full px-4 py-3 bg-neutral-50/50 border border-neutral-200 rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-neutral-900/5 focus:border-neutral-300 resize-none transition-all"
                     />
                 </div>
             </div>
 
             {/* Visibility */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-6 space-y-4">
-                <h2 className="text-sm font-semibold text-gray-900">Visibility</h2>
+            <div className="bg-white border border-neutral-200/60 rounded-2xl shadow-sm p-6 space-y-4">
+                <h2 className="text-[15px] font-semibold text-neutral-900">Visibility</h2>
                 <div className="space-y-2">
                     {VISIBILITY_OPTIONS.map(option => {
                         const Icon = option.icon
@@ -97,15 +97,15 @@ export default function ManageOrgSettings() {
                                 key={option.value}
                                 onClick={() => setVisibility(option.value)}
                                 className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl border text-left transition-all ${
-                                    isSelected ? option.color : 'border-gray-100 hover:border-gray-200'
+                                    isSelected ? option.color : 'border-neutral-200/60 hover:border-neutral-300'
                                 }`}
                             >
-                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isSelected ? '' : 'bg-gray-50'}`}>
-                                    <Icon className={`w-4 h-4 ${isSelected ? '' : 'text-gray-400'}`} />
+                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isSelected ? '' : 'bg-neutral-50'}`}>
+                                    <Icon className={`w-4 h-4 ${isSelected ? '' : 'text-neutral-400'}`} />
                                 </div>
                                 <div className="flex-1">
-                                    <p className={`text-sm font-medium ${isSelected ? '' : 'text-gray-700'}`}>{option.label}</p>
-                                    <p className="text-xs text-gray-400">{option.description}</p>
+                                    <p className={`text-sm font-medium ${isSelected ? '' : 'text-neutral-700'}`}>{option.label}</p>
+                                    <p className="text-xs text-neutral-400">{option.description}</p>
                                 </div>
                                 {isSelected && <Check className="w-4 h-4" />}
                             </button>
@@ -115,19 +115,19 @@ export default function ManageOrgSettings() {
             </div>
 
             {/* Links */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-6 space-y-4">
-                <h2 className="text-sm font-semibold text-gray-900">Share Links</h2>
+            <div className="bg-white border border-neutral-200/60 rounded-2xl shadow-sm p-6 space-y-4">
+                <h2 className="text-[15px] font-semibold text-neutral-900">Share Links</h2>
 
                 {/* Public share link */}
                 {org.slug && (
                     <div>
-                        <label className="block text-xs font-medium text-gray-400 mb-1.5">Public Page</label>
+                        <label className="block text-[13px] font-medium text-neutral-400 mb-2">Public Page</label>
                         <div className="flex gap-2">
-                            <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 truncate">
+                            <div className="flex-1 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-[14px] text-neutral-600 truncate">
                                 {typeof window !== 'undefined' ? `${window.location.origin}/org/${org.slug}` : `/org/${org.slug}`}
                             </div>
-                            <button onClick={copyShareLink} className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                {copiedShare ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                            <button onClick={copyShareLink} className="px-3 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
+                                {copiedShare ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-neutral-400" />}
                             </button>
                         </div>
                     </div>
@@ -136,13 +136,13 @@ export default function ManageOrgSettings() {
                 {/* Invite code link */}
                 {org.invite_code && (
                     <div>
-                        <label className="block text-xs font-medium text-gray-400 mb-1.5">Invite Link (auto-join)</label>
+                        <label className="block text-[13px] font-medium text-neutral-400 mb-2">Invite Link (auto-join)</label>
                         <div className="flex gap-2">
-                            <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 truncate">
+                            <div className="flex-1 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-[14px] text-neutral-600 truncate">
                                 {typeof window !== 'undefined' ? `${window.location.origin}/org/join/${org.invite_code}` : `/org/join/${org.invite_code}`}
                             </div>
-                            <button onClick={copyInviteCode} className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                {copiedInvite ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                            <button onClick={copyInviteCode} className="px-3 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
+                                {copiedInvite ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-neutral-400" />}
                             </button>
                         </div>
                     </div>
@@ -153,7 +153,7 @@ export default function ManageOrgSettings() {
             <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-6 py-3 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2"
+                className="h-11 px-5 bg-neutral-900 text-white rounded-xl text-[14px] font-medium hover:bg-neutral-800 disabled:opacity-50 flex items-center gap-2 transition-colors"
             >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : null}
                 {saved ? 'Saved!' : 'Save Changes'}
