@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
     X,
     Link2,
@@ -9,12 +9,14 @@ import {
     Copy,
     Globe,
     Shuffle,
+    ChevronDown,
     QrCode,
     Image as ImageIcon,
     Twitter
 } from 'lucide-react'
 import { createShortLink } from '@/app/actions/links'
-import QRCode from 'react-qr-code'
+import { getVerifiedDomainForWorkspace } from '@/app/actions/domains'
+import QRCodeWithLogo from '@/components/QRCodeWithLogo'
 import { nanoid } from 'nanoid'
 
 interface CreateLinkModalProps {
@@ -35,6 +37,15 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
     const [tags, setTags] = useState('') // UI only for now
     const [comments, setComments] = useState('') // UI only for now
 
+    // Domain
+    const [verifiedDomain, setVerifiedDomain] = useState<string | null>(null)
+    const [selectedDomain, setSelectedDomain] = useState<string>('')
+    const [showDomainDropdown, setShowDomainDropdown] = useState(false)
+
+    const defaultDomain = typeof window !== 'undefined'
+        ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(/^https?:\/\//, '')
+        : ''
+
     // Reset when opening
     useEffect(() => {
         if (isOpen) {
@@ -44,8 +55,27 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
             setTags('')
             setComments('')
             setError('')
+            setShowDomainDropdown(false)
+
+            getVerifiedDomainForWorkspace().then(res => {
+                if (res.success && res.domain) {
+                    setVerifiedDomain(res.domain)
+                    setSelectedDomain(res.domain)
+                } else {
+                    setVerifiedDomain(null)
+                    setSelectedDomain(defaultDomain)
+                }
+            })
         }
-    }, [isOpen])
+    }, [isOpen, defaultDomain])
+
+    const domainOptions = useMemo(() => {
+        const opts = [{ label: defaultDomain, value: defaultDomain }]
+        if (verifiedDomain && verifiedDomain !== defaultDomain) {
+            opts.unshift({ label: verifiedDomain, value: verifiedDomain })
+        }
+        return opts
+    }, [verifiedDomain, defaultDomain])
 
     // Auto-generate slug from URL
     useEffect(() => {
@@ -86,6 +116,9 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
         const formData = new FormData()
         formData.append('url', url)
         if (slug) formData.append('slug', slug)
+        if (verifiedDomain && selectedDomain === verifiedDomain) {
+            formData.append('domain', verifiedDomain)
+        }
 
         // Tags and Comments are ignored for now as agreed
 
@@ -221,10 +254,37 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                         </button>
                                     </div>
                                     <div className="flex rounded-xl shadow-sm border border-gray-200 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all overflow-hidden">
-                                        <div className="px-4 py-3 bg-gray-50 border-r border-gray-200 text-gray-500 font-medium select-none flex items-center gap-2">
-                                            <Globe className="w-4 h-4" />
-                                            trac.to
-                                            <span className="text-gray-300">/</span>
+                                        <div className="relative">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowDomainDropdown(!showDomainDropdown)}
+                                                className="flex items-center gap-1.5 px-4 py-3 bg-gray-50 border-r border-gray-200 text-gray-500 font-medium hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
+                                            >
+                                                <Globe className="w-4 h-4" />
+                                                {selectedDomain}
+                                                {domainOptions.length > 1 && <ChevronDown className="w-3 h-3 text-gray-400" />}
+                                                <span className="text-gray-300 ml-0.5">/s/</span>
+                                            </button>
+                                            {showDomainDropdown && domainOptions.length > 1 && (
+                                                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[200px]">
+                                                    {domainOptions.map(opt => (
+                                                        <button
+                                                            key={opt.value}
+                                                            onClick={() => {
+                                                                setSelectedDomain(opt.value)
+                                                                setShowDomainDropdown(false)
+                                                            }}
+                                                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                                                                selectedDomain === opt.value ? 'text-gray-900 font-medium' : 'text-gray-700'
+                                                            }`}
+                                                        >
+                                                            <Globe className="w-4 h-4" />
+                                                            {opt.label}
+                                                            {selectedDomain === opt.value && <Check className="w-3 h-3 ml-auto" />}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                         <input
                                             type="text"
@@ -272,11 +332,11 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                     </div>
                                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-center aspect-ratio-1">
                                         <div className="bg-white p-2 rounded-lg">
-                                            <QRCode
+                                            <QRCodeWithLogo
                                                 value={url || 'https://trac.to'}
                                                 size={120}
                                                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                                                viewBox={`0 0 256 256`}
+                                                viewBox="0 0 256 256"
                                             />
                                         </div>
                                     </div>

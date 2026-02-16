@@ -28,6 +28,7 @@ export async function createShortLink(formData: FormData) {
     // Get form data
     const originalUrl = formData.get('url') as string
     let slug = formData.get('slug') as string | null
+    const domain = formData.get('domain') as string | null
 
     // Validate URL
     if (!originalUrl) {
@@ -73,7 +74,7 @@ export async function createShortLink(formData: FormData) {
             linkId: link.id,
             workspaceId: link.workspace_id,
             sellerId: null,
-        })
+        }, domain || undefined)
 
         console.log('[ShortLink] ✅ Created:', link.slug, 'for workspace:', workspace.workspaceId)
 
@@ -85,7 +86,9 @@ export async function createShortLink(formData: FormData) {
                 id: link.id,
                 slug: link.slug,
                 original_url: link.original_url,
-                short_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/s/${link.slug}`,
+                short_url: domain
+                    ? `https://${domain}/s/${link.slug}`
+                    : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/s/${link.slug}`,
             }
         }
     } catch (error) {
