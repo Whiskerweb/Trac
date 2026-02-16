@@ -3,7 +3,9 @@
 import { prisma } from '@/lib/db'
 import { createClient } from '@/utils/supabase/server'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
+import { getCurrentUser } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import type { MessageType, MessageActionStatus, Prisma } from '@/lib/generated/prisma/client'
 
 // =============================================
 // MESSAGING SYSTEM - SERVER ACTIONS
@@ -170,6 +172,9 @@ export async function getMessages(conversationId: string): Promise<{
         is_invitation: boolean
         created_at: Date
         read_at: Date | null
+        message_type: string
+        metadata: Record<string, unknown> | null
+        action_status: string | null
     }>
     error?: string
 }> {
@@ -187,7 +192,10 @@ export async function getMessages(conversationId: string): Promise<{
                 content: m.content,
                 is_invitation: m.is_invitation,
                 created_at: m.created_at,
-                read_at: m.read_at
+                read_at: m.read_at,
+                message_type: m.message_type,
+                metadata: m.metadata as Record<string, unknown> | null,
+                action_status: m.action_status,
             }))
         }
     } catch (error) {
@@ -485,5 +493,357 @@ export async function createInvitationMessage(
     } catch (error) {
         console.error('[Messaging] ❌ createInvitationMessage error:', error)
         return { success: false, error: 'Failed to create invitation message' }
+    }
+}
+
+// =============================================
+// RICH MESSAGES — Helpers & Actions
+// =============================================
+
+/**
+ * Internal helper: send a rich message (card) in a conversation.
+ * Creates the Message with message_type, metadata, action_status
+ * and updates the conversation's last_message / unread counters.
+ */
+export async function sendRichMessage({
+    workspaceId,
+    sellerId,
+    senderType,
+    messageType,
+    content,
+    metadata,
+    actionStatus = 'PENDING',
+}: {
+    workspaceId: string
+    sellerId: string
+    senderType: 'STARTUP' | 'SELLER'
+    messageType: MessageType
+    content: string
+    metadata: Record<string, unknown>
+    actionStatus?: MessageActionStatus
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+        // Upsert conversation
+        let conversation = await prisma.conversation.findUnique({
+            where: { workspace_id_seller_id: { workspace_id: workspaceId, seller_id: sellerId } }
+        })
+        if (!conversation) {
+            conversation = await prisma.conversation.create({
+                data: { workspace_id: workspaceId, seller_id: sellerId }
+            })
+        }
+
+        const message = await prisma.message.create({
+            data: {
+                conversation_id: conversation.id,
+                sender_type: senderType,
+                content,
+                message_type: messageType,
+                metadata: metadata as Prisma.InputJsonValue,
+                action_status: actionStatus,
+            }
+        })
+
+        const preview = content.slice(0, 100)
+        await prisma.conversation.update({
+            where: { id: conversation.id },
+            data: {
+                last_message: preview,
+                last_at: new Date(),
+                ...(senderType === 'STARTUP'
+                    ? { unread_partner: { increment: 1 } }
+                    : { unread_startup: { increment: 1 } }
+                )
+            }
+        })
+
+        return { success: true, messageId: message.id }
+    } catch (error) {
+        console.error('[Messaging] sendRichMessage error:', error)
+        return { success: false, error: 'Failed to send rich message' }
+    }
+}
+
+/**
+ * Internal helper: sync the action_status of a card message.
+ * Finds the message by message_type + a metadata field match within a conversation,
+ * then updates its action_status (and optionally merges extra metadata).
+ */
+export async function syncMessageCardStatus({
+    workspaceId,
+    sellerId,
+    messageType,
+    metadataKey,
+    metadataValue,
+    newStatus,
+    extraMetadata,
+}: {
+    workspaceId: string
+    sellerId: string
+    messageType: MessageType
+    metadataKey: string
+    metadataValue: string
+    newStatus: MessageActionStatus
+    extraMetadata?: Record<string, unknown>
+}): Promise<void> {
+    try {
+        const conversation = await prisma.conversation.findUnique({
+            where: { workspace_id_seller_id: { workspace_id: workspaceId, seller_id: sellerId } }
+        })
+        if (!conversation) return
+
+        // Find the most recent matching card message
+        const messages = await prisma.message.findMany({
+            where: {
+                conversation_id: conversation.id,
+                message_type: messageType,
+            },
+            orderBy: { created_at: 'desc' },
+        })
+
+        const target = messages.find(m => {
+            const meta = m.metadata as Record<string, unknown> | null
+            return meta && meta[metadataKey] === metadataValue
+        })
+
+        if (!target) return
+
+        const updateData: Prisma.MessageUpdateInput = { action_status: newStatus }
+        if (extraMetadata) {
+            const existingMeta = (target.metadata as Record<string, unknown>) || {}
+            updateData.metadata = { ...existingMeta, ...extraMetadata } as Prisma.InputJsonValue
+        }
+
+        await prisma.message.update({
+            where: { id: target.id },
+            data: updateData,
+        })
+    } catch (error) {
+        console.error('[Messaging] syncMessageCardStatus error:', error)
+    }
+}
+
+// =============================================
+// ORG DEAL PROPOSAL — respond from chat
+// =============================================
+
+/**
+ * Leader responds to an org deal proposal card in the chat.
+ * Calls acceptOrgMission or rejectOrgMission under the hood,
+ * then updates the card status.
+ */
+export async function respondToOrgDeal(
+    messageId: string,
+    action: 'ACCEPTED' | 'REJECTED',
+    leaderCut?: string
+): Promise<{ success: boolean; error?: string; memberReward?: string }> {
+    try {
+        const user = await getCurrentUser()
+        if (!user) return { success: false, error: 'Not authenticated' }
+
+        const message = await prisma.message.findUnique({ where: { id: messageId } })
+        if (!message || message.message_type !== 'ORG_DEAL_PROPOSAL') {
+            return { success: false, error: 'Message not found or wrong type' }
+        }
+        if (message.action_status !== 'PENDING') {
+            return { success: false, error: 'Already responded' }
+        }
+
+        const meta = message.metadata as Record<string, unknown>
+        const orgMissionId = meta.orgMissionId as string
+
+        if (action === 'ACCEPTED') {
+            if (!leaderCut) return { success: false, error: 'Leader cut is required' }
+            // Dynamically import to avoid circular deps
+            const { acceptOrgMission } = await import('./organization-actions')
+            const result = await acceptOrgMission(orgMissionId, leaderCut)
+            if (!result.success) return { success: false, error: result.error }
+
+            // Update card
+            await prisma.message.update({
+                where: { id: messageId },
+                data: {
+                    action_status: 'ACCEPTED',
+                    metadata: {
+                        ...meta,
+                        leaderReward: leaderCut,
+                        memberReward: result.memberReward,
+                    } as Prisma.InputJsonValue,
+                }
+            })
+
+            revalidatePath('/seller/messages')
+            revalidatePath('/dashboard/messages')
+            return { success: true, memberReward: result.memberReward }
+        } else {
+            const { rejectOrgMission } = await import('./organization-actions')
+            const result = await rejectOrgMission(orgMissionId)
+            if (!result.success) return { success: false, error: result.error }
+
+            await prisma.message.update({
+                where: { id: messageId },
+                data: { action_status: 'REJECTED' }
+            })
+
+            revalidatePath('/seller/messages')
+            revalidatePath('/dashboard/messages')
+            return { success: true }
+        }
+    } catch (error) {
+        console.error('[Messaging] respondToOrgDeal error:', error)
+        return { success: false, error: 'Failed to respond to deal' }
+    }
+}
+
+// =============================================
+// MISSION INVITE — send & respond from chat
+// =============================================
+
+/**
+ * Startup sends a mission invite card to a seller via chat.
+ */
+export async function sendMissionInviteCard(
+    sellerId: string,
+    missionId: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+        if (!workspace) return { success: false, error: 'Not authenticated' }
+
+        const mission = await prisma.mission.findFirst({
+            where: { id: missionId, workspace_id: workspace.workspaceId }
+        })
+        if (!mission) return { success: false, error: 'Mission not found' }
+
+        // Build reward display string
+        let rewardDisplay = mission.reward || ''
+        if (mission.sale_enabled && mission.sale_reward_amount) {
+            const struct = mission.sale_reward_structure === 'PERCENTAGE' ? '%' : '€'
+            rewardDisplay = `${mission.sale_reward_amount}${struct}/sale`
+        }
+
+        const content = `You're invited to join "${mission.title}". Reward: ${rewardDisplay}`
+
+        await sendRichMessage({
+            workspaceId: workspace.workspaceId,
+            sellerId,
+            senderType: 'STARTUP',
+            messageType: 'MISSION_INVITE',
+            content,
+            metadata: {
+                missionId: mission.id,
+                missionTitle: mission.title,
+                reward: rewardDisplay,
+                companyName: mission.company_name || '',
+                logoUrl: mission.logo_url || '',
+            },
+        })
+
+        revalidatePath('/dashboard/messages')
+        revalidatePath('/seller/messages')
+        return { success: true }
+    } catch (error) {
+        console.error('[Messaging] sendMissionInviteCard error:', error)
+        return { success: false, error: 'Failed to send invite' }
+    }
+}
+
+/**
+ * Seller responds to a mission invite card in the chat.
+ */
+export async function respondToMissionInvite(
+    messageId: string,
+    action: 'ACCEPTED' | 'REJECTED'
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const user = await getCurrentUser()
+        if (!user) return { success: false, error: 'Not authenticated' }
+
+        const message = await prisma.message.findUnique({ where: { id: messageId } })
+        if (!message || message.message_type !== 'MISSION_INVITE') {
+            return { success: false, error: 'Message not found or wrong type' }
+        }
+        if (message.action_status !== 'PENDING') {
+            return { success: false, error: 'Already responded' }
+        }
+
+        const meta = message.metadata as Record<string, unknown>
+        const missionId = meta.missionId as string
+
+        if (action === 'ACCEPTED') {
+            const { joinMission } = await import('./marketplace')
+            const result = await joinMission(missionId)
+            if (!result.success) return { success: false, error: result.error }
+
+            await prisma.message.update({
+                where: { id: messageId },
+                data: {
+                    action_status: 'ACCEPTED',
+                    metadata: { ...meta, enrollmentId: result.enrollment?.id || null } as Prisma.InputJsonValue,
+                }
+            })
+        } else {
+            await prisma.message.update({
+                where: { id: messageId },
+                data: { action_status: 'REJECTED' }
+            })
+        }
+
+        revalidatePath('/seller/messages')
+        revalidatePath('/dashboard/messages')
+        return { success: true }
+    } catch (error) {
+        console.error('[Messaging] respondToMissionInvite error:', error)
+        return { success: false, error: 'Failed to respond to invite' }
+    }
+}
+
+// =============================================
+// ENROLLMENT REQUEST — respond from chat
+// =============================================
+
+/**
+ * Startup responds to an enrollment request card in the chat.
+ */
+export async function respondToEnrollmentRequest(
+    messageId: string,
+    action: 'ACCEPTED' | 'REJECTED'
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const user = await getCurrentUser()
+        if (!user) return { success: false, error: 'Not authenticated' }
+
+        const message = await prisma.message.findUnique({ where: { id: messageId } })
+        if (!message || message.message_type !== 'ENROLLMENT_REQUEST') {
+            return { success: false, error: 'Message not found or wrong type' }
+        }
+        if (message.action_status !== 'PENDING') {
+            return { success: false, error: 'Already responded' }
+        }
+
+        const meta = message.metadata as Record<string, unknown>
+        const programRequestId = meta.programRequestId as string
+
+        if (action === 'ACCEPTED') {
+            const { approveProgramRequest } = await import('./marketplace-actions')
+            const result = await approveProgramRequest(programRequestId)
+            if (!result.success) return { success: false, error: result.error }
+        } else {
+            const { rejectProgramRequest } = await import('./marketplace-actions')
+            const result = await rejectProgramRequest(programRequestId)
+            if (!result.success) return { success: false, error: result.error }
+        }
+
+        await prisma.message.update({
+            where: { id: messageId },
+            data: { action_status: action }
+        })
+
+        revalidatePath('/dashboard/messages')
+        revalidatePath('/seller/messages')
+        return { success: true }
+    } catch (error) {
+        console.error('[Messaging] respondToEnrollmentRequest error:', error)
+        return { success: false, error: 'Failed to respond to request' }
     }
 }

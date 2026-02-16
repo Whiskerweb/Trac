@@ -861,6 +861,33 @@ export async function joinMission(missionId: string): Promise<{
 
             console.log(`[Marketplace] 📝 Created request for PRIVATE mission: seller=${sellerId}, mission=${missionId}`)
 
+            // Auto-send enrollment request card to startup (non-blocking)
+            try {
+                const { sendRichMessage } = await import('./messaging')
+                const sellerInfo = await prisma.seller.findUnique({
+                    where: { id: sellerId },
+                    select: { name: true, email: true, Profile: { select: { avatar_url: true } } }
+                })
+                const content = `${sellerInfo?.name || sellerInfo?.email || 'A seller'} wants to join "${mission.title}"`
+                await sendRichMessage({
+                    workspaceId: mission.workspace_id,
+                    sellerId,
+                    senderType: 'SELLER',
+                    messageType: 'ENROLLMENT_REQUEST',
+                    content,
+                    metadata: {
+                        programRequestId: request.id,
+                        missionId: mission.id,
+                        missionTitle: mission.title,
+                        sellerName: sellerInfo?.name || '',
+                        sellerEmail: sellerInfo?.email || user.email || '',
+                        sellerAvatar: sellerInfo?.Profile?.avatar_url || '',
+                    },
+                })
+            } catch (e) {
+                console.error('[Marketplace] Failed to send enrollment request card:', e)
+            }
+
             revalidatePath('/seller')
             revalidatePath('/seller/marketplace')
 

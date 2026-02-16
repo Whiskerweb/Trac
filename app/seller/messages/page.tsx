@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { MessageSquare, Send, User, Building2, CheckCheck, Gift, ExternalLink, Loader2, ArrowLeft } from 'lucide-react'
 import { getConversations, getMessages, sendMessage, markAsRead } from '@/app/actions/messaging'
+import MessageCard from '@/components/messages/MessageCard'
 import Link from 'next/link'
 
 interface Conversation {
@@ -25,6 +26,9 @@ interface Message {
     is_invitation: boolean
     created_at: Date
     read_at: Date | null
+    message_type: string
+    metadata: Record<string, unknown> | null
+    action_status: string | null
 }
 
 // Loading fallback for Suspense
@@ -114,6 +118,13 @@ function MessagesContent() {
             await loadConversations() // Refresh to update last_message
         }
         setSending(false)
+    }
+
+    async function handleCardAction() {
+        if (selectedConversation) {
+            await loadMessages(selectedConversation)
+            await loadConversations()
+        }
     }
 
     const selectedConvo = conversations.find(c => c.id === selectedConversation)
@@ -235,38 +246,57 @@ function MessagesContent() {
 
                         {/* Messages */}
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-                            {messages.map((msg) => (
-                                <div
-                                    key={msg.id}
-                                    className={`flex ${msg.sender_type === 'SELLER' ? 'justify-end' : 'justify-start'}`}
-                                >
+                            {messages.map((msg) => {
+                                // Rich message card (not TEXT)
+                                if (msg.message_type !== 'TEXT') {
+                                    return (
+                                        <div key={msg.id} className="flex justify-center py-1">
+                                            <MessageCard
+                                                messageId={msg.id}
+                                                messageType={msg.message_type}
+                                                metadata={msg.metadata}
+                                                actionStatus={msg.action_status}
+                                                isOwnMessage={msg.sender_type === 'SELLER'}
+                                                onAction={handleCardAction}
+                                            />
+                                        </div>
+                                    )
+                                }
+
+                                // Standard text / legacy invitation bubble
+                                return (
                                     <div
-                                        className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${msg.is_invitation
-                                                ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
-                                                : msg.sender_type === 'SELLER'
-                                                    ? 'bg-blue-500 text-white'
-                                                    : 'bg-white border border-gray-200 text-gray-900'
-                                            }`}
+                                        key={msg.id}
+                                        className={`flex ${msg.sender_type === 'SELLER' ? 'justify-end' : 'justify-start'}`}
                                     >
-                                        {msg.is_invitation && (
-                                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/30">
-                                                <Gift className="w-4 h-4" />
-                                                <span className="text-sm font-medium">Mission Invitation</span>
-                                            </div>
-                                        )}
-                                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                                        <div className={`flex items-center gap-1 mt-1 ${msg.sender_type === 'SELLER' || msg.is_invitation ? 'text-white/70' : 'text-gray-400'
-                                            }`}>
-                                            <span className="text-xs">
-                                                {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                            {msg.sender_type === 'SELLER' && msg.read_at && (
-                                                <CheckCheck className="w-3 h-3" />
+                                        <div
+                                            className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${msg.is_invitation
+                                                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
+                                                    : msg.sender_type === 'SELLER'
+                                                        ? 'bg-blue-500 text-white'
+                                                        : 'bg-white border border-gray-200 text-gray-900'
+                                                }`}
+                                        >
+                                            {msg.is_invitation && (
+                                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/30">
+                                                    <Gift className="w-4 h-4" />
+                                                    <span className="text-sm font-medium">Mission Invitation</span>
+                                                </div>
                                             )}
+                                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                            <div className={`flex items-center gap-1 mt-1 ${msg.sender_type === 'SELLER' || msg.is_invitation ? 'text-white/70' : 'text-gray-400'
+                                                }`}>
+                                                <span className="text-xs">
+                                                    {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                                {msg.sender_type === 'SELLER' && msg.read_at && (
+                                                    <CheckCheck className="w-3 h-3" />
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                             <div ref={messagesEndRef} />
                         </div>
 

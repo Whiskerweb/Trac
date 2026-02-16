@@ -682,6 +682,21 @@ export async function approveProgramRequest(requestId: string): Promise<{
         const linkUrl = `${baseUrl}/s/${fullSlug}`
         console.log(`[Marketplace] ✅ Approved request: seller=${request.Seller.id}, mission=${request.mission_id}, link=${linkUrl}`)
 
+        // Sync card status in chat (non-blocking)
+        try {
+            const { syncMessageCardStatus } = await import('./messaging')
+            await syncMessageCardStatus({
+                workspaceId: request.Mission.workspace_id,
+                sellerId: request.Seller.id,
+                messageType: 'ENROLLMENT_REQUEST',
+                metadataKey: 'programRequestId',
+                metadataValue: requestId,
+                newStatus: 'ACCEPTED',
+            })
+        } catch (e) {
+            console.error('[Marketplace] Failed to sync enrollment card:', e)
+        }
+
         return {
             success: true,
             enrollment: {
@@ -701,13 +716,32 @@ export async function approveProgramRequest(requestId: string): Promise<{
  */
 export async function rejectProgramRequest(requestId: string) {
     try {
-        await prisma.programRequest.update({
+        const request = await prisma.programRequest.update({
             where: { id: requestId },
             data: {
                 status: 'REJECTED',
                 reviewed_at: new Date()
+            },
+            include: {
+                Seller: { select: { id: true } },
+                Mission: { select: { workspace_id: true } },
             }
         })
+
+        // Sync card status in chat (non-blocking)
+        try {
+            const { syncMessageCardStatus } = await import('./messaging')
+            await syncMessageCardStatus({
+                workspaceId: request.Mission.workspace_id,
+                sellerId: request.Seller.id,
+                messageType: 'ENROLLMENT_REQUEST',
+                metadataKey: 'programRequestId',
+                metadataValue: requestId,
+                newStatus: 'REJECTED',
+            })
+        } catch (e) {
+            console.error('[Marketplace] Failed to sync enrollment card:', e)
+        }
 
         return { success: true }
 

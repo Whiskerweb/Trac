@@ -148,6 +148,13 @@ organization_mission_id   String?          — lie au contrat OrganizationMissio
 group_id                  String?          — SellerGroup.id (revenu va au createur)
 ```
 
+### Champs Message (rich messages)
+```
+message_type              MessageType      @default(TEXT) — type de carte
+metadata                  Json?            — donnees structurees (deal info, mission details)
+action_status             MessageActionStatus? — etat de l'action (null pour TEXT)
+```
+
 ### Enums critiques
 ```
 CommissionStatus: PENDING → PROCEED → COMPLETE
@@ -162,6 +169,8 @@ OrgMemberStatus: PENDING, ACTIVE, REMOVED
 OrgMissionStatus: PROPOSED, ACCEPTED, REJECTED
 SellerGroupStatus: ACTIVE, ARCHIVED
 GroupMemberStatus: ACTIVE, REMOVED
+MessageType: TEXT, ORG_DEAL_PROPOSAL, MISSION_INVITE, ENROLLMENT_REQUEST
+MessageActionStatus: PENDING, ACCEPTED, REJECTED, CANCELLED
 ```
 
 ---
@@ -417,6 +426,18 @@ Responsabilites:
 - [x] **Contraintes** : 1 seul groupe par seller (`seller_id @unique`), max 10 membres, createur quitte → archive
 - [x] **I18n** : `groups` ajoute dans sidebar + traductions (FR/EN/ES)
 - [x] **Tests** : 35 tests (`test-group-commissions.ts`)
+
+### Rich Messages — Deals, Invitations & Actions dans le Chat (Fevrier 2026)
+- [x] **Schema** : `MessageType` (TEXT, ORG_DEAL_PROPOSAL, MISSION_INVITE, ENROLLMENT_REQUEST), `MessageActionStatus` (PENDING, ACCEPTED, REJECTED, CANCELLED) + champs `message_type`, `metadata` (Json), `action_status` sur Message
+- [x] **Server Actions** : `sendRichMessage()`, `syncMessageCardStatus()`, `respondToOrgDeal()`, `sendMissionInviteCard()`, `respondToMissionInvite()`, `respondToEnrollmentRequest()` dans `messaging.ts`
+- [x] **Cartes UI** : `components/messages/MessageCard.tsx` (dispatcher), `OrgDealCard.tsx`, `MissionInviteCard.tsx`, `EnrollmentRequestCard.tsx` — design sobre, framer-motion
+- [x] **Integration pages** : dashboard + seller messages pages rendent les cartes centrees pour les rich messages, bulles classiques pour TEXT
+- [x] **Org Deal auto-send** : `proposeOrgMission()` envoie automatiquement une carte ORG_DEAL_PROPOSAL au leader
+- [x] **Org Deal sync** : `acceptOrgMission()` / `rejectOrgMission()` synchronisent le statut de la carte via `syncMessageCardStatus()`
+- [x] **Enrollment Request auto-send** : `joinMission()` (branche PRIVATE) envoie automatiquement une carte ENROLLMENT_REQUEST a la startup
+- [x] **Enrollment Request sync** : `approveProgramRequest()` / `rejectProgramRequest()` synchronisent le statut
+- [x] **Bouton "+"** : cote startup, popover avec "Propose org deal" + "Invite to mission" avec modales de selection
+- [x] **Backward compat** : anciens messages texte + `is_invitation: true` s'affichent normalement
 
 ---
 

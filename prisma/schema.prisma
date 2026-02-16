@@ -772,20 +772,27 @@ model Conversation {
 
 /// Message in a Conversation
 model Message {
-  id              String       @id @default(cuid())
+  id              String              @id @default(cuid())
   conversation_id String
   sender_type     SenderType
   content         String
   /// Special message type for invitations
-  is_invitation   Boolean      @default(false)
+  is_invitation   Boolean             @default(false)
   /// Reference to ProgramRequest if invitation
   invitation_id   String?
+  /// Rich message type (TEXT for normal messages)
+  message_type    MessageType         @default(TEXT)
+  /// Structured data for rich messages (deal info, mission details, etc.)
+  metadata        Json?
+  /// Action status for interactive cards (null for TEXT messages)
+  action_status   MessageActionStatus?
   read_at         DateTime?
-  created_at      DateTime     @default(now())
-  Conversation    Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  created_at      DateTime            @default(now())
+  Conversation    Conversation        @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
 
   @@index([conversation_id])
   @@index([created_at])
+  @@index([message_type, action_status])
 }
 
 enum EnrollmentStatus {
@@ -868,6 +875,23 @@ enum DiscountType {
 enum SenderType {
   STARTUP
   SELLER
+}
+
+enum MessageType {
+  TEXT
+  /// Org deal proposal (startup → leader)
+  ORG_DEAL_PROPOSAL
+  /// Mission invitation (startup → seller)
+  MISSION_INVITE
+  /// Enrollment request for PRIVATE mission (seller → startup)
+  ENROLLMENT_REQUEST
+}
+
+enum MessageActionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
 }
 
 // === MISSION REWARD ENUMS ===

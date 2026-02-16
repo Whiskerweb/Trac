@@ -573,6 +573,31 @@ export async function proposeOrgMission({ orgId, missionId, totalReward }: {
             }
         })
 
+        // Auto-send rich card to leader (non-blocking)
+        try {
+            const { sendRichMessage } = await import('./messaging')
+            const content = `New org deal proposal: "${template.title}" — Total reward: ${totalReward}`
+            await sendRichMessage({
+                workspaceId: workspace.workspaceId,
+                sellerId: org.leader_id,
+                senderType: 'STARTUP',
+                messageType: 'ORG_DEAL_PROPOSAL',
+                content,
+                metadata: {
+                    orgMissionId: orgMission.id,
+                    orgId: org.id,
+                    orgName: org.name,
+                    missionId: clonedMission.id,
+                    missionTitle: template.title,
+                    totalReward,
+                    companyName: template.company_name || '',
+                    logoUrl: template.logo_url || '',
+                },
+            })
+        } catch (e) {
+            console.error('[Org] Failed to send deal card:', e)
+        }
+
         return { success: true, orgMission }
     } catch (error) {
         console.error('[Org] Failed to propose mission:', error)
@@ -717,6 +742,22 @@ export async function acceptOrgMission(orgMissionId: string, leaderCut: string) 
             memberReward
         ).catch(() => {})
 
+        // Sync card status in chat (non-blocking)
+        try {
+            const { syncMessageCardStatus } = await import('./messaging')
+            await syncMessageCardStatus({
+                workspaceId: orgMission.Mission.workspace_id,
+                sellerId: orgMission.Organization.leader_id,
+                messageType: 'ORG_DEAL_PROPOSAL',
+                metadataKey: 'orgMissionId',
+                metadataValue: orgMissionId,
+                newStatus: 'ACCEPTED',
+                extraMetadata: { leaderReward: leaderCut, memberReward },
+            })
+        } catch (e) {
+            console.error('[Org] Failed to sync deal card:', e)
+        }
+
         return { success: true, memberReward }
     } catch (error) {
         console.error('[Org] Failed to accept mission:', error)
@@ -734,7 +775,7 @@ export async function rejectOrgMission(orgMissionId: string) {
 
         const orgMission = await prisma.organizationMission.findUnique({
             where: { id: orgMissionId },
-            include: { Organization: true }
+            include: { Organization: true, Mission: { select: { workspace_id: true } } }
         })
         if (!orgMission) return { success: false, error: 'Mission proposal not found' }
         if (orgMission.Organization.leader_id !== seller.id) {
@@ -745,6 +786,21 @@ export async function rejectOrgMission(orgMissionId: string) {
             where: { id: orgMissionId },
             data: { status: 'REJECTED' }
         })
+
+        // Sync card status in chat (non-blocking)
+        try {
+            const { syncMessageCardStatus } = await import('./messaging')
+            await syncMessageCardStatus({
+                workspaceId: orgMission.Mission.workspace_id,
+                sellerId: orgMission.Organization.leader_id,
+                messageType: 'ORG_DEAL_PROPOSAL',
+                metadataKey: 'orgMissionId',
+                metadataValue: orgMissionId,
+                newStatus: 'REJECTED',
+            })
+        } catch (e) {
+            console.error('[Org] Failed to sync deal card:', e)
+        }
 
         return { success: true }
     } catch (error) {
@@ -2253,4 +2309,46 @@ export async function getOrgMemberProfile(orgId: string, sellerId: string): Prom
         console.error('[Org] Failed to get member profile:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
+}
+
+// =============================================
+// MESSAGING INTEGRATION — Rich Cards
+// =============================================
+
+/**
+ * Get organizations where a given seller is the leader.
+ * Used by the startup-side quick actions popover.
+ */
+export async function getSellerOrganizations(sellerId: string): Promise<{
+    success: boolean
+    organizations?: Array<{ id: string; name: string }>
+    error?: string
+}> {
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+        if (!workspace) return { success: false, error: 'Not authenticated' }
+
+        const orgs = await prisma.organization.findMany({
+            where: { leader_id: sellerId, status: 'ACTIVE' },
+            select: { id: true, name: true },
+        })
+
+        return { success: true, organizations: orgs }
+    } catch (error) {
+        console.error('[Org] getSellerOrganizations error:', error)
+        return { success: false, error: 'Failed' }
+    }
+}
+
+/**
+ * Startup sends an org deal proposal card via chat.
+ * Delegates to proposeOrgMission which auto-sends the card.
+ */
+export async function sendOrgDealProposalCard({ orgId, missionId, totalReward }: {
+    orgId: string
+    missionId: string
+    totalReward: string
+    sellerId?: string
+}): Promise<{ success: boolean; error?: string }> {
+    return proposeOrgMission({ orgId, missionId, totalReward })
 }

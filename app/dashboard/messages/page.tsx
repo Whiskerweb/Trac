@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { MessageSquare, Send, User, CheckCheck, Gift, ExternalLink, Loader2, ArrowLeft } from 'lucide-react'
-import { getConversations, getMessages, sendMessage, markAsRead } from '@/app/actions/messaging'
+import { MessageSquare, Send, User, CheckCheck, Gift, ExternalLink, Loader2, ArrowLeft, Plus, X, Handshake, Rocket } from 'lucide-react'
+import { getConversations, getMessages, sendMessage, markAsRead, sendMissionInviteCard } from '@/app/actions/messaging'
+import { sendOrgDealProposalCard } from '@/app/actions/organization-actions'
+import MessageCard from '@/components/messages/MessageCard'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 
@@ -26,6 +28,9 @@ interface Message {
     is_invitation: boolean
     created_at: Date
     read_at: Date | null
+    message_type: string
+    metadata: Record<string, unknown> | null
+    action_status: string | null
 }
 
 // Loading fallback for Suspense
@@ -46,6 +51,205 @@ export default function MessagesPage() {
     )
 }
 
+// ---- Quick Actions Popover (startup-side "+" button) ----
+
+function QuickActionsPopover({
+    sellerId,
+    onClose,
+    onDone,
+}: {
+    sellerId: string
+    onClose: () => void
+    onDone: () => void
+}) {
+    const [mode, setMode] = useState<null | 'deal' | 'invite'>(null)
+    const [missions, setMissions] = useState<Array<{ id: string; title: string; reward: string }>>([])
+    const [orgs, setOrgs] = useState<Array<{ id: string; name: string }>>([])
+    const [selectedMission, setSelectedMission] = useState('')
+    const [selectedOrg, setSelectedOrg] = useState('')
+    const [totalReward, setTotalReward] = useState('')
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
+    const [dataLoading, setDataLoading] = useState(false)
+
+    // Load missions + orgs for this seller when opening a sub-mode
+    useEffect(() => {
+        if (mode) {
+            setDataLoading(true)
+            loadData()
+        }
+    }, [mode])
+
+    async function loadData() {
+        try {
+            const { getWorkspaceMissions } = await import('@/app/actions/missions')
+            const missionsResult = await getWorkspaceMissions()
+            if (missionsResult.success && missionsResult.missions) {
+                setMissions(
+                    missionsResult.missions
+                        .filter(m => m.status === 'ACTIVE' && !m.organization_id)
+                        .map(m => ({ id: m.id, title: m.title, reward: m.reward }))
+                )
+            }
+
+            if (mode === 'deal') {
+                const { getSellerOrganizations } = await import('@/app/actions/organization-actions')
+                const orgsResult = await getSellerOrganizations(sellerId)
+                if (orgsResult.success && orgsResult.organizations) {
+                    setOrgs(orgsResult.organizations)
+                }
+            }
+        } catch {
+            // silent
+        }
+        setDataLoading(false)
+    }
+
+    async function handleSendDeal() {
+        if (!selectedOrg || !selectedMission || !totalReward.trim()) {
+            setError('All fields are required')
+            return
+        }
+        setLoading(true)
+        setError('')
+        const result = await sendOrgDealProposalCard({ orgId: selectedOrg, missionId: selectedMission, totalReward, sellerId })
+        if (!result.success) {
+            setError(result.error || 'Failed')
+            setLoading(false)
+            return
+        }
+        setLoading(false)
+        onDone()
+    }
+
+    async function handleSendInvite() {
+        if (!selectedMission) {
+            setError('Select a mission')
+            return
+        }
+        setLoading(true)
+        setError('')
+        const result = await sendMissionInviteCard(sellerId, selectedMission)
+        if (!result.success) {
+            setError(result.error || 'Failed')
+            setLoading(false)
+            return
+        }
+        setLoading(false)
+        onDone()
+    }
+
+    return (
+        <div className="absolute bottom-full left-0 mb-2 w-72 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden">
+            {!mode ? (
+                <div className="p-2">
+                    <button
+                        onClick={() => setMode('deal')}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                    >
+                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                            <Handshake className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-gray-900">Propose org deal</p>
+                            <p className="text-xs text-gray-500">Send a deal to an org leader</p>
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setMode('invite')}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                    >
+                        <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
+                            <Rocket className="w-4 h-4 text-violet-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-gray-900">Invite to mission</p>
+                            <p className="text-xs text-gray-500">Invite this seller to a mission</p>
+                        </div>
+                    </button>
+                </div>
+            ) : dataLoading ? (
+                <div className="p-6 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                </div>
+            ) : mode === 'deal' ? (
+                <div className="p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-gray-900">Propose Deal</p>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                    </div>
+                    <div>
+                        <label className="text-xs text-gray-600 mb-1 block">Organization</label>
+                        <select
+                            value={selectedOrg}
+                            onChange={e => setSelectedOrg(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Select org...</option>
+                            {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-xs text-gray-600 mb-1 block">Mission</label>
+                        <select
+                            value={selectedMission}
+                            onChange={e => setSelectedMission(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Select mission...</option>
+                            {missions.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-xs text-gray-600 mb-1 block">Total reward (e.g. 20% or 15€)</label>
+                        <input
+                            type="text"
+                            value={totalReward}
+                            onChange={e => setTotalReward(e.target.value)}
+                            placeholder="20% or 15€"
+                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    {error && <p className="text-xs text-red-500">{error}</p>}
+                    <button
+                        onClick={handleSendDeal}
+                        disabled={loading}
+                        className="w-full py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Send Deal'}
+                    </button>
+                </div>
+            ) : (
+                <div className="p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-gray-900">Invite to Mission</p>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                    </div>
+                    <div>
+                        <label className="text-xs text-gray-600 mb-1 block">Mission</label>
+                        <select
+                            value={selectedMission}
+                            onChange={e => setSelectedMission(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        >
+                            <option value="">Select mission...</option>
+                            {missions.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                        </select>
+                    </div>
+                    {error && <p className="text-xs text-red-500">{error}</p>}
+                    <button
+                        onClick={handleSendInvite}
+                        disabled={loading}
+                        className="w-full py-2 bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Send Invite'}
+                    </button>
+                </div>
+            )}
+        </div>
+    )
+}
+
 function MessagesContent() {
     const t = useTranslations('messages')
     const searchParams = useSearchParams()
@@ -57,6 +261,7 @@ function MessagesContent() {
     const [newMessage, setNewMessage] = useState('')
     const [loading, setLoading] = useState(true)
     const [sending, setSending] = useState(false)
+    const [showActions, setShowActions] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     // Load conversations
@@ -116,6 +321,13 @@ function MessagesContent() {
             await loadConversations() // Refresh to update last_message
         }
         setSending(false)
+    }
+
+    async function handleCardAction() {
+        if (selectedConversation) {
+            await loadMessages(selectedConversation)
+            await loadConversations()
+        }
     }
 
     const selectedConvo = conversations.find(c => c.id === selectedConversation)
@@ -259,46 +471,88 @@ function MessagesContent() {
 
                         {/* Messages */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                            {messages.map((msg) => (
-                                <div
-                                    key={msg.id}
-                                    className={`flex ${msg.sender_type === 'STARTUP' ? 'justify-end' : 'justify-start'}`}
-                                >
+                            {messages.map((msg) => {
+                                // Rich message card (not TEXT)
+                                if (msg.message_type !== 'TEXT') {
+                                    return (
+                                        <div key={msg.id} className="flex justify-center py-1">
+                                            <MessageCard
+                                                messageId={msg.id}
+                                                messageType={msg.message_type}
+                                                metadata={msg.metadata}
+                                                actionStatus={msg.action_status}
+                                                isOwnMessage={msg.sender_type === 'STARTUP'}
+                                                onAction={handleCardAction}
+                                            />
+                                        </div>
+                                    )
+                                }
+
+                                // Legacy invitation bubble (backward compat)
+                                return (
                                     <div
-                                        className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
-                                            msg.is_invitation
-                                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
-                                                : msg.sender_type === 'STARTUP'
-                                                    ? 'bg-violet-500 text-white'
-                                                    : 'bg-white border border-gray-200 text-gray-900'
-                                        }`}
+                                        key={msg.id}
+                                        className={`flex ${msg.sender_type === 'STARTUP' ? 'justify-end' : 'justify-start'}`}
                                     >
-                                        {msg.is_invitation && (
-                                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/30">
-                                                <Gift className="w-4 h-4" />
-                                                <span className="text-sm font-medium">{t('missionInvitation')}</span>
-                                            </div>
-                                        )}
-                                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                                        <div className={`flex items-center gap-1 mt-1 ${
-                                            msg.sender_type === 'STARTUP' || msg.is_invitation ? 'text-white/70' : 'text-gray-400'
-                                        }`}>
-                                            <span className="text-xs">
-                                                {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                            {msg.sender_type === 'STARTUP' && msg.read_at && (
-                                                <CheckCheck className="w-3 h-3" />
+                                        <div
+                                            className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                                                msg.is_invitation
+                                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+                                                    : msg.sender_type === 'STARTUP'
+                                                        ? 'bg-violet-500 text-white'
+                                                        : 'bg-white border border-gray-200 text-gray-900'
+                                            }`}
+                                        >
+                                            {msg.is_invitation && (
+                                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/30">
+                                                    <Gift className="w-4 h-4" />
+                                                    <span className="text-sm font-medium">{t('missionInvitation')}</span>
+                                                </div>
                                             )}
+                                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                            <div className={`flex items-center gap-1 mt-1 ${
+                                                msg.sender_type === 'STARTUP' || msg.is_invitation ? 'text-white/70' : 'text-gray-400'
+                                            }`}>
+                                                <span className="text-xs">
+                                                    {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                                {msg.sender_type === 'STARTUP' && msg.read_at && (
+                                                    <CheckCheck className="w-3 h-3" />
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                             <div ref={messagesEndRef} />
                         </div>
 
                         {/* Input */}
                         <div className="p-4 sm:p-6 bg-white border-t border-gray-200">
                             <div className="flex items-center gap-2 sm:gap-3">
+                                {/* Quick actions "+" button */}
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setShowActions(!showActions)}
+                                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                                            showActions
+                                                ? 'bg-violet-500 text-white'
+                                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        {showActions ? <X className="w-4 h-4" /> : <Plus className="w-5 h-5" />}
+                                    </button>
+                                    {showActions && selectedConvo.seller_id && (
+                                        <QuickActionsPopover
+                                            sellerId={selectedConvo.seller_id}
+                                            onClose={() => setShowActions(false)}
+                                            onDone={() => {
+                                                setShowActions(false)
+                                                handleCardAction()
+                                            }}
+                                        />
+                                    )}
+                                </div>
                                 <input
                                     type="text"
                                     value={newMessage}
