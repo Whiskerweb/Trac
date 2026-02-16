@@ -555,7 +555,8 @@ export async function getAllMissions(): Promise<{
                 status: 'ACTIVE',
                 visibility: {
                     in: ['PUBLIC', 'PRIVATE']
-                }
+                },
+                organization_id: null,
             },
             orderBy: { created_at: 'desc' },
             include: {

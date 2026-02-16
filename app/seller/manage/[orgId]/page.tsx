@@ -153,7 +153,7 @@ function MemberDashboard({ org, stats }: { org: any; stats: any }) {
                         {acceptedMissions.map((om: any) => (
                             <Link
                                 key={om.id}
-                                href={`/seller/marketplace/${om.Mission?.id}`}
+                                href={`/seller/manage/${org.id}/mission/${om.id}`}
                                 className="flex items-center justify-between p-3 rounded-xl hover:bg-neutral-50/80 transition-colors cursor-pointer group"
                             >
                                 <div className="flex items-center gap-3">
@@ -191,7 +191,11 @@ function MemberDashboard({ org, stats }: { org: any; stats: any }) {
                     <h2 className="text-[15px] font-semibold text-neutral-900 mb-4">Members ({activeMembers.length})</h2>
                     <div className="divide-y divide-neutral-100">
                         {activeMembers.slice(0, 20).map((m: any) => (
-                            <div key={m.id} className="flex items-center gap-3 py-3">
+                            <Link
+                                key={m.id}
+                                href={`/seller/manage/${org.id}/member/${m.Seller?.id}`}
+                                className="flex items-center gap-3 py-3 hover:bg-neutral-50/60 rounded-lg px-2 -mx-2 transition-colors"
+                            >
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neutral-200 to-neutral-300 flex items-center justify-center flex-shrink-0">
                                     <span className="text-xs font-semibold text-neutral-600">
                                         {(m.Seller?.name || m.Seller?.email || '?').charAt(0).toUpperCase()}
@@ -201,7 +205,7 @@ function MemberDashboard({ org, stats }: { org: any; stats: any }) {
                                     <p className="text-[14px] font-medium text-neutral-900">{m.Seller?.name || 'Seller'}</p>
                                     <p className="text-[12px] text-neutral-400">{m.Seller?.email}</p>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                         {activeMembers.length > 20 && (
                             <div className="py-3 text-center">

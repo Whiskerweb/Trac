@@ -93,7 +93,15 @@ model Mission {
   /// Unique code for INVITE_ONLY missions (allows joining via /invite/[code])
   invite_code String? @unique
 
+  /// If set, this mission is exclusive to an organization (not shown in marketplace)
+  organization_id    String?
+  /// The template mission this was cloned from
+  source_mission_id  String?
+
   Workspace            Workspace              @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  Organization         Organization?          @relation("OrgExclusiveMissions", fields: [organization_id], references: [id])
+  SourceMission        Mission?               @relation("MissionTemplate", fields: [source_mission_id], references: [id], onDelete: SetNull)
+  DerivedMissions      Mission[]              @relation("MissionTemplate")
   Contents             MissionContent[]
   MissionEnrollment    MissionEnrollment[]
   Requests             ProgramRequest[]
@@ -103,6 +111,7 @@ model Mission {
   @@index([status])
   @@index([visibility])
   @@index([workspace_id])
+  @@index([organization_id])
 }
 
 model MissionEnrollment {
@@ -658,9 +667,10 @@ model Organization {
   created_at         DateTime                @default(now())
   updated_at         DateTime                @updatedAt
 
-  Leader   Seller               @relation("OrgLeader", fields: [leader_id], references: [id])
-  Members  OrganizationMember[]
-  Missions OrganizationMission[]
+  Leader            Seller               @relation("OrgLeader", fields: [leader_id], references: [id])
+  Members           OrganizationMember[]
+  Missions          OrganizationMission[]
+  ExclusiveMissions Mission[]            @relation("OrgExclusiveMissions")
 
   @@index([leader_id])
   @@index([status])

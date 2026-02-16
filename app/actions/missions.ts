@@ -448,6 +448,7 @@ export async function getWorkspaceMissions(): Promise<{
         created_at: Date
         _count: { enrollments: number }
         visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
+        organization_id: string | null
     }[]
     error?: string
 }> {
@@ -486,7 +487,8 @@ export async function getWorkspaceMissions(): Promise<{
                 status: m.status,
                 created_at: m.created_at,
                 _count: { enrollments: m._count.MissionEnrollment },
-                visibility: m.visibility as 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
+                visibility: m.visibility as 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY',
+                organization_id: m.organization_id,
             }))
         }
 
@@ -602,6 +604,17 @@ export async function deleteMission(missionId: string): Promise<{
                 await deleteLinkFromRedis(enrollment.ShortLink.slug)
             }
         }
+
+        // 4. Cancel ACCEPTED OrganizationMissions tied to this mission
+        await prisma.organizationMission.updateMany({
+            where: { mission_id: missionId, status: 'ACCEPTED' },
+            data: { status: 'CANCELLED' }
+        })
+
+        // 5. Delete GroupMissions tied to this mission
+        await prisma.groupMission.deleteMany({
+            where: { mission_id: missionId }
+        })
 
         console.log('[Mission] 📦 Archived:', missionId, `(${mission.MissionEnrollment.length} enrollments archived)`)
 

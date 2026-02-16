@@ -29,7 +29,8 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
             status: 'ACTIVE',
             visibility: {
                 in: ['PUBLIC', 'PRIVATE'] as MissionVisibility[]
-            }
+            },
+            organization_id: null,
         }
 
         // Collect AND conditions

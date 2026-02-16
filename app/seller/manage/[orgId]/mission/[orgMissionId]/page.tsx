@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Loader2, Crown } from 'lucide-react'
+import { ArrowLeft, Loader2, Crown, MessageSquare, ExternalLink, ChevronRight } from 'lucide-react'
 import { getOrgMissionDetail } from '@/app/actions/organization-actions'
 import type { OrgMissionDetail } from '@/app/actions/organization-actions'
+import { getOrCreateConversationForSeller } from '@/app/actions/messaging'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
 
 function OrgCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -66,6 +67,7 @@ function DealBreakdown({ orgDeal }: { orgDeal: OrgMissionDetail['orgDeal'] }) {
 
 export default function OrgMissionDetailPage() {
     const params = useParams()
+    const router = useRouter()
     const orgId = params.orgId as string
     const orgMissionId = params.orgMissionId as string
 
@@ -73,6 +75,7 @@ export default function OrgMissionDetailPage() {
     const [detail, setDetail] = useState<OrgMissionDetail | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [activeEventTypes, setActiveEventTypes] = useState<Set<string>>(new Set(['clicks', 'leads', 'sales']))
+    const [messagingLoading, setMessagingLoading] = useState(false)
 
     useEffect(() => {
         async function load() {
@@ -193,6 +196,51 @@ export default function OrgMissionDetailPage() {
                     </div>
                 </OrgCard>
 
+                {/* Startup Card */}
+                {mission.workspaceId && (
+                    <OrgCard className="p-6">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3.5">
+                                {mission.logoUrl ? (
+                                    <img src={mission.logoUrl} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="" />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0">
+                                        <span className="text-sm font-bold text-neutral-400">
+                                            {mission.companyName?.charAt(0) || 'S'}
+                                        </span>
+                                    </div>
+                                )}
+                                <div>
+                                    <p className="text-[14px] font-medium text-neutral-900">{mission.companyName || 'Startup'}</p>
+                                    <p className="text-[12px] text-neutral-400">Startup</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={async () => {
+                                        if (messagingLoading || !mission.workspaceId) return
+                                        setMessagingLoading(true)
+                                        const result = await getOrCreateConversationForSeller(mission.workspaceId)
+                                        setMessagingLoading(false)
+                                        if (result.success && result.conversationId) {
+                                            router.push(`/seller/messages?conversation=${result.conversationId}`)
+                                        }
+                                    }}
+                                    disabled={messagingLoading}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50"
+                                >
+                                    {messagingLoading ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <MessageSquare className="w-3.5 h-3.5" />
+                                    )}
+                                    Message
+                                </button>
+                            </div>
+                        </div>
+                    </OrgCard>
+                )}
+
                 {/* Deal Breakdown Card */}
                 <OrgCard>
                     <div className="p-6">
@@ -224,34 +272,39 @@ export default function OrgMissionDetailPage() {
                         {memberBreakdown.length > 0 ? (
                             <div className="space-y-1">
                                 {memberBreakdown.map((member, index) => (
-                                    <motion.div
+                                    <Link
                                         key={member.sellerId}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.04 * index }}
-                                        className="flex items-center justify-between py-3 px-3 -mx-3 rounded-xl hover:bg-neutral-50/80 transition-colors"
+                                        href={`/seller/manage/${orgId}/member/${member.sellerId}`}
                                     >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            {member.avatarUrl ? (
-                                                <img src={member.avatarUrl} className="w-8 h-8 rounded-full object-cover flex-shrink-0" alt="" />
-                                            ) : (
-                                                <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center flex-shrink-0">
-                                                    <span className="text-[11px] font-medium text-neutral-500">
-                                                        {member.name.charAt(0).toUpperCase()}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            <span className="text-[14px] text-neutral-700 truncate">{member.name}</span>
-                                        </div>
-                                        <div className="flex items-center gap-4 flex-shrink-0 ml-3">
-                                            <span className="text-[13px] text-neutral-400 tabular-nums">
-                                                {member.clicks} clicks &middot; {member.salesCount} sales
-                                            </span>
-                                            <span className="text-[14px] font-medium text-neutral-900 tabular-nums">
-                                                {formatCurrency(member.revenue)}
-                                            </span>
-                                        </div>
-                                    </motion.div>
+                                        <motion.div
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.04 * index }}
+                                            className="flex items-center justify-between py-3 px-3 -mx-3 rounded-xl hover:bg-neutral-50/80 transition-colors group"
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                {member.avatarUrl ? (
+                                                    <img src={member.avatarUrl} className="w-8 h-8 rounded-full object-cover flex-shrink-0" alt="" />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-[11px] font-medium text-neutral-500">
+                                                            {member.name.charAt(0).toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <span className="text-[14px] text-neutral-700 truncate">{member.name}</span>
+                                            </div>
+                                            <div className="flex items-center gap-4 flex-shrink-0 ml-3">
+                                                <span className="text-[13px] text-neutral-400 tabular-nums">
+                                                    {member.clicks} clicks &middot; {member.salesCount} sales
+                                                </span>
+                                                <span className="text-[14px] font-medium text-neutral-900 tabular-nums">
+                                                    {formatCurrency(member.revenue)}
+                                                </span>
+                                                <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-400" />
+                                            </div>
+                                        </motion.div>
+                                    </Link>
                                 ))}
                             </div>
                         ) : (

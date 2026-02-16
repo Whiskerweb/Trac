@@ -490,11 +490,11 @@ export async function proposeOrgMission({ orgId, missionId, totalReward }: {
         const workspace = await getActiveWorkspaceForUser()
         if (!workspace) return { success: false, error: 'Not authenticated' }
 
-        // Verify mission belongs to this workspace
-        const mission = await prisma.mission.findFirst({
-            where: { id: missionId, workspace_id: workspace.workspaceId }
+        // Verify template mission belongs to this workspace and is NOT already an org-exclusive clone
+        const template = await prisma.mission.findFirst({
+            where: { id: missionId, workspace_id: workspace.workspaceId, organization_id: null }
         })
-        if (!mission) return { success: false, error: 'Mission not found' }
+        if (!template) return { success: false, error: 'Mission not found' }
 
         // Verify org is active
         const org = await prisma.organization.findUnique({ where: { id: orgId } })
@@ -511,16 +511,54 @@ export async function proposeOrgMission({ orgId, missionId, totalReward }: {
             }
         }
 
+        // Clone the template mission as an org-exclusive mission
+        const clonedMission = await prisma.mission.create({
+            data: {
+                workspace_id: template.workspace_id,
+                title: template.title,
+                description: template.description,
+                target_url: template.target_url,
+                reward: template.reward,
+                status: 'ACTIVE',
+                gain_type: template.gain_type,
+                industry: template.industry,
+                visibility: 'INVITE_ONLY',
+                reward_type: template.reward_type,
+                commission_structure: template.commission_structure,
+                reward_structure: template.reward_structure,
+                reward_amount: template.reward_amount,
+                recurring_duration: template.recurring_duration,
+                lead_enabled: template.lead_enabled,
+                lead_reward_amount: template.lead_reward_amount,
+                sale_enabled: template.sale_enabled,
+                sale_reward_amount: template.sale_reward_amount,
+                sale_reward_structure: template.sale_reward_structure,
+                recurring_enabled: template.recurring_enabled,
+                recurring_reward_amount: template.recurring_reward_amount,
+                recurring_reward_structure: template.recurring_reward_structure,
+                recurring_duration_months: template.recurring_duration_months,
+                country_filter_type: template.country_filter_type,
+                country_filter_list: template.country_filter_list,
+                company_name: template.company_name,
+                logo_url: template.logo_url,
+                contact_email: template.contact_email,
+                help_center_url: template.help_center_url,
+                organization_id: orgId,
+                source_mission_id: missionId,
+            }
+        })
+
+        // Create OrganizationMission pointing to the CLONE
         const orgMission = await prisma.organizationMission.upsert({
             where: {
                 organization_id_mission_id: {
                     organization_id: orgId,
-                    mission_id: missionId,
+                    mission_id: clonedMission.id,
                 }
             },
             create: {
                 organization_id: orgId,
-                mission_id: missionId,
+                mission_id: clonedMission.id,
                 total_reward: totalReward,
                 leader_reward: null,
                 member_reward: null,
@@ -813,6 +851,31 @@ export async function cancelOrgMission(orgMissionId: string) {
             }
 
             console.log(`[Org] Deleted ${pendingCommissions.length} PENDING commissions for cancelled mission ${orgMissionId}`)
+        }
+
+        // 4. Archive all APPROVED enrollments tied to this org mission + remove ShortLinks from Redis
+        const orgEnrollments = await prisma.missionEnrollment.findMany({
+            where: {
+                organization_mission_id: orgMissionId,
+                status: 'APPROVED'
+            },
+            include: { ShortLink: { select: { slug: true } } }
+        })
+
+        if (orgEnrollments.length > 0) {
+            await prisma.missionEnrollment.updateMany({
+                where: { id: { in: orgEnrollments.map(e => e.id) } },
+                data: { status: 'ARCHIVED' }
+            })
+
+            const { deleteLinkFromRedis } = await import('@/lib/redis')
+            for (const enrollment of orgEnrollments) {
+                if (enrollment.ShortLink?.slug) {
+                    await deleteLinkFromRedis(enrollment.ShortLink.slug)
+                }
+            }
+
+            console.log(`[Org] Archived ${orgEnrollments.length} enrollments for cancelled mission ${orgMissionId}`)
         }
 
         console.log(`[Org] Mission ${orgMission.Mission.title} cancelled for org ${orgMission.Organization.id}`)
@@ -1448,6 +1511,7 @@ export type OrgMissionDetail = {
         title: string
         companyName: string | null
         logoUrl: string | null
+        workspaceId: string | null
         lead_enabled: boolean
         sale_enabled: boolean
         recurring_enabled: boolean
@@ -1516,6 +1580,7 @@ export async function getOrgMissionDetail(orgMissionId: string): Promise<{
                         recurring_reward_amount: true, recurring_reward_structure: true,
                         Workspace: {
                             select: {
+                                id: true,
                                 name: true,
                                 Profile: { select: { logo_url: true } }
                             }
@@ -1638,6 +1703,7 @@ export async function getOrgMissionDetail(orgMissionId: string): Promise<{
                     title: mission.title,
                     companyName: mission.company_name || mission.Workspace?.name || null,
                     logoUrl: mission.logo_url || mission.Workspace?.Profile?.logo_url || null,
+                    workspaceId: mission.Workspace?.id || null,
                     lead_enabled: mission.lead_enabled,
                     sale_enabled: mission.sale_enabled,
                     recurring_enabled: mission.recurring_enabled,
@@ -2082,4 +2148,109 @@ export async function resyncOrgLinksToRedis() {
 
     console.log(`[Org] Resynced ${synced} org links to Redis`)
     return { success: true, synced }
+}
+
+// =============================================
+// MEMBER PROFILE (seller-to-seller within org)
+// =============================================
+
+export type OrgMemberProfileData = {
+    id: string
+    name: string | null
+    email: string
+    avatarUrl: string | null
+    bio: string | null
+    country: string | null
+    profileType: string | null
+    activityType: string | null
+    monthlyTraffic: string | null
+    industryInterests: string[]
+    socials: {
+        tiktok?: string | null
+        instagram?: string | null
+        twitter?: string | null
+        youtube?: string | null
+        website?: string | null
+        linkedin?: string | null
+    }
+    portfolioUrl: string | null
+    cvUrl: string | null
+}
+
+/**
+ * Get a member's profile within an org context.
+ * Caller must be an active member or leader of the same org.
+ */
+export async function getOrgMemberProfile(orgId: string, sellerId: string): Promise<{
+    success: boolean
+    profile?: OrgMemberProfileData
+    error?: string
+}> {
+    try {
+        const caller = await getSellerForCurrentUser()
+        if (!caller) return { success: false, error: 'Not authenticated' }
+
+        // Verify caller is leader or active member of this org
+        const org = await prisma.organization.findUnique({
+            where: { id: orgId },
+            include: {
+                Members: { where: { status: 'ACTIVE' }, select: { seller_id: true } }
+            }
+        })
+        if (!org) return { success: false, error: 'Organization not found' }
+
+        const callerIsLeader = org.leader_id === caller.id
+        const callerIsMember = org.Members.some(m => m.seller_id === caller.id)
+        if (!callerIsLeader && !callerIsMember) {
+            return { success: false, error: 'Access denied' }
+        }
+
+        // Verify target is leader or active member
+        const targetIsLeader = org.leader_id === sellerId
+        const targetIsMember = org.Members.some(m => m.seller_id === sellerId)
+        if (!targetIsLeader && !targetIsMember) {
+            return { success: false, error: 'Member not found in this organization' }
+        }
+
+        // Fetch seller + profile
+        const seller = await prisma.seller.findUnique({
+            where: { id: sellerId },
+            include: {
+                Profile: true,
+            }
+        })
+        if (!seller) return { success: false, error: 'Seller not found' }
+
+        const p = seller.Profile
+        const interests = (p?.industry_interests as string[] | null) || []
+
+        return {
+            success: true,
+            profile: {
+                id: seller.id,
+                name: seller.name,
+                email: seller.email,
+                avatarUrl: p?.avatar_url || null,
+                bio: p?.bio || null,
+                country: p?.country || null,
+                profileType: p?.profile_type || null,
+                activityType: p?.activity_type || null,
+                monthlyTraffic: p?.monthly_traffic || null,
+                industryInterests: interests,
+                socials: {
+                    tiktok: p?.tiktok_url,
+                    instagram: p?.instagram_url,
+                    twitter: p?.twitter_url,
+                    youtube: p?.youtube_url,
+                    website: p?.website_url,
+                    linkedin: p?.linkedin_url,
+                },
+                portfolioUrl: p?.portfolio_url || null,
+                cvUrl: p?.cv_url || null,
+            }
+        }
+    } catch (error) {
+        console.error('[Org] Failed to get member profile:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
 }

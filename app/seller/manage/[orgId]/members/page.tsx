@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import { Loader2, UserPlus, Check, X, Mail, Search, Users, Clock, UserCheck, UserMinus, Send, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOrg } from '../layout'
@@ -91,6 +93,8 @@ function StatPill({ icon: Icon, label, value, color }: {
 
 export default function ManageOrgMembers() {
     const { org, isLeader, reload } = useOrg()
+    const params = useParams()
+    const orgId = params.orgId as string
     const [inviteEmail, setInviteEmail] = useState('')
     const [inviting, setInviting] = useState(false)
     const [inviteMsg, setInviteMsg] = useState<{ text: string; success: boolean } | null>(null)
@@ -125,9 +129,10 @@ export default function ManageOrgMembers() {
                 ) : (
                     <div className="bg-white border border-neutral-200/60 rounded-2xl shadow-sm overflow-hidden">
                         {activeMembers.map((m: any, i: number) => (
-                            <div
+                            <Link
                                 key={m.id}
-                                className={`flex items-center gap-3.5 px-5 py-3.5 ${
+                                href={`/seller/manage/${orgId}/member/${m.Seller?.id}`}
+                                className={`flex items-center gap-3.5 px-5 py-3.5 hover:bg-neutral-50/60 transition-colors ${
                                     i < activeMembers.length - 1 ? 'border-b border-neutral-100' : ''
                                 }`}
                             >
@@ -136,7 +141,7 @@ export default function ManageOrgMembers() {
                                     <p className="text-[14px] font-medium text-neutral-900">{m.Seller?.name || 'Unknown'}</p>
                                     <p className="text-[12px] text-neutral-400">{m.Seller?.email}</p>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 )}
@@ -371,13 +376,16 @@ export default function ManageOrgMembers() {
                                         i < filteredActive.length - 1 ? 'border-b border-neutral-100' : ''
                                     }`}
                                 >
-                                    <div className="flex items-center gap-3.5">
+                                    <Link
+                                        href={`/seller/manage/${orgId}/member/${m.Seller?.id}`}
+                                        className="flex items-center gap-3.5 flex-1 min-w-0"
+                                    >
                                         <MemberAvatar name={m.Seller?.name || m.Seller?.email || '?'} />
                                         <div>
                                             <p className="text-[14px] font-medium text-neutral-900">{m.Seller?.name || 'Unknown'}</p>
                                             <p className="text-[12px] text-neutral-400">{m.Seller?.email}</p>
                                         </div>
-                                    </div>
+                                    </Link>
                                     <button
                                         onClick={() => handleRemove(m.id)}
                                         disabled={actionLoading === m.id}

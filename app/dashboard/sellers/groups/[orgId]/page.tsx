@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Loader2, ArrowLeft, Users, Target, Send, X, AlertTriangle, Ban, Check, Info, DollarSign, ShoppingCart, Trophy, BarChart3 } from 'lucide-react'
+import { Loader2, ArrowLeft, Users, Target, Send, X, AlertTriangle, Ban, Check, Info, DollarSign, ShoppingCart, Trophy, BarChart3, MessageSquare } from 'lucide-react'
 import { getActiveOrganizationsForStartup, proposeOrgMission, cancelOrgMission, getOrgStatsForStartup } from '@/app/actions/organization-actions'
 import { getWorkspaceMissions } from '@/app/actions/missions'
+import { initializeConversation } from '@/app/actions/messaging'
 
 // ---- Helpers ----
 
@@ -111,6 +112,9 @@ export default function OrgDetailPage() {
     const [showPropose, setShowPropose] = useState(false)
     const [proposing, setProposing] = useState(false)
     const [proposeError, setProposeError] = useState<string | null>(null)
+
+    // Messaging state
+    const [messagingLeader, setMessagingLeader] = useState(false)
 
     // Cancel state
     const [cancellingId, setCancellingId] = useState<string | null>(null)
@@ -223,7 +227,7 @@ export default function OrgDetailPage() {
 
     // Missions already proposed (to filter from selector)
     const alreadyProposedMissionIds = new Set(org.Missions?.map((m: any) => m.mission_id) || [])
-    const availableMissions = missions.filter(m => !alreadyProposedMissionIds.has(m.id))
+    const availableMissions = missions.filter(m => !alreadyProposedMissionIds.has(m.id) && !m.organization_id)
 
     return (
         <div className="space-y-8">
@@ -246,14 +250,38 @@ export default function OrgDetailPage() {
                             <p className="text-sm text-gray-500">Led by {org.Leader?.name || org.Leader?.email} · {org._count?.Members || 0} active members</p>
                         </div>
                     </div>
-                    {availableMissions.length > 0 && (
-                        <button
-                            onClick={() => setShowPropose(true)}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
-                        >
-                            <Send className="w-4 h-4" /> Propose Mission
-                        </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {org.leader_id && (
+                            <button
+                                onClick={async () => {
+                                    if (messagingLeader) return
+                                    setMessagingLeader(true)
+                                    const result = await initializeConversation(org.leader_id)
+                                    setMessagingLeader(false)
+                                    if (result.success && result.conversationId) {
+                                        router.push(`/dashboard/messages?conversation=${result.conversationId}`)
+                                    }
+                                }}
+                                disabled={messagingLeader}
+                                className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            >
+                                {messagingLeader ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <MessageSquare className="w-4 h-4" />
+                                )}
+                                Message Leader
+                            </button>
+                        )}
+                        {availableMissions.length > 0 && (
+                            <button
+                                onClick={() => setShowPropose(true)}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+                            >
+                                <Send className="w-4 h-4" /> Propose Mission
+                            </button>
+                        )}
+                    </div>
                 </div>
                 {org.description && (
                     <p className="text-gray-500 mt-3 text-sm">{org.description}</p>
@@ -516,7 +544,7 @@ export default function OrgDetailPage() {
 
                         {/* Mission selector */}
                         <div>
-                            <label className="text-sm font-medium text-gray-700 block mb-1.5">Select a mission</label>
+                            <label className="text-sm font-medium text-gray-700 block mb-1.5">Select a template mission</label>
                             <select
                                 value={selectedMission}
                                 onChange={e => setSelectedMission(e.target.value)}
