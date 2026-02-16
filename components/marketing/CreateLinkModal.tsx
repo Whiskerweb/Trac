@@ -11,7 +11,7 @@ import {
 import { createMarketingLink } from '@/app/actions/marketing-links'
 import { getVerifiedDomainForWorkspace } from '@/app/actions/domains'
 import { PREDEFINED_CHANNELS } from '@/lib/marketing/channels'
-import QRCode from 'react-qr-code'
+import QRCodeWithLogo from '@/components/QRCodeWithLogo'
 import { nanoid } from 'nanoid'
 
 interface CreateLinkModalProps {
@@ -239,7 +239,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
 
                         {/* QR Code */}
                         <div className="bg-white p-4 rounded-lg border border-gray-200 mb-6">
-                            <QRCode
+                            <QRCodeWithLogo
                                 value={result.short_url}
                                 size={140}
                                 style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
@@ -419,7 +419,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                 <div>
                                     <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">{t('modal.qrPreview')}</h3>
                                     <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-center">
-                                        <QRCode
+                                        <QRCodeWithLogo
                                             value={url || `https://${selectedDomain}`}
                                             size={80}
                                             style={{ height: 'auto', maxWidth: '100%', width: '100%' }}

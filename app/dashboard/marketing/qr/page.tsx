@@ -7,7 +7,7 @@ import {
     Download, QrCode, ExternalLink, MousePointerClick,
     Link2, Palette
 } from 'lucide-react'
-import QRCode from 'react-qr-code'
+import QRCodeWithLogo from '@/components/QRCodeWithLogo'
 import { getMarketingLinks } from '@/app/actions/marketing-links'
 import { getChannelConfig } from '@/lib/marketing/channels'
 
@@ -158,12 +158,11 @@ export default function MarketingQRPage() {
                                     id={`qr-${link.id}`}
                                     className="flex justify-center mb-4"
                                 >
-                                    <QRCode
+                                    <QRCodeWithLogo
                                         value={link.short_url}
                                         size={Math.min(qrSize, 200)}
                                         fgColor={qrColor}
                                         bgColor="#FFFFFF"
-                                        level="M"
                                     />
                                 </div>
 

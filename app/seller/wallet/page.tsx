@@ -76,11 +76,16 @@ export default function SellerWalletPage() {
         }).format(cents / 100)
     }
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('fr-FR', {
-            day: 'numeric',
-            month: 'short'
-        })
+    const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
+
+    const formatDate = (dateString: string, expanded?: boolean) => {
+        const d = new Date(dateString)
+        if (expanded) {
+            const date = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+            const time = `${d.getHours()}h${d.getMinutes().toString().padStart(2, '0')}`
+            return `${date} ${time}`
+        }
+        return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
     }
 
     const getStatusLabel = (status: Commission['status']) => {
@@ -302,8 +307,19 @@ export default function SellerWalletPage() {
                                                             </span>
                                                         )}
                                                     </p>
-                                                    <p className="text-xs text-neutral-400">
-                                                        {formatDate(commission.created_at)}
+                                                    <p
+                                                        className="text-xs text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors"
+                                                        onClick={(e) => {
+                                                            e.preventDefault()
+                                                            e.stopPropagation()
+                                                            setExpandedDates(prev => {
+                                                                const next = new Set(prev)
+                                                                next.has(commission.id) ? next.delete(commission.id) : next.add(commission.id)
+                                                                return next
+                                                            })
+                                                        }}
+                                                    >
+                                                        {formatDate(commission.created_at, expandedDates.has(commission.id))}
                                                     </p>
                                                 </div>
                                             </div>

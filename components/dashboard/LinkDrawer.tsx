@@ -20,7 +20,7 @@ import {
     DollarSign,
     MousePointer2
 } from 'lucide-react'
-import QRCode from 'react-qr-code'
+import QRCodeWithLogo from '@/components/QRCodeWithLogo'
 import { deleteShortLink } from '@/app/actions/links'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -345,11 +345,11 @@ export function LinkDrawer({ isOpen, onClose, link, onDelete }: LinkDrawerProps)
                                     <h3 className="text-sm font-semibold text-gray-700">QR Code</h3>
                                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-center">
                                         <div className="bg-white p-2">
-                                            <QRCode
+                                            <QRCodeWithLogo
                                                 value={shortUrl}
                                                 size={120}
                                                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                                                viewBox={`0 0 256 256`}
+                                                viewBox="0 0 256 256"
                                             />
                                         </div>
                                     </div>
