@@ -1594,6 +1594,7 @@ export type OrgMissionDetail = {
         clicks: number
     }>
     isLeader: boolean
+    myLinkUrl: string | null
 }
 
 /**
@@ -1670,6 +1671,23 @@ export async function getOrgMissionDetail(orgMissionId: string): Promise<{
         const enrollmentLinkIds = enrollments
             .map(e => e.link_id)
             .filter((id): id is string => !!id)
+
+        // Find current seller's link
+        const myEnrollment = enrollments.find(e => e.user_id === seller.user_id)
+        let myLinkUrl: string | null = null
+        if (myEnrollment?.link_id) {
+            const myLink = await prisma.shortLink.findUnique({
+                where: { id: myEnrollment.link_id },
+                select: { slug: true, Workspace: { select: { Domain: { where: { verified: true }, take: 1 } } } }
+            })
+            if (myLink) {
+                const customDomain = myLink.Workspace?.Domain?.[0]?.name
+                const baseUrl = customDomain
+                    ? `https://${customDomain}`
+                    : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+                myLinkUrl = `${baseUrl}/s/${myLink.slug}`
+            }
+        }
 
         // Fetch Tinybird stats per link
         const { getAffiliateStatsFromTinybird } = await import('@/app/actions/marketplace')
@@ -1778,6 +1796,7 @@ export async function getOrgMissionDetail(orgMissionId: string): Promise<{
                 timeseries,
                 memberBreakdown,
                 isLeader,
+                myLinkUrl,
             }
         }
     } catch (error) {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Loader2, Crown, MessageSquare, ExternalLink, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Loader2, Crown, MessageSquare, ExternalLink, ChevronRight, Copy, Check, Link2 } from 'lucide-react'
 import { getOrgMissionDetail } from '@/app/actions/organization-actions'
 import type { OrgMissionDetail } from '@/app/actions/organization-actions'
 import { getOrCreateConversationForSeller } from '@/app/actions/messaging'
@@ -89,6 +89,7 @@ export default function OrgMissionDetailPage() {
     const [error, setError] = useState<string | null>(null)
     const [activeEventTypes, setActiveEventTypes] = useState<Set<string>>(new Set(['clicks', 'leads', 'sales']))
     const [messagingLoading, setMessagingLoading] = useState(false)
+    const [copied, setCopied] = useState(false)
 
     useEffect(() => {
         async function load() {
@@ -139,7 +140,14 @@ export default function OrgMissionDetailPage() {
         )
     }
 
-    const { mission, orgDeal, stats, timeseries, memberBreakdown } = detail
+    const { mission, orgDeal, stats, timeseries, memberBreakdown, myLinkUrl } = detail
+
+    function copyLink() {
+        if (!myLinkUrl) return
+        navigator.clipboard.writeText(myLinkUrl)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+    }
 
     // Build commission badges (member reward)
     const badges: string[] = []
@@ -208,6 +216,45 @@ export default function OrgMissionDetailPage() {
                         )}
                     </div>
                 </OrgCard>
+
+                {/* Affiliate Link Card */}
+                {myLinkUrl && (
+                    <OrgCard>
+                        <div className="p-6">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Link2 className="w-4 h-4 text-neutral-400" />
+                                <p className="text-xs text-neutral-400 uppercase tracking-wider font-medium">
+                                    Your affiliate link
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <code className="flex-1 text-xs sm:text-sm text-neutral-700 bg-neutral-50 px-4 py-2.5 rounded-xl font-mono truncate">
+                                    {myLinkUrl}
+                                </code>
+                                <button
+                                    onClick={copyLink}
+                                    className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                                        copied
+                                            ? 'bg-emerald-50 text-emerald-600'
+                                            : 'bg-neutral-900 text-white hover:bg-black'
+                                    }`}
+                                >
+                                    {copied ? (
+                                        <span className="flex items-center gap-1.5">
+                                            <Check className="w-4 h-4" />
+                                            Copied
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-1.5">
+                                            <Copy className="w-4 h-4" />
+                                            Copy
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </OrgCard>
+                )}
 
                 {/* Startup Card */}
                 {mission.workspaceId && (
