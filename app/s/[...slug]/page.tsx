@@ -14,8 +14,9 @@
  */
 
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
+import { headers, cookies } from 'next/headers'
 import { prisma } from '@/lib/db'
+import { redis } from '@/lib/redis'
 import { nanoid } from 'nanoid'
 
 export const dynamic = 'force-dynamic'
@@ -66,11 +67,12 @@ function decorateUrl(originalUrl: string, tracId: string): string {
     try {
         const url = new URL(originalUrl)
         url.searchParams.set(TRAC_ID_PARAM, tracId)
+        url.searchParams.set('client_reference_id', tracId)
         return url.toString()
     } catch {
         // Fallback for malformed URLs
         const sep = originalUrl.includes('?') ? '&' : '?'
-        return `${originalUrl}${sep}${TRAC_ID_PARAM}=${tracId}`
+        return `${originalUrl}${sep}${TRAC_ID_PARAM}=${tracId}&client_reference_id=${tracId}`
     }
 }
 
@@ -233,11 +235,36 @@ export default async function TracRedirect({
     })
 
     // ----------------------------------------
-    // 6. DECORATE & REDIRECT
+    // 6. STORE CLICK IN REDIS (for webhook attribution)
+    // ----------------------------------------
+    redis.set(
+        `click:${click_id}`,
+        JSON.stringify({
+            linkId: link.id,
+            sellerId: link.affiliate_id || null,
+            workspaceId: link.workspace_id
+        }),
+        { ex: 90 * 24 * 60 * 60 } // 90 days
+    ).catch(err => console.error('[Trac] Failed to store click in Redis:', err))
+
+    // ----------------------------------------
+    // 7. SET COOKIE (for SDK compatibility)
+    // ----------------------------------------
+    const cookieStore = await cookies()
+    cookieStore.set('clk_id', click_id, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 90, // 90 days
+        path: '/',
+    })
+
+    // ----------------------------------------
+    // 8. DECORATE & REDIRECT
     // ----------------------------------------
     const destination = decorateUrl(link.original_url, click_id)
 
-    console.log('[Trac] 🚀 Redirect:', {
+    console.log('[Trac] Redirect:', {
         slug,
         click_id,
         destination: destination.slice(0, 80) + '...',

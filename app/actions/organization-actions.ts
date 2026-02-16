@@ -1714,8 +1714,6 @@ async function enrollMembersInOrgMission(orgMission: {
     }
     Mission: { id: string; title: string; target_url: string; workspace_id: string }
 }) {
-    const { setLinkInRedis } = await import('@/lib/redis')
-
     for (const member of orgMission.Organization.Members) {
         if (!member.Seller.user_id) continue
 
@@ -2031,4 +2029,57 @@ export async function getTraaactionOrgCard() {
         console.error('[Org] Failed to get Traaaction org card:', error)
         return { success: true, org: null }
     }
+}
+
+// =============================================
+// ADMIN: RE-SYNC ORG LINKS TO REDIS
+// =============================================
+
+/**
+ * Re-sync all org enrollment links to Redis.
+ * Useful when links were created before the Redis storage fix,
+ * or after a Redis flush.
+ */
+export async function resyncOrgLinksToRedis() {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    const adminEmails = getAdminEmails()
+    if (!adminEmails.includes(user.email || '')) {
+        return { success: false, error: 'Admin only' }
+    }
+
+    const enrollments = await prisma.missionEnrollment.findMany({
+        where: {
+            organization_mission_id: { not: null },
+            link_id: { not: null },
+            status: 'APPROVED',
+        },
+        include: {
+            ShortLink: true,
+        }
+    })
+
+    const { setLinkInRedis } = await import('@/lib/redis')
+    let synced = 0
+
+    for (const enrollment of enrollments) {
+        if (!enrollment.ShortLink) continue
+        const link = enrollment.ShortLink
+
+        const verifiedDomain = await prisma.domain.findFirst({
+            where: { workspace_id: link.workspace_id, verified: true }
+        })
+
+        await setLinkInRedis(link.slug, {
+            url: link.original_url,
+            linkId: link.id,
+            workspaceId: link.workspace_id,
+            sellerId: link.affiliate_id,
+        }, verifiedDomain?.name || undefined)
+        synced++
+    }
+
+    console.log(`[Org] Resynced ${synced} org links to Redis`)
+    return { success: true, synced }
 }
