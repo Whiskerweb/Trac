@@ -647,7 +647,7 @@ export default function LoginPage() {
                             </div>
 
                             {/* Form */}
-                            <form action={handleSubmit} className="space-y-4">
+                            <form onSubmit={(e) => { e.preventDefault(); handleSubmit(new FormData(e.currentTarget)) }} className="space-y-4">
                                 <AnimatePresence mode="wait">
                                     {mode === 'signup' && (
                                         <motion.div
