@@ -1,12 +1,17 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MessageSquare, X, Paperclip, Mic, MicOff, Send, CheckCircle, Loader2 } from 'lucide-react'
 
 interface FeedbackWidgetProps {
     userType: 'STARTUP' | 'SELLER'
 }
+
+const DOCK_THRESHOLD = 60
+const EDGE_MARGIN = 8
+const DRAG_THRESHOLD = 5
+const STORAGE_KEY = 'trac_feedback_pos'
 
 export default function FeedbackWidget({ userType }: FeedbackWidgetProps) {
     const [isOpen, setIsOpen] = useState(false)
@@ -18,10 +23,143 @@ export default function FeedbackWidget({ userType }: FeedbackWidgetProps) {
     const [isSuccess, setIsSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
+    // Drag state
+    const [position, setPosition] = useState<{ x: number; y: number }>({ x: -1, y: -1 })
+    const [isDragging, setIsDragging] = useState(false)
+    const [isDocked, setIsDocked] = useState(false)
+    const [dockSide, setDockSide] = useState<'left' | 'right'>('right')
+    const [isHoveredWhileDocked, setIsHoveredWhileDocked] = useState(false)
+
     const fileInputRef = useRef<HTMLInputElement>(null)
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const audioChunksRef = useRef<Blob[]>([])
     const textareaRef = useRef<HTMLTextAreaElement>(null)
+    const buttonRef = useRef<HTMLButtonElement>(null)
+    const dragStartRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null)
+    const hasDraggedRef = useRef(false)
+
+    // Restore position from localStorage
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY)
+            if (saved) {
+                const { y, side } = JSON.parse(saved) as { y: number; side: 'left' | 'right' }
+                const btnWidth = 44 // docked button width approximation
+                const xPos = side === 'left' ? EDGE_MARGIN : window.innerWidth - btnWidth - EDGE_MARGIN
+                setPosition({ x: xPos, y: Math.min(y, window.innerHeight - 48 - EDGE_MARGIN) })
+                setDockSide(side)
+                setIsDocked(true)
+            } else {
+                // Default: bottom-right, not docked
+                setPosition({
+                    x: window.innerWidth - 150 - 24,
+                    y: window.innerHeight - 48 - 24,
+                })
+            }
+        } catch {
+            setPosition({
+                x: window.innerWidth - 150 - 24,
+                y: window.innerHeight - 48 - 24,
+            })
+        }
+    }, [])
+
+    // Handle window resize — keep button in bounds
+    useEffect(() => {
+        const handleResize = () => {
+            setPosition(prev => {
+                if (prev.x < 0) return prev
+                const btnWidth = buttonRef.current?.offsetWidth ?? 150
+                const btnHeight = buttonRef.current?.offsetHeight ?? 48
+                const maxX = window.innerWidth - btnWidth - EDGE_MARGIN
+                const maxY = window.innerHeight - btnHeight - EDGE_MARGIN
+                // Re-snap to the docked side
+                let newX = prev.x
+                if (isDocked) {
+                    newX = dockSide === 'left' ? EDGE_MARGIN : maxX
+                } else {
+                    newX = Math.max(EDGE_MARGIN, Math.min(prev.x, maxX))
+                }
+                return {
+                    x: newX,
+                    y: Math.max(EDGE_MARGIN, Math.min(prev.y, maxY)),
+                }
+            })
+        }
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [isDocked, dockSide])
+
+    // Pointer event handlers for drag
+    const handlePointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+        if (isOpen) return
+        dragStartRef.current = { x: e.clientX, y: e.clientY, px: position.x, py: position.y }
+        hasDraggedRef.current = false
+        buttonRef.current?.setPointerCapture(e.pointerId)
+    }, [isOpen, position.x, position.y])
+
+    const handlePointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+        if (!dragStartRef.current) return
+
+        const dx = e.clientX - dragStartRef.current.x
+        const dy = e.clientY - dragStartRef.current.y
+
+        // Check drag threshold
+        if (!hasDraggedRef.current && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) {
+            return
+        }
+
+        if (!hasDraggedRef.current) {
+            hasDraggedRef.current = true
+            setIsDragging(true)
+            setIsDocked(false)
+            setIsHoveredWhileDocked(false)
+        }
+
+        const btnWidth = buttonRef.current?.offsetWidth ?? 150
+        const btnHeight = buttonRef.current?.offsetHeight ?? 48
+        const newX = Math.max(EDGE_MARGIN, Math.min(dragStartRef.current.px + dx, window.innerWidth - btnWidth - EDGE_MARGIN))
+        const newY = Math.max(EDGE_MARGIN, Math.min(dragStartRef.current.py + dy, window.innerHeight - btnHeight - EDGE_MARGIN))
+
+        setPosition({ x: newX, y: newY })
+    }, [])
+
+    const handlePointerUp = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+        if (!dragStartRef.current) return
+
+        const wasDrag = hasDraggedRef.current
+        dragStartRef.current = null
+
+        if (!wasDrag) {
+            // It was a click, not a drag
+            setIsDragging(false)
+            setIsOpen(true)
+            return
+        }
+
+        // Snap to nearest edge
+        const btnWidth = buttonRef.current?.offsetWidth ?? 150
+        const btnHeight = buttonRef.current?.offsetHeight ?? 48
+        const screenW = window.innerWidth
+        const midX = position.x + btnWidth / 2
+
+        const side: 'left' | 'right' = midX < screenW / 2 ? 'left' : 'right'
+        const snappedX = side === 'left' ? EDGE_MARGIN : screenW - btnWidth - EDGE_MARGIN
+        const clampedY = Math.max(EDGE_MARGIN, Math.min(position.y, window.innerHeight - btnHeight - EDGE_MARGIN))
+
+        // Determine if docked (close to edge)
+        const docked = position.x < DOCK_THRESHOLD || position.x > screenW - DOCK_THRESHOLD - btnWidth
+
+        setPosition({ x: snappedX, y: clampedY })
+        setDockSide(side)
+        setIsDocked(docked)
+        setIsDragging(false)
+
+        // Persist
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ y: clampedY, side }))
+        } catch { /* ignore */ }
+    }, [position.x, position.y])
 
     // Auto-resize textarea
     useEffect(() => {
@@ -139,20 +277,47 @@ export default function FeedbackWidget({ userType }: FeedbackWidgetProps) {
         }
     }
 
+    // Don't render until position is initialized (SSR-safe)
+    const isInitialized = position.x >= 0
+
+    // Docked appearance: show only icon, reduced size
+    const showDocked = isDocked && !isHoveredWhileDocked && !isDragging && !isOpen
+
     return (
         <>
-            {/* Floating button */}
+            {/* Floating draggable button */}
             <motion.button
-                onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-full shadow-lg hover:bg-neutral-800 transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1 }}
+                ref={buttonRef}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onMouseEnter={() => { if (isDocked) setIsHoveredWhileDocked(true) }}
+                onMouseLeave={() => setIsHoveredWhileDocked(false)}
+                className={[
+                    'fixed z-50 flex items-center gap-2 bg-neutral-900 text-white shadow-lg select-none',
+                    isDragging ? 'cursor-grabbing' : 'cursor-grab',
+                    showDocked
+                        ? dockSide === 'left'
+                            ? 'rounded-r-full pl-2 pr-2.5 py-2.5 opacity-60'
+                            : 'rounded-l-full pl-2.5 pr-2 py-2.5 opacity-60'
+                        : 'rounded-full px-4 py-2.5 opacity-100',
+                    !isDragging && 'transition-all duration-300 ease-out',
+                    !isInitialized && 'invisible',
+                ].filter(Boolean).join(' ')}
+                style={{
+                    left: isInitialized ? position.x : undefined,
+                    top: isInitialized ? position.y : undefined,
+                    touchAction: 'none',
+                    willChange: isDragging ? 'transform' : 'auto',
+                }}
+                whileHover={!isDragging ? { scale: 1.02 } : undefined}
+                whileTap={!isDragging ? { scale: 0.98 } : undefined}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isInitialized ? (showDocked ? 0.6 : 1) : 0 }}
+                transition={{ delay: isInitialized ? 0 : 1 }}
             >
-                <MessageSquare className="w-4 h-4" />
-                <span className="text-sm font-medium">Feedback</span>
+                <MessageSquare className={showDocked ? 'w-4 h-4' : 'w-4 h-4'} />
+                {!showDocked && <span className="text-sm font-medium whitespace-nowrap">Feedback</span>}
             </motion.button>
 
             {/* Modal */}
