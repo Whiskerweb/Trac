@@ -1125,7 +1125,8 @@
                 "linkReady": "Tu enlace de marketing está listo para compartir.",
                 "close": "Cerrar",
                 "createAnother": "Crear otro",
-                "cancel": "Cancelar"
+                "cancel": "Cancelar",
+                "customLinkPreview": "Vista previa del enlace"
             },
             "detail": {
                 "notFound": "Enlace no encontrado",
