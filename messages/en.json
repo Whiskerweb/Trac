@@ -2636,8 +2636,7 @@
         "stats": {
             "referred": "Referred sellers",
             "earned": "Total earned",
-            "commissions": "Commissions",
-            "pendingEarnings": "Pending"
+            "commissions": "Commissions"
         },
         "generations": {
             "title": "Earnings by generation",
@@ -2655,7 +2654,19 @@
         "errorTitle": "Unable to load referral data",
         "errorRetry": "Retry",
         "learnMore": "Learn more about the referral program",
-        "page": "Page"
+        "page": "Page",
+        "network": "Your network",
+        "searchPlaceholder": "Search referrals...",
+        "gen1Badge": "1st",
+        "gen2Badge": "2nd",
+        "gen3Badge": "3rd",
+        "expand": "Show referrals",
+        "collapse": "Hide",
+        "loadingSub": "Loading...",
+        "noSubReferrals": "No referrals yet",
+        "subReferralCount": "{count} referral(s)",
+        "totalInNetwork": "{count} sellers in your network",
+        "searchNoResults": "No results for \"{query}\""
     },
     "affiliate": {
         "badge": "Referral program",

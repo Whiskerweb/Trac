@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter, useParams } from 'next/navigation'
 import {
-    ArrowLeft, Copy, QrCode, ExternalLink,
-    MousePointerClick, Globe, Smartphone, Monitor,
-    Check, Link2, Calendar, Tag, Pencil, Trash2
+    ArrowLeft, Copy, ExternalLink,
+    MousePointerClick,
+    Check, Link2, Calendar, Tag, Trash2
 } from 'lucide-react'
 import { getMarketingLink, deleteMarketingLink } from '@/app/actions/marketing-links'
 import { getChannelConfig } from '@/lib/marketing/channels'
@@ -57,7 +57,7 @@ export default function MarketingLinkDetailPage() {
         if (!link) return
         const res = await deleteMarketingLink(link.id)
         if (res.success) {
-            router.push('/dashboard/marketing/links')
+            router.push('/dashboard/marketing')
         }
     }
 
@@ -148,12 +148,6 @@ export default function MarketingLinkDetailPage() {
                             {copied ? t('detail.copied') : t('links.copy')}
                         </button>
                         <button
-                            onClick={() => router.push(`/dashboard/marketing/qr?link=${link.id}`)}
-                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                            <QrCode className="w-4 h-4" />
-                        </button>
-                        <button
                             onClick={handleDelete}
                             className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                         >
@@ -163,39 +157,11 @@ export default function MarketingLinkDetailPage() {
                 </div>
             </div>
 
-            {/* KPI Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div className="bg-white rounded-xl border border-gray-200 p-5">
-                    <div className="flex items-center gap-2 mb-2">
-                        <MousePointerClick className="w-4 h-4 text-blue-500" />
-                        <span className="text-xs text-gray-500 font-medium">{t('detail.totalClicks')}</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 tabular-nums">{link.clicks.toLocaleString()}</p>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-5">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Globe className="w-4 h-4 text-emerald-500" />
-                        <span className="text-xs text-gray-500 font-medium">{t('detail.topCountry')}</span>
-                    </div>
-                    <p className="text-lg font-semibold text-gray-700">--</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{t('detail.tinybirdNote')}</p>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-5">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Monitor className="w-4 h-4 text-purple-500" />
-                        <span className="text-xs text-gray-500 font-medium">{t('detail.topDevice')}</span>
-                    </div>
-                    <p className="text-lg font-semibold text-gray-700">--</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{t('detail.tinybirdNote')}</p>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-5">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Smartphone className="w-4 h-4 text-amber-500" />
-                        <span className="text-xs text-gray-500 font-medium">{t('detail.topReferrer')}</span>
-                    </div>
-                    <p className="text-lg font-semibold text-gray-700">--</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{t('detail.tinybirdNote')}</p>
-                </div>
+            {/* Clicks */}
+            <div className="inline-flex items-center gap-2 bg-white rounded-xl border border-gray-200 px-5 py-3">
+                <MousePointerClick className="w-4 h-4 text-blue-500" />
+                <span className="text-sm text-gray-500 font-medium">{t('detail.totalClicks')}</span>
+                <span className="text-lg font-bold text-gray-900 tabular-nums ml-1">{link.clicks.toLocaleString()}</span>
             </div>
 
             {/* UTM Parameters */}

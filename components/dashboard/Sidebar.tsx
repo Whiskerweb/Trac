@@ -5,8 +5,7 @@ import {
     Contact, Coins, Shield, Globe, Settings,
     Puzzle, User, ExternalLink, Target,
     ChevronLeft, ChevronRight, ChevronDown, Check,
-    Link2, BarChart3, Tag, QrCode, Megaphone,
-    LayoutGrid
+    Link2, BarChart3, Megaphone
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -70,22 +69,8 @@ const marketingNavigationConfig: NavSection[] = [
     {
         titleKey: 'marketingLinks',
         items: [
-            { nameKey: 'marketingOverview', href: '/dashboard/marketing', icon: Home },
-            { nameKey: 'marketingAllLinks', href: '/dashboard/marketing/links', icon: Link2 },
-        ]
-    },
-    {
-        titleKey: 'marketingOrganize',
-        items: [
-            { nameKey: 'marketingChannels', href: '/dashboard/marketing/channels', icon: LayoutGrid },
-            { nameKey: 'marketingCampaigns', href: '/dashboard/marketing/campaigns', icon: Tag },
-        ]
-    },
-    {
-        titleKey: 'marketingAnalytics',
-        items: [
+            { nameKey: 'marketingAllLinks', href: '/dashboard/marketing', icon: Link2 },
             { nameKey: 'marketingAnalyticsPage', href: '/dashboard/marketing/analytics', icon: BarChart3 },
-            { nameKey: 'marketingQrCodes', href: '/dashboard/marketing/qr', icon: QrCode },
         ]
     },
     {

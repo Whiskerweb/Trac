@@ -2409,8 +2409,7 @@
         "stats": {
             "referred": "Sellers parraines",
             "earned": "Total gagne",
-            "commissions": "Commissions",
-            "pendingEarnings": "En attente"
+            "commissions": "Commissions"
         },
         "generations": {
             "title": "Gains par generation",
@@ -2428,7 +2427,19 @@
         "errorTitle": "Impossible de charger les donnees de parrainage",
         "errorRetry": "Reessayer",
         "learnMore": "En savoir plus sur le programme de parrainage",
-        "page": "Page"
+        "page": "Page",
+        "network": "Votre reseau",
+        "searchPlaceholder": "Rechercher un filleul...",
+        "gen1Badge": "1er",
+        "gen2Badge": "2eme",
+        "gen3Badge": "3eme",
+        "expand": "Voir les filleuls",
+        "collapse": "Masquer",
+        "loadingSub": "Chargement...",
+        "noSubReferrals": "Aucun filleul",
+        "subReferralCount": "{count} filleul(s)",
+        "totalInNetwork": "{count} sellers dans votre reseau",
+        "searchNoResults": "Aucun resultat pour \"{query}\""
     },
     "affiliate": {
         "badge": "Programme de parrainage",

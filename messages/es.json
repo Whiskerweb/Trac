@@ -2409,8 +2409,7 @@
         "stats": {
             "referred": "Sellers referidos",
             "earned": "Total ganado",
-            "commissions": "Comisiones",
-            "pendingEarnings": "Pendiente"
+            "commissions": "Comisiones"
         },
         "generations": {
             "title": "Ganancias por generacion",
@@ -2428,7 +2427,19 @@
         "errorTitle": "No se pudieron cargar los datos de referidos",
         "errorRetry": "Reintentar",
         "learnMore": "Saber mas sobre el programa de referidos",
-        "page": "Pagina"
+        "page": "Pagina",
+        "network": "Tu red",
+        "searchPlaceholder": "Buscar referidos...",
+        "gen1Badge": "1ro",
+        "gen2Badge": "2do",
+        "gen3Badge": "3ro",
+        "expand": "Ver referidos",
+        "collapse": "Ocultar",
+        "loadingSub": "Cargando...",
+        "noSubReferrals": "Sin referidos",
+        "subReferralCount": "{count} referido(s)",
+        "totalInNetwork": "{count} sellers en tu red",
+        "searchNoResults": "Sin resultados para \"{query}\""
     },
     "affiliate": {
         "badge": "Programa de referidos",

@@ -744,11 +744,13 @@ export async function createGlobalSeller(data: {
             if (refCode) {
                 const referrer = await prisma.seller.findUnique({
                     where: { referral_code: refCode },
-                    select: { id: true }
+                    select: { id: true, status: true }
                 })
-                if (referrer) {
+                if (referrer && referrer.status === 'APPROVED') {
                     referredBy = referrer.id
                     console.log(`[Seller] Referral detected: ${refCode} → referrer ${referrer.id}`)
+                } else if (referrer) {
+                    console.log(`[Seller] Referral skipped: referrer ${referrer.id} status=${referrer.status}`)
                 }
             }
         } catch { /* cookie read may fail in some contexts */ }
@@ -766,6 +768,15 @@ export async function createGlobalSeller(data: {
                 referred_at: referredBy ? new Date() : null,
             }
         })
+
+        // S1: Prevent self-referral (edge case: same user creates 2 accounts)
+        if (referredBy && referredBy === seller.id) {
+            await prisma.seller.update({
+                where: { id: seller.id },
+                data: { referred_by: null, referred_at: null }
+            })
+            console.log(`[Seller] Self-referral blocked for ${seller.id}`)
+        }
 
         return { success: true, sellerId: seller.id }
     } catch (error) {
@@ -1768,7 +1779,7 @@ export async function getMyCommissionDetail(commissionId: string) {
  * Get the current seller's referral data (code, link, stats).
  * Lazily generates a referral_code if the seller doesn't have one.
  */
-export async function getMyReferralData(page: number = 1) {
+export async function getMyReferralData(page: number = 1, search?: string) {
     try {
         const user = await getCurrentUser()
         if (!user) return { success: false, error: 'Not authenticated' }
@@ -1796,10 +1807,25 @@ export async function getMyReferralData(page: number = 1) {
             seller = { ...seller, referral_code: code }
         }
 
-        // Count direct referrals (gen 1)
-        const referralCount = await prisma.seller.count({
+        // Build search filter for referred sellers
+        const searchFilter = search ? {
+            OR: [
+                { name: { contains: search, mode: 'insensitive' as const } },
+                { email: { contains: search, mode: 'insensitive' as const } },
+            ]
+        } : {}
+
+        // Count direct referrals (gen 1) — total (unfiltered) for stats
+        const referralCountTotal = await prisma.seller.count({
             where: { referred_by: seller.id }
         })
+
+        // Count with search filter for pagination
+        const referralCount = search
+            ? await prisma.seller.count({
+                where: { referred_by: seller.id, ...searchFilter }
+            })
+            : referralCountTotal
 
         // Get referral earnings (all commissions with referral_generation != null for this seller)
         const referralEarnings = await prisma.commission.aggregate({
@@ -1892,7 +1918,7 @@ export async function getMyReferralData(page: number = 1) {
         const totalPages = Math.max(1, Math.ceil(totalReferredSellers / perPage))
 
         const referredSellers = await prisma.seller.findMany({
-            where: { referred_by: seller.id },
+            where: { referred_by: seller.id, ...searchFilter },
             select: {
                 id: true,
                 name: true,
@@ -1906,6 +1932,20 @@ export async function getMyReferralData(page: number = 1) {
             skip: (safePage - 1) * perPage,
         })
 
+        // Batch-check which Gen1 sellers have sub-referrals (Gen2)
+        const gen1PageIds = referredSellers.map(s => s.id)
+        const subCounts = gen1PageIds.length > 0
+            ? await prisma.seller.groupBy({
+                by: ['referred_by'],
+                where: { referred_by: { in: gen1PageIds } },
+                _count: true,
+            })
+            : []
+        const subCountMap: Record<string, number> = {}
+        for (const sc of subCounts) {
+            if (sc.referred_by) subCountMap[sc.referred_by] = sc._count
+        }
+
         return {
             success: true,
             referralCode: seller.referral_code,
@@ -1913,7 +1953,7 @@ export async function getMyReferralData(page: number = 1) {
             referredBy: seller.Referrer ? { name: seller.Referrer.name, email: seller.Referrer.email } : null,
             referredAt: seller.referred_at,
             stats: {
-                totalReferred: referralCount,
+                totalReferred: referralCountTotal,
                 totalEarnings: referralEarnings._sum.commission_amount || 0,
                 totalCommissions: referralEarnings._count,
             },
@@ -1922,6 +1962,7 @@ export async function getMyReferralData(page: number = 1) {
                 gen2: { count: gen2Agg._count, amount: gen2Agg._sum.commission_amount || 0, referredCount: gen2ReferredCount },
                 gen3: { count: gen3Agg._count, amount: gen3Agg._sum.commission_amount || 0, referredCount: gen3ReferredCount },
             },
+            totalInNetwork: gen1Ids.length + gen2ReferredCount + gen3ReferredCount,
             referredSellers: referredSellers.map(s => ({
                 id: s.id,
                 name: s.name,
@@ -1930,6 +1971,8 @@ export async function getMyReferralData(page: number = 1) {
                 status: s.status,
                 salesCount: s._count.Commissions,
                 earningsFromThem: earningsByReferral[s.id] || 0,
+                hasSubReferrals: (subCountMap[s.id] || 0) > 0,
+                subReferralCount: subCountMap[s.id] || 0,
             })),
             pagination: {
                 page: safePage,
@@ -1940,5 +1983,136 @@ export async function getMyReferralData(page: number = 1) {
     } catch (error) {
         console.error('[Referral] Failed to get referral data:', error)
         return { success: false, error: 'Failed to load referral data' }
+    }
+}
+
+/**
+ * Get sub-referrals for a given seller in the current user's referral tree.
+ * parentGeneration = 1 → returns Gen2 children of a Gen1 seller
+ * parentGeneration = 2 → returns Gen3 children of a Gen2 seller
+ */
+export async function getReferralSubTree(
+    parentSellerId: string,
+    parentGeneration: number
+) {
+    try {
+        const user = await getCurrentUser()
+        if (!user) return { success: false, error: 'Not authenticated' }
+
+        const currentSeller = await prisma.seller.findFirst({
+            where: { user_id: user.userId },
+            select: { id: true }
+        })
+        if (!currentSeller) return { success: false, error: 'No seller found' }
+
+        // Security: validate parentSellerId is in the user's referral tree
+        if (parentGeneration === 1) {
+            // Gen1 parent must be referred_by the current seller
+            const parent = await prisma.seller.findUnique({
+                where: { id: parentSellerId },
+                select: { referred_by: true }
+            })
+            if (!parent || parent.referred_by !== currentSeller.id) {
+                return { success: false, error: 'Unauthorized' }
+            }
+        } else if (parentGeneration === 2) {
+            // Gen2 parent: parent's referrer must be referred_by the current seller (2 hops)
+            const parent = await prisma.seller.findUnique({
+                where: { id: parentSellerId },
+                select: { referred_by: true }
+            })
+            if (!parent?.referred_by) return { success: false, error: 'Unauthorized' }
+            const grandparent = await prisma.seller.findUnique({
+                where: { id: parent.referred_by },
+                select: { referred_by: true }
+            })
+            if (!grandparent || grandparent.referred_by !== currentSeller.id) {
+                return { success: false, error: 'Unauthorized' }
+            }
+        } else {
+            return { success: false, error: 'Invalid generation' }
+        }
+
+        // Fetch children of parentSellerId
+        const children = await prisma.seller.findMany({
+            where: { referred_by: parentSellerId },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                created_at: true,
+                status: true,
+                _count: { select: { Commissions: { where: { referral_generation: null, org_parent_commission_id: null } } } }
+            },
+            orderBy: { created_at: 'desc' },
+        })
+
+        // For Gen2 children (parentGeneration=1), check if they have sub-referrals
+        const childIds = children.map(c => c.id)
+        let subCountMap: Record<string, number> = {}
+        if (parentGeneration === 1 && childIds.length > 0) {
+            const subCounts = await prisma.seller.groupBy({
+                by: ['referred_by'],
+                where: { referred_by: { in: childIds } },
+                _count: true,
+            })
+            for (const sc of subCounts) {
+                if (sc.referred_by) subCountMap[sc.referred_by] = sc._count
+            }
+        }
+
+        // Calculate earningsFromThem: commissions the current user earned from each child
+        const nextGen = parentGeneration + 1
+        const refCommissions = await prisma.commission.findMany({
+            where: {
+                seller_id: currentSeller.id,
+                referral_generation: nextGen,
+            },
+            select: {
+                commission_amount: true,
+                referral_source_commission_id: true,
+            }
+        })
+
+        // Batch-lookup source commissions to find which child generated them
+        const sourceIds = refCommissions
+            .map(c => c.referral_source_commission_id)
+            .filter((id): id is string => id !== null)
+        const sourceCommissions = sourceIds.length > 0
+            ? await prisma.commission.findMany({
+                where: { id: { in: sourceIds } },
+                select: { id: true, seller_id: true },
+            })
+            : []
+        const sourceToSeller: Record<string, string> = {}
+        for (const sc of sourceCommissions) {
+            sourceToSeller[sc.id] = sc.seller_id
+        }
+
+        const earningsByChild: Record<string, number> = {}
+        for (const c of refCommissions) {
+            const srcSellerId = c.referral_source_commission_id ? sourceToSeller[c.referral_source_commission_id] : null
+            if (srcSellerId) {
+                earningsByChild[srcSellerId] = (earningsByChild[srcSellerId] || 0) + c.commission_amount
+            }
+        }
+
+        return {
+            success: true,
+            referrals: children.map(c => ({
+                id: c.id,
+                name: c.name,
+                email: c.email,
+                joinedAt: c.created_at,
+                status: c.status,
+                salesCount: c._count.Commissions,
+                earningsFromThem: earningsByChild[c.id] || 0,
+                hasSubReferrals: parentGeneration === 1 ? (subCountMap[c.id] || 0) > 0 : false,
+                subReferralCount: parentGeneration === 1 ? (subCountMap[c.id] || 0) : 0,
+            })),
+        }
+    } catch (error) {
+        console.error('[Referral] Failed to get sub-tree:', error)
+        return { success: false, error: 'Failed to load sub-referrals' }
     }
 }
