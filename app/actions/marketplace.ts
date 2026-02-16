@@ -113,22 +113,23 @@ export async function getAffiliateStatsFromTinybird(linkIds: string[]): Promise<
             }
         }
 
-        // 3. GET SALES directly by link_id (sales table has link_id column!)
-        const salesQuery = `SELECT link_id, count() as sales, sum(amount) as revenue FROM sales WHERE link_id IN (${linkIdList}) GROUP BY link_id`
-        const salesResponse = await fetch(
-            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
-            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-        )
+        // 3. GET SALES & REVENUE from DB Commission (source of truth)
+        const commissionsByLink = await prisma.commission.groupBy({
+            by: ['link_id'],
+            where: {
+                link_id: { in: validLinkIds },
+                org_parent_commission_id: null,
+                referral_generation: null,
+            },
+            _count: { _all: true },
+            _sum: { commission_amount: true },
+        })
 
-        if (salesResponse.ok) {
-            const salesText = await salesResponse.text()
-            for (const line of salesText.trim().split('\n').filter(l => l.trim())) {
-                const [link_id, sales, revenue] = line.split('\t')
-                if (link_id && statsMap.has(link_id)) {
-                    const stats = statsMap.get(link_id)!
-                    stats.sales = parseInt(sales) || 0
-                    stats.revenue = parseInt(revenue) || 0 // Keep in cents
-                }
+        for (const row of commissionsByLink) {
+            if (row.link_id && statsMap.has(row.link_id)) {
+                const stats = statsMap.get(row.link_id)!
+                stats.sales = row._count._all
+                stats.revenue = row._sum.commission_amount || 0
             }
         }
 
@@ -204,19 +205,35 @@ export async function getAffiliateStatsByUserId(userId: string): Promise<Affilia
                 stats.leads = parseInt(text.trim()) || 0
             }
 
-            // 3. GET TOTAL SALES by link_id
-            const salesQuery = `SELECT count() as sales, sum(amount) as revenue FROM sales WHERE link_id IN (${linkIdList})`
-            const salesResponse = await fetch(
-                `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
-                { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-            )
+        }
 
-            if (salesResponse.ok) {
-                const text = await salesResponse.text()
-                const [sales, revenue] = text.trim().split('\t')
-                stats.sales = parseInt(sales) || 0
-                stats.revenue = parseInt(revenue) || 0
-            }
+        // 3. GET TOTAL SALES & REVENUE from DB Commission (source of truth)
+        const seller = await prisma.seller.findFirst({
+            where: { user_id: userId },
+            select: { id: true },
+        })
+
+        if (seller) {
+            const [salesCount, revenueAgg] = await Promise.all([
+                prisma.commission.count({
+                    where: {
+                        seller_id: seller.id,
+                        org_parent_commission_id: null,
+                        referral_generation: null,
+                    },
+                }),
+                prisma.commission.aggregate({
+                    where: {
+                        seller_id: seller.id,
+                        org_parent_commission_id: null,
+                        referral_generation: null,
+                    },
+                    _sum: { commission_amount: true },
+                }),
+            ])
+
+            stats.sales = salesCount
+            stats.revenue = revenueAgg._sum.commission_amount || 0
         }
 
 
@@ -394,27 +411,28 @@ async function getAffiliateTimeseriesByUserId(
             }
         }
 
-        // 3. GET SALES TIMESERIES
-        const salesQuery = `
-            SELECT toDate(timestamp) as date, count() as sales, sum(amount) as revenue
-            FROM sales
-            WHERE link_id IN (${linkIdList})
-            AND timestamp >= '${dateFromStr}'
-            GROUP BY date
-            ORDER BY date
-        `
-        const salesResponse = await fetch(
-            `${TINYBIRD_HOST}/v0/sql?q=${encodeURIComponent(salesQuery)}`,
-            { headers: { 'Authorization': `Bearer ${TINYBIRD_TOKEN}` } }
-        )
+        // 3. GET SALES TIMESERIES from DB Commission (source of truth)
+        const seller = await prisma.seller.findFirst({
+            where: { user_id: userId },
+            select: { id: true },
+        })
 
-        if (salesResponse.ok) {
-            const text = await salesResponse.text()
-            for (const line of text.trim().split('\n').filter(l => l.trim())) {
-                const [date, sales, revenue] = line.split('\t')
-                if (date && dateMap.has(date)) {
-                    dateMap.get(date)!.sales = parseInt(sales) || 0
-                    dateMap.get(date)!.revenue = parseInt(revenue) || 0
+        if (seller) {
+            const commissions = await prisma.commission.findMany({
+                where: {
+                    seller_id: seller.id,
+                    org_parent_commission_id: null,
+                    referral_generation: null,
+                    created_at: { gte: dateFrom },
+                },
+                select: { created_at: true, commission_amount: true },
+            })
+
+            for (const c of commissions) {
+                const dateStr = c.created_at.toISOString().split('T')[0]
+                if (dateMap.has(dateStr)) {
+                    dateMap.get(dateStr)!.sales += 1
+                    dateMap.get(dateStr)!.revenue += c.commission_amount
                 }
             }
         }
