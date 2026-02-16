@@ -1101,6 +1101,15 @@
                 "campaign": "Campaign",
                 "campaignPlaceholder": "e.g. spring_sale, launch_2026",
                 "utmParameters": "UTM Parameters",
+                "socialPreview": "Social Preview (OG)",
+                "ogTitle": "Preview Title",
+                "ogTitlePlaceholder": "Custom title for social sharing",
+                "ogDescription": "Preview Description",
+                "ogDescriptionPlaceholder": "Description shown when link is shared",
+                "ogImage": "Preview Image",
+                "ogImageUpload": "Click to upload",
+                "ogImageHint": "Recommended: 1200x630px",
+                "ogImageRemove": "Remove",
                 "preview": "Link Preview",
                 "submit": "Create Link",
                 "errorUrlRequired": "URL is required"
@@ -1267,7 +1276,16 @@
                 "bySeller": "By seller"
             },
             "missionDetail": "Mission detail",
-            "enterCode": "Enter invite code"
+            "enterCode": "Enter invite code",
+            "confirmLeaveTitle": "Leave Group",
+            "confirmLeaveDesc": "Are you sure you want to leave this group?",
+            "confirmLeaveCreatorDesc": "As the creator, leaving will permanently archive the group. Existing commissions will continue their lifecycle.",
+            "confirmRemoveTitle": "Remove Member",
+            "confirmRemoveDesc": "Are you sure you want to remove {name} from the group?",
+            "cancel": "Cancel",
+            "confirm": "Confirm",
+            "dangerZone": "Danger zone",
+            "dangerZoneDesc": "Leaving the group is irreversible for the creator."
         },
         "commissions": {
             "detail": {

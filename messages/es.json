@@ -1101,6 +1101,15 @@
                 "campaign": "Campaña",
                 "campaignPlaceholder": "ej. rebajas_primavera, lanzamiento_2026",
                 "utmParameters": "Parámetros UTM",
+                "socialPreview": "Vista previa social (OG)",
+                "ogTitle": "Título de vista previa",
+                "ogTitlePlaceholder": "Título personalizado para compartir en redes",
+                "ogDescription": "Descripción de vista previa",
+                "ogDescriptionPlaceholder": "Descripción mostrada al compartir el enlace",
+                "ogImage": "Imagen de vista previa",
+                "ogImageUpload": "Haz clic para subir",
+                "ogImageHint": "Recomendado: 1200x630px",
+                "ogImageRemove": "Eliminar",
                 "preview": "Vista previa del enlace",
                 "submit": "Crear enlace",
                 "errorUrlRequired": "La URL es obligatoria"
@@ -1267,7 +1276,16 @@
                 "bySeller": "Por seller"
             },
             "missionDetail": "Detalle misión",
-            "enterCode": "Ingresa el codigo de invitacion"
+            "enterCode": "Ingresa el codigo de invitacion",
+            "confirmLeaveTitle": "Dejar el grupo",
+            "confirmLeaveDesc": "¿Estás seguro de que quieres dejar este grupo?",
+            "confirmLeaveCreatorDesc": "Como creador, salir archivará permanentemente el grupo. Las comisiones existantes continuarán su ciclo.",
+            "confirmRemoveTitle": "Eliminar miembro",
+            "confirmRemoveDesc": "¿Estás seguro de que quieres eliminar a {name} del grupo?",
+            "cancel": "Cancelar",
+            "confirm": "Confirmar",
+            "dangerZone": "Zona de peligro",
+            "dangerZoneDesc": "Dejar el grupo es irreversible para el creador."
         },
         "commissions": {
             "detail": {

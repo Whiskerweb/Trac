@@ -594,6 +594,9 @@ export async function acceptOrgMission(orgMissionId: string, leaderCut: string) 
         if (orgMission.Organization.leader_id !== seller.id) {
             return { success: false, error: 'Only the leader can accept missions' }
         }
+        if (orgMission.status === 'ACCEPTED') {
+            return { success: true, memberReward: orgMission.member_reward || '' }
+        }
         if (orgMission.status !== 'PROPOSED') {
             return { success: false, error: 'Mission is not in proposed state' }
         }
@@ -864,6 +867,133 @@ export async function getOrgMissionProposalsForLeader() {
         return { success: true, proposals }
     } catch (error) {
         console.error('[Org] Failed to get leader proposals:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+/**
+ * Get org performance stats for the startup dashboard.
+ * Aggregates commissions by seller and by mission.
+ */
+export async function getOrgStatsForStartup(orgId: string) {
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+        if (!workspace) return { success: false, error: 'Not authenticated' }
+
+        // Get org with active members
+        const org = await prisma.organization.findUnique({
+            where: { id: orgId, status: 'ACTIVE' },
+            include: {
+                Members: {
+                    where: { status: 'ACTIVE' },
+                    include: { Seller: { select: { id: true, name: true, email: true } } },
+                },
+            },
+        })
+        if (!org) return { success: false, error: 'Organization not found' }
+
+        // Get org missions that are ACCEPTED or proposed by this workspace
+        const orgMissions = await prisma.organizationMission.findMany({
+            where: {
+                organization_id: orgId,
+                OR: [
+                    { status: 'ACCEPTED' },
+                    { proposed_by: workspace.workspaceId },
+                ],
+            },
+            include: { Mission: { select: { id: true, title: true, status: true, reward: true, gain_type: true } } },
+        })
+
+        const acceptedMissionIds = orgMissions
+            .filter(m => m.status === 'ACCEPTED')
+            .map(m => m.id)
+
+        // Get all member commissions for these org missions (exclude leader cuts and referral)
+        const commissions = acceptedMissionIds.length > 0
+            ? await prisma.commission.findMany({
+                where: {
+                    organization_mission_id: { in: acceptedMissionIds },
+                    org_parent_commission_id: null,
+                    referral_generation: null,
+                },
+                select: {
+                    id: true,
+                    seller_id: true,
+                    organization_mission_id: true,
+                    commission_source: true,
+                    gross_amount: true,
+                    commission_amount: true,
+                    status: true,
+                },
+            })
+            : []
+
+        // Aggregate totals
+        const totalRevenue = commissions.reduce((s, c) => s + c.gross_amount, 0)
+        const totalSales = commissions.filter(c => c.commission_source === 'SALE' || c.commission_source === 'RECURRING').length
+        const totalLeads = commissions.filter(c => c.commission_source === 'LEAD').length
+
+        // Aggregate by seller → top sellers
+        const sellerMap = new Map<string, { sales: number; leads: number; revenue: number }>()
+        for (const c of commissions) {
+            const existing = sellerMap.get(c.seller_id) || { sales: 0, leads: 0, revenue: 0 }
+            existing.revenue += c.gross_amount
+            if (c.commission_source === 'LEAD') existing.leads++
+            else existing.sales++
+            sellerMap.set(c.seller_id, existing)
+        }
+
+        // Build top sellers list with seller info
+        const sellerInfoMap = new Map(
+            org.Members.map(m => [m.Seller.id, m.Seller])
+        )
+        // Also add leader info if they have commissions
+        const topSellers = Array.from(sellerMap.entries())
+            .map(([sellerId, stats]) => ({
+                sellerId,
+                name: sellerInfoMap.get(sellerId)?.name || null,
+                email: sellerInfoMap.get(sellerId)?.email || null,
+                avatarUrl: null,
+                ...stats,
+            }))
+            .sort((a, b) => b.revenue - a.revenue)
+
+        // Aggregate by mission
+        const missionMap = new Map<string, { sales: number; leads: number; revenue: number }>()
+        for (const c of commissions) {
+            if (!c.organization_mission_id) continue
+            const existing = missionMap.get(c.organization_mission_id) || { sales: 0, leads: 0, revenue: 0 }
+            existing.revenue += c.gross_amount
+            if (c.commission_source === 'LEAD') existing.leads++
+            else existing.sales++
+            missionMap.set(c.organization_mission_id, existing)
+        }
+
+        const missionStats = orgMissions
+            .filter(m => m.status === 'ACCEPTED')
+            .map(m => ({
+                orgMissionId: m.id,
+                missionTitle: m.Mission.title,
+                totalReward: m.total_reward,
+                leaderReward: m.leader_reward,
+                memberReward: m.member_reward,
+                ...(missionMap.get(m.id) || { sales: 0, leads: 0, revenue: 0 }),
+            }))
+
+        return {
+            success: true,
+            stats: {
+                totalRevenue,
+                totalSales,
+                totalLeads,
+                activeMembers: org.Members.length,
+                activeMissions: acceptedMissionIds.length,
+                topSellers,
+                missionStats,
+            },
+        }
+    } catch (error) {
+        console.error('[Org] Failed to get org stats for startup:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
 }

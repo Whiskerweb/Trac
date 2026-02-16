@@ -1101,6 +1101,15 @@
                 "campaign": "Campagne",
                 "campaignPlaceholder": "ex. soldes_printemps, lancement_2026",
                 "utmParameters": "Paramètres UTM",
+                "socialPreview": "Aperçu social (OG)",
+                "ogTitle": "Titre de prévisualisation",
+                "ogTitlePlaceholder": "Titre personnalisé pour le partage social",
+                "ogDescription": "Description de prévisualisation",
+                "ogDescriptionPlaceholder": "Description affichée lors du partage du lien",
+                "ogImage": "Image de prévisualisation",
+                "ogImageUpload": "Cliquer pour uploader",
+                "ogImageHint": "Recommandé : 1200x630px",
+                "ogImageRemove": "Supprimer",
                 "preview": "Aperçu du lien",
                 "submit": "Créer le lien",
                 "errorUrlRequired": "L'URL est obligatoire"
@@ -1267,7 +1276,16 @@
                 "bySeller": "Par seller"
             },
             "missionDetail": "Détail mission",
-            "enterCode": "Entrer le code d'invitation"
+            "enterCode": "Entrer le code d'invitation",
+            "confirmLeaveTitle": "Quitter le groupe",
+            "confirmLeaveDesc": "Voulez-vous vraiment quitter ce groupe ?",
+            "confirmLeaveCreatorDesc": "En tant que créateur, quitter archivera définitivement le groupe. Les commissions existantes continueront leur cycle.",
+            "confirmRemoveTitle": "Retirer un membre",
+            "confirmRemoveDesc": "Voulez-vous vraiment retirer {name} du groupe ?",
+            "cancel": "Annuler",
+            "confirm": "Confirmer",
+            "dangerZone": "Zone de danger",
+            "dangerZoneDesc": "Quitter le groupe est irréversible pour le créateur."
         },
         "commissions": {
             "detail": {
