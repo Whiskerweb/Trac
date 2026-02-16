@@ -1578,7 +1578,7 @@ export type OrgMissionDetail = {
         recurring_reward_structure: string | null
     }
     orgDeal: {
-        totalReward: string
+        totalReward: string | null
         leaderReward: string | null
         memberReward: string | null
     }
@@ -1770,8 +1770,8 @@ export async function getOrgMissionDetail(orgMissionId: string): Promise<{
                     recurring_reward_structure: mission.recurring_reward_structure,
                 },
                 orgDeal: {
-                    totalReward: orgMission.total_reward,
-                    leaderReward: orgMission.leader_reward,
+                    totalReward: isLeader ? orgMission.total_reward : null,
+                    leaderReward: isLeader ? orgMission.leader_reward : null,
                     memberReward: orgMission.member_reward,
                 },
                 stats: { clicks: totalClicks, leads: totalLeads, sales: totalSales, revenue: totalRevenue },

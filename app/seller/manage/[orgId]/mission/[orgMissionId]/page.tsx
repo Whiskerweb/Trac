@@ -28,6 +28,19 @@ const formatCurrency = (cents: number) =>
         .format(cents / 100) + ' \u20AC'
 
 function DealBreakdown({ orgDeal }: { orgDeal: OrgMissionDetail['orgDeal'] }) {
+    // Member view: only show their reward
+    if (!orgDeal.totalReward) {
+        return orgDeal.memberReward ? (
+            <div className="bg-neutral-50 rounded-xl px-4 py-3">
+                <div className="flex items-center justify-between text-[13px]">
+                    <span className="text-emerald-600 font-medium">Your commission</span>
+                    <span className="font-semibold text-emerald-600">{orgDeal.memberReward}</span>
+                </div>
+            </div>
+        ) : null
+    }
+
+    // Leader view: full breakdown
     const isPercentage = orgDeal.totalReward.includes('%')
     const dealValue = isPercentage
         ? parseFloat(orgDeal.totalReward.replace('%', ''))
