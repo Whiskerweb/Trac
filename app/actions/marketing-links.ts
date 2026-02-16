@@ -10,6 +10,20 @@ import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 // MARKETING LINKS — Server Actions
 // =============================================
 
+const DEFAULT_BASE = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
+async function getShortLinkBase(workspaceId: string): Promise<string> {
+    const domain = await prisma.domain.findFirst({
+        where: { workspace_id: workspaceId, verified: true },
+        select: { name: true },
+    })
+    return domain ? `https://${domain.name}` : DEFAULT_BASE
+}
+
+function buildShortUrl(base: string, slug: string): string {
+    return `${base}/s/${slug}`
+}
+
 interface MarketingLinkInput {
     url: string
     slug?: string
@@ -119,13 +133,14 @@ export async function createMarketingLink(input: MarketingLinkInput) {
 
         revalidatePath('/dashboard/marketing')
 
+        const base = input.domain ? `https://${input.domain}` : await getShortLinkBase(workspace.workspaceId)
         return {
             success: true,
             data: {
                 id: link.id,
                 slug: link.slug,
                 original_url: link.original_url,
-                short_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/s/${link.slug}`,
+                short_url: buildShortUrl(base, link.slug),
                 channel: link.channel,
                 campaign: link.campaign,
             }
@@ -172,11 +187,12 @@ export async function getMarketingLinks(filters?: {
         orderBy: { created_at: 'desc' },
     })
 
+    const base = await getShortLinkBase(workspace.workspaceId)
     return {
         success: true,
         data: links.map(l => ({
             ...l,
-            short_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/s/${l.slug}`,
+            short_url: buildShortUrl(base, l.slug),
         })),
     }
 }
@@ -199,11 +215,12 @@ export async function getMarketingLink(id: string) {
         return { success: false, error: 'Link not found' }
     }
 
+    const base = await getShortLinkBase(workspace.workspaceId)
     return {
         success: true,
         data: {
             ...link,
-            short_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/s/${link.slug}`,
+            short_url: buildShortUrl(base, link.slug),
         },
     }
 }
@@ -422,9 +439,10 @@ export async function getMarketingOverview() {
     const bestLink = links[0] || null
 
     // Top 10 performing links
+    const base = await getShortLinkBase(workspace.workspaceId)
     const topLinks = links.slice(0, 10).map(l => ({
         ...l,
-        short_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/s/${l.slug}`,
+        short_url: buildShortUrl(base, l.slug),
     }))
 
     return {
@@ -436,7 +454,7 @@ export async function getMarketingOverview() {
             topChannelClicks,
             bestLink: bestLink ? {
                 ...bestLink,
-                short_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/s/${bestLink.slug}`,
+                short_url: buildShortUrl(base, bestLink.slug),
             } : null,
             topLinks,
         },
