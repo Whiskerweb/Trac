@@ -26,13 +26,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Aucun fichier fourni' }, { status: 400 })
         }
 
-        const validTypes = ['avatar', 'cv', 'logo', 'pitch_deck', 'doc']
+        const validTypes = ['avatar', 'cv', 'logo', 'pitch_deck', 'doc', 'og_image']
         if (!type || !validTypes.includes(type)) {
             return NextResponse.json({ error: `Invalid type. Accepted types: ${validTypes.join(', ')}` }, { status: 400 })
         }
 
         // Validate file type
-        const imageTypes = ['avatar', 'logo']
+        const imageTypes = ['avatar', 'logo', 'og_image']
         const pdfTypes = ['cv', 'pitch_deck', 'doc']
 
         if (imageTypes.includes(type)) {
@@ -69,7 +69,8 @@ export async function POST(request: NextRequest) {
             cv: 'cvs',
             logo: 'logos',
             pitch_deck: 'documents',
-            doc: 'documents'
+            doc: 'documents',
+            og_image: 'og-images'
         }
         const folder = dirMap[type] || 'uploads'
         const storagePath = `${folder}/${filename}`

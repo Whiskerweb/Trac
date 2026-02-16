@@ -21,6 +21,9 @@ interface MarketingLinkInput {
     utm_term?: string
     utm_content?: string
     domain?: string
+    og_title?: string
+    og_description?: string
+    og_image?: string
 }
 
 /**
@@ -94,6 +97,9 @@ export async function createMarketingLink(input: MarketingLinkInput) {
                 utm_campaign: input.utm_campaign || null,
                 utm_term: input.utm_term || null,
                 utm_content: input.utm_content || null,
+                og_title: input.og_title || null,
+                og_description: input.og_description || null,
+                og_image: input.og_image || null,
             }
         })
 
@@ -104,6 +110,9 @@ export async function createMarketingLink(input: MarketingLinkInput) {
             linkId: link.id,
             workspaceId: link.workspace_id,
             sellerId: null,
+            ogTitle: input.og_title || null,
+            ogDescription: input.og_description || null,
+            ogImage: input.og_image || null,
         }, input.domain)
 
         console.log('[Marketing] ✅ Created link:', link.slug, 'channel:', input.channel)
@@ -224,8 +233,23 @@ export async function updateMarketingLink(id: string, input: Partial<MarketingLi
     if (input.utm_campaign !== undefined) data.utm_campaign = input.utm_campaign || null
     if (input.utm_term !== undefined) data.utm_term = input.utm_term || null
     if (input.utm_content !== undefined) data.utm_content = input.utm_content || null
+    if (input.og_title !== undefined) data.og_title = input.og_title || null
+    if (input.og_description !== undefined) data.og_description = input.og_description || null
+    if (input.og_image !== undefined) data.og_image = input.og_image || null
 
     const updated = await prisma.shortLink.update({ where: { id }, data })
+
+    // Re-sync Redis with updated data
+    const { setLinkInRedis } = await import('@/lib/redis')
+    await setLinkInRedis(updated.slug, {
+        url: updated.original_url,
+        linkId: updated.id,
+        workspaceId: updated.workspace_id,
+        sellerId: updated.affiliate_id || null,
+        ogTitle: updated.og_title || null,
+        ogDescription: updated.og_description || null,
+        ogImage: updated.og_image || null,
+    }, input.domain)
 
     revalidatePath('/dashboard/marketing')
     return { success: true, data: updated }

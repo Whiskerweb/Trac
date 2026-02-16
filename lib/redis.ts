@@ -42,6 +42,9 @@ export interface RedisLinkData {
     linkId: string
     workspaceId: string
     sellerId?: string | null
+    ogTitle?: string | null
+    ogDescription?: string | null
+    ogImage?: string | null
 }
 
 // =============================================

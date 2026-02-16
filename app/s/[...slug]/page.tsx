@@ -34,6 +34,12 @@ const TRAC_ID_PARAM = 'trac_id'
 // UTILITY FUNCTIONS
 // =============================================
 
+const SOCIAL_CRAWLERS = /Twitterbot|facebookexternalhit|LinkedInBot|Slackbot|WhatsApp|Discordbot|TelegramBot|Applebot/i
+
+function isSocialCrawler(ua: string): boolean {
+    return SOCIAL_CRAWLERS.test(ua)
+}
+
 /**
  * Generate a unique Click ID
  * Format: clk_<12-char-nanoid>
@@ -134,6 +140,53 @@ export default async function TracRedirect({
     if (!link) {
         console.log('[Trac] ❌ Not found:', slug)
         redirect('/404')
+    }
+
+    // ----------------------------------------
+    // SOCIAL CRAWLER: Serve OG meta tags
+    // ----------------------------------------
+    const uaString = headersList.get('user-agent') || ''
+    if (isSocialCrawler(uaString) && (link.og_title || link.og_description || link.og_image)) {
+        console.log('[Trac] 🤖 Social crawler detected (fallback):', uaString.slice(0, 40))
+
+        const crawlerClickId = generateClickId()
+        prisma.shortLink.update({
+            where: { id: link.id },
+            data: { clicks: { increment: 1 } }
+        }).catch(() => {})
+        logClick({
+            timestamp: new Date().toISOString(),
+            click_id: crawlerClickId,
+            workspace_id: link.workspace_id,
+            link_id: link.id,
+            affiliate_id: link.affiliate_id || null,
+            url: link.original_url,
+            user_agent: uaString,
+            ip: headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || '0.0.0.0',
+            country: headersList.get('x-vercel-ip-country') || '',
+            city: headersList.get('x-vercel-ip-city') || '',
+            referrer: headersList.get('referer') || '',
+            device: parseDevice(uaString),
+        })
+
+        return (
+            <html>
+                <head>
+                    <meta charSet="utf-8" />
+                    <title>{link.og_title || ''}</title>
+                    <meta property="og:title" content={link.og_title || ''} />
+                    <meta property="og:description" content={link.og_description || ''} />
+                    {link.og_image && <meta property="og:image" content={link.og_image} />}
+                    <meta property="og:url" content={link.original_url} />
+                    <meta name="twitter:card" content={link.og_image ? 'summary_large_image' : 'summary'} />
+                    <meta name="twitter:title" content={link.og_title || ''} />
+                    <meta name="twitter:description" content={link.og_description || ''} />
+                    {link.og_image && <meta name="twitter:image" content={link.og_image} />}
+                    <meta httpEquiv="refresh" content={`0;url=${link.original_url}`} />
+                </head>
+                <body />
+            </html>
+        )
     }
 
     // ----------------------------------------

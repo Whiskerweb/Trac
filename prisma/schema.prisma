@@ -143,6 +143,9 @@ model ShortLink {
   utm_campaign      String?
   utm_term          String?
   utm_content       String?
+  og_title          String?
+  og_description    String?
+  og_image          String?
   MissionEnrollment MissionEnrollment?
   Workspace         Workspace          @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 

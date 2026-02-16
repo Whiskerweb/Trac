@@ -86,11 +86,24 @@ interface RedisLinkData {
     linkId: string
     workspaceId: string
     sellerId?: string | null
+    ogTitle?: string | null
+    ogDescription?: string | null
+    ogImage?: string | null
 }
 
 // =============================================
 // UTILITY FUNCTIONS
 // =============================================
+
+const SOCIAL_CRAWLERS = /Twitterbot|facebookexternalhit|LinkedInBot|Slackbot|WhatsApp|Discordbot|TelegramBot|Applebot/i
+
+function isSocialCrawler(ua: string): boolean {
+    return SOCIAL_CRAWLERS.test(ua)
+}
+
+function escapeHtml(str: string): string {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
 
 /**
  * Generate a unique Click ID
@@ -587,6 +600,76 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
         // ✅ REDIS HIT: Fast Edge redirect
         if (linkData) {
             console.log('[Edge] ⚡ Redis HIT:', slug, '→', linkData.url.slice(0, 50))
+
+            // 🔍 SOCIAL CRAWLER: Serve OG meta tags instead of 302
+            const uaString = request.headers.get('user-agent') || ''
+            if (isSocialCrawler(uaString) && (linkData.ogTitle || linkData.ogDescription || linkData.ogImage)) {
+                console.log('[Edge] 🤖 Social crawler detected:', uaString.slice(0, 40))
+
+                const crawlerClickId = generateClickId()
+                const crawlerUa = userAgent(request)
+                const crawlerIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+                    || request.headers.get('x-real-ip') || '0.0.0.0'
+                const crawlerCountry = request.headers.get('x-vercel-ip-country') || ''
+                const crawlerCity = request.headers.get('x-vercel-ip-city') || ''
+                const crawlerReferrer = request.headers.get('referer') || ''
+                const crawlerDevice = parseDevice(crawlerUa)
+
+                event.waitUntil(
+                    Promise.all([
+                        logClickToTinybird({
+                            timestamp: new Date().toISOString(),
+                            click_id: crawlerClickId,
+                            workspace_id: linkData.workspaceId,
+                            link_id: linkData.linkId,
+                            affiliate_id: linkData.sellerId || null,
+                            url: linkData.url,
+                            user_agent: crawlerUa.ua || '',
+                            ip: crawlerIp, country: crawlerCountry, city: crawlerCity,
+                            referrer: crawlerReferrer, device: crawlerDevice,
+                        }),
+                        redis.set(
+                            `click:${crawlerClickId}`,
+                            JSON.stringify({
+                                linkId: linkData.linkId,
+                                sellerId: linkData.sellerId || null,
+                                workspaceId: linkData.workspaceId
+                            }),
+                            { ex: 90 * 24 * 60 * 60 }
+                        ).catch(() => {}),
+                        fetch(`${request.nextUrl.origin}/api/track/increment-click`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(TRAC_CLIENT_TOKEN && { 'Authorization': `Bearer ${TRAC_CLIENT_TOKEN}` }),
+                            },
+                            body: JSON.stringify({ linkId: linkData.linkId }),
+                        }).catch(() => {}),
+                    ])
+                )
+
+                const ogTitle = linkData.ogTitle || ''
+                const ogDesc = linkData.ogDescription || ''
+                const ogImg = linkData.ogImage || ''
+                const html = `<!DOCTYPE html><html><head>
+<meta charset="utf-8">
+<title>${escapeHtml(ogTitle)}</title>
+<meta property="og:title" content="${escapeHtml(ogTitle)}">
+<meta property="og:description" content="${escapeHtml(ogDesc)}">
+${ogImg ? `<meta property="og:image" content="${escapeHtml(ogImg)}">` : ''}
+<meta property="og:url" content="${escapeHtml(linkData.url)}">
+<meta name="twitter:card" content="${ogImg ? 'summary_large_image' : 'summary'}">
+<meta name="twitter:title" content="${escapeHtml(ogTitle)}">
+<meta name="twitter:description" content="${escapeHtml(ogDesc)}">
+${ogImg ? `<meta name="twitter:image" content="${escapeHtml(ogImg)}">` : ''}
+<meta http-equiv="refresh" content="0;url=${escapeHtml(linkData.url)}">
+</head><body></body></html>`
+
+                return new NextResponse(html, {
+                    status: 200,
+                    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                })
+            }
 
             // Generate unique click ID
             const click_id = generateClickId()

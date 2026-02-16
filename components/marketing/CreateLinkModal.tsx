@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import {
     X, Link2, Loader2, Check, Copy, Globe,
-    Shuffle, ChevronDown, ChevronUp, ExternalLink
+    Shuffle, ChevronDown, ChevronUp, ExternalLink,
+    Image as ImageIcon, Upload, Trash2
 } from 'lucide-react'
 import { createMarketingLink } from '@/app/actions/marketing-links'
 import { getVerifiedDomainForWorkspace } from '@/app/actions/domains'
@@ -39,6 +40,13 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
     const [utmTerm, setUtmTerm] = useState('')
     const [utmContent, setUtmContent] = useState('')
 
+    // OG Preview
+    const [showOg, setShowOg] = useState(false)
+    const [ogTitle, setOgTitle] = useState('')
+    const [ogDescription, setOgDescription] = useState('')
+    const [ogImage, setOgImage] = useState('')
+    const [uploadingOg, setUploadingOg] = useState(false)
+
     // Domain
     const [verifiedDomain, setVerifiedDomain] = useState<string | null>(null)
     const [selectedDomain, setSelectedDomain] = useState<string>('')
@@ -63,6 +71,10 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
             setUtmCampaign('')
             setUtmTerm('')
             setUtmContent('')
+            setShowOg(false)
+            setOgTitle('')
+            setOgDescription('')
+            setOgImage('')
             setError('')
             setCopied(false)
 
@@ -132,6 +144,9 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
             utm_term: utmTerm.trim() || undefined,
             utm_content: utmContent.trim() || undefined,
             domain: domainToSend,
+            og_title: ogTitle.trim() || undefined,
+            og_description: ogDescription.trim() || undefined,
+            og_image: ogImage || undefined,
         })
 
         if (res.success && res.data) {
@@ -416,6 +431,91 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                     )}
                                 </div>
 
+                                {/* Social Preview (OG) toggle */}
+                                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowOg(!showOg)}
+                                        className="flex items-center justify-between w-full px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <ImageIcon className="w-4 h-4 text-gray-400" />
+                                            {t('create.socialPreview')}
+                                        </span>
+                                        {showOg ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                                    </button>
+                                    {showOg && (
+                                        <div className="px-4 pb-3 space-y-2.5 border-t border-gray-100 pt-3">
+                                            <div>
+                                                <label className="block text-[11px] font-medium text-gray-400 mb-0.5">{t('create.ogTitle')}</label>
+                                                <input
+                                                    type="text"
+                                                    value={ogTitle}
+                                                    onChange={(e) => setOgTitle(e.target.value)}
+                                                    placeholder={t('create.ogTitlePlaceholder')}
+                                                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300 transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[11px] font-medium text-gray-400 mb-0.5">{t('create.ogDescription')}</label>
+                                                <textarea
+                                                    value={ogDescription}
+                                                    onChange={(e) => setOgDescription(e.target.value)}
+                                                    placeholder={t('create.ogDescriptionPlaceholder')}
+                                                    rows={2}
+                                                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300 transition-all resize-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[11px] font-medium text-gray-400 mb-0.5">{t('create.ogImage')}</label>
+                                                {ogImage ? (
+                                                    <div className="relative rounded-lg overflow-hidden border border-gray-200">
+                                                        <img src={ogImage} alt="OG preview" className="w-full h-32 object-cover" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setOgImage('')}
+                                                            className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-lg shadow-sm transition-colors"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-purple-300 hover:bg-purple-50/30 transition-all">
+                                                        {uploadingOg ? (
+                                                            <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                                                        ) : (
+                                                            <>
+                                                                <Upload className="w-5 h-5 text-gray-400 mb-1" />
+                                                                <span className="text-xs text-gray-400">{t('create.ogImageUpload')}</span>
+                                                                <span className="text-[10px] text-gray-300 mt-0.5">{t('create.ogImageHint')}</span>
+                                                            </>
+                                                        )}
+                                                        <input
+                                                            type="file"
+                                                            accept="image/jpeg,image/png,image/webp"
+                                                            className="hidden"
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0]
+                                                                if (!file) return
+                                                                setUploadingOg(true)
+                                                                try {
+                                                                    const formData = new FormData()
+                                                                    formData.append('file', file)
+                                                                    formData.append('type', 'og_image')
+                                                                    const res = await fetch('/api/upload', { method: 'POST', body: formData })
+                                                                    const data = await res.json()
+                                                                    if (data.success) setOgImage(data.url)
+                                                                } catch { /* ignore */ }
+                                                                setUploadingOg(false)
+                                                            }}
+                                                        />
+                                                    </label>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 {/* Error */}
                                 {error && (
                                     <div className="bg-red-50 text-red-600 text-sm px-4 py-2.5 rounded-xl border border-red-100">
@@ -439,20 +539,36 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                     </div>
                                 </div>
 
-                                {/* Link preview */}
+                                {/* Social Card Preview */}
                                 <div>
-                                    <h3 className="text-sm font-semibold text-gray-700 mb-2">{t('create.preview')}</h3>
-                                    <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
-                                        <div className="flex items-center gap-2">
-                                            <Link2 className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                                            <p className="text-sm font-mono text-gray-800 truncate">{previewUrl}</p>
-                                        </div>
-                                        {url && (
-                                            <div className="flex items-center gap-2">
-                                                <ExternalLink className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                                                <p className="text-xs text-gray-400 truncate">{url}</p>
+                                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                        {ogTitle || ogDescription || ogImage ? t('create.socialPreview') : t('create.preview')}
+                                    </h3>
+                                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                                        {ogImage && (
+                                            <div className="w-full h-[132px] bg-gray-100">
+                                                <img src={ogImage} alt="OG preview" className="w-full h-full object-cover" />
                                             </div>
                                         )}
+                                        {!ogImage && (ogTitle || ogDescription) && (
+                                            <div className="w-full h-16 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
+                                                <ImageIcon className="w-6 h-6 text-gray-300" />
+                                            </div>
+                                        )}
+                                        <div className="p-3 space-y-1">
+                                            {ogTitle ? (
+                                                <p className="text-sm font-semibold text-gray-900 line-clamp-1">{ogTitle}</p>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <Link2 className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                                    <p className="text-sm font-mono text-gray-800 truncate">{previewUrl}</p>
+                                                </div>
+                                            )}
+                                            {ogDescription && (
+                                                <p className="text-xs text-gray-500 line-clamp-2">{ogDescription}</p>
+                                            )}
+                                            <p className="text-[11px] text-gray-400 truncate">{url || previewUrl}</p>
+                                        </div>
                                     </div>
                                 </div>
 
