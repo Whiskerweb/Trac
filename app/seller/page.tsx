@@ -39,6 +39,7 @@ interface Enrollment {
         id: string
         name: string
         memberReward: string | null
+        orgMissionId: string
     } | null
     group?: {
         id: string
@@ -79,8 +80,12 @@ function MissionRow({ data, sellerId }: { data: Enrollment; sellerId: string | n
 
     const revenue = data.link?.revenue || 0
 
+    const href = data.organization
+        ? `/seller/manage/${data.organization.id}/mission/${data.organization.orgMissionId}`
+        : `/seller/programs/${data.mission.id}?eid=${data.id}`
+
     return (
-        <Link href={`/seller/programs/${data.mission.id}?eid=${data.id}`}>
+        <Link href={href}>
             <div className="group px-6 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-6">
                     {/* Startup Logo */}

@@ -1438,6 +1438,232 @@ export async function getPublicOrganization(slug: string) {
     }
 }
 
+// =============================================
+// ORG MISSION DETAIL (for seller dashboard)
+// =============================================
+
+export type OrgMissionDetail = {
+    mission: {
+        id: string
+        title: string
+        companyName: string | null
+        logoUrl: string | null
+        lead_enabled: boolean
+        sale_enabled: boolean
+        recurring_enabled: boolean
+        lead_reward_amount: number | null
+        sale_reward_amount: number | null
+        sale_reward_structure: string | null
+        recurring_reward_amount: number | null
+        recurring_reward_structure: string | null
+    }
+    orgDeal: {
+        totalReward: string
+        leaderReward: string | null
+        memberReward: string | null
+    }
+    stats: { clicks: number; leads: number; sales: number; revenue: number }
+    timeseries: Array<{ date: string; clicks: number; leads: number; sales: number; revenue: number }>
+    memberBreakdown: Array<{
+        sellerId: string
+        name: string
+        avatarUrl: string | null
+        revenue: number
+        salesCount: number
+        leadsCount: number
+        clicks: number
+    }>
+    isLeader: boolean
+}
+
+/**
+ * Get detailed analytics for an org mission (for seller mission detail page).
+ * Fetches Tinybird stats, timeseries, and per-member breakdown.
+ */
+export async function getOrgMissionDetail(orgMissionId: string): Promise<{
+    success: boolean
+    detail?: OrgMissionDetail
+    error?: string
+}> {
+    try {
+        const seller = await getSellerForCurrentUser()
+        if (!seller) return { success: false, error: 'Not authenticated' }
+
+        // Fetch org mission with related data
+        const orgMission = await prisma.organizationMission.findUnique({
+            where: { id: orgMissionId },
+            include: {
+                Organization: {
+                    include: {
+                        Members: {
+                            where: { status: 'ACTIVE' },
+                            include: {
+                                Seller: {
+                                    select: {
+                                        id: true, user_id: true, name: true, email: true,
+                                        Profile: { select: { avatar_url: true } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                Mission: {
+                    select: {
+                        id: true, title: true, company_name: true, logo_url: true,
+                        lead_enabled: true, sale_enabled: true, recurring_enabled: true,
+                        lead_reward_amount: true, sale_reward_amount: true, sale_reward_structure: true,
+                        recurring_reward_amount: true, recurring_reward_structure: true,
+                        Workspace: {
+                            select: {
+                                name: true,
+                                Profile: { select: { logo_url: true } }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+        if (!orgMission) return { success: false, error: 'Mission not found' }
+
+        const org = orgMission.Organization
+        const mission = orgMission.Mission
+
+        // Verify user is leader or active member
+        const isLeader = org.leader_id === seller.id
+        const isMember = org.Members.some(m => m.seller_id === seller.id)
+        if (!isLeader && !isMember) {
+            return { success: false, error: 'Access denied' }
+        }
+
+        // Get all enrollments for this org mission
+        const enrollments = await prisma.missionEnrollment.findMany({
+            where: {
+                organization_mission_id: orgMissionId,
+                status: 'APPROVED',
+            },
+            select: { user_id: true, link_id: true }
+        })
+
+        const enrollmentLinkIds = enrollments
+            .map(e => e.link_id)
+            .filter((id): id is string => !!id)
+
+        // Fetch Tinybird stats per link
+        const { getAffiliateStatsFromTinybird } = await import('@/app/actions/marketplace')
+        const tinybirdStats = await getAffiliateStatsFromTinybird(enrollmentLinkIds)
+
+        // Map members by user_id
+        const membersByUserId = new Map(
+            org.Members.map(m => [m.Seller.user_id, {
+                sellerId: m.Seller.id,
+                name: m.Seller.name || m.Seller.email || '',
+                avatarUrl: m.Seller.Profile?.avatar_url || null,
+            }])
+        )
+
+        // Aggregate stats + per-member breakdown
+        let totalClicks = 0, totalLeads = 0, totalSales = 0, totalRevenue = 0
+        const memberStatsMap = new Map<string, { clicks: number; leads: number; sales: number; revenue: number }>()
+
+        for (const enrollment of enrollments) {
+            if (!enrollment.link_id) continue
+            const stats = tinybirdStats.get(enrollment.link_id)
+            if (!stats) continue
+
+            totalClicks += stats.clicks
+            totalLeads += stats.leads
+            totalSales += stats.sales
+            totalRevenue += stats.revenue
+
+            const existing = memberStatsMap.get(enrollment.user_id) || { clicks: 0, leads: 0, sales: 0, revenue: 0 }
+            existing.clicks += stats.clicks
+            existing.leads += stats.leads
+            existing.sales += stats.sales
+            existing.revenue += stats.revenue
+            memberStatsMap.set(enrollment.user_id, existing)
+        }
+
+        // Build member breakdown
+        const memberBreakdown: OrgMissionDetail['memberBreakdown'] = []
+        for (const [userId, mStats] of memberStatsMap) {
+            const info = membersByUserId.get(userId)
+            memberBreakdown.push({
+                sellerId: info?.sellerId || userId,
+                name: info?.name || userId,
+                avatarUrl: info?.avatarUrl || null,
+                revenue: mStats.revenue,
+                salesCount: mStats.sales,
+                leadsCount: mStats.leads,
+                clicks: mStats.clicks,
+            })
+        }
+        memberBreakdown.sort((a, b) => b.clicks - a.clicks)
+
+        // Fetch timeseries (aggregate all links)
+        const { getLinkTimeseries } = await import('@/app/actions/marketplace-actions')
+        const days = 30
+
+        const dateMap = new Map<string, { clicks: number; leads: number; sales: number; revenue: number }>()
+        for (let i = 0; i <= days; i++) {
+            const d = new Date()
+            d.setDate(d.getDate() - (days - i))
+            const dateStr = d.toISOString().split('T')[0]
+            dateMap.set(dateStr, { clicks: 0, leads: 0, sales: 0, revenue: 0 })
+        }
+
+        for (const linkId of enrollmentLinkIds) {
+            const ts = await getLinkTimeseries(linkId, days)
+            for (const point of ts) {
+                const existing = dateMap.get(point.date)
+                if (existing) {
+                    existing.clicks += point.clicks
+                    existing.leads += point.leads
+                    existing.sales += point.sales
+                    existing.revenue += point.revenue
+                }
+            }
+        }
+
+        const timeseries = Array.from(dateMap.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([date, data]) => ({ date, ...data }))
+
+        return {
+            success: true,
+            detail: {
+                mission: {
+                    id: mission.id,
+                    title: mission.title,
+                    companyName: mission.company_name || mission.Workspace?.name || null,
+                    logoUrl: mission.logo_url || mission.Workspace?.Profile?.logo_url || null,
+                    lead_enabled: mission.lead_enabled,
+                    sale_enabled: mission.sale_enabled,
+                    recurring_enabled: mission.recurring_enabled,
+                    lead_reward_amount: mission.lead_reward_amount,
+                    sale_reward_amount: mission.sale_reward_amount,
+                    sale_reward_structure: mission.sale_reward_structure,
+                    recurring_reward_amount: mission.recurring_reward_amount,
+                    recurring_reward_structure: mission.recurring_reward_structure,
+                },
+                orgDeal: {
+                    totalReward: orgMission.total_reward,
+                    leaderReward: orgMission.leader_reward,
+                    memberReward: orgMission.member_reward,
+                },
+                stats: { clicks: totalClicks, leads: totalLeads, sales: totalSales, revenue: totalRevenue },
+                timeseries,
+                memberBreakdown,
+                isLeader,
+            }
+        }
+    } catch (error) {
+        console.error('[Org] Failed to get org mission detail:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
 /**
  * Get org info by invite code (for invite landing page, no auth required)
  */
