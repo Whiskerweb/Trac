@@ -30,6 +30,14 @@ const SELLER_BANNED_ID = TEST_PREFIX + 'seller_banned'
 const SELLER_NO_REF_ID = TEST_PREFIX + 'seller_noref'
 const SELLER_NO_CODE_ID = TEST_PREFIX + 'seller_nocode'
 
+// T29: Chain D2 → C2 → B_BANNED → A for BANNED referrer cascade test
+const SELLER_C2_ID = TEST_PREFIX + 'seller_c2'
+const SELLER_D2_ID = TEST_PREFIX + 'seller_d2'
+const LINK_C2_ID = TEST_PREFIX + 'link_c2'
+const LINK_D2_ID = TEST_PREFIX + 'link_d2'
+const ENROLLMENT_C2_ID = TEST_PREFIX + 'enroll_c2'
+const ENROLLMENT_D2_ID = TEST_PREFIX + 'enroll_d2'
+
 const MISSION_ID = TEST_PREFIX + 'mission_001'
 const LINK_B_ID = TEST_PREFIX + 'link_b'
 const LINK_C_ID = TEST_PREFIX + 'link_c'
@@ -175,7 +183,38 @@ async function seedTestData() {
         }
     })
 
+    // T29 chain: D2 → C2 → BANNED → A
+    // C2 referred by BANNED seller, D2 referred by C2
+    await prisma.seller.create({
+        data: {
+            id: SELLER_C2_ID,
+            user_id: TEST_PREFIX + 'user_c2',
+            tenant_id: TEST_PREFIX + 'tenant_c2',
+            email: 'seller_c2@test.com',
+            name: 'Seller C2 (referred by BANNED)',
+            status: 'APPROVED',
+            referral_code: 'ref_c200',
+            referred_by: SELLER_BANNED_ID,
+            referred_at: new Date(),
+        }
+    })
+
+    await prisma.seller.create({
+        data: {
+            id: SELLER_D2_ID,
+            user_id: TEST_PREFIX + 'user_d2',
+            tenant_id: TEST_PREFIX + 'tenant_d2',
+            email: 'seller_d2@test.com',
+            name: 'Seller D2 (referred by C2)',
+            status: 'APPROVED',
+            referral_code: 'ref_d200',
+            referred_by: SELLER_C2_ID,
+            referred_at: new Date(),
+        }
+    })
+
     console.log('  Created seller chain: A → B → C → D + banned + no_ref + no_code')
+    console.log('  Created BANNED chain: A ← BANNED ← C2 ← D2')
 
     // Create mission
     await prisma.mission.create({
@@ -211,11 +250,26 @@ async function seedTestData() {
         })
     }
 
-    // Enrollments for B, C, D
+    // Short links for C2, D2
+    for (const [linkId, userId] of [[LINK_C2_ID, TEST_PREFIX + 'user_c2'], [LINK_D2_ID, TEST_PREFIX + 'user_d2']] as const) {
+        await prisma.shortLink.create({
+            data: {
+                id: linkId,
+                slug: `test-ref-link-${linkId.slice(-2)}`,
+                original_url: 'https://example.com',
+                workspace_id: WORKSPACE_ID,
+                affiliate_id: userId,
+            }
+        })
+    }
+
+    // Enrollments for B, C, D, C2, D2
     for (const [enrollId, linkId, userId] of [
         [ENROLLMENT_B_ID, LINK_B_ID, TEST_PREFIX + 'user_b'],
         [ENROLLMENT_C_ID, LINK_C_ID, TEST_PREFIX + 'user_c'],
         [ENROLLMENT_D_ID, LINK_D_ID, TEST_PREFIX + 'user_d'],
+        [ENROLLMENT_C2_ID, LINK_C2_ID, TEST_PREFIX + 'user_c2'],
+        [ENROLLMENT_D2_ID, LINK_D2_ID, TEST_PREFIX + 'user_d2'],
     ] as const) {
         await prisma.missionEnrollment.create({
             data: {
@@ -305,6 +359,66 @@ async function createTestCommission(params: {
 }
 
 // =============================================
+// HELPER: Create flat commission (commission amount is a fixed value, not %)
+// =============================================
+
+async function createTestFlatCommission(params: {
+    saleId: string
+    sellerId: string
+    linkId: string
+    grossAmount: number
+    htAmount: number
+    flatAmount: number // commission in cents
+    commissionSource?: 'SALE' | 'RECURRING'
+    subscriptionId?: string | null
+    recurringMonth?: number | null
+    recurringMax?: number | null
+    holdDays?: number
+    status?: 'PENDING' | 'PROCEED' | 'COMPLETE'
+}) {
+    const {
+        saleId, sellerId, linkId, grossAmount, htAmount, flatAmount,
+        commissionSource = 'SALE',
+        subscriptionId = null,
+        recurringMonth = null,
+        recurringMax = null,
+        holdDays = 30,
+        status = 'PENDING',
+    } = params
+
+    const stripeFee = Math.floor(grossAmount * 0.029 + 30)
+    const netAmount = htAmount - stripeFee
+    const platformFee = Math.floor(htAmount * 0.15)
+
+    return prisma.commission.upsert({
+        where: { sale_id: saleId },
+        create: {
+            seller_id: sellerId,
+            program_id: WORKSPACE_ID,
+            sale_id: saleId,
+            link_id: linkId,
+            gross_amount: grossAmount,
+            net_amount: netAmount,
+            stripe_fee: stripeFee,
+            tax_amount: grossAmount - htAmount,
+            commission_amount: flatAmount,
+            platform_fee: platformFee,
+            commission_rate: `${flatAmount}c`,
+            commission_type: 'FIXED',
+            currency: 'EUR',
+            status,
+            startup_payment_status: 'UNPAID',
+            commission_source: commissionSource,
+            subscription_id: subscriptionId,
+            recurring_month: recurringMonth,
+            recurring_max: recurringMax,
+            hold_days: holdDays,
+        },
+        update: {}
+    })
+}
+
+// =============================================
 // HELPER: Call createReferralCommissions (inline, same logic as engine.ts)
 // We re-implement it here to use our test prisma instance
 // =============================================
@@ -344,6 +458,13 @@ async function callCreateReferralCommissions(sourceCommission: {
         })
 
         if (!seller?.referred_by) break
+
+        // S3: Skip referrers who are not APPROVED (BANNED, PENDING, etc.)
+        const referrerSeller = await prisma.seller.findUnique({
+            where: { id: seller.referred_by },
+            select: { id: true, status: true }
+        })
+        if (!referrerSeller || referrerSeller.status !== 'APPROVED') break
 
         const referrerId = seller.referred_by
         const referralAmount = Math.floor(ht_amount * rate)
@@ -1294,6 +1415,264 @@ async function testT25_PartialChain2Generations() {
     assert(gen2Count === 0, `No gen2 created (count=${gen2Count})`)
 }
 
+// ----------- BLOC 9: Flat commission & platform_fee redistribution -----------
+
+async function testT26_FlatCommissionSameReferrals() {
+    console.log('\n📋 T26: Flat commission (10€) produces same referrals as percentage (10%)')
+
+    // Flat 10€ = 1000 centimes on 100€ HT
+    const commission = await createTestFlatCommission({
+        saleId: TEST_PREFIX + 'sale_flat1',
+        sellerId: SELLER_D_ID,
+        linkId: LINK_D_ID,
+        grossAmount: 12000,
+        htAmount: 10000,
+        flatAmount: 1000, // 10€ flat
+    })
+
+    await callCreateReferralCommissions({
+        id: commission.id,
+        seller_id: SELLER_D_ID,
+        program_id: WORKSPACE_ID,
+        sale_id: TEST_PREFIX + 'sale_flat1',
+        gross_amount: 12000,
+        net_amount: commission.net_amount,
+        stripe_fee: commission.stripe_fee,
+        tax_amount: commission.tax_amount,
+        currency: 'EUR',
+        hold_days: 30,
+        commission_source: 'SALE',
+        ht_amount: 10000,
+    })
+
+    const gen1 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_flat1:ref:gen1:${SELLER_C_ID}` }
+    })
+    const gen2 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_flat1:ref:gen2:${SELLER_B_ID}` }
+    })
+    const gen3 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_flat1:ref:gen3:${SELLER_A_ID}` }
+    })
+
+    // Same amounts as T3 (percentage 10%): referrals depend on HT, not commission type
+    assert(gen1?.commission_amount === 500, `Gen1 = ${gen1?.commission_amount} (expected 500, same as T3)`)
+    assert(gen2?.commission_amount === 300, `Gen2 = ${gen2?.commission_amount} (expected 300, same as T3)`)
+    assert(gen3?.commission_amount === 200, `Gen3 = ${gen3?.commission_amount} (expected 200, same as T3)`)
+}
+
+async function testT27_ReferralTotalNeverExceedsPlatformFee() {
+    console.log('\n📋 T27: Referral total <= platform_fee (15% of HT)')
+
+    // Check all source commissions from our tests
+    const sourceCommissions = await prisma.commission.findMany({
+        where: {
+            sale_id: { startsWith: TEST_PREFIX },
+            referral_generation: null,
+            org_parent_commission_id: null,
+        },
+        select: { id: true, sale_id: true, gross_amount: true, tax_amount: true }
+    })
+
+    let allValid = true
+    for (const source of sourceCommissions) {
+        const htAmount = source.gross_amount - source.tax_amount
+        if (htAmount <= 0) continue
+
+        const platformFee = Math.floor(htAmount * 0.15)
+        const referrals = await prisma.commission.aggregate({
+            where: { referral_source_commission_id: source.id },
+            _sum: { commission_amount: true }
+        })
+        const totalReferral = referrals._sum.commission_amount || 0
+
+        if (totalReferral > platformFee) {
+            allValid = false
+            console.log(`    ⚠️ sale_id=${source.sale_id}: referralTotal=${totalReferral} > platformFee=${platformFee}`)
+        }
+    }
+
+    assert(allValid, 'All referral totals <= platform_fee (15% of HT)')
+}
+
+async function testT28_HighFlatCommissionReferralsUnchanged() {
+    console.log('\n📋 T28: High flat commission (80€) — referrals still based on HT')
+
+    // Flat 80€ = 8000 centimes on 100€ HT (very high commission)
+    const commission = await createTestFlatCommission({
+        saleId: TEST_PREFIX + 'sale_flat2',
+        sellerId: SELLER_D_ID,
+        linkId: LINK_D_ID,
+        grossAmount: 12000,
+        htAmount: 10000,
+        flatAmount: 8000, // 80€ flat
+    })
+
+    await callCreateReferralCommissions({
+        id: commission.id,
+        seller_id: SELLER_D_ID,
+        program_id: WORKSPACE_ID,
+        sale_id: TEST_PREFIX + 'sale_flat2',
+        gross_amount: 12000,
+        net_amount: commission.net_amount,
+        stripe_fee: commission.stripe_fee,
+        tax_amount: commission.tax_amount,
+        currency: 'EUR',
+        hold_days: 30,
+        commission_source: 'SALE',
+        ht_amount: 10000,
+    })
+
+    const gen1 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_flat2:ref:gen1:${SELLER_C_ID}` }
+    })
+    const gen2 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_flat2:ref:gen2:${SELLER_B_ID}` }
+    })
+    const gen3 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_flat2:ref:gen3:${SELLER_A_ID}` }
+    })
+
+    // Identical to T26 and T3: referrals only depend on HT amount
+    assert(gen1?.commission_amount === 500, `Gen1 = ${gen1?.commission_amount} (expected 500, independent of flat)`)
+    assert(gen2?.commission_amount === 300, `Gen2 = ${gen2?.commission_amount} (expected 300, independent of flat)`)
+    assert(gen3?.commission_amount === 200, `Gen3 = ${gen3?.commission_amount} (expected 200, independent of flat)`)
+}
+
+async function testT29_BannedReferrerBlocksCascade() {
+    console.log('\n📋 T29: BANNED referrer in chain blocks cascade (S3 fix)')
+
+    // Chain: D2 → C2 → BANNED → A
+    // D2 sale → Gen1 for C2 = OK, Gen2 for BANNED = SKIP → Gen3 for A = SKIP
+    const commission = await createTestFlatCommission({
+        saleId: TEST_PREFIX + 'sale_banned1',
+        sellerId: SELLER_D2_ID,
+        linkId: LINK_D2_ID,
+        grossAmount: 12000,
+        htAmount: 10000,
+        flatAmount: 1000,
+    })
+
+    await callCreateReferralCommissions({
+        id: commission.id,
+        seller_id: SELLER_D2_ID,
+        program_id: WORKSPACE_ID,
+        sale_id: TEST_PREFIX + 'sale_banned1',
+        gross_amount: 12000,
+        net_amount: commission.net_amount,
+        stripe_fee: commission.stripe_fee,
+        tax_amount: commission.tax_amount,
+        currency: 'EUR',
+        hold_days: 30,
+        commission_source: 'SALE',
+        ht_amount: 10000,
+    })
+
+    // Gen1 for C2 should exist (C2 is APPROVED)
+    const gen1 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_banned1:ref:gen1:${SELLER_C2_ID}` }
+    })
+    assert(gen1 !== null, 'Gen1 for C2 exists (C2 is APPROVED)')
+    assert(gen1?.commission_amount === 500, `Gen1 amount = ${gen1?.commission_amount} (expected 500)`)
+
+    // Gen2 for BANNED should NOT exist (BANNED status blocks cascade)
+    const gen2 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_banned1:ref:gen2:${SELLER_BANNED_ID}` }
+    })
+    assert(gen2 === null, 'Gen2 for BANNED seller skipped')
+
+    // Gen3 for A should NOT exist (cascade broken by BANNED)
+    const gen3 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_banned1:ref:gen3:${SELLER_A_ID}` }
+    })
+    assert(gen3 === null, 'Gen3 for A skipped (cascade broken by BANNED)')
+}
+
+async function testT30_PlatformFeeRedistributionExplicit() {
+    console.log('\n📋 T30: Platform fee redistribution — explicit values')
+
+    // 100€ HT sale: platform_fee = 1500 (15%)
+    // Referrals: gen1=500, gen2=300, gen3=200 → total=1000 (10%)
+    // Traaaction keeps: 1500-1000 = 500 (5%)
+    const htAmount = 10000
+    const platformFee = Math.floor(htAmount * 0.15)
+    const gen1Amount = Math.floor(htAmount * GEN1_RATE)
+    const gen2Amount = Math.floor(htAmount * GEN2_RATE)
+    const gen3Amount = Math.floor(htAmount * GEN3_RATE)
+    const totalReferral = gen1Amount + gen2Amount + gen3Amount
+    const traaactionKeeps = platformFee - totalReferral
+
+    assert(platformFee === 1500, `platform_fee = ${platformFee} (expected 1500)`)
+    assert(gen1Amount === 500, `gen1 = ${gen1Amount} (expected 500)`)
+    assert(gen2Amount === 300, `gen2 = ${gen2Amount} (expected 300)`)
+    assert(gen3Amount === 200, `gen3 = ${gen3Amount} (expected 200)`)
+    assert(totalReferral === 1000, `totalReferral = ${totalReferral} (expected 1000, = 10% of HT)`)
+    assert(traaactionKeeps === 500, `traaactionKeeps = ${traaactionKeeps} (expected 500, = 5% of HT)`)
+
+    // Verify against actual T3 commissions
+    const gen1Comm = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_003:ref:gen1:${SELLER_C_ID}` }
+    })
+    const gen2Comm = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_003:ref:gen2:${SELLER_B_ID}` }
+    })
+    const gen3Comm = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_003:ref:gen3:${SELLER_A_ID}` }
+    })
+    const actualTotal = (gen1Comm?.commission_amount || 0) + (gen2Comm?.commission_amount || 0) + (gen3Comm?.commission_amount || 0)
+    assert(actualTotal === totalReferral, `Actual DB total = ${actualTotal} (expected ${totalReferral})`)
+}
+
+async function testT31_SmallAmountFloorRounding() {
+    console.log('\n📋 T31: Small amount (7.77€ HT) — floor() preserves constraint')
+
+    const htAmount = 777 // 7.77€ in cents
+    const commission = await createTestFlatCommission({
+        saleId: TEST_PREFIX + 'sale_small',
+        sellerId: SELLER_D_ID,
+        linkId: LINK_D_ID,
+        grossAmount: 932, // ~777 * 1.2
+        htAmount,
+        flatAmount: 100, // 1€ flat
+    })
+
+    await callCreateReferralCommissions({
+        id: commission.id,
+        seller_id: SELLER_D_ID,
+        program_id: WORKSPACE_ID,
+        sale_id: TEST_PREFIX + 'sale_small',
+        gross_amount: 932,
+        net_amount: commission.net_amount,
+        stripe_fee: commission.stripe_fee,
+        tax_amount: commission.tax_amount,
+        currency: 'EUR',
+        hold_days: 30,
+        commission_source: 'SALE',
+        ht_amount: htAmount,
+    })
+
+    const gen1 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_small:ref:gen1:${SELLER_C_ID}` }
+    })
+    const gen2 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_small:ref:gen2:${SELLER_B_ID}` }
+    })
+    const gen3 = await prisma.commission.findUnique({
+        where: { sale_id: `${TEST_PREFIX}sale_small:ref:gen3:${SELLER_A_ID}` }
+    })
+
+    const expectedGen1 = Math.floor(777 * 0.05) // 38
+    const expectedGen2 = Math.floor(777 * 0.03) // 23
+    const expectedGen3 = Math.floor(777 * 0.02) // 15
+    const expectedTotal = expectedGen1 + expectedGen2 + expectedGen3 // 76
+    const platformFee = Math.floor(777 * 0.15) // 116
+
+    assert(gen1?.commission_amount === expectedGen1, `Gen1 = ${gen1?.commission_amount} (expected ${expectedGen1})`)
+    assert(gen2?.commission_amount === expectedGen2, `Gen2 = ${gen2?.commission_amount} (expected ${expectedGen2})`)
+    assert(gen3?.commission_amount === expectedGen3, `Gen3 = ${gen3?.commission_amount} (expected ${expectedGen3})`)
+    assert(expectedTotal <= platformFee, `totalReferral ${expectedTotal} <= platformFee ${platformFee}`)
+}
+
 // =============================================
 // MAIN
 // =============================================
@@ -1346,6 +1725,14 @@ async function main() {
         // Bloc 8: Edge cases
         await testT24_NoReferrerNoCommissions()
         await testT25_PartialChain2Generations()
+
+        // Bloc 9: Flat commission & platform_fee redistribution
+        await testT26_FlatCommissionSameReferrals()
+        await testT27_ReferralTotalNeverExceedsPlatformFee()
+        await testT28_HighFlatCommissionReferralsUnchanged()
+        await testT29_BannedReferrerBlocksCascade()
+        await testT30_PlatformFeeRedistributionExplicit()
+        await testT31_SmallAmountFloorRounding()
 
         await cleanup()
 
