@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { createShortLink } from '@/app/actions/links'
 import { getVerifiedDomainForWorkspace } from '@/app/actions/domains'
+import { getStartupProfile } from '@/app/actions/startup-profile'
 import QRCodeWithLogo from '@/components/QRCodeWithLogo'
 import { nanoid } from 'nanoid'
 
@@ -36,6 +37,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
     const [slug, setSlug] = useState('')
     const [tags, setTags] = useState('') // UI only for now
     const [comments, setComments] = useState('') // UI only for now
+    const [startupLogo, setStartupLogo] = useState<string | null>(null)
 
     // Domain
     const [verifiedDomain, setVerifiedDomain] = useState<string | null>(null)
@@ -64,6 +66,11 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                 } else {
                     setVerifiedDomain(null)
                     setSelectedDomain(defaultDomain)
+                }
+            })
+            getStartupProfile().then(res => {
+                if (res.success && res.profile?.logoUrl) {
+                    setStartupLogo(res.profile.logoUrl)
                 }
             })
         }
@@ -337,6 +344,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                                 size={120}
                                                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                                                 viewBox="0 0 256 256"
+                                                logoUrl={startupLogo || undefined}
                                             />
                                         </div>
                                     </div>

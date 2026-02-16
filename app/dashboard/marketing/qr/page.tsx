@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import QRCodeWithLogo from '@/components/QRCodeWithLogo'
 import { getMarketingLinks } from '@/app/actions/marketing-links'
+import { getStartupProfile } from '@/app/actions/startup-profile'
 import { getChannelConfig } from '@/lib/marketing/channels'
 
 interface MarketingLink {
@@ -36,6 +37,7 @@ export default function MarketingQRPage() {
     const [loading, setLoading] = useState(true)
     const [qrColor, setQrColor] = useState('#000000')
     const [qrSize, setQrSize] = useState(200)
+    const [startupLogo, setStartupLogo] = useState<string | null>(null)
 
     useEffect(() => {
         getMarketingLinks().then(res => {
@@ -43,6 +45,11 @@ export default function MarketingQRPage() {
                 setLinks(res.data as unknown as MarketingLink[])
             }
             setLoading(false)
+        })
+        getStartupProfile().then(res => {
+            if (res.success && res.profile?.logoUrl) {
+                setStartupLogo(res.profile.logoUrl)
+            }
         })
     }, [])
 
@@ -163,6 +170,7 @@ export default function MarketingQRPage() {
                                         size={Math.min(qrSize, 200)}
                                         fgColor={qrColor}
                                         bgColor="#FFFFFF"
+                                        logoUrl={startupLogo || undefined}
                                     />
                                 </div>
 

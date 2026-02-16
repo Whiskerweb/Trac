@@ -9,6 +9,7 @@ interface QRCodeWithLogoProps {
     bgColor?: string
     style?: React.CSSProperties
     viewBox?: string
+    logoUrl?: string
 }
 
 export default function QRCodeWithLogo({
@@ -18,6 +19,7 @@ export default function QRCodeWithLogo({
     bgColor = '#FFFFFF',
     style,
     viewBox,
+    logoUrl,
 }: QRCodeWithLogoProps) {
     // Logo takes ~22% of QR code size — safe with level H (30% error correction)
     const logoSize = Math.round(size * 0.22)
@@ -52,7 +54,7 @@ export default function QRCodeWithLogo({
             >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                    src="/logos/28e3dff9-d0d8-4239-bdd4-810b36b7023a_1769596124427.png"
+                    src={logoUrl || "/logos/28e3dff9-d0d8-4239-bdd4-810b36b7023a_1769596124427.png"}
                     alt="Traaaction"
                     width={logoSize}
                     height={logoSize}

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import QRCodeWithLogo from '@/components/QRCodeWithLogo'
 import { deleteShortLink } from '@/app/actions/links'
+import { getStartupProfile } from '@/app/actions/startup-profile'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface LinkDrawerProps {
@@ -48,6 +49,7 @@ export function LinkDrawer({ isOpen, onClose, link, onDelete }: LinkDrawerProps)
     const [comments, setComments] = useState('')
     const [isSaving, setIsSaving] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [startupLogo, setStartupLogo] = useState<string | null>(null)
 
     const shortUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/s/${link.slug}`
 
@@ -59,6 +61,11 @@ export function LinkDrawer({ isOpen, onClose, link, onDelete }: LinkDrawerProps)
             setSlug(link.slug)
             setTags('')
             setComments('')
+            getStartupProfile().then(res => {
+                if (res.success && res.profile?.logoUrl) {
+                    setStartupLogo(res.profile.logoUrl)
+                }
+            })
         }
     }, [isOpen, link])
 
@@ -350,6 +357,7 @@ export function LinkDrawer({ isOpen, onClose, link, onDelete }: LinkDrawerProps)
                                                 size={120}
                                                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                                                 viewBox="0 0 256 256"
+                                                logoUrl={startupLogo || undefined}
                                             />
                                         </div>
                                     </div>
