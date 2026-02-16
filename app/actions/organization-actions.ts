@@ -1730,7 +1730,12 @@ async function enrollMembersInOrgMission(orgMission: {
 /**
  * Enroll a single seller into a mission via an org.
  * Creates ShortLink + Redis + MissionEnrollment.
- * Skips if already enrolled.
+ * Aligned with enrollSellerInGroupMission() pattern:
+ *   - `-o` suffix on slugs (groups use `-g`)
+ *   - P2002 collision handler with nanoid fallback
+ *   - Custom domain passed to Redis
+ *   - try-catch so one member failing doesn't block others
+ *   - ARCHIVED enrollment reactivation
  */
 async function enrollSingleMemberInMission(
     seller: { id: string; user_id: string | null },
@@ -1739,57 +1744,122 @@ async function enrollSingleMemberInMission(
 ) {
     if (!seller.user_id) return
 
-    // Check if already enrolled via this org mission
-    const existing = await prisma.missionEnrollment.findFirst({
-        where: {
-            mission_id: mission.id,
-            user_id: seller.user_id,
-            organization_mission_id: organizationMissionId,
+    try {
+        // Check if already enrolled via this org mission
+        const existing = await prisma.missionEnrollment.findFirst({
+            where: {
+                mission_id: mission.id,
+                user_id: seller.user_id,
+                organization_mission_id: organizationMissionId,
+            }
+        })
+
+        // Handle ARCHIVED enrollment — reactivate
+        if (existing && existing.status === 'ARCHIVED') {
+            if (existing.link_id) {
+                const oldLink = await prisma.shortLink.findUnique({
+                    where: { id: existing.link_id }
+                })
+                if (oldLink) {
+                    const verifiedDomain = await prisma.domain.findFirst({
+                        where: { workspace_id: mission.workspace_id, verified: true }
+                    })
+                    const { setLinkInRedis } = await import('@/lib/redis')
+                    await setLinkInRedis(oldLink.slug, {
+                        url: oldLink.original_url,
+                        linkId: oldLink.id,
+                        workspaceId: oldLink.workspace_id,
+                        sellerId: oldLink.affiliate_id,
+                    }, verifiedDomain?.name || undefined)
+
+                    await prisma.missionEnrollment.update({
+                        where: { id: existing.id },
+                        data: { status: 'APPROVED' }
+                    })
+                    console.log(`[Org] Reactivated ARCHIVED enrollment for seller ${seller.id}`)
+                    return
+                }
+            }
+            // Old ShortLink deleted — fall through to create new one below
         }
-    })
-    if (existing) return // Already enrolled — skip
 
-    // Generate slug: mission-slug/affiliate-code
-    const missionSlug = mission.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 20)
-    const affiliateCode = seller.user_id.slice(0, 8)
-    const fullSlug = `${missionSlug}/${affiliateCode}`
+        if (existing && existing.status !== 'ARCHIVED') return // Already active — skip
 
-    // Create ShortLink
-    const shortLink = await prisma.shortLink.create({
-        data: {
-            slug: fullSlug,
-            original_url: mission.target_url,
-            workspace_id: mission.workspace_id,
-            affiliate_id: seller.user_id,
-            clicks: 0,
+        // Generate slug with -o suffix (like groups use -g)
+        const missionSlug = mission.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '')
+            .slice(0, 20)
+        const affiliateCode = seller.user_id.slice(0, 8)
+        let fullSlug = `${missionSlug}/${affiliateCode}-o`
+
+        // Fetch custom domain
+        const verifiedDomain = await prisma.domain.findFirst({
+            where: { workspace_id: mission.workspace_id, verified: true }
+        })
+        const customDomain = verifiedDomain?.name || null
+
+        // Create ShortLink (P2002 handler with nanoid fallback)
+        let shortLink
+        try {
+            shortLink = await prisma.shortLink.create({
+                data: {
+                    slug: fullSlug,
+                    original_url: mission.target_url,
+                    workspace_id: mission.workspace_id,
+                    affiliate_id: seller.user_id,
+                    clicks: 0,
+                }
+            })
+        } catch (slugError: any) {
+            if (slugError?.code === 'P2002') {
+                fullSlug = `${missionSlug}/${affiliateCode}-o-${nanoid(4)}`
+                shortLink = await prisma.shortLink.create({
+                    data: {
+                        slug: fullSlug,
+                        original_url: mission.target_url,
+                        workspace_id: mission.workspace_id,
+                        affiliate_id: seller.user_id,
+                        clicks: 0,
+                    }
+                })
+            } else {
+                throw slugError
+            }
         }
-    })
 
-    // Add to Redis
-    const { setLinkInRedis } = await import('@/lib/redis')
-    await setLinkInRedis(shortLink.slug, {
-        url: shortLink.original_url,
-        linkId: shortLink.id,
-        workspaceId: shortLink.workspace_id,
-        sellerId: shortLink.affiliate_id,
-    })
+        // Set in Redis WITH custom domain
+        const { setLinkInRedis } = await import('@/lib/redis')
+        await setLinkInRedis(shortLink.slug, {
+            url: shortLink.original_url,
+            linkId: shortLink.id,
+            workspaceId: shortLink.workspace_id,
+            sellerId: shortLink.affiliate_id,
+        }, customDomain || undefined)
 
-    // Create MissionEnrollment
-    await prisma.missionEnrollment.create({
-        data: {
-            mission_id: mission.id,
-            user_id: seller.user_id,
-            status: 'APPROVED',
-            link_id: shortLink.id,
-            organization_mission_id: organizationMissionId,
+        // Create or update MissionEnrollment
+        if (existing && existing.status === 'ARCHIVED') {
+            await prisma.missionEnrollment.update({
+                where: { id: existing.id },
+                data: { status: 'APPROVED', link_id: shortLink.id }
+            })
+        } else {
+            await prisma.missionEnrollment.create({
+                data: {
+                    mission_id: mission.id,
+                    user_id: seller.user_id,
+                    status: 'APPROVED',
+                    link_id: shortLink.id,
+                    organization_mission_id: organizationMissionId,
+                }
+            })
         }
-    })
 
-    console.log(`[Org] Enrolled seller ${seller.id} in mission ${mission.id} via org`)
+        console.log(`[Org] Enrolled seller ${seller.id} in mission ${mission.id} via org`)
+    } catch (error) {
+        console.error(`[Org] Failed to enroll seller ${seller.id}:`, error)
+    }
 }
 
 // =============================================
