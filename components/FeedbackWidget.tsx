@@ -8,10 +8,9 @@ interface FeedbackWidgetProps {
     userType: 'STARTUP' | 'SELLER'
 }
 
-const DOCK_THRESHOLD = 60
-const EDGE_MARGIN = 8
 const DRAG_THRESHOLD = 5
 const STORAGE_KEY = 'trac_feedback_pos'
+const DRAG_MARGIN = 8 // margin during drag movement (keeps button slightly in-bounds)
 
 export default function FeedbackWidget({ userType }: FeedbackWidgetProps) {
     const [isOpen, setIsOpen] = useState(false)
@@ -40,55 +39,47 @@ export default function FeedbackWidget({ userType }: FeedbackWidgetProps) {
 
     // Restore position from localStorage
     useEffect(() => {
+        const defaultPos = () => {
+            // Default: docked bottom-right, flush with edge
+            const btnWidth = 44
+            setPosition({ x: window.innerWidth - btnWidth, y: window.innerHeight - 48 - 24 })
+            setDockSide('right')
+            setIsDocked(true)
+        }
         try {
             const saved = localStorage.getItem(STORAGE_KEY)
             if (saved) {
                 const { y, side } = JSON.parse(saved) as { y: number; side: 'left' | 'right' }
                 const btnWidth = 44 // docked button width approximation
-                const xPos = side === 'left' ? EDGE_MARGIN : window.innerWidth - btnWidth - EDGE_MARGIN
-                setPosition({ x: xPos, y: Math.min(y, window.innerHeight - 48 - EDGE_MARGIN) })
+                const xPos = side === 'left' ? 0 : window.innerWidth - btnWidth
+                setPosition({ x: xPos, y: Math.min(y, window.innerHeight - 48) })
                 setDockSide(side)
                 setIsDocked(true)
             } else {
-                // Default: bottom-right, not docked
-                setPosition({
-                    x: window.innerWidth - 150 - 24,
-                    y: window.innerHeight - 48 - 24,
-                })
+                defaultPos()
             }
         } catch {
-            setPosition({
-                x: window.innerWidth - 150 - 24,
-                y: window.innerHeight - 48 - 24,
-            })
+            defaultPos()
         }
     }, [])
 
-    // Handle window resize — keep button in bounds
+    // Handle window resize — keep button flush with docked edge
     useEffect(() => {
         const handleResize = () => {
             setPosition(prev => {
                 if (prev.x < 0) return prev
-                const btnWidth = buttonRef.current?.offsetWidth ?? 150
+                const btnWidth = buttonRef.current?.offsetWidth ?? 44
                 const btnHeight = buttonRef.current?.offsetHeight ?? 48
-                const maxX = window.innerWidth - btnWidth - EDGE_MARGIN
-                const maxY = window.innerHeight - btnHeight - EDGE_MARGIN
-                // Re-snap to the docked side
-                let newX = prev.x
-                if (isDocked) {
-                    newX = dockSide === 'left' ? EDGE_MARGIN : maxX
-                } else {
-                    newX = Math.max(EDGE_MARGIN, Math.min(prev.x, maxX))
-                }
+                const newX = dockSide === 'left' ? 0 : window.innerWidth - btnWidth
                 return {
                     x: newX,
-                    y: Math.max(EDGE_MARGIN, Math.min(prev.y, maxY)),
+                    y: Math.max(0, Math.min(prev.y, window.innerHeight - btnHeight)),
                 }
             })
         }
         window.addEventListener('resize', handleResize)
         return () => window.removeEventListener('resize', handleResize)
-    }, [isDocked, dockSide])
+    }, [dockSide])
 
     // Pointer event handlers for drag
     const handlePointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
@@ -118,8 +109,8 @@ export default function FeedbackWidget({ userType }: FeedbackWidgetProps) {
 
         const btnWidth = buttonRef.current?.offsetWidth ?? 150
         const btnHeight = buttonRef.current?.offsetHeight ?? 48
-        const newX = Math.max(EDGE_MARGIN, Math.min(dragStartRef.current.px + dx, window.innerWidth - btnWidth - EDGE_MARGIN))
-        const newY = Math.max(EDGE_MARGIN, Math.min(dragStartRef.current.py + dy, window.innerHeight - btnHeight - EDGE_MARGIN))
+        const newX = Math.max(DRAG_MARGIN, Math.min(dragStartRef.current.px + dx, window.innerWidth - btnWidth - DRAG_MARGIN))
+        const newY = Math.max(DRAG_MARGIN, Math.min(dragStartRef.current.py + dy, window.innerHeight - btnHeight - DRAG_MARGIN))
 
         setPosition({ x: newX, y: newY })
     }, [])
@@ -137,22 +128,19 @@ export default function FeedbackWidget({ userType }: FeedbackWidgetProps) {
             return
         }
 
-        // Snap to nearest edge
+        // Snap flush to nearest edge — always dock
         const btnWidth = buttonRef.current?.offsetWidth ?? 150
         const btnHeight = buttonRef.current?.offsetHeight ?? 48
         const screenW = window.innerWidth
         const midX = position.x + btnWidth / 2
 
         const side: 'left' | 'right' = midX < screenW / 2 ? 'left' : 'right'
-        const snappedX = side === 'left' ? EDGE_MARGIN : screenW - btnWidth - EDGE_MARGIN
-        const clampedY = Math.max(EDGE_MARGIN, Math.min(position.y, window.innerHeight - btnHeight - EDGE_MARGIN))
-
-        // Determine if docked (close to edge)
-        const docked = position.x < DOCK_THRESHOLD || position.x > screenW - DOCK_THRESHOLD - btnWidth
+        const snappedX = side === 'left' ? 0 : screenW - btnWidth
+        const clampedY = Math.max(0, Math.min(position.y, window.innerHeight - btnHeight))
 
         setPosition({ x: snappedX, y: clampedY })
         setDockSide(side)
-        setIsDocked(docked)
+        setIsDocked(true)
         setIsDragging(false)
 
         // Persist
