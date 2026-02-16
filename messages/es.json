@@ -539,6 +539,13 @@
             "pendingRequests": "Solicitudes pendientes",
             "recentActivity": "Actividad reciente",
             "noActivity": "Sin actividad reciente",
+            "archives": {
+                "title": "Archivos",
+                "section": "Misiones archivadas",
+                "daysRemaining": "{count}d restantes",
+                "exportData": "Exportar",
+                "deletionSoon": "Las misiones archivadas se eliminan automáticamente después de 30 días. Exporta tus datos antes de la eliminación."
+            },
             "activityTypes": {
                 "wantsToJoin": "{name} quiere unirse a {mission}",
                 "joined": "{name} se unió",

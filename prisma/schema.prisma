@@ -35,6 +35,7 @@ model Mission {
   status       MissionStatus     @default(DRAFT)
   created_at   DateTime          @default(now())
   updated_at   DateTime          @updatedAt
+  archived_at  DateTime?
   /// Net Revenue, ROI, Fixed
   gain_type    String?
   /// SaaS, E-commerce, Finance, etc.
@@ -112,6 +113,7 @@ model Mission {
   @@index([visibility])
   @@index([workspace_id])
   @@index([organization_id])
+  @@index([archived_at])
 }
 
 model MissionEnrollment {

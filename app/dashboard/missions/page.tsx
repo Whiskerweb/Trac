@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
     Plus, Loader2, Target, Users, MousePointer2,
     MoreHorizontal, Archive, Globe, Lock,
-    Sparkles, Clock, AlertCircle,
+    Sparkles, Clock, AlertCircle, Download,
     Copy, Activity, Eye, Zap, ArrowUpRight, Circle, Check, ChevronRight
 } from 'lucide-react'
 import Link from 'next/link'
@@ -14,6 +14,7 @@ import {
     getMissionsWithFullStats,
     getRecentMissionActivity,
     deleteMission,
+    exportMissionData,
     type MissionWithStats,
     type ActivityItem
 } from '@/app/actions/missions'
@@ -286,6 +287,84 @@ function MissionRow({
                         {t('manage')}
                         <ArrowUpRight className="w-3 h-3" />
                     </Link>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// =============================================
+// ARCHIVED MISSION ROW
+// =============================================
+
+function ArchivedMissionRow({
+    mission,
+    onExport
+}: {
+    mission: MissionWithStats
+    onExport: (missionId: string) => void
+}) {
+    const t = useTranslations('dashboard.missions')
+    const [exporting, setExporting] = useState(false)
+
+    const daysRemaining = mission.archived_at
+        ? Math.max(0, 30 - Math.floor((Date.now() - new Date(mission.archived_at).getTime()) / 86400000))
+        : 30
+
+    async function handleExport() {
+        setExporting(true)
+        try {
+            onExport(mission.id)
+        } finally {
+            setExporting(false)
+        }
+    }
+
+    return (
+        <div className="group relative bg-white border border-neutral-100 rounded-xl overflow-hidden opacity-60 hover:opacity-80 transition-all duration-200">
+            <div className="p-4 sm:p-5">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex-1 min-w-0">
+                        <Link
+                            href={`/dashboard/missions/${mission.id}`}
+                            className="text-base font-medium text-neutral-900 hover:text-neutral-600 transition-colors truncate block"
+                        >
+                            {mission.title}
+                        </Link>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Deletion countdown badge */}
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-full ${
+                            daysRemaining <= 7
+                                ? 'bg-red-50 text-red-600'
+                                : 'bg-neutral-100 text-neutral-500'
+                        }`}>
+                            <Clock className="w-3 h-3" />
+                            {t('archives.daysRemaining', { count: daysRemaining })}
+                        </span>
+                        {/* Export button */}
+                        <button
+                            onClick={handleExport}
+                            disabled={exporting}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
+                        >
+                            {exporting ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                                <Download className="w-3 h-3" />
+                            )}
+                            {t('archives.exportData')}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Compact Stats */}
+                <div className="grid grid-cols-4 gap-4">
+                    <StatBlock value={mission.stats.activeSellers} label={t('stats.sellers')} />
+                    <StatBlock value={formatNumber(mission.stats.clicks)} label={t('stats.clicks')} />
+                    <StatBlock value={mission.stats.sales} label={t('stats.sales')} />
+                    <StatBlock value={formatCurrency(mission.stats.revenue)} label={t('stats.revenue')} />
                 </div>
             </div>
         </div>
@@ -569,6 +648,7 @@ function MissionsContent() {
         totalCommissions: 0
     })
     const [loading, setLoading] = useState(true)
+    const [showArchives, setShowArchives] = useState(false)
 
     const loadData = useCallback(async () => {
         setLoading(true)
@@ -599,8 +679,22 @@ function MissionsContent() {
     }, [loadData])
 
     // Filter active/non-archived missions for slot count
-    const activeMissions = missions.filter(m => m.status !== 'ARCHIVED')
+    const nonArchivedMissions = missions.filter(m => m.status !== 'ARCHIVED')
+    const archivedMissions = missions.filter(m => m.status === 'ARCHIVED')
+    const activeMissions = nonArchivedMissions
     const canCreateMore = activeMissions.length < MAX_MISSIONS
+
+    async function handleExport(missionId: string) {
+        const result = await exportMissionData(missionId)
+        if (result.success && result.csv) {
+            const blob = new Blob([result.csv], { type: 'text/csv;charset=utf-8;' })
+            const a = document.createElement('a')
+            a.href = URL.createObjectURL(blob)
+            a.download = result.filename || 'mission-export.csv'
+            a.click()
+            URL.revokeObjectURL(a.href)
+        }
+    }
 
     // Group requests by mission for badge count
     const requestsByMission = requests.reduce((acc, req) => {
@@ -630,6 +724,24 @@ function MissionsContent() {
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                     <MissionSlots used={activeMissions.length} total={MAX_MISSIONS} />
+                    {archivedMissions.length > 0 && (
+                        <button
+                            onClick={() => setShowArchives(!showArchives)}
+                            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                                showArchives
+                                    ? 'bg-neutral-900 text-white border-neutral-900'
+                                    : 'bg-white text-neutral-500 border-neutral-200 hover:border-neutral-300 hover:text-neutral-700'
+                            }`}
+                        >
+                            <Archive className="w-3.5 h-3.5" />
+                            {t('archives.title')}
+                            <span className={`ml-0.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${
+                                showArchives ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-500'
+                            }`}>
+                                {archivedMissions.length}
+                            </span>
+                        </button>
+                    )}
                     {canCreateMore ? (
                         <Link
                             href="/dashboard/missions/create"
@@ -656,11 +768,11 @@ function MissionsContent() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
                 {/* Missions List (2/3) */}
                 <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-                    {missions.length === 0 ? (
+                    {nonArchivedMissions.length === 0 && archivedMissions.length === 0 ? (
                         <EmptyState />
                     ) : (
                         <>
-                            {missions.map((mission) => (
+                            {nonArchivedMissions.map((mission) => (
                                 <MissionRow
                                     key={mission.id}
                                     mission={mission}
@@ -680,6 +792,28 @@ function MissionsContent() {
                                     </div>
                                     <span className="font-medium">{t('addMission')}</span>
                                 </Link>
+                            )}
+
+                            {/* Archives Section */}
+                            {showArchives && archivedMissions.length > 0 && (
+                                <div className="mt-6 space-y-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Archive className="w-4 h-4 text-neutral-400" />
+                                        <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">
+                                            {t('archives.section')}
+                                        </h3>
+                                    </div>
+                                    <p className="text-xs text-neutral-400 -mt-1 mb-3">
+                                        {t('archives.deletionSoon')}
+                                    </p>
+                                    {archivedMissions.map((mission) => (
+                                        <ArchivedMissionRow
+                                            key={mission.id}
+                                            mission={mission}
+                                            onExport={handleExport}
+                                        />
+                                    ))}
+                                </div>
                             )}
                         </>
                     )}

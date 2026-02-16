@@ -588,7 +588,7 @@ export async function deleteMission(missionId: string): Promise<{
         // 1. Archive mission
         await prisma.mission.update({
             where: { id: missionId },
-            data: { status: 'ARCHIVED' }
+            data: { status: 'ARCHIVED', archived_at: new Date() }
         })
 
         // 2. Archive all APPROVED enrollments
@@ -1024,6 +1024,7 @@ export interface MissionWithStats {
     visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'
     invite_code: string | null
     created_at: Date
+    archived_at: Date | null
     // Stats
     stats: {
         sellers: number           // Total enrolled sellers
@@ -1179,6 +1180,7 @@ export async function getMissionsWithFullStats(): Promise<MissionsWithStatsRespo
                 visibility: mission.visibility as 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY',
                 invite_code: mission.invite_code,
                 created_at: mission.created_at,
+                archived_at: mission.archived_at,
                 stats: {
                     sellers: totalSellers,
                     activeSellers,
@@ -1358,5 +1360,120 @@ export async function getRecentMissionActivity(limit: number = 20): Promise<{
     } catch (error) {
         console.error('[Mission] ❌ Error fetching activity:', error)
         return { success: false, error: 'Failed to fetch activity' }
+    }
+}
+
+// =============================================
+// EXPORT MISSION DATA (RGPD — portabilité)
+// =============================================
+
+/**
+ * Export all data related to a mission as CSV
+ * Includes: mission info, enrollments, commissions, customers
+ */
+export async function exportMissionData(missionId: string): Promise<{
+    success: boolean
+    csv?: string
+    filename?: string
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) {
+        return { success: false, error: 'No active workspace' }
+    }
+
+    try {
+        // Fetch mission with enrollments + short links
+        const mission = await prisma.mission.findFirst({
+            where: { id: missionId, workspace_id: workspace.workspaceId },
+            include: {
+                MissionEnrollment: {
+                    include: { ShortLink: { select: { id: true, slug: true, clicks: true } } }
+                }
+            }
+        })
+
+        if (!mission) {
+            return { success: false, error: 'Mission not found' }
+        }
+
+        // Collect link_ids and user_ids
+        const linkIds = mission.MissionEnrollment
+            .map(e => e.link_id)
+            .filter((id): id is string => id !== null)
+        const userIds = mission.MissionEnrollment.map(e => e.user_id)
+
+        // Parallel fetch: sellers, commissions, customers
+        const [sellers, commissions, customers] = await Promise.all([
+            userIds.length > 0
+                ? prisma.seller.findMany({
+                    where: { user_id: { in: userIds } },
+                    select: { user_id: true, name: true, email: true }
+                })
+                : Promise.resolve([]),
+            linkIds.length > 0
+                ? prisma.commission.findMany({
+                    where: { link_id: { in: linkIds } },
+                    include: { Seller: { select: { name: true, email: true } } },
+                    orderBy: { created_at: 'desc' }
+                })
+                : Promise.resolve([]),
+            linkIds.length > 0
+                ? prisma.customer.findMany({
+                    where: { link_id: { in: linkIds } },
+                    orderBy: { created_at: 'desc' }
+                })
+                : Promise.resolve([])
+        ])
+
+        const sellerMap = new Map(sellers.map(s => [s.user_id, s]))
+        const today = new Date().toISOString().split('T')[0]
+
+        let csv = ''
+
+        // Section 1: MISSION
+        csv += 'MISSION\n'
+        csv += 'Titre;URL;Reward;Status;Visibilite;Cree le;Archive le\n'
+        csv += `${mission.title};${mission.target_url};${mission.reward};${mission.status};${mission.visibility};${mission.created_at.toISOString().split('T')[0]};${mission.archived_at?.toISOString().split('T')[0] || 'N/A'}\n`
+        csv += '\n'
+
+        // Section 2: ENROLLMENTS
+        csv += 'ENROLLMENTS\n'
+        csv += 'Seller;Email;Status;Clics;Date inscription\n'
+        for (const enrollment of mission.MissionEnrollment) {
+            const seller = sellerMap.get(enrollment.user_id)
+            csv += `${seller?.name || 'N/A'};${seller?.email || 'N/A'};${enrollment.status};${enrollment.ShortLink?.clicks || 0};${enrollment.created_at.toISOString().split('T')[0]}\n`
+        }
+        csv += '\n'
+
+        // Section 3: COMMISSIONS
+        csv += 'COMMISSIONS\n'
+        csv += 'Montant Brut;Montant Net;Commission;Platform Fee;Status;Source;Seller;Date\n'
+        for (const c of commissions) {
+            csv += `${(c.gross_amount / 100).toFixed(2)};${(c.net_amount / 100).toFixed(2)};${(c.commission_amount / 100).toFixed(2)};${(c.platform_fee / 100).toFixed(2)};${c.status};${c.commission_source};${c.Seller?.name || c.Seller?.email || 'N/A'};${c.created_at.toISOString().split('T')[0]}\n`
+        }
+        csv += '\n'
+
+        // Section 4: CUSTOMERS
+        csv += 'CUSTOMERS\n'
+        csv += 'External ID;Email;Pays;Date attribution\n'
+        for (const cust of customers) {
+            csv += `${cust.external_id};${cust.email || 'N/A'};${cust.country || 'N/A'};${cust.created_at.toISOString().split('T')[0]}\n`
+        }
+
+        const filename = `mission-${mission.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${today}.csv`
+
+        return { success: true, csv, filename }
+
+    } catch (error) {
+        console.error('[Mission] ❌ Error exporting data:', error)
+        return { success: false, error: 'Failed to export mission data' }
     }
 }
