@@ -30,6 +30,7 @@ interface TreasuryData {
         totalPlatformFees: number
         totalGiftCardsPaid: number
         totalStripeConnectTransfers: number
+        totalReferralFunded: number
         netPosition: number
         isReconciled: boolean
         discrepancy: number
@@ -317,6 +318,10 @@ export default function AdminTreasuryPage() {
                             <div className="flex justify-between items-center py-2 border-b border-neutral-800">
                                 <span className="text-neutral-400">Stripe Connect transfers</span>
                                 <span className="font-medium">{formatCurrency(treasury.totalStripeConnectTransfers)} EUR</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-neutral-800">
+                                <span className="text-neutral-400">Referral finance (marge Traaaction)</span>
+                                <span className="font-medium">{formatCurrency(treasury.totalReferralFunded)} EUR</span>
                             </div>
                             <div className="flex justify-between items-center py-2">
                                 <span className="text-neutral-400">Ledger debits</span>

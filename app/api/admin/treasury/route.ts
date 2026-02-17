@@ -119,12 +119,23 @@ export async function GET() {
         const platformSellerCommissions = await prisma.commission.findMany({
             where: {
                 seller_id: { in: sellerIds },
-                startup_payment_status: 'PAID'
+                startup_payment_status: 'PAID',
+                referral_generation: null // Exclure referral (finance par Traaaction, pas StartupPayment)
             },
             select: { commission_amount: true }
         })
 
         const totalReceivedForPlatformSellers = platformSellerCommissions.reduce((sum, c) => sum + c.commission_amount, 0)
+
+        // Referral commissions funded by Traaaction's margin (not by startups)
+        const platformReferralCommissions = await prisma.commission.findMany({
+            where: {
+                seller_id: { in: sellerIds },
+                referral_generation: { not: null }
+            },
+            select: { commission_amount: true }
+        })
+        const totalReferralFunded = platformReferralCommissions.reduce((sum, c) => sum + c.commission_amount, 0)
 
         // Net position = What we received for PLATFORM sellers - What we paid out (gift cards)
         const netPosition = totalReceivedForPlatformSellers - totalGiftCardsPaid
@@ -149,6 +160,7 @@ export async function GET() {
                 // Outflows
                 totalGiftCardsPaid,              // Gift cards delivered
                 totalStripeConnectTransfers,      // Sent to Stripe Connect accounts
+                totalReferralFunded,             // Referral commissions funded by Traaaction margin
 
                 // Reconciliation
                 netPosition,             // Should equal totalOwedToSellers if reconciled
