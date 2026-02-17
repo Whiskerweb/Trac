@@ -6,11 +6,13 @@ import { useRouter, useParams } from 'next/navigation'
 import {
     ArrowLeft, Copy, ExternalLink,
     MousePointerClick,
-    Check, Link2, Calendar, Tag, Trash2
+    Check, Link2, Calendar, Tag, Trash2, Pencil, Folder
 } from 'lucide-react'
-import { getMarketingLink, deleteMarketingLink } from '@/app/actions/marketing-links'
-import { getChannelConfig } from '@/lib/marketing/channels'
+import { getMarketingLink, deleteMarketingLink, updateMarketingLink } from '@/app/actions/marketing-links'
+import { getChannelConfig, PREDEFINED_CHANNELS } from '@/lib/marketing/channels'
 import { getTagColor } from '@/lib/marketing/tags'
+import { CampaignSelect } from '@/components/marketing/CampaignSelect'
+import { FolderSelect } from '@/components/marketing/FolderSelect'
 
 interface LinkData {
     id: string
@@ -20,6 +22,8 @@ interface LinkData {
     clicks: number
     channel: string | null
     campaign: string | null
+    campaign_id: string | null
+    folder_id: string | null
     created_at: string
     utm_source: string | null
     utm_medium: string | null
@@ -27,6 +31,8 @@ interface LinkData {
     utm_term: string | null
     utm_content: string | null
     tags: { id: string; name: string; color: string }[]
+    Campaign: { id: string; name: string; color: string | null; status: string } | null
+    Folder: { id: string; name: string; color: string | null } | null
 }
 
 export default function MarketingLinkDetailPage() {
@@ -38,6 +44,7 @@ export default function MarketingLinkDetailPage() {
     const [link, setLink] = useState<LinkData | null>(null)
     const [loading, setLoading] = useState(true)
     const [copied, setCopied] = useState(false)
+    const [editingField, setEditingField] = useState<string | null>(null)
 
     useEffect(() => {
         getMarketingLink(linkId).then(res => {
@@ -61,6 +68,31 @@ export default function MarketingLinkDetailPage() {
         if (res.success) {
             router.push('/dashboard/marketing')
         }
+    }
+
+    const handleUpdateCampaign = async (campaignId: string | null) => {
+        if (!link) return
+        await updateMarketingLink(link.id, { campaign_id: campaignId || undefined })
+        // Reload link
+        const res = await getMarketingLink(linkId)
+        if (res.success && res.data) setLink(res.data as unknown as LinkData)
+        setEditingField(null)
+    }
+
+    const handleUpdateFolder = async (folderId: string | null) => {
+        if (!link) return
+        await updateMarketingLink(link.id, { folder_id: folderId || undefined })
+        const res = await getMarketingLink(linkId)
+        if (res.success && res.data) setLink(res.data as unknown as LinkData)
+        setEditingField(null)
+    }
+
+    const handleUpdateChannel = async (channel: string) => {
+        if (!link) return
+        await updateMarketingLink(link.id, { channel: channel || undefined })
+        const res = await getMarketingLink(linkId)
+        if (res.success && res.data) setLink(res.data as unknown as LinkData)
+        setEditingField(null)
     }
 
     if (loading) {
@@ -107,7 +139,7 @@ export default function MarketingLinkDetailPage() {
         <div className="space-y-6 max-w-4xl">
             {/* Back */}
             <button
-                onClick={() => router.push('/dashboard/marketing/links')}
+                onClick={() => router.push('/dashboard/marketing')}
                 className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
                 <ArrowLeft className="w-4 h-4" />
@@ -127,10 +159,16 @@ export default function MarketingLinkDetailPage() {
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${channelCfg.color} ${channelCfg.textColor}`}>
                                     {channelCfg.label}
                                 </span>
-                                {link.campaign && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600">
-                                        <Tag className="w-2.5 h-2.5" />
-                                        {link.campaign}
+                                {link.Campaign && (
+                                    <span
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
+                                        style={{
+                                            backgroundColor: link.Campaign.color ? `${link.Campaign.color}20` : '#f3f4f6',
+                                            color: link.Campaign.color || '#6B7280',
+                                        }}
+                                    >
+                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: link.Campaign.color || '#6B7280' }} />
+                                        {link.Campaign.name}
                                     </span>
                                 )}
                                 {link.tags?.map(tag => {
@@ -176,6 +214,121 @@ export default function MarketingLinkDetailPage() {
                 <MousePointerClick className="w-4 h-4 text-blue-500" />
                 <span className="text-sm text-gray-500 font-medium">{t('detail.totalClicks')}</span>
                 <span className="text-lg font-bold text-gray-900 tabular-nums ml-1">{link.clicks.toLocaleString()}</span>
+            </div>
+
+            {/* Editable Properties */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 className="text-base font-semibold text-gray-900 mb-4">{t('detail.properties')}</h2>
+                <div className="space-y-3">
+                    {/* Campaign */}
+                    <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Tag className="w-4 h-4" />
+                            <span>{t('campaigns.label')}</span>
+                        </div>
+                        {editingField === 'campaign' ? (
+                            <div className="w-64">
+                                <CampaignSelect
+                                    value={link.campaign_id}
+                                    onChange={(id) => handleUpdateCampaign(id)}
+                                />
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setEditingField('campaign')}
+                                className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 group/edit"
+                            >
+                                {link.Campaign ? (
+                                    <span
+                                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                                        style={{
+                                            backgroundColor: link.Campaign.color ? `${link.Campaign.color}20` : '#f3f4f6',
+                                            color: link.Campaign.color || '#6B7280',
+                                        }}
+                                    >
+                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: link.Campaign.color || '#6B7280' }} />
+                                        {link.Campaign.name}
+                                    </span>
+                                ) : (
+                                    <span className="text-gray-400">{t('campaigns.none')}</span>
+                                )}
+                                <Pencil className="w-3 h-3 text-gray-400 opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Folder */}
+                    <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Folder className="w-4 h-4" />
+                            <span>{t('folders.label')}</span>
+                        </div>
+                        {editingField === 'folder' ? (
+                            <div className="w-64">
+                                <FolderSelect
+                                    value={link.folder_id}
+                                    onChange={(id) => handleUpdateFolder(id)}
+                                />
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setEditingField('folder')}
+                                className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 group/edit"
+                            >
+                                {link.Folder ? (
+                                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                        <Folder className="w-2.5 h-2.5" />
+                                        {link.Folder.name}
+                                    </span>
+                                ) : (
+                                    <span className="text-gray-400">{t('folders.none')}</span>
+                                )}
+                                <Pencil className="w-3 h-3 text-gray-400 opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Channel */}
+                    <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <ExternalLink className="w-4 h-4" />
+                            <span>{t('create.channel')}</span>
+                        </div>
+                        {editingField === 'channel' ? (
+                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                {PREDEFINED_CHANNELS.filter(c => c.id !== 'other').map(ch => (
+                                    <button
+                                        key={ch.id}
+                                        onClick={() => handleUpdateChannel(ch.id)}
+                                        className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+                                            link.channel === ch.id
+                                                ? `${ch.color} ${ch.textColor}`
+                                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        {ch.label}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => setEditingField(null)}
+                                    className="p-1 text-gray-400 hover:text-gray-600"
+                                >
+                                    <Check className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setEditingField('channel')}
+                                className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 group/edit"
+                            >
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${channelCfg.color} ${channelCfg.textColor}`}>
+                                    {channelCfg.label}
+                                </span>
+                                <Pencil className="w-3 h-3 text-gray-400 opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* UTM Parameters */}

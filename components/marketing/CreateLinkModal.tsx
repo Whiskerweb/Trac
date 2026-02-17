@@ -13,6 +13,8 @@ import { getVerifiedDomainForWorkspace } from '@/app/actions/domains'
 import { getStartupProfile } from '@/app/actions/startup-profile'
 import { PREDEFINED_CHANNELS } from '@/lib/marketing/channels'
 import { TAG_COLORS, getTagColor } from '@/lib/marketing/tags'
+import { CampaignSelect } from '@/components/marketing/CampaignSelect'
+import { FolderSelect } from '@/components/marketing/FolderSelect'
 import QRCodeWithLogo from '@/components/QRCodeWithLogo'
 import { nanoid } from 'nanoid'
 
@@ -42,6 +44,8 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
     const [channel, setChannel] = useState('')
     const [customChannel, setCustomChannel] = useState('')
     const [campaign, setCampaign] = useState('')
+    const [campaignId, setCampaignId] = useState<string | null>(null)
+    const [folderId, setFolderId] = useState<string | null>(null)
     const [showUtm, setShowUtm] = useState(false)
     const [utmSource, setUtmSource] = useState('')
     const [utmMedium, setUtmMedium] = useState('')
@@ -86,6 +90,8 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
             setChannel('')
             setCustomChannel('')
             setCampaign('')
+            setCampaignId(null)
+            setFolderId(null)
             setShowUtm(false)
             setUtmSource('')
             setUtmMedium('')
@@ -184,7 +190,9 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
             url: url.trim(),
             slug: slug.trim() || undefined,
             channel: effectiveChannel || undefined,
-            campaign: campaign.trim() || undefined,
+            campaign: campaignId ? undefined : (campaign.trim() || undefined),
+            campaign_id: campaignId || undefined,
+            folder_id: folderId || undefined,
             utm_source: utmSource.trim() || undefined,
             utm_medium: utmMedium.trim() || undefined,
             utm_campaign: utmCampaign.trim() || undefined,
@@ -429,12 +437,20 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                         {t('create.campaign')}
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={campaign}
-                                        onChange={(e) => setCampaign(e.target.value)}
-                                        placeholder={t('create.campaignPlaceholder')}
-                                        className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 transition-all"
+                                    <CampaignSelect
+                                        value={campaignId}
+                                        onChange={(id) => { setCampaignId(id); if (id) setCampaign('') }}
+                                    />
+                                </div>
+
+                                {/* Folder */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        {t('folders.label')}
+                                    </label>
+                                    <FolderSelect
+                                        value={folderId}
+                                        onChange={setFolderId}
                                     />
                                 </div>
 

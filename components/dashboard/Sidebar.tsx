@@ -70,6 +70,7 @@ const marketingNavigationConfig: NavSection[] = [
         titleKey: 'marketingLinks',
         items: [
             { nameKey: 'marketingAllLinks', href: '/dashboard/marketing', icon: Link2 },
+            { nameKey: 'marketingCampaigns', href: '/dashboard/marketing/campaigns', icon: Megaphone },
             { nameKey: 'marketingAnalyticsPage', href: '/dashboard/marketing/analytics', icon: BarChart3 },
         ]
     },

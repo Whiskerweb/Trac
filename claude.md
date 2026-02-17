@@ -69,7 +69,7 @@ app/
 │   ├── webhooks/       # [endpointId] (Stripe), startup-payments
 │   ├── cron/           # commissions, mature-commissions, payouts
 │   └── seller/         # connect, wallet, withdraw, payout-method
-├── actions/            # Server Actions (commissions, sellers, payouts, missions, messaging, customers, organizations, admin-org)
+├── actions/            # Server Actions (commissions, sellers, payouts, missions, messaging, customers, organizations, admin-org, marketing-campaigns, marketing-folders)
 └── [pages legales]     # terms, privacy, seller-terms, startup-terms, about, report-abuse
 
 components/
@@ -77,6 +77,7 @@ components/
 ├── WebhookManager.tsx    # Guide configuration webhook Stripe (4 events)
 ├── dashboard/            # Sidebar, ActivityFeed, charts
 ├── landing/              # Navbar, Hero, Features, FAQ
+├── marketing/            # CampaignSelect, FolderSelect, FolderSidebar, BulkActionBar, CampaignManager, CreateLinkModal
 └── seller/               # ProfileCompletionBanner
 
 lib/
@@ -114,6 +115,9 @@ Seller → SellerProfile, SellerBalance, Commission, GiftCardRedemption
 Organization → OrganizationMember[], OrganizationMission[]
 SellerGroup → SellerGroupMember[], GroupMission[]
 Feedback (standalone) → user feedback avec attachments
+Workspace → MarketingCampaign[], MarketingFolder[]
+MarketingCampaign → ShortLink[] (campaign_id FK, onDelete: SetNull)
+MarketingFolder → ShortLink[] (folder_id FK, onDelete: SetNull), Children[] (self-relation)
 ```
 
 ### Modeles cles
@@ -132,6 +136,8 @@ Feedback (standalone) → user feedback avec attachments
 | **SellerGroup** | Pool egalitaire de sellers (max 10, un seul groupe par seller) |
 | **SellerGroupMember** | Liaison seller ↔ group (ACTIVE/REMOVED, seller_id @unique) |
 | **GroupMission** | Inscription groupe dans mission (@@unique group_id+mission_id) |
+| **MarketingCampaign** | Campagne marketing first-class (name, color, status, dates) — @@unique(workspace_id, name) |
+| **MarketingFolder** | Dossier organisation liens (self-relation max 2 niveaux, position ordering) — @@unique(workspace_id, name, parent_id) |
 
 ### Champs Commission (recurring + org)
 ```
@@ -171,6 +177,7 @@ SellerGroupStatus: ACTIVE, ARCHIVED
 GroupMemberStatus: ACTIVE, REMOVED
 MessageType: TEXT, ORG_DEAL_PROPOSAL, MISSION_INVITE, ENROLLMENT_REQUEST
 MessageActionStatus: PENDING, ACCEPTED, REJECTED, CANCELLED
+CampaignStatus: ACTIVE, PAUSED, COMPLETED, ARCHIVED
 ```
 
 ---
@@ -438,6 +445,24 @@ Responsabilites:
 - [x] **Enrollment Request sync** : `approveProgramRequest()` / `rejectProgramRequest()` synchronisent le statut
 - [x] **Bouton "+"** : cote startup, popover avec "Propose org deal" + "Invite to mission" avec modales de selection
 - [x] **Backward compat** : anciens messages texte + `is_invitation: true` s'affichent normalement
+
+### Marketing Campaigns, Folders & Bulk Operations (Fevrier 2026)
+- [x] **Schema** : `MarketingCampaign` (name, description, color, status, dates) + `MarketingFolder` (self-relation max 2 niveaux, position) + `campaign_id`/`folder_id` FK sur ShortLink (onDelete: SetNull)
+- [x] **Campaigns CRUD** : `marketing-campaigns.ts` — create, update (cascade rename sur ShortLink.campaign), delete (unlink tous liens), list (avec _count + totalClicks), get
+- [x] **Folders CRUD** : `marketing-folders.ts` — create (validation max 2 niveaux), update, delete (cascade children + unlink liens), getTree
+- [x] **Bulk operations** : `bulkDeleteLinks`, `bulkMoveToFolder`, `bulkSetCampaign`, `bulkAddTags`, `bulkRemoveTags` dans `marketing-links.ts`
+- [x] **Links editables** : `updateMarketingLink()` supporte campaign_id, folder_id, channel
+- [x] **UI FolderSidebar** : panneau 220px avec arbre dossiers, inline create/rename, context menu
+- [x] **UI CampaignManager** : popover gestion campagnes (create, edit, status toggle, delete)
+- [x] **UI BulkActionBar** : barre sticky en bas avec actions bulk (move, campaign, tags, delete)
+- [x] **UI CampaignSelect/FolderSelect** : dropdowns reutilisables
+- [x] **Page marketing** : layout 2 colonnes (sidebar + contenu), checkboxes multi-select, campaign pills filtre
+- [x] **Page campagnes** : `/dashboard/marketing/campaigns` — grille cards avec stats, create/edit/archive/delete
+- [x] **Link detail editable** : section "Properties" (campaign, folder, channel) avec edit inline
+- [x] **CreateLinkModal** : CampaignSelect + FolderSelect remplacent input texte libre
+- [x] **Denormalisation** : champ `campaign` string garde en sync avec `campaign_id` (backward compat)
+- [x] **Migration** : `scripts/migrate-campaigns.ts` — convertit strings campaign existants en entites MarketingCampaign
+- [x] **I18n** : ~40 cles (campaigns, folders, bulk) dans FR/EN/ES
 
 ---
 

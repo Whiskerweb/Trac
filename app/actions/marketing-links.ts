@@ -29,6 +29,8 @@ interface MarketingLinkInput {
     slug?: string
     channel?: string
     campaign?: string
+    campaign_id?: string
+    folder_id?: string
     utm_source?: string
     utm_medium?: string
     utm_campaign?: string
@@ -97,6 +99,21 @@ export async function createMarketingLink(input: MarketingLinkInput) {
     }
     targetUrl = url.toString()
 
+    // Resolve campaign_id → campaign name for denormalized field
+    let campaignName = input.campaign || null
+    let campaignId = input.campaign_id || null
+    if (campaignId) {
+        const camp = await prisma.marketingCampaign.findUnique({
+            where: { id: campaignId },
+            select: { name: true, workspace_id: true },
+        })
+        if (camp && camp.workspace_id === workspace.workspaceId) {
+            campaignName = camp.name
+        } else {
+            campaignId = null
+        }
+    }
+
     try {
         const link = await prisma.shortLink.create({
             data: {
@@ -106,7 +123,9 @@ export async function createMarketingLink(input: MarketingLinkInput) {
                 affiliate_id: null,
                 link_type: 'marketing',
                 channel: input.channel || null,
-                campaign: input.campaign || null,
+                campaign: campaignName,
+                campaign_id: campaignId,
+                folder_id: input.folder_id || null,
                 utm_source: input.utm_source || null,
                 utm_medium: input.utm_medium || null,
                 utm_campaign: input.utm_campaign || null,
@@ -161,6 +180,8 @@ export async function createMarketingLink(input: MarketingLinkInput) {
 export async function getMarketingLinks(filters?: {
     channel?: string
     campaign?: string
+    campaign_id?: string
+    folder_id?: string
     search?: string
     tagIds?: string[]
 }) {
@@ -179,6 +200,10 @@ export async function getMarketingLinks(filters?: {
 
     if (filters?.channel) where.channel = filters.channel
     if (filters?.campaign) where.campaign = filters.campaign
+    if (filters?.campaign_id) where.campaign_id = filters.campaign_id
+    if (filters?.folder_id !== undefined) {
+        where.folder_id = filters.folder_id || null
+    }
     if (filters?.search) {
         where.OR = [
             { slug: { contains: filters.search, mode: 'insensitive' } },
@@ -193,7 +218,11 @@ export async function getMarketingLinks(filters?: {
     const links = await prisma.shortLink.findMany({
         where,
         orderBy: { created_at: 'desc' },
-        include: { tags: { select: { id: true, name: true, color: true } } },
+        include: {
+            tags: { select: { id: true, name: true, color: true } },
+            Campaign: { select: { id: true, name: true, color: true, status: true } },
+            Folder: { select: { id: true, name: true, color: true } },
+        },
     })
 
     const base = await getShortLinkBase(workspace.workspaceId)
@@ -220,7 +249,11 @@ export async function getMarketingLink(id: string) {
 
     const link = await prisma.shortLink.findUnique({
         where: { id },
-        include: { tags: { select: { id: true, name: true, color: true } } },
+        include: {
+            tags: { select: { id: true, name: true, color: true } },
+            Campaign: { select: { id: true, name: true, color: true, status: true } },
+            Folder: { select: { id: true, name: true, color: true } },
+        },
     })
 
     if (!link || link.workspace_id !== workspace.workspaceId || link.link_type !== 'marketing') {
@@ -257,6 +290,25 @@ export async function updateMarketingLink(id: string, input: Partial<MarketingLi
     const data: Record<string, unknown> = {}
     if (input.channel !== undefined) data.channel = input.channel || null
     if (input.campaign !== undefined) data.campaign = input.campaign || null
+    if (input.folder_id !== undefined) data.folder_id = input.folder_id || null
+
+    // Handle campaign_id change — also update denormalized string
+    if (input.campaign_id !== undefined) {
+        if (input.campaign_id) {
+            const camp = await prisma.marketingCampaign.findUnique({
+                where: { id: input.campaign_id },
+                select: { name: true, workspace_id: true },
+            })
+            if (camp && camp.workspace_id === workspace.workspaceId) {
+                data.campaign_id = input.campaign_id
+                data.campaign = camp.name
+            }
+        } else {
+            data.campaign_id = null
+            data.campaign = null
+        }
+    }
+
     if (input.utm_source !== undefined) data.utm_source = input.utm_source || null
     if (input.utm_medium !== undefined) data.utm_medium = input.utm_medium || null
     if (input.utm_campaign !== undefined) data.utm_campaign = input.utm_campaign || null
@@ -610,4 +662,119 @@ export async function getMarketingOverview() {
             topLinks,
         },
     }
+}
+
+// =============================================
+// BULK OPERATIONS
+// =============================================
+
+async function validateBulkLinks(linkIds: string[]) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { error: 'Not authenticated' }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) return { error: 'No workspace' }
+
+    // Verify all links belong to workspace and are marketing type
+    const links = await prisma.shortLink.findMany({
+        where: {
+            id: { in: linkIds },
+            workspace_id: workspace.workspaceId,
+            link_type: 'marketing',
+        },
+        select: { id: true, slug: true },
+    })
+
+    if (links.length !== linkIds.length) {
+        return { error: 'Some links not found' }
+    }
+
+    return { workspace, links }
+}
+
+export async function bulkDeleteLinks(linkIds: string[]) {
+    const result = await validateBulkLinks(linkIds)
+    if ('error' in result) return { success: false, error: result.error }
+
+    const { links } = result
+
+    // Delete from DB
+    await prisma.shortLink.deleteMany({
+        where: { id: { in: linkIds } },
+    })
+
+    // Cleanup Redis
+    const { deleteLinkFromRedis } = await import('@/lib/redis')
+    await Promise.all(links.map(l => deleteLinkFromRedis(l.slug)))
+
+    revalidatePath('/dashboard/marketing')
+    return { success: true }
+}
+
+export async function bulkMoveToFolder(linkIds: string[], folderId: string | null) {
+    const result = await validateBulkLinks(linkIds)
+    if ('error' in result) return { success: false, error: result.error }
+
+    await prisma.shortLink.updateMany({
+        where: { id: { in: linkIds } },
+        data: { folder_id: folderId },
+    })
+
+    revalidatePath('/dashboard/marketing')
+    return { success: true }
+}
+
+export async function bulkSetCampaign(linkIds: string[], campaignId: string | null) {
+    const result = await validateBulkLinks(linkIds)
+    if ('error' in result) return { success: false, error: result.error }
+
+    let campaignName: string | null = null
+    if (campaignId) {
+        const camp = await prisma.marketingCampaign.findUnique({
+            where: { id: campaignId },
+            select: { name: true },
+        })
+        if (!camp) return { success: false, error: 'Campaign not found' }
+        campaignName = camp.name
+    }
+
+    await prisma.shortLink.updateMany({
+        where: { id: { in: linkIds } },
+        data: { campaign_id: campaignId, campaign: campaignName },
+    })
+
+    revalidatePath('/dashboard/marketing')
+    return { success: true }
+}
+
+export async function bulkAddTags(linkIds: string[], tagIds: string[]) {
+    const result = await validateBulkLinks(linkIds)
+    if ('error' in result) return { success: false, error: result.error }
+
+    // Add tags additively to each link
+    await Promise.all(linkIds.map(linkId =>
+        prisma.shortLink.update({
+            where: { id: linkId },
+            data: { tags: { connect: tagIds.map(id => ({ id })) } },
+        })
+    ))
+
+    revalidatePath('/dashboard/marketing')
+    return { success: true }
+}
+
+export async function bulkRemoveTags(linkIds: string[], tagIds: string[]) {
+    const result = await validateBulkLinks(linkIds)
+    if ('error' in result) return { success: false, error: result.error }
+
+    await Promise.all(linkIds.map(linkId =>
+        prisma.shortLink.update({
+            where: { id: linkId },
+            data: { tags: { disconnect: tagIds.map(id => ({ id })) } },
+        })
+    ))
+
+    revalidatePath('/dashboard/marketing')
+    return { success: true }
 }

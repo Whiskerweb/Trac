@@ -148,6 +148,10 @@ model ShortLink {
   affiliate_id      String?
   channel           String?
   campaign          String?
+  /// FK to MarketingCampaign entity
+  campaign_id       String?
+  /// FK to MarketingFolder entity
+  folder_id         String?
   link_type         String             @default("affiliate")
   utm_source        String?
   utm_medium        String?
@@ -159,6 +163,8 @@ model ShortLink {
   og_image          String?
   MissionEnrollment MissionEnrollment?
   Workspace         Workspace          @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  Campaign          MarketingCampaign? @relation(fields: [campaign_id], references: [id], onDelete: SetNull)
+  Folder            MarketingFolder?   @relation(fields: [folder_id], references: [id], onDelete: SetNull)
   tags              MarketingTag[]     @relation("ShortLinkTags")
 
   @@index([affiliate_id])
@@ -167,6 +173,8 @@ model ShortLink {
   @@index([link_type])
   @@index([channel])
   @@index([campaign])
+  @@index([campaign_id])
+  @@index([folder_id])
 }
 
 model User {
@@ -231,8 +239,10 @@ model Workspace {
   ShortLink        ShortLink[]
   WebhookEndpoint  WebhookEndpoint[]
   WorkspaceMember  WorkspaceMember[]
-  StartupPayment   StartupPayment[]
-  MarketingTag     MarketingTag[]
+  StartupPayment    StartupPayment[]
+  MarketingTag      MarketingTag[]
+  MarketingCampaign MarketingCampaign[]
+  MarketingFolder   MarketingFolder[]
 
   @@index([owner_id])
   @@index([slug])
@@ -1259,4 +1269,59 @@ model GroupMission {
 
   @@unique([group_id, mission_id])
   @@index([mission_id])
+}
+
+// === MARKETING CAMPAIGNS & FOLDERS ===
+
+enum CampaignStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+/// Marketing campaign — first-class entity for organizing links
+model MarketingCampaign {
+  id           String         @id @default(uuid())
+  name         String
+  description  String?
+  /// Hex color for visual identification
+  color        String?
+  status       CampaignStatus @default(ACTIVE)
+  start_date   DateTime?
+  end_date     DateTime?
+  workspace_id String
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
+
+  Workspace Workspace   @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  links     ShortLink[]
+
+  @@unique([workspace_id, name])
+  @@index([workspace_id])
+  @@index([status])
+}
+
+/// Marketing folder — hierarchical organization for links (max 2 levels)
+model MarketingFolder {
+  id           String   @id @default(uuid())
+  name         String
+  /// Hex color for visual identification
+  color        String?
+  /// Ordering position within parent
+  position     Int      @default(0)
+  workspace_id String
+  /// Self-relation for sub-folders (max 2 levels: parent → child)
+  parent_id    String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  Workspace Workspace        @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  Parent    MarketingFolder?  @relation("FolderHierarchy", fields: [parent_id], references: [id], onDelete: Cascade)
+  Children  MarketingFolder[] @relation("FolderHierarchy")
+  links     ShortLink[]
+
+  @@unique([workspace_id, name, parent_id])
+  @@index([workspace_id])
+  @@index([parent_id])
 }
