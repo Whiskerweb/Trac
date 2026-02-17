@@ -96,6 +96,7 @@ export async function getPortalData(workspaceSlug: string) {
                     portal_welcome_text: workspace.portal_welcome_text,
                     portal_primary_color: workspace.portal_primary_color,
                     portal_headline: workspace.portal_headline,
+                    portal_logo_url: workspace.portal_logo_url,
                 },
                 profile: workspace.Profile ? {
                     logo_url: workspace.Profile.logo_url,
@@ -468,6 +469,7 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
                     slug: workspace.slug,
                     portal_primary_color: workspace.portal_primary_color,
                     portal_headline: workspace.portal_headline,
+                    portal_logo_url: workspace.portal_logo_url,
                 },
                 profile: workspace.Profile ? {
                     logo_url: workspace.Profile.logo_url,
@@ -522,6 +524,8 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
                     paidTotal: sellerBalance?.paid_total || 0,
                 },
                 sellerName: user.user_metadata?.full_name || user.email || '',
+                sellerId: seller.id,
+                referralCode: seller.referral_code || '',
             },
         }
     } catch (error) {
@@ -641,5 +645,592 @@ export async function getPortalCommissions(
     } catch (error) {
         console.error('[Portal] getPortalCommissions error:', error)
         return { success: false, error: 'Failed to load commissions' }
+    }
+}
+
+// =============================================
+// PORTAL — REFERRALS (scoped to portal workspace)
+// =============================================
+
+/**
+ * Get referred sellers who are enrolled in this workspace's missions
+ */
+export async function getPortalReferrals(
+    workspaceSlug: string,
+    page: number = 1,
+    search?: string
+) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    try {
+        const workspace = await prisma.workspace.findUnique({
+            where: { slug: workspaceSlug },
+        })
+
+        if (!workspace || !workspace.portal_enabled) {
+            return { success: false, error: 'Portal not available' }
+        }
+
+        const seller = await prisma.seller.findFirst({
+            where: { user_id: user.id },
+            select: { id: true, referral_code: true },
+        })
+
+        if (!seller) return { success: false, error: 'Seller not found' }
+
+        // Build search filter
+        const searchFilter = search ? {
+            OR: [
+                { name: { contains: search, mode: 'insensitive' as const } },
+                { email: { contains: search, mode: 'insensitive' as const } },
+            ],
+        } : {}
+
+        // Get Gen1 referred sellers
+        const perPage = 20
+        const skip = (page - 1) * perPage
+
+        const [referrals, total] = await Promise.all([
+            prisma.seller.findMany({
+                where: {
+                    referred_by: seller.id,
+                    ...searchFilter,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    status: true,
+                    created_at: true,
+                    _count: {
+                        select: {
+                            Commissions: {
+                                where: {
+                                    program_id: workspace.id,
+                                    referral_generation: null,
+                                    org_parent_commission_id: null,
+                                },
+                            },
+                            Referrals: true,
+                        },
+                    },
+                },
+                orderBy: { created_at: 'desc' },
+                skip,
+                take: perPage,
+            }),
+            prisma.seller.count({
+                where: { referred_by: seller.id, ...searchFilter },
+            }),
+        ])
+
+        // Get earnings per generation
+        const earningsByGen = await prisma.commission.groupBy({
+            by: ['referral_generation'],
+            where: {
+                seller_id: seller.id,
+                referral_generation: { not: null },
+                program_id: workspace.id,
+            },
+            _sum: { commission_amount: true },
+            _count: { id: true },
+        })
+
+        const genStats = { gen1: { amount: 0, count: 0 }, gen2: { amount: 0, count: 0 }, gen3: { amount: 0, count: 0 } }
+        for (const g of earningsByGen) {
+            if (g.referral_generation === 1) { genStats.gen1 = { amount: g._sum.commission_amount || 0, count: g._count.id } }
+            else if (g.referral_generation === 2) { genStats.gen2 = { amount: g._sum.commission_amount || 0, count: g._count.id } }
+            else if (g.referral_generation === 3) { genStats.gen3 = { amount: g._sum.commission_amount || 0, count: g._count.id } }
+        }
+
+        // Get earnings from each referral
+        const referralIds = referrals.map(r => r.id)
+        let earningsByReferral: Record<string, number> = {}
+        if (referralIds.length > 0) {
+            const refCommissions = await prisma.commission.findMany({
+                where: {
+                    seller_id: seller.id,
+                    referral_generation: 1,
+                    program_id: workspace.id,
+                },
+                select: { commission_amount: true, referral_source_commission_id: true },
+            })
+            const sourceIds = refCommissions
+                .map(c => c.referral_source_commission_id)
+                .filter((id): id is string => id !== null)
+            if (sourceIds.length > 0) {
+                const sourceCommissions = await prisma.commission.findMany({
+                    where: { id: { in: sourceIds } },
+                    select: { id: true, seller_id: true },
+                })
+                const sourceToSeller: Record<string, string> = {}
+                for (const sc of sourceCommissions) { sourceToSeller[sc.id] = sc.seller_id }
+                for (const c of refCommissions) {
+                    const srcSellerId = c.referral_source_commission_id ? sourceToSeller[c.referral_source_commission_id] : null
+                    if (srcSellerId) { earningsByReferral[srcSellerId] = (earningsByReferral[srcSellerId] || 0) + c.commission_amount }
+                }
+            }
+        }
+
+        const totalEarnings = genStats.gen1.amount + genStats.gen2.amount + genStats.gen3.amount
+
+        return {
+            success: true,
+            data: {
+                referrals: referrals.map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    email: r.email,
+                    status: r.status,
+                    joinedAt: r.created_at.toISOString(),
+                    salesCount: r._count.Commissions,
+                    totalEarnings: earningsByReferral[r.id] || 0,
+                    subReferralCount: r._count.Referrals,
+                })),
+                stats: {
+                    totalReferred: total,
+                    totalEarnings,
+                    genStats,
+                },
+                pagination: {
+                    page,
+                    totalPages: Math.ceil(total / perPage),
+                    total,
+                },
+            },
+        }
+    } catch (error) {
+        console.error('[Portal] getPortalReferrals error:', error)
+        return { success: false, error: 'Failed to load referrals' }
+    }
+}
+
+// =============================================
+// PORTAL — SUB-AFFILIATE TREE
+// =============================================
+
+/**
+ * Get children of parentSellerId (scoped to portal workspace)
+ */
+export async function getPortalSubTree(
+    workspaceSlug: string,
+    parentSellerId: string,
+    parentGeneration: number
+) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    try {
+        const workspace = await prisma.workspace.findUnique({
+            where: { slug: workspaceSlug },
+        })
+
+        if (!workspace || !workspace.portal_enabled) {
+            return { success: false, error: 'Portal not available' }
+        }
+
+        const currentSeller = await prisma.seller.findFirst({
+            where: { user_id: user.id },
+            select: { id: true },
+        })
+
+        if (!currentSeller) return { success: false, error: 'Seller not found' }
+
+        // Security: validate parentSellerId is in the user's referral tree
+        if (parentGeneration === 1) {
+            const parent = await prisma.seller.findUnique({
+                where: { id: parentSellerId },
+                select: { referred_by: true },
+            })
+            if (!parent || parent.referred_by !== currentSeller.id) {
+                return { success: false, error: 'Unauthorized' }
+            }
+        } else if (parentGeneration === 2) {
+            const parent = await prisma.seller.findUnique({
+                where: { id: parentSellerId },
+                select: { referred_by: true },
+            })
+            if (!parent?.referred_by) return { success: false, error: 'Unauthorized' }
+            const grandparent = await prisma.seller.findUnique({
+                where: { id: parent.referred_by },
+                select: { referred_by: true },
+            })
+            if (!grandparent || grandparent.referred_by !== currentSeller.id) {
+                return { success: false, error: 'Unauthorized' }
+            }
+        } else {
+            return { success: false, error: 'Invalid generation' }
+        }
+
+        const children = await prisma.seller.findMany({
+            where: { referred_by: parentSellerId },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                created_at: true,
+                status: true,
+                _count: {
+                    select: {
+                        Commissions: {
+                            where: {
+                                program_id: workspace.id,
+                                referral_generation: null,
+                                org_parent_commission_id: null,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { created_at: 'desc' },
+        })
+
+        // For Gen2 children, check sub-referrals
+        const childIds = children.map(c => c.id)
+        let subCountMap: Record<string, number> = {}
+        if (parentGeneration === 1 && childIds.length > 0) {
+            const subCounts = await prisma.seller.groupBy({
+                by: ['referred_by'],
+                where: { referred_by: { in: childIds } },
+                _count: true,
+            })
+            for (const sc of subCounts) {
+                if (sc.referred_by) subCountMap[sc.referred_by] = sc._count
+            }
+        }
+
+        // Calculate earnings from each child
+        const nextGen = parentGeneration + 1
+        const refCommissions = await prisma.commission.findMany({
+            where: {
+                seller_id: currentSeller.id,
+                referral_generation: nextGen,
+                program_id: workspace.id,
+            },
+            select: { commission_amount: true, referral_source_commission_id: true },
+        })
+
+        const sourceIds = refCommissions
+            .map(c => c.referral_source_commission_id)
+            .filter((id): id is string => id !== null)
+        const sourceCommissions = sourceIds.length > 0
+            ? await prisma.commission.findMany({
+                where: { id: { in: sourceIds } },
+                select: { id: true, seller_id: true },
+            })
+            : []
+        const sourceToSeller: Record<string, string> = {}
+        for (const sc of sourceCommissions) { sourceToSeller[sc.id] = sc.seller_id }
+        const earningsByChild: Record<string, number> = {}
+        for (const c of refCommissions) {
+            const srcSellerId = c.referral_source_commission_id ? sourceToSeller[c.referral_source_commission_id] : null
+            if (srcSellerId) { earningsByChild[srcSellerId] = (earningsByChild[srcSellerId] || 0) + c.commission_amount }
+        }
+
+        return {
+            success: true,
+            data: children.map(c => ({
+                id: c.id,
+                name: c.name,
+                email: c.email,
+                joinedAt: c.created_at.toISOString(),
+                status: c.status,
+                salesCount: c._count.Commissions,
+                earnings: earningsByChild[c.id] || 0,
+                hasSubReferrals: parentGeneration === 1 ? (subCountMap[c.id] || 0) > 0 : false,
+                subReferralCount: parentGeneration === 1 ? (subCountMap[c.id] || 0) : 0,
+            })),
+        }
+    } catch (error) {
+        console.error('[Portal] getPortalSubTree error:', error)
+        return { success: false, error: 'Failed to load sub-tree' }
+    }
+}
+
+// =============================================
+// PORTAL — PAYOUTS
+// =============================================
+
+/**
+ * Get seller payout data (balance, method, stripe status, recent payouts)
+ */
+export async function getPortalPayoutData(workspaceSlug: string) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    try {
+        const workspace = await prisma.workspace.findUnique({
+            where: { slug: workspaceSlug },
+        })
+
+        if (!workspace || !workspace.portal_enabled) {
+            return { success: false, error: 'Portal not available' }
+        }
+
+        const seller = await prisma.seller.findFirst({
+            where: { user_id: user.id },
+            select: {
+                id: true,
+                payout_method: true,
+                stripe_connect_id: true,
+                paypal_email: true,
+                iban: true,
+            },
+        })
+
+        if (!seller) return { success: false, error: 'Seller not found' }
+
+        const sellerBalance = await prisma.sellerBalance.findUnique({
+            where: { seller_id: seller.id },
+        })
+
+        // Commission totals scoped to this workspace
+        const commissionsByStatus = await prisma.commission.groupBy({
+            by: ['status'],
+            where: {
+                seller_id: seller.id,
+                program_id: workspace.id,
+                org_parent_commission_id: null,
+                referral_generation: null,
+            },
+            _sum: { commission_amount: true },
+        })
+
+        let pendingAmount = 0, proceedAmount = 0, completeAmount = 0
+        for (const group of commissionsByStatus) {
+            if (group.status === 'PENDING') pendingAmount = group._sum.commission_amount || 0
+            else if (group.status === 'PROCEED') proceedAmount = group._sum.commission_amount || 0
+            else if (group.status === 'COMPLETE') completeAmount = group._sum.commission_amount || 0
+        }
+
+        return {
+            success: true,
+            data: {
+                balance: {
+                    available: proceedAmount,
+                    pending: pendingAmount,
+                    paid: completeAmount,
+                    total: sellerBalance?.balance || 0,
+                },
+                payout: {
+                    method: seller.payout_method || 'STRIPE_CONNECT',
+                    stripeConnected: !!seller.stripe_connect_id,
+                    paypalEmail: seller.paypal_email,
+                    iban: seller.iban,
+                },
+            },
+        }
+    } catch (error) {
+        console.error('[Portal] getPortalPayoutData error:', error)
+        return { success: false, error: 'Failed to load payout data' }
+    }
+}
+
+// =============================================
+// PORTAL — ASSETS
+// =============================================
+
+/**
+ * Get aggregated MissionContent from all enrolled missions
+ */
+export async function getPortalAssets(workspaceSlug: string) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    try {
+        const workspace = await prisma.workspace.findUnique({
+            where: { slug: workspaceSlug },
+        })
+
+        if (!workspace || !workspace.portal_enabled) {
+            return { success: false, error: 'Portal not available' }
+        }
+
+        const enrollments = await prisma.missionEnrollment.findMany({
+            where: {
+                user_id: user.id,
+                status: 'APPROVED',
+                Mission: { workspace_id: workspace.id },
+            },
+            include: {
+                Mission: {
+                    select: {
+                        id: true,
+                        title: true,
+                        Contents: {
+                            orderBy: { order: 'asc' },
+                            select: {
+                                id: true,
+                                type: true,
+                                url: true,
+                                title: true,
+                                description: true,
+                            },
+                        },
+                    },
+                },
+            },
+        })
+
+        const missionAssets = enrollments
+            .filter(e => e.Mission.Contents.length > 0)
+            .map(e => ({
+                missionId: e.Mission.id,
+                missionTitle: e.Mission.title,
+                contents: e.Mission.Contents,
+            }))
+
+        return { success: true, data: { missions: missionAssets } }
+    } catch (error) {
+        console.error('[Portal] getPortalAssets error:', error)
+        return { success: false, error: 'Failed to load assets' }
+    }
+}
+
+// =============================================
+// PORTAL — REPORTS (DB-based analytics)
+// =============================================
+
+/**
+ * Get DB-based analytics for portal dashboard
+ */
+export async function getPortalReports(
+    workspaceSlug: string,
+    period: '7d' | '30d' | '90d' | 'all' = '30d'
+) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    try {
+        const workspace = await prisma.workspace.findUnique({
+            where: { slug: workspaceSlug },
+        })
+
+        if (!workspace || !workspace.portal_enabled) {
+            return { success: false, error: 'Portal not available' }
+        }
+
+        const seller = await prisma.seller.findFirst({
+            where: { user_id: user.id },
+            select: { id: true },
+        })
+
+        if (!seller) return { success: false, error: 'Seller not found' }
+
+        // Date filter
+        const now = new Date()
+        let dateFilter: Date | undefined
+        if (period === '7d') dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        else if (period === '30d') dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        else if (period === '90d') dateFilter = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+
+        const dateWhere = dateFilter ? { created_at: { gte: dateFilter } } : {}
+
+        // Get enrolled links for clicks
+        const enrollments = await prisma.missionEnrollment.findMany({
+            where: {
+                user_id: user.id,
+                status: 'APPROVED',
+                Mission: { workspace_id: workspace.id },
+            },
+            select: { ShortLink: { select: { id: true, clicks: true } } },
+        })
+
+        const totalClicks = enrollments.reduce((sum, e) => sum + (e.ShortLink?.clicks || 0), 0)
+
+        // Commission stats
+        const [commissionAgg, leadCount] = await Promise.all([
+            prisma.commission.aggregate({
+                where: {
+                    seller_id: seller.id,
+                    program_id: workspace.id,
+                    org_parent_commission_id: null,
+                    referral_generation: null,
+                    ...dateWhere,
+                },
+                _count: { id: true },
+                _sum: { commission_amount: true, net_amount: true },
+            }),
+            prisma.leadEvent.count({
+                where: {
+                    link_id: { in: enrollments.map(e => e.ShortLink?.id).filter((id): id is string => !!id) },
+                    ...dateWhere,
+                },
+            }),
+        ])
+
+        // Daily aggregates for chart (last N days based on period)
+        const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 30
+        const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+
+        const dailyCommissions = await prisma.commission.groupBy({
+            by: ['created_at'],
+            where: {
+                seller_id: seller.id,
+                program_id: workspace.id,
+                org_parent_commission_id: null,
+                referral_generation: null,
+                created_at: { gte: startDate },
+            },
+            _sum: { commission_amount: true },
+            _count: { id: true },
+        })
+
+        // Aggregate by day
+        const dailyMap: Record<string, { sales: number; commission: number }> = {}
+        for (const d of dailyCommissions) {
+            const dayKey = d.created_at.toISOString().split('T')[0]
+            if (!dailyMap[dayKey]) dailyMap[dayKey] = { sales: 0, commission: 0 }
+            dailyMap[dayKey].sales += d._count.id
+            dailyMap[dayKey].commission += d._sum.commission_amount || 0
+        }
+
+        // Fill in all days
+        const timeseries: { date: string; sales: number; commission: number }[] = []
+        for (let i = days - 1; i >= 0; i--) {
+            const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+            const key = d.toISOString().split('T')[0]
+            timeseries.push({
+                date: key,
+                sales: dailyMap[key]?.sales || 0,
+                commission: dailyMap[key]?.commission || 0,
+            })
+        }
+
+        return {
+            success: true,
+            data: {
+                totalClicks,
+                totalSales: commissionAgg._count.id,
+                totalLeads: leadCount,
+                totalRevenue: commissionAgg._sum.net_amount || 0,
+                totalCommission: commissionAgg._sum.commission_amount || 0,
+                timeseries,
+            },
+        }
+    } catch (error) {
+        console.error('[Portal] getPortalReports error:', error)
+        return { success: false, error: 'Failed to load reports' }
     }
 }

@@ -2,35 +2,34 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { ArrowRight, Loader2 } from 'lucide-react'
 import { usePortalData } from './layout'
 import PortalKPIRow from '@/components/portal/PortalKPIRow'
 import PortalProgramCard from '@/components/portal/PortalProgramCard'
-import PortalEarningsSection from '@/components/portal/PortalEarningsSection'
-import { portalJoinMission } from '@/app/actions/portal'
+
+const statusDot: Record<string, string> = {
+    PENDING: '#f59e0b',
+    PROCEED: '#7C3AED',
+    COMPLETE: '#10b981',
+}
 
 export default function PortalDashboardPage() {
     const ctx = usePortalData()
     const t = useTranslations('portal.dashboard')
-    const tPrograms = useTranslations('portal.programs')
-    const params = useParams()
-    const workspaceSlug = params.workspaceSlug as string
+    const tComm = useTranslations('portal.commissions')
 
     const [expandedId, setExpandedId] = useState<string | null>(null)
-    const [joiningId, setJoiningId] = useState<string | null>(null)
 
     if (!ctx) return null
-    const { data, refresh } = ctx
+    const { data } = ctx
 
     const primaryColor = data.workspace.portal_primary_color || '#7C3AED'
 
-    const handleJoin = async (missionId: string) => {
-        setJoiningId(missionId)
-        await portalJoinMission(missionId)
-        await refresh()
-        setJoiningId(null)
+    const getDaysLeft = (createdAt: string, holdDays: number) => {
+        const created = new Date(createdAt)
+        const maturesAt = new Date(created.getTime() + holdDays * 24 * 60 * 60 * 1000)
+        const now = new Date()
+        return Math.max(0, Math.ceil((maturesAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
     }
 
     return (
@@ -55,7 +54,7 @@ export default function PortalDashboardPage() {
 
                 {data.enrollments.length === 0 ? (
                     <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-                        <p className="text-sm text-gray-500">{tPrograms('noEnrolled')}</p>
+                        <p className="text-sm text-gray-500">{t('noStats')}</p>
                     </div>
                 ) : (
                     <div className="space-y-2">
@@ -85,52 +84,50 @@ export default function PortalDashboardPage() {
                 )}
             </motion.div>
 
-            {/* Available Programs */}
-            {data.availableMissions.length > 0 && (
+            {/* Recent Earnings (inline, last 5) */}
+            {data.recentCommissions.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.08 }}
+                    className="bg-white rounded-2xl border border-gray-100 p-5"
                 >
-                    <p className="text-sm font-semibold text-gray-900 mb-3">{tPrograms('available')}</p>
-                    <div className="space-y-2">
-                        {data.availableMissions.map((mission) => (
-                            <div
-                                key={mission.id}
-                                className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-3"
-                            >
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-gray-900 truncate">{mission.title}</p>
-                                    <p className="text-xs text-gray-500 truncate mt-0.5">{mission.description}</p>
+                    <p className="text-sm font-semibold text-gray-900 mb-3">{t('earnings')}</p>
+                    <div className="space-y-1">
+                        {data.recentCommissions.slice(0, 5).map((c) => {
+                            const dotColor = c.status === 'PROCEED' ? primaryColor : (statusDot[c.status] || '#9ca3af')
+                            const daysLeft = c.status === 'PENDING' ? getDaysLeft(c.createdAt, c.holdDays) : 0
+                            let typeLabel = c.source
+                            if (c.source === 'RECURRING' && c.recurringMonth) {
+                                typeLabel = `REC #${c.recurringMonth}`
+                            }
+
+                            return (
+                                <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50/50 transition-colors">
+                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-xs font-medium text-gray-700">
+                                            {(c.amount / 100).toFixed(2)}&euro;
+                                        </span>
+                                        <span className="text-[11px] text-gray-400 ml-2">{typeLabel}</span>
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                        {c.status === 'PENDING' && daysLeft > 0 ? (
+                                            <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
+                                                {tComm('availableIn', { days: daysLeft })}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[11px] text-gray-400">
+                                                {new Date(c.createdAt).toLocaleDateString()}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                                <button
-                                    onClick={() => handleJoin(mission.id)}
-                                    disabled={joiningId === mission.id}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50 flex-shrink-0"
-                                    style={{ backgroundColor: primaryColor }}
-                                >
-                                    {joiningId === mission.id ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    ) : (
-                                        <>
-                                            {mission.visibility === 'PRIVATE' ? tPrograms('requestJoin') : tPrograms('joinNow')}
-                                            <ArrowRight className="w-3 h-3" />
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 </motion.div>
             )}
-
-            {/* Recent Earnings + Payout */}
-            <PortalEarningsSection
-                workspaceSlug={workspaceSlug}
-                recentCommissions={data.recentCommissions}
-                payout={data.payout}
-                primaryColor={primaryColor}
-            />
         </div>
     )
 }

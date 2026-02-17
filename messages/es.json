@@ -2747,6 +2747,13 @@
             "noMissions": "No hay programas disponibles por el momento."
         },
         "nav": {
+            "home": "Inicio",
+            "referrals": "Referidos",
+            "network": "Red",
+            "commissions": "Comisiones",
+            "payouts": "Pagos",
+            "assets": "Recursos",
+            "reports": "Informes",
             "logout": "Cerrar sesión"
         },
         "dashboard": {
@@ -2805,6 +2812,23 @@
             "noResources": "Sin recursos disponibles",
             "notFound": "Misión no encontrada o no estás inscrito."
         },
+        "referrals": {
+            "title": "Referidos",
+            "yourLink": "Tu enlace de referido",
+            "copyLink": "Copiar",
+            "totalReferred": "Total referidos",
+            "totalEarnings": "Ganancias totales",
+            "gen1": "Gen 1 (5%)",
+            "gen2": "Gen 2 (3%)",
+            "gen3": "Gen 3 (2%)",
+            "noReferrals": "Sin referidos todavía. Comparte tu enlace para empezar a ganar.",
+            "search": "Buscar por nombre o email..."
+        },
+        "network": {
+            "title": "Red de sub-afiliados",
+            "empty": "Sin sub-afiliados todavía. Refiere vendedores para construir tu red.",
+            "expand": "Expandir"
+        },
         "commissions": {
             "all": "Todas",
             "maturing": "En maduración",
@@ -2833,15 +2857,33 @@
             "platformWallet": "Wallet plataforma",
             "stripeConnectedDesc": "Los pagos se envían automáticamente a tu cuenta bancaria.",
             "stripeNotConnectedDesc": "Conecta Stripe para recibir pagos automáticos.",
+            "stripeConnected": "Conectado",
+            "connectStripe": "Conecta tu cuenta Stripe para recibir pagos automáticos.",
+            "pendingMaturation": "Pendiente de maduración",
             "recentPayments": "Pagos recientes"
         },
         "assets": {
+            "title": "Recursos y Assets",
+            "empty": "No hay recursos disponibles por el momento.",
+            "openLink": "Abrir",
             "marketingMaterials": "Materiales de marketing",
             "companyDocuments": "Documentos de empresa",
             "pitchDeck": "Pitch Deck",
             "documentation": "Documentación",
             "emptyTitle": "Sin recursos disponibles",
             "emptyDesc": "Los materiales de marketing y documentos aparecerán aquí."
+        },
+        "reports": {
+            "title": "Informes",
+            "period7d": "7 días",
+            "period30d": "30 días",
+            "period90d": "90 días",
+            "periodAll": "Todo",
+            "clicks": "Clics",
+            "sales": "Ventas",
+            "leads": "Leads",
+            "revenue": "Ingresos",
+            "commission": "Comisión"
         },
         "settings": {
             "title": "Portal de Afiliados",
@@ -2882,7 +2924,19 @@
             "portalStats": "Estadísticas del portal",
             "totalAffiliates": "Afiliados",
             "totalCommissions": "Comisiones",
-            "totalRevenue": "Ingresos"
+            "totalRevenue": "Ingresos",
+            "missions": "Misiones del portal",
+            "addMission": "Agregar misión",
+            "editMission": "Editar misión",
+            "deleteMission": "Eliminar misión",
+            "missionTitle": "Título de la misión",
+            "missionDescription": "Descripción",
+            "missionTargetUrl": "URL de destino (https://...)",
+            "commissionConfig": "Configuración de comisiones",
+            "resources": "Recursos",
+            "addResource": "Agregar recurso",
+            "logoUrl": "URL del logo del portal",
+            "noMissionsWarning": "Sin misiones. Agrega al menos una misión para activar tu portal."
         }
     }
 }

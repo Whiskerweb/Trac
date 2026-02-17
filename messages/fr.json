@@ -2747,6 +2747,13 @@
             "noMissions": "Aucun programme disponible pour le moment."
         },
         "nav": {
+            "home": "Accueil",
+            "referrals": "Parrainages",
+            "network": "Réseau",
+            "commissions": "Commissions",
+            "payouts": "Paiements",
+            "assets": "Ressources",
+            "reports": "Rapports",
             "logout": "Déconnexion"
         },
         "dashboard": {
@@ -2805,6 +2812,23 @@
             "noResources": "Aucune ressource disponible",
             "notFound": "Mission introuvable ou vous n'êtes pas inscrit."
         },
+        "referrals": {
+            "title": "Parrainages",
+            "yourLink": "Votre lien de parrainage",
+            "copyLink": "Copier",
+            "totalReferred": "Total parrainés",
+            "totalEarnings": "Gains totaux",
+            "gen1": "Gen 1 (5%)",
+            "gen2": "Gen 2 (3%)",
+            "gen3": "Gen 3 (2%)",
+            "noReferrals": "Aucun parrainage pour le moment. Partagez votre lien pour commencer.",
+            "search": "Rechercher par nom ou email..."
+        },
+        "network": {
+            "title": "Réseau de sous-affiliés",
+            "empty": "Aucun sous-affilié pour le moment. Parrainez des vendeurs pour développer votre réseau.",
+            "expand": "Développer"
+        },
         "commissions": {
             "all": "Toutes",
             "maturing": "En maturation",
@@ -2833,15 +2857,33 @@
             "platformWallet": "Wallet plateforme",
             "stripeConnectedDesc": "Les paiements sont envoyés automatiquement sur votre compte bancaire.",
             "stripeNotConnectedDesc": "Connectez Stripe pour recevoir des paiements automatiques.",
+            "stripeConnected": "Connecté",
+            "connectStripe": "Connectez votre compte Stripe pour recevoir des paiements automatiques.",
+            "pendingMaturation": "En cours de maturation",
             "recentPayments": "Paiements récents"
         },
         "assets": {
+            "title": "Ressources & Assets",
+            "empty": "Aucune ressource disponible pour le moment.",
+            "openLink": "Ouvrir",
             "marketingMaterials": "Matériaux marketing",
             "companyDocuments": "Documents entreprise",
             "pitchDeck": "Pitch Deck",
             "documentation": "Documentation",
             "emptyTitle": "Aucune ressource disponible",
             "emptyDesc": "Les matériaux marketing et documents apparaîtront ici."
+        },
+        "reports": {
+            "title": "Rapports",
+            "period7d": "7 jours",
+            "period30d": "30 jours",
+            "period90d": "90 jours",
+            "periodAll": "Tout",
+            "clicks": "Clics",
+            "sales": "Ventes",
+            "leads": "Leads",
+            "revenue": "Revenu",
+            "commission": "Commission"
         },
         "settings": {
             "title": "Portail Affilié",
@@ -2882,7 +2924,19 @@
             "portalStats": "Statistiques du portail",
             "totalAffiliates": "Affiliés",
             "totalCommissions": "Commissions",
-            "totalRevenue": "Revenus"
+            "totalRevenue": "Revenus",
+            "missions": "Missions du portail",
+            "addMission": "Ajouter une mission",
+            "editMission": "Modifier la mission",
+            "deleteMission": "Supprimer la mission",
+            "missionTitle": "Titre de la mission",
+            "missionDescription": "Description",
+            "missionTargetUrl": "URL cible (https://...)",
+            "commissionConfig": "Configuration des commissions",
+            "resources": "Ressources",
+            "addResource": "Ajouter une ressource",
+            "logoUrl": "URL du logo du portail",
+            "noMissionsWarning": "Aucune mission. Ajoutez au moins une mission pour activer votre portail."
         }
     }
 }

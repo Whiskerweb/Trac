@@ -66,6 +66,15 @@ interface AvailableMission {
     recurring_duration_months: number | null
 }
 
+interface PayoutData {
+    method: string
+    stripeConnected: boolean
+    balance: number
+    pending: number
+    due: number
+    paidTotal: number
+}
+
 export interface PortalDashboardData {
     workspace: {
         id: string
@@ -73,6 +82,7 @@ export interface PortalDashboardData {
         slug: string
         portal_primary_color: string | null
         portal_headline: string | null
+        portal_logo_url: string | null
     }
     profile: {
         logo_url: string | null
@@ -82,15 +92,10 @@ export interface PortalDashboardData {
     availableMissions: AvailableMission[]
     balance: { pending: number; available: number; paid: number }
     recentCommissions: RecentCommission[]
-    payout: {
-        method: string
-        stripeConnected: boolean
-        balance: number
-        pending: number
-        due: number
-        paidTotal: number
-    }
+    payout: PayoutData
     sellerName: string
+    sellerId: string
+    referralCode: string
 }
 
 const PortalContext = createContext<{
@@ -169,10 +174,11 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
                     workspaceSlug={workspaceSlug}
                     workspaceName={data.workspace.name}
                     logoUrl={data.profile?.logo_url ?? null}
+                    portalLogoUrl={data.workspace.portal_logo_url ?? null}
                     primaryColor={primaryColor}
                     userName={data.sellerName}
                 />
-                <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+                <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
                     {children}
                 </main>
 

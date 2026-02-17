@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Loader2, Shield, Clock, BarChart3, CheckCircle2, ArrowDown } from 'lucide-react'
@@ -48,11 +48,13 @@ export default function PortalPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [isPreviewMode, setIsPreviewMode] = useState(false)
+    const searchParams = useSearchParams()
     const [workspace, setWorkspace] = useState<{
         id: string; name: string; slug: string;
         portal_welcome_text: string | null;
         portal_primary_color: string | null;
         portal_headline: string | null;
+        portal_logo_url: string | null;
     } | null>(null)
     const [profile, setProfile] = useState<PortalProfile | null>(null)
     const [missions, setMissions] = useState<MissionCard[]>([])
@@ -89,6 +91,14 @@ export default function PortalPage() {
     }, [workspaceSlug, router])
 
     useEffect(() => { loadData() }, [loadData])
+
+    // Set trac_ref cookie if ?ref=CODE is in URL
+    useEffect(() => {
+        const refCode = searchParams.get('ref')
+        if (refCode) {
+            document.cookie = `trac_ref=${refCode};path=/;max-age=${90 * 24 * 60 * 60};samesite=lax`
+        }
+    }, [searchParams])
 
     const scrollToAuth = () => {
         authRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -143,8 +153,8 @@ export default function PortalPage() {
                     <div className="max-w-xl">
                         {/* Logo + Name */}
                         <div className="flex items-center gap-3 mb-8">
-                            {profile?.logo_url ? (
-                                <img src={profile.logo_url} alt={workspace.name} className="w-11 h-11 rounded-xl object-cover" />
+                            {(workspace.portal_logo_url || profile?.logo_url) ? (
+                                <img src={workspace.portal_logo_url || profile?.logo_url || ''} alt={workspace.name} className="w-11 h-11 rounded-xl object-cover" />
                             ) : (
                                 <div
                                     className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-lg"

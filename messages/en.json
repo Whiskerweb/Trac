@@ -2974,6 +2974,13 @@
             "noMissions": "No programs available yet. Check back soon!"
         },
         "nav": {
+            "home": "Home",
+            "referrals": "Referrals",
+            "network": "Network",
+            "commissions": "Commissions",
+            "payouts": "Payouts",
+            "assets": "Assets",
+            "reports": "Reports",
             "logout": "Log out"
         },
         "dashboard": {
@@ -3032,6 +3039,23 @@
             "noResources": "No resources available",
             "notFound": "Mission not found or you are not enrolled."
         },
+        "referrals": {
+            "title": "Referrals",
+            "yourLink": "Your Referral Link",
+            "copyLink": "Copy",
+            "totalReferred": "Total Referred",
+            "totalEarnings": "Total Earnings",
+            "gen1": "Gen 1 (5%)",
+            "gen2": "Gen 2 (3%)",
+            "gen3": "Gen 3 (2%)",
+            "noReferrals": "No referrals yet. Share your link to start earning.",
+            "search": "Search by name or email..."
+        },
+        "network": {
+            "title": "Sub-Affiliate Network",
+            "empty": "No sub-affiliates yet. Refer sellers to build your network.",
+            "expand": "Expand"
+        },
         "commissions": {
             "all": "All",
             "maturing": "Maturing",
@@ -3060,15 +3084,33 @@
             "platformWallet": "Platform Wallet",
             "stripeConnectedDesc": "Payouts are sent automatically to your bank account.",
             "stripeNotConnectedDesc": "Connect Stripe to receive automatic payouts.",
+            "stripeConnected": "Connected",
+            "connectStripe": "Connect your Stripe account to receive automatic payouts to your bank.",
+            "pendingMaturation": "Pending maturation",
             "recentPayments": "Recent payments"
         },
         "assets": {
+            "title": "Assets & Resources",
+            "empty": "No resources available yet.",
+            "openLink": "Open",
             "marketingMaterials": "Marketing Materials",
             "companyDocuments": "Company Documents",
             "pitchDeck": "Pitch Deck",
             "documentation": "Documentation",
             "emptyTitle": "No assets available",
             "emptyDesc": "Marketing materials and documents will appear here."
+        },
+        "reports": {
+            "title": "Reports",
+            "period7d": "7 days",
+            "period30d": "30 days",
+            "period90d": "90 days",
+            "periodAll": "All time",
+            "clicks": "Clicks",
+            "sales": "Sales",
+            "leads": "Leads",
+            "revenue": "Revenue",
+            "commission": "Commission"
         },
         "settings": {
             "title": "Affiliate Portal",
@@ -3109,7 +3151,19 @@
             "portalStats": "Portal Stats",
             "totalAffiliates": "Affiliates",
             "totalCommissions": "Commissions",
-            "totalRevenue": "Revenue"
+            "totalRevenue": "Revenue",
+            "missions": "Portal Missions",
+            "addMission": "Add Mission",
+            "editMission": "Edit Mission",
+            "deleteMission": "Delete Mission",
+            "missionTitle": "Mission title",
+            "missionDescription": "Description",
+            "missionTargetUrl": "Target URL (https://...)",
+            "commissionConfig": "Commission Configuration",
+            "resources": "Resources",
+            "addResource": "Add Resource",
+            "logoUrl": "Portal Logo URL",
+            "noMissionsWarning": "No missions yet. Add at least one mission to activate your portal."
         }
     }
 }

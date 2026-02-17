@@ -252,6 +252,7 @@ model Workspace {
   portal_welcome_text  String?
   portal_primary_color String?  @default("#7C3AED")
   portal_headline      String?
+  portal_logo_url      String?
 
   @@index([owner_id])
   @@index([slug])
