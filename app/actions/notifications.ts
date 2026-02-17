@@ -126,7 +126,7 @@ export async function getNotificationSummary(): Promise<{
                 id: sid,
                 label: group.name,
                 sublabel: `${group.count} commissions - ${(group.total / 100).toFixed(2)}€`,
-                href: '/dashboard/commissions',
+                href: '/dashboard/pipeline',
             }))
 
         const totalCount =

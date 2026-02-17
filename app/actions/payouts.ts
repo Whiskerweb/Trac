@@ -290,8 +290,8 @@ export async function createPaymentSession(commissionIds: string[]): Promise<{
                 }
             ],
             mode: 'payment',
-            success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/payouts?success=true&payment_id=${payment.id}`,
-            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/payouts?canceled=true`,
+            success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/pipeline?success=true&payment_id=${payment.id}`,
+            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/pipeline?canceled=true`,
             metadata: {
                 startup_payment_id: payment.id,
                 workspace_id: workspace.workspaceId,
@@ -498,8 +498,7 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
 
         console.log(`[Payouts] ✅ Payment ${paymentId} confirmed: ${successfulCommissionIds.length} succeeded, ${failedCommissionIds.length} failed`)
 
-        revalidatePath('/dashboard/payouts')
-        revalidatePath('/dashboard/commissions')
+        revalidatePath('/dashboard/pipeline')
         revalidatePath('/seller/wallet')
         return true
     } catch (err) {

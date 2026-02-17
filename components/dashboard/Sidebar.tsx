@@ -1,7 +1,7 @@
 'use client'
 
 import {
-    Home, MessageSquare, CreditCard, Users, UserPlus,
+    Home, MessageSquare, Users, UserPlus,
     Contact, Coins, Shield, Globe, Settings,
     Puzzle, User, ExternalLink, Target,
     ChevronLeft, ChevronRight, ChevronDown, Check,
@@ -34,7 +34,6 @@ const sellerNavigationConfig: NavSection[] = [
         titleKey: 'sellerProgram',
         items: [
             { nameKey: 'overview', href: '/dashboard', icon: Home },
-            { nameKey: 'payouts', href: '/dashboard/payouts', icon: CreditCard },
             { nameKey: 'messages', href: '/dashboard/messages', icon: MessageSquare },
         ]
     },
@@ -51,7 +50,7 @@ const sellerNavigationConfig: NavSection[] = [
         items: [
             { nameKey: 'missions', href: '/dashboard/missions', icon: Target },
             { nameKey: 'customers', href: '/dashboard/customers', icon: Contact },
-            { nameKey: 'commissions', href: '/dashboard/commissions', icon: Coins },
+            { nameKey: 'pipeline', href: '/dashboard/pipeline', icon: Coins },
             { nameKey: 'fraudDetection', href: '/dashboard/fraud', icon: Shield },
         ]
     },

@@ -431,7 +431,7 @@
             "overview": "Vue d'ensemble",
             "missions": "Missions",
             "sellers": "Vendeurs",
-            "commissions": "Commissions",
+            "pipeline": "Pipeline",
             "payouts": "Paiements",
             "customers": "Clients",
             "links": "Liens",
@@ -833,6 +833,25 @@
                 "clicks": "clics"
             }
         },
+        "pipeline": {
+            "title": "Pipeline Commissions",
+            "pending": "En attente",
+            "proceed": "A payer",
+            "complete": "Payees",
+            "holdDaysShort": "j",
+            "daysShort": "j",
+            "search": "Rechercher seller, mission...",
+            "selected": "selectionnes",
+            "pay": "Payer",
+            "paymentSuccess": "Paiements confirmes !",
+            "paymentProcessing": "Les transferts sont en cours de traitement.",
+            "noCommissions": "Aucune commission",
+            "drawer": {
+                "title": "Detail commission",
+                "retention": "Retention",
+                "inProgress": "En cours..."
+            }
+        },
         "payouts": {
             "title": "Paiements",
             "viewHistory": "Voir l'historique →",
@@ -1068,7 +1087,7 @@
             "insights": "Analyses",
             "missions": "Missions",
             "customers": "Clients",
-            "commissions": "Commissions",
+            "pipeline": "Pipeline",
             "fraudDetection": "Détection fraude",
             "configuration": "Configuration",
             "integration": "Intégration",
