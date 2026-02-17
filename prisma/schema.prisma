@@ -247,6 +247,8 @@ model Workspace {
   /// Hosted affiliate portal
   portal_enabled       Boolean @default(false)
   portal_welcome_text  String?
+  portal_primary_color String?  @default("#7C3AED")
+  portal_headline      String?
 
   @@index([owner_id])
   @@index([slug])
