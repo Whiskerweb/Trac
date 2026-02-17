@@ -36,7 +36,7 @@ export default function PortalCommissionsPage() {
     const [totalPages, setTotalPages] = useState(1)
     const [statusTotals, setStatusTotals] = useState({ PENDING: 0, PROCEED: 0, COMPLETE: 0 })
 
-    const primaryColor = portalData?.workspace.portal_primary_color || '#7C3AED'
+    const primaryColor = portalData?.data.workspace.portal_primary_color || '#7C3AED'
 
     const loadCommissions = useCallback(async () => {
         setLoading(true)

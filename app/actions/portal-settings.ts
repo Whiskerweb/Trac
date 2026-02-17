@@ -35,6 +35,7 @@ export async function getPortalSettings() {
                     select: {
                         id: true,
                         title: true,
+                        portal_visible: true,
                     },
                 },
             },
@@ -73,7 +74,7 @@ export async function togglePortal(enabled: boolean) {
             data: { portal_enabled: enabled },
         })
 
-        revalidatePath('/dashboard/settings')
+        revalidatePath('/dashboard/portal')
         return { success: true }
     } catch (error) {
         console.error('[Portal Settings] togglePortal error:', error)
@@ -94,7 +95,7 @@ export async function updatePortalWelcomeText(text: string) {
             data: { portal_welcome_text: text || null },
         })
 
-        revalidatePath('/dashboard/settings')
+        revalidatePath('/dashboard/portal')
         return { success: true }
     } catch (error) {
         console.error('[Portal Settings] updatePortalWelcomeText error:', error)
@@ -119,7 +120,7 @@ export async function updatePortalHeadline(text: string) {
             data: { portal_headline: text || null },
         })
 
-        revalidatePath('/dashboard/settings')
+        revalidatePath('/dashboard/portal')
         return { success: true }
     } catch (error) {
         console.error('[Portal Settings] updatePortalHeadline error:', error)
@@ -145,10 +146,99 @@ export async function updatePortalPrimaryColor(color: string) {
             data: { portal_primary_color: color },
         })
 
-        revalidatePath('/dashboard/settings')
+        revalidatePath('/dashboard/portal')
         return { success: true }
     } catch (error) {
         console.error('[Portal Settings] updatePortalPrimaryColor error:', error)
         return { success: false, error: 'Failed to update color' }
+    }
+}
+
+/**
+ * Toggle mission visibility on portal
+ */
+export async function toggleMissionPortalVisibility(missionId: string, visible: boolean) {
+    const ws = await getActiveWorkspaceForUser()
+    if (!ws) return { success: false, error: 'No workspace' }
+
+    try {
+        // Verify mission belongs to this workspace
+        const mission = await prisma.mission.findFirst({
+            where: {
+                id: missionId,
+                workspace_id: ws.workspaceId,
+            },
+        })
+
+        if (!mission) return { success: false, error: 'Mission not found' }
+
+        await prisma.mission.update({
+            where: { id: missionId },
+            data: { portal_visible: visible },
+        })
+
+        revalidatePath('/dashboard/portal')
+        return { success: true }
+    } catch (error) {
+        console.error('[Portal Settings] toggleMissionPortalVisibility error:', error)
+        return { success: false, error: 'Failed to update mission visibility' }
+    }
+}
+
+/**
+ * Get portal overview stats: total affiliates, commissions, revenue
+ */
+export async function getPortalOverview() {
+    const ws = await getActiveWorkspaceForUser()
+    if (!ws) return { success: false, error: 'No workspace' }
+
+    try {
+        // Get portal-visible mission IDs
+        const portalMissions = await prisma.mission.findMany({
+            where: {
+                workspace_id: ws.workspaceId,
+                portal_visible: true,
+            },
+            select: { id: true },
+        })
+
+        const missionIds = portalMissions.map(m => m.id)
+
+        if (missionIds.length === 0) {
+            return {
+                success: true,
+                data: { totalAffiliates: 0, totalCommissions: 0, totalRevenue: 0 },
+            }
+        }
+
+        const [enrollmentCount, commissionAgg] = await Promise.all([
+            prisma.missionEnrollment.count({
+                where: {
+                    mission_id: { in: missionIds },
+                    status: 'APPROVED',
+                },
+            }),
+            prisma.commission.aggregate({
+                where: {
+                    program_id: ws.workspaceId,
+                    org_parent_commission_id: null,
+                    referral_generation: null,
+                },
+                _count: { id: true },
+                _sum: { commission_amount: true },
+            }),
+        ])
+
+        return {
+            success: true,
+            data: {
+                totalAffiliates: enrollmentCount,
+                totalCommissions: commissionAgg._count.id,
+                totalRevenue: commissionAgg._sum.commission_amount || 0,
+            },
+        }
+    } catch (error) {
+        console.error('[Portal Settings] getPortalOverview error:', error)
+        return { success: false, error: 'Failed to load overview' }
     }
 }

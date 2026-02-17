@@ -2965,15 +2965,16 @@
         "landing": {
             "defaultHeadline": "Earn commissions with {name}",
             "whatYouEarn": "What you earn",
+            "availablePrograms": "{count} programs available",
             "freeToJoin": "Free to join",
             "paidMonthly": "Paid monthly",
             "realTimeTracking": "Real-time tracking"
         },
         "nav": {
             "home": "Home",
+            "programs": "Programs",
             "commissions": "Commissions",
             "payouts": "Payouts",
-            "assets": "Assets",
             "logout": "Log out"
         },
         "home": {
@@ -3000,7 +3001,30 @@
             "recurringFor": "For {months} months",
             "recurringLifetime": "Lifetime recurring",
             "resources": "Resources",
-            "viewAll": "View all"
+            "viewAll": "View all",
+            "myPrograms": "My Programs"
+        },
+        "programs": {
+            "title": "Programs",
+            "enrolled": "My Programs",
+            "available": "Available Programs",
+            "availableCount": "{count} programs to join",
+            "noEnrolled": "You haven't joined any programs yet.",
+            "noAvailable": "No programs available",
+            "noAvailableDesc": "There are no programs to join at the moment.",
+            "joinNow": "Join",
+            "requestJoin": "Request to Join",
+            "joined": "Joined!",
+            "viewDetails": "View details",
+            "browseAvailable": "Browse programs"
+        },
+        "missionDetail": {
+            "backToPrograms": "Back to Programs",
+            "yourLink": "Your affiliate link",
+            "performance": "Performance",
+            "resources": "Resources",
+            "noResources": "No resources available",
+            "notFound": "Mission not found or you are not enrolled."
         },
         "commissions": {
             "all": "All",
@@ -3043,12 +3067,17 @@
         "settings": {
             "title": "Affiliate Portal",
             "subtitle": "Let affiliates sign up and join your missions directly from a branded page.",
+            "enabled": "Enabled",
+            "disabled": "Disabled",
             "enablePortal": "Enable Portal",
             "enablePortalDesc": "Make your affiliate portal publicly accessible.",
             "portalUrl": "Portal URL",
             "portalUrlDesc": "Share this link with potential affiliates.",
-            "altUrl": "Alternative URL (path-based)",
+            "primaryUrlDesc": "This is your main portal URL. Share it with potential affiliates.",
+            "subdomainUrl": "Subdomain URL",
+            "subdomainNote": "Requires wildcard DNS configuration.",
             "customDomainUrl": "Custom domain URL",
+            "branding": "Branding",
             "embedCode": "Embed Code",
             "embedCodeDesc": "Add this iframe to your website to embed the portal.",
             "iframeNote": "For best results with custom domains, use a CNAME record to avoid third-party cookie issues.",
@@ -3064,10 +3093,16 @@
             "save": "Save",
             "copy": "Copy",
             "copied": "Copied!",
-            "missionLinks": "Direct Mission Links",
-            "missionLinksDesc": "Share links to specific missions for focused campaigns.",
+            "missionSelection": "Mission Selection",
+            "missionSelectionDesc": "Choose which missions are visible on your portal. Toggle visibility for each mission.",
+            "noMissions": "No missions",
+            "noMissionsDesc": "Create an active mission to display on your portal.",
             "viewPortal": "View your portal",
-            "loadError": "Failed to load portal settings."
+            "loadError": "Failed to load portal settings.",
+            "portalStats": "Portal Stats",
+            "totalAffiliates": "Affiliates",
+            "totalCommissions": "Commissions",
+            "totalRevenue": "Revenue"
         }
     }
 }

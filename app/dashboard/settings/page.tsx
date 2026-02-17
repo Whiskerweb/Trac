@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl'
 import { setLocale } from '@/app/actions/locale'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { PortalTab } from '@/components/dashboard/settings/PortalTab'
 import { IntegrationTab } from '@/components/dashboard/settings/IntegrationTab'
 import { DomainsTab } from '@/components/dashboard/settings/DomainsTab'
 
@@ -39,8 +38,8 @@ function SettingsContent() {
     const searchParams = useSearchParams()
 
     const tabParam = searchParams.get('tab')
-    const currentTab = (['account', 'portal', 'integration', 'domains'] as const).includes(tabParam as any)
-        ? tabParam as 'account' | 'portal' | 'integration' | 'domains'
+    const currentTab = (['account', 'integration', 'domains'] as const).includes(tabParam as any)
+        ? tabParam as 'account' | 'integration' | 'domains'
         : 'account'
 
     // Profile Data
@@ -136,7 +135,7 @@ function SettingsContent() {
         }
     }
 
-    const switchTab = (tab: 'account' | 'portal' | 'integration' | 'domains') => {
+    const switchTab = (tab: 'account' | 'integration' | 'domains') => {
         if (tab === 'account') {
             router.replace('/dashboard/settings')
         } else {
@@ -146,7 +145,6 @@ function SettingsContent() {
 
     const tabs = [
         { key: 'account' as const, label: t('tabs.account') },
-        { key: 'portal' as const, label: t('tabs.portal') },
         { key: 'integration' as const, label: t('tabs.integration') },
         { key: 'domains' as const, label: t('tabs.domains') },
     ]
@@ -338,9 +336,6 @@ function SettingsContent() {
                     </section>
                 </div>
             )}
-
-            {/* Portal Tab */}
-            {currentTab === 'portal' && <PortalTab />}
 
             {/* Integration Tab */}
             {currentTab === 'integration' && <IntegrationTab />}

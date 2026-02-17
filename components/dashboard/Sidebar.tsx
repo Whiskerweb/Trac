@@ -43,7 +43,7 @@ const navigationConfig: NavSection[] = [
     {
         titleKey: 'portal',
         items: [
-            { nameKey: 'portal', href: '/dashboard/settings?tab=portal', icon: Globe },
+            { nameKey: 'portal', href: '/dashboard/portal', icon: Globe },
         ]
     },
     {

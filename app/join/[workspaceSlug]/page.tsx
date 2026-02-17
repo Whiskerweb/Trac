@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { getPortalData, getPortalUserStatus } from '@/app/actions/portal'
 import PortalAuthForm from '@/components/portal/PortalAuthForm'
+import PortalMissionPreviewCard from '@/components/portal/PortalMissionPreviewCard'
 import { portalPath } from '@/components/portal/portal-utils'
 
 // =============================================
@@ -130,11 +131,12 @@ export default function PortalPage() {
     }
 
     const primaryColor = workspace.portal_primary_color || '#7C3AED'
+    const isMultiMission = missions.length > 1
     const primaryMission = missions[0]
 
-    // Build reward items for display
+    // Build reward items for single-mission display
     const rewardItems: { icon: React.ElementType; label: string; value: string }[] = []
-    if (primaryMission) {
+    if (primaryMission && !isMultiMission) {
         if (primaryMission.sale_enabled && primaryMission.sale_reward_amount) {
             rewardItems.push({
                 icon: DollarSign,
@@ -196,8 +198,8 @@ export default function PortalPage() {
                             <p className="text-base text-gray-500 mb-8 leading-relaxed">{profile.description}</p>
                         )}
 
-                        {/* Reward cards */}
-                        {rewardItems.length > 0 && (
+                        {/* Single mission: reward cards */}
+                        {!isMultiMission && rewardItems.length > 0 && (
                             <div className="mb-8">
                                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{tLanding('whatYouEarn')}</p>
                                 <div className="space-y-2">
@@ -215,6 +217,33 @@ export default function PortalPage() {
                                             <span className="text-sm text-gray-600 flex-1">{item.label}</span>
                                             <span className="text-lg font-bold text-gray-900">{item.value}</span>
                                         </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Multi-mission: mission cards grid */}
+                        {isMultiMission && (
+                            <div className="mb-8">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                                    {tLanding('availablePrograms', { count: missions.length })}
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {missions.map(mission => (
+                                        <PortalMissionPreviewCard
+                                            key={mission.id}
+                                            title={mission.title}
+                                            description={mission.description}
+                                            sale_enabled={mission.sale_enabled}
+                                            sale_reward_amount={mission.sale_reward_amount}
+                                            sale_reward_structure={mission.sale_reward_structure}
+                                            lead_enabled={mission.lead_enabled}
+                                            lead_reward_amount={mission.lead_reward_amount}
+                                            recurring_enabled={mission.recurring_enabled}
+                                            recurring_reward_amount={mission.recurring_reward_amount}
+                                            recurring_reward_structure={mission.recurring_reward_structure}
+                                            primaryColor={primaryColor}
+                                        />
                                     ))}
                                 </div>
                             </div>

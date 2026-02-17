@@ -94,6 +94,9 @@ model Mission {
   /// Unique code for INVITE_ONLY missions (allows joining via /invite/[code])
   invite_code String? @unique
 
+  /// Whether this mission is visible on the hosted affiliate portal
+  portal_visible     Boolean             @default(false)
+
   /// If set, this mission is exclusive to an organization (not shown in marketplace)
   organization_id    String?
   /// The template mission this was cloned from

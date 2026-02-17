@@ -56,7 +56,7 @@ async function fetchLinkStats(linkId: string): Promise<{ clicks: number; leads: 
 // =============================================
 
 /**
- * Fetch workspace + profile + active PUBLIC/PRIVATE missions for portal landing
+ * Fetch workspace + profile + active PUBLIC/PRIVATE portal_visible missions for portal landing
  */
 export async function getPortalData(workspaceSlug: string) {
     try {
@@ -81,6 +81,7 @@ export async function getPortalData(workspaceSlug: string) {
                 status: 'ACTIVE',
                 visibility: { in: ['PUBLIC', 'PRIVATE'] },
                 organization_id: null,
+                portal_visible: true,
             },
             orderBy: { created_at: 'desc' },
             select: {
@@ -151,6 +152,7 @@ export async function getPortalMission(workspaceSlug: string, missionId: string)
                 status: 'ACTIVE',
                 visibility: { in: ['PUBLIC', 'PRIVATE'] },
                 organization_id: null,
+                portal_visible: true,
             },
             include: {
                 Contents: {
@@ -216,138 +218,6 @@ export async function portalJoinMission(missionId: string) {
 }
 
 /**
- * Mini-dashboard: seller's enrollments + stats for a specific workspace
- */
-export async function getPortalDashboard(workspaceSlug: string) {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-        return { success: false, error: 'Not authenticated' }
-    }
-
-    try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { slug: workspaceSlug },
-        })
-
-        if (!workspace || !workspace.portal_enabled) {
-            return { success: false, error: 'Portal not available' }
-        }
-
-        // Get seller's enrollments for this workspace's missions
-        const enrollments = await prisma.missionEnrollment.findMany({
-            where: {
-                user_id: user.id,
-                status: 'APPROVED',
-                Mission: {
-                    workspace_id: workspace.id,
-                },
-            },
-            include: {
-                Mission: {
-                    select: {
-                        id: true,
-                        title: true,
-                        description: true,
-                        sale_enabled: true,
-                        sale_reward_amount: true,
-                        sale_reward_structure: true,
-                        lead_enabled: true,
-                        lead_reward_amount: true,
-                        recurring_enabled: true,
-                        recurring_reward_amount: true,
-                        recurring_reward_structure: true,
-                        Contents: {
-                            orderBy: { order: 'asc' },
-                            select: {
-                                id: true,
-                                type: true,
-                                url: true,
-                                title: true,
-                                description: true,
-                            },
-                        },
-                    },
-                },
-                ShortLink: {
-                    select: {
-                        id: true,
-                        slug: true,
-                        clicks: true,
-                        original_url: true,
-                    },
-                },
-            },
-        })
-
-        // Get commissions for this seller in this workspace
-        const seller = await prisma.seller.findFirst({
-            where: { user_id: user.id },
-        })
-
-        let commissionStats = { pendingCount: 0, pendingAmount: 0, earnedTotal: 0 }
-
-        if (seller) {
-            const commissions = await prisma.commission.groupBy({
-                by: ['status'],
-                where: {
-                    seller_id: seller.id,
-                    program_id: workspace.id,
-                },
-                _sum: { commission_amount: true },
-                _count: { id: true },
-            })
-
-            for (const group of commissions) {
-                if (group.status === 'PENDING') {
-                    commissionStats.pendingCount = group._count.id
-                    commissionStats.pendingAmount = group._sum.commission_amount || 0
-                } else if (group.status === 'PROCEED' || group.status === 'COMPLETE') {
-                    commissionStats.earnedTotal += (group._sum.commission_amount || 0)
-                }
-            }
-        }
-
-        // Build custom domain base URL
-        const verifiedDomain = await prisma.domain.findFirst({
-            where: { workspace_id: workspace.id, verified: true },
-        })
-
-        const defaultUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.traaaction.com'
-        const baseUrl = verifiedDomain ? `https://${verifiedDomain.name}` : defaultUrl
-
-        return {
-            success: true,
-            data: {
-                enrollments: enrollments.map(e => ({
-                    id: e.id,
-                    missionId: e.Mission.id,
-                    missionTitle: e.Mission.title,
-                    missionDescription: e.Mission.description,
-                    linkSlug: e.ShortLink?.slug || null,
-                    linkUrl: e.ShortLink ? `${baseUrl}/s/${e.ShortLink.slug}` : null,
-                    clicks: e.ShortLink?.clicks || 0,
-                    contents: e.Mission.Contents,
-                    sale_enabled: e.Mission.sale_enabled,
-                    sale_reward_amount: e.Mission.sale_reward_amount,
-                    sale_reward_structure: e.Mission.sale_reward_structure,
-                    lead_enabled: e.Mission.lead_enabled,
-                    lead_reward_amount: e.Mission.lead_reward_amount,
-                    recurring_enabled: e.Mission.recurring_enabled,
-                    recurring_reward_amount: e.Mission.recurring_reward_amount,
-                    recurring_reward_structure: e.Mission.recurring_reward_structure,
-                })),
-                commissionStats,
-            },
-        }
-    } catch (error) {
-        console.error('[Portal] getPortalDashboard error:', error)
-        return { success: false, error: 'Failed to load dashboard' }
-    }
-}
-
-/**
  * Check if current user has any enrollments in this workspace's missions
  */
 export async function getPortalUserStatus(workspaceSlug: string) {
@@ -388,11 +258,12 @@ export async function getPortalUserStatus(workspaceSlug: string) {
 }
 
 // =============================================
-// PORTAL — FULL DASHBOARD ACTIONS
+// PORTAL — FULL DASHBOARD (multi-mission)
 // =============================================
 
 /**
- * Full dashboard data: auto-enroll + workspace branding + mission + stats + balance
+ * Full multi-mission dashboard: auto-enroll in all PUBLIC portal_visible missions,
+ * workspace branding, enrollments, available missions, balance
  */
 export async function getPortalFullDashboard(workspaceSlug: string) {
     const supabase = await createClient()
@@ -423,8 +294,8 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
             return { success: false, error: 'Seller not found' }
         }
 
-        // Check enrollment
-        let enrollment = await prisma.missionEnrollment.findFirst({
+        // Get all existing enrollments for this workspace
+        let enrollments = await prisma.missionEnrollment.findMany({
             where: {
                 user_id: user.id,
                 status: 'APPROVED',
@@ -451,23 +322,27 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
             },
         })
 
-        // Auto-enroll if not enrolled
-        if (!enrollment) {
-            const firstMission = await prisma.mission.findFirst({
+        // Auto-enroll in ALL portal_visible PUBLIC missions if no enrollments yet
+        if (enrollments.length === 0) {
+            const publicMissions = await prisma.mission.findMany({
                 where: {
                     workspace_id: workspace.id,
                     status: 'ACTIVE',
-                    visibility: { in: ['PUBLIC'] },
+                    visibility: 'PUBLIC',
                     organization_id: null,
+                    portal_visible: true,
                 },
                 orderBy: { created_at: 'asc' },
+                select: { id: true },
             })
 
-            if (firstMission) {
-                await joinMission(firstMission.id)
+            for (const mission of publicMissions) {
+                await joinMission(mission.id)
+            }
 
-                // Re-fetch enrollment after join
-                enrollment = await prisma.missionEnrollment.findFirst({
+            // Re-fetch enrollments
+            if (publicMissions.length > 0) {
+                enrollments = await prisma.missionEnrollment.findMany({
                     where: {
                         user_id: user.id,
                         status: 'APPROVED',
@@ -496,13 +371,27 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
             }
         }
 
-        if (!enrollment) {
-            return { success: false, error: 'No mission available' }
-        }
-
-        // Get link stats from Tinybird
-        const linkId = enrollment.ShortLink?.id || ''
-        const stats = await fetchLinkStats(linkId)
+        // Get available missions (portal_visible but not enrolled)
+        const enrolledMissionIds = enrollments.map(e => e.Mission.id)
+        const availableMissions = await prisma.mission.findMany({
+            where: {
+                workspace_id: workspace.id,
+                status: 'ACTIVE',
+                visibility: { in: ['PUBLIC', 'PRIVATE'] },
+                organization_id: null,
+                portal_visible: true,
+                id: { notIn: enrolledMissionIds.length > 0 ? enrolledMissionIds : ['__none__'] },
+            },
+            orderBy: { created_at: 'desc' },
+            select: {
+                id: true, title: true, description: true,
+                visibility: true,
+                sale_enabled: true, sale_reward_amount: true, sale_reward_structure: true,
+                lead_enabled: true, lead_reward_amount: true,
+                recurring_enabled: true, recurring_reward_amount: true, recurring_reward_structure: true,
+                recurring_duration_months: true,
+            },
+        })
 
         // Get commission balance breakdown
         const commissions = await prisma.commission.groupBy({
@@ -510,6 +399,8 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
             where: {
                 seller_id: seller.id,
                 program_id: workspace.id,
+                org_parent_commission_id: null,
+                referral_generation: null,
             },
             _sum: { commission_amount: true },
             _count: { id: true },
@@ -525,7 +416,6 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
         // Build link URL
         const defaultUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.traaaction.com'
         const baseUrl = workspace.Domain[0] ? `https://${workspace.Domain[0].name}` : defaultUrl
-        const linkUrl = enrollment.ShortLink ? `${baseUrl}/s/${enrollment.ShortLink.slug}` : null
 
         return {
             success: true,
@@ -541,10 +431,29 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
                     logo_url: workspace.Profile.logo_url,
                     description: workspace.Profile.description,
                 } : null,
-                mission: enrollment.Mission,
-                linkUrl,
-                linkSlug: enrollment.ShortLink?.slug || null,
-                stats,
+                enrollments: enrollments.map(e => ({
+                    id: e.id,
+                    missionId: e.Mission.id,
+                    missionTitle: e.Mission.title,
+                    missionDescription: e.Mission.description,
+                    linkSlug: e.ShortLink?.slug || null,
+                    linkUrl: e.ShortLink ? `${baseUrl}/s/${e.ShortLink.slug}` : null,
+                    linkId: e.ShortLink?.id || null,
+                    clicks: e.ShortLink?.clicks || 0,
+                    contents: e.Mission.Contents,
+                    sale_enabled: e.Mission.sale_enabled,
+                    sale_reward_amount: e.Mission.sale_reward_amount,
+                    sale_reward_structure: e.Mission.sale_reward_structure,
+                    lead_enabled: e.Mission.lead_enabled,
+                    lead_reward_amount: e.Mission.lead_reward_amount,
+                    recurring_enabled: e.Mission.recurring_enabled,
+                    recurring_reward_amount: e.Mission.recurring_reward_amount,
+                    recurring_reward_structure: e.Mission.recurring_reward_structure,
+                    recurring_duration_months: e.Mission.recurring_duration_months,
+                    company_name: e.Mission.company_name,
+                    logo_url: e.Mission.logo_url,
+                })),
+                availableMissions,
                 balance: {
                     pending: pendingAmount,
                     available: proceedAmount,
@@ -556,6 +465,86 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
     } catch (error) {
         console.error('[Portal] getPortalFullDashboard error:', error)
         return { success: false, error: 'Failed to load dashboard' }
+    }
+}
+
+/**
+ * Get stats for a specific mission (portal mission detail)
+ */
+export async function getPortalMissionStats(workspaceSlug: string, missionId: string) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    try {
+        const workspace = await prisma.workspace.findUnique({
+            where: { slug: workspaceSlug },
+        })
+
+        if (!workspace || !workspace.portal_enabled) {
+            return { success: false, error: 'Portal not available' }
+        }
+
+        // Get enrollment + link for this mission
+        const enrollment = await prisma.missionEnrollment.findFirst({
+            where: {
+                user_id: user.id,
+                mission_id: missionId,
+                status: 'APPROVED',
+            },
+            include: {
+                Mission: {
+                    select: {
+                        id: true, title: true, description: true,
+                        sale_enabled: true, sale_reward_amount: true, sale_reward_structure: true,
+                        lead_enabled: true, lead_reward_amount: true,
+                        recurring_enabled: true, recurring_reward_amount: true, recurring_reward_structure: true,
+                        recurring_duration_months: true,
+                        company_name: true, logo_url: true,
+                        Contents: {
+                            orderBy: { order: 'asc' },
+                            select: { id: true, type: true, url: true, title: true, description: true },
+                        },
+                    },
+                },
+                ShortLink: {
+                    select: { id: true, slug: true, clicks: true },
+                },
+            },
+        })
+
+        if (!enrollment) {
+            return { success: false, error: 'Not enrolled in this mission' }
+        }
+
+        // Fetch link stats from Tinybird
+        const linkId = enrollment.ShortLink?.id || ''
+        const stats = await fetchLinkStats(linkId)
+
+        // Build link URL
+        const defaultUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.traaaction.com'
+        const domain = await prisma.domain.findFirst({
+            where: { workspace_id: workspace.id, verified: true },
+        })
+        const baseUrl = domain ? `https://${domain.name}` : defaultUrl
+        const linkUrl = enrollment.ShortLink ? `${baseUrl}/s/${enrollment.ShortLink.slug}` : null
+
+        return {
+            success: true,
+            data: {
+                mission: enrollment.Mission,
+                linkUrl,
+                linkSlug: enrollment.ShortLink?.slug || null,
+                stats,
+                contents: enrollment.Mission.Contents,
+            },
+        }
+    } catch (error) {
+        console.error('[Portal] getPortalMissionStats error:', error)
+        return { success: false, error: 'Failed to load mission stats' }
     }
 }
 

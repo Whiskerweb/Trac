@@ -2738,15 +2738,16 @@
         "landing": {
             "defaultHeadline": "Gana comisiones con {name}",
             "whatYouEarn": "Lo que ganas",
+            "availablePrograms": "{count} programas disponibles",
             "freeToJoin": "Gratis",
             "paidMonthly": "Pago mensual",
             "realTimeTracking": "Seguimiento en tiempo real"
         },
         "nav": {
             "home": "Inicio",
+            "programs": "Programas",
             "commissions": "Comisiones",
             "payouts": "Pagos",
-            "assets": "Recursos",
             "logout": "Cerrar sesión"
         },
         "home": {
@@ -2773,7 +2774,30 @@
             "recurringFor": "Durante {months} meses",
             "recurringLifetime": "Recurrente de por vida",
             "resources": "Recursos",
-            "viewAll": "Ver todo"
+            "viewAll": "Ver todo",
+            "myPrograms": "Mis programas"
+        },
+        "programs": {
+            "title": "Programas",
+            "enrolled": "Mis programas",
+            "available": "Programas disponibles",
+            "availableCount": "{count} programas para unirte",
+            "noEnrolled": "No te has unido a ningún programa.",
+            "noAvailable": "No hay programas disponibles",
+            "noAvailableDesc": "No hay programas para unirte en este momento.",
+            "joinNow": "Unirse",
+            "requestJoin": "Solicitar unirse",
+            "joined": "¡Unido!",
+            "viewDetails": "Ver detalles",
+            "browseAvailable": "Explorar programas"
+        },
+        "missionDetail": {
+            "backToPrograms": "Volver a Programas",
+            "yourLink": "Tu enlace de afiliado",
+            "performance": "Rendimiento",
+            "resources": "Recursos",
+            "noResources": "Sin recursos disponibles",
+            "notFound": "Misión no encontrada o no estás inscrito."
         },
         "commissions": {
             "all": "Todas",
@@ -2816,12 +2840,17 @@
         "settings": {
             "title": "Portal de Afiliados",
             "subtitle": "Permite a los afiliados registrarse y unirse a tus misiones desde una página personalizada.",
+            "enabled": "Activado",
+            "disabled": "Desactivado",
             "enablePortal": "Activar portal",
             "enablePortalDesc": "Hacer tu portal de afiliados accesible públicamente.",
             "portalUrl": "URL del portal",
             "portalUrlDesc": "Comparte este enlace con posibles afiliados.",
-            "altUrl": "URL alternativa (ruta)",
+            "primaryUrlDesc": "URL principal de tu portal. Compártela con posibles afiliados.",
+            "subdomainUrl": "URL de subdominio",
+            "subdomainNote": "Requiere configuración DNS wildcard.",
             "customDomainUrl": "URL de dominio personalizado",
+            "branding": "Marca",
             "embedCode": "Código de integración",
             "embedCodeDesc": "Añade este iframe a tu sitio web para incrustar el portal.",
             "iframeNote": "Para mejores resultados con dominios personalizados, usa un registro CNAME para evitar problemas de cookies de terceros.",
@@ -2837,10 +2866,16 @@
             "save": "Guardar",
             "copy": "Copiar",
             "copied": "¡Copiado!",
-            "missionLinks": "Enlaces directos por misión",
-            "missionLinksDesc": "Comparte enlaces a misiones específicas para campañas enfocadas.",
+            "missionSelection": "Selección de misiones",
+            "missionSelectionDesc": "Elige qué misiones son visibles en tu portal.",
+            "noMissions": "Sin misiones",
+            "noMissionsDesc": "Crea una misión activa para mostrarla en tu portal.",
             "viewPortal": "Ver tu portal",
-            "loadError": "Error al cargar la configuración del portal."
+            "loadError": "Error al cargar la configuración del portal.",
+            "portalStats": "Estadísticas del portal",
+            "totalAffiliates": "Afiliados",
+            "totalCommissions": "Comisiones",
+            "totalRevenue": "Ingresos"
         }
     }
 }

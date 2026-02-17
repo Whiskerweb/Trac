@@ -22,7 +22,7 @@ export default function PortalPayoutsPage() {
         recentPayouts: { id: string; amount: number; source: string; paidAt: string | null; recurringMonth: number | null }[]
     } | null>(null)
 
-    const primaryColor = portalData?.workspace.portal_primary_color || '#7C3AED'
+    const primaryColor = portalData?.data.workspace.portal_primary_color || '#7C3AED'
 
     useEffect(() => {
         async function load() {

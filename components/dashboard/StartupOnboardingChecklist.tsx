@@ -64,7 +64,7 @@ export function StartupOnboardingChecklist() {
             key: 'portal' as const,
             icon: Globe,
             label: t('steps.portal'),
-            href: '/dashboard/settings?tab=portal',
+            href: '/dashboard/portal',
             done: status.steps.portal,
         },
     ]

@@ -2738,15 +2738,16 @@
         "landing": {
             "defaultHeadline": "Gagnez des commissions avec {name}",
             "whatYouEarn": "Ce que vous gagnez",
+            "availablePrograms": "{count} programmes disponibles",
             "freeToJoin": "Gratuit",
             "paidMonthly": "Paiement mensuel",
             "realTimeTracking": "Suivi en temps réel"
         },
         "nav": {
             "home": "Accueil",
+            "programs": "Programmes",
             "commissions": "Commissions",
             "payouts": "Paiements",
-            "assets": "Ressources",
             "logout": "Déconnexion"
         },
         "home": {
@@ -2773,7 +2774,30 @@
             "recurringFor": "Pendant {months} mois",
             "recurringLifetime": "Récurrent à vie",
             "resources": "Ressources",
-            "viewAll": "Voir tout"
+            "viewAll": "Voir tout",
+            "myPrograms": "Mes programmes"
+        },
+        "programs": {
+            "title": "Programmes",
+            "enrolled": "Mes programmes",
+            "available": "Programmes disponibles",
+            "availableCount": "{count} programmes à rejoindre",
+            "noEnrolled": "Vous n'avez rejoint aucun programme.",
+            "noAvailable": "Aucun programme disponible",
+            "noAvailableDesc": "Il n'y a aucun programme à rejoindre pour le moment.",
+            "joinNow": "Rejoindre",
+            "requestJoin": "Demander à rejoindre",
+            "joined": "Rejoint !",
+            "viewDetails": "Voir les détails",
+            "browseAvailable": "Parcourir les programmes"
+        },
+        "missionDetail": {
+            "backToPrograms": "Retour aux programmes",
+            "yourLink": "Votre lien affilié",
+            "performance": "Performance",
+            "resources": "Ressources",
+            "noResources": "Aucune ressource disponible",
+            "notFound": "Mission introuvable ou vous n'êtes pas inscrit."
         },
         "commissions": {
             "all": "Toutes",
@@ -2816,12 +2840,17 @@
         "settings": {
             "title": "Portail Affilié",
             "subtitle": "Permettez aux affiliés de s'inscrire et de rejoindre vos missions depuis une page personnalisée.",
+            "enabled": "Activé",
+            "disabled": "Désactivé",
             "enablePortal": "Activer le portail",
             "enablePortalDesc": "Rendre votre portail affilié publiquement accessible.",
             "portalUrl": "URL du portail",
             "portalUrlDesc": "Partagez ce lien avec vos futurs affiliés.",
-            "altUrl": "URL alternative (chemin)",
+            "primaryUrlDesc": "URL principale de votre portail. Partagez-la avec vos futurs affiliés.",
+            "subdomainUrl": "URL sous-domaine",
+            "subdomainNote": "Nécessite une configuration DNS wildcard.",
             "customDomainUrl": "URL domaine personnalisé",
+            "branding": "Image de marque",
             "embedCode": "Code d'intégration",
             "embedCodeDesc": "Ajoutez cet iframe sur votre site pour intégrer le portail.",
             "iframeNote": "Pour de meilleurs résultats avec les domaines personnalisés, utilisez un enregistrement CNAME pour éviter les problèmes de cookies tiers.",
@@ -2837,10 +2866,16 @@
             "save": "Enregistrer",
             "copy": "Copier",
             "copied": "Copié !",
-            "missionLinks": "Liens directs par mission",
-            "missionLinksDesc": "Partagez des liens vers des missions spécifiques pour des campagnes ciblées.",
+            "missionSelection": "Sélection des missions",
+            "missionSelectionDesc": "Choisissez quelles missions sont visibles sur votre portail.",
+            "noMissions": "Aucune mission",
+            "noMissionsDesc": "Créez une mission active pour l'afficher sur votre portail.",
             "viewPortal": "Voir votre portail",
-            "loadError": "Impossible de charger les paramètres du portail."
+            "loadError": "Impossible de charger les paramètres du portail.",
+            "portalStats": "Statistiques du portail",
+            "totalAffiliates": "Affiliés",
+            "totalCommissions": "Commissions",
+            "totalRevenue": "Revenus"
         }
     }
 }

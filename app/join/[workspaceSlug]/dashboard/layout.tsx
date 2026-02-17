@@ -7,7 +7,46 @@ import { getPortalFullDashboard } from '@/app/actions/portal'
 import PortalNav from '@/components/portal/PortalNav'
 import { portalPath } from '@/components/portal/portal-utils'
 
-interface PortalDashboardData {
+interface EnrollmentData {
+    id: string
+    missionId: string
+    missionTitle: string
+    missionDescription: string
+    linkSlug: string | null
+    linkUrl: string | null
+    linkId: string | null
+    clicks: number
+    contents: { id: string; type: string; url: string | null; title: string; description: string | null }[]
+    sale_enabled: boolean
+    sale_reward_amount: number | null
+    sale_reward_structure: string | null
+    lead_enabled: boolean
+    lead_reward_amount: number | null
+    recurring_enabled: boolean
+    recurring_reward_amount: number | null
+    recurring_reward_structure: string | null
+    recurring_duration_months: number | null
+    company_name: string | null
+    logo_url: string | null
+}
+
+interface AvailableMission {
+    id: string
+    title: string
+    description: string
+    visibility: string
+    sale_enabled: boolean
+    sale_reward_amount: number | null
+    sale_reward_structure: string | null
+    lead_enabled: boolean
+    lead_reward_amount: number | null
+    recurring_enabled: boolean
+    recurring_reward_amount: number | null
+    recurring_reward_structure: string | null
+    recurring_duration_months: number | null
+}
+
+export interface PortalDashboardData {
     workspace: {
         id: string
         name: string
@@ -19,31 +58,21 @@ interface PortalDashboardData {
         logo_url: string | null
         description: string | null
     } | null
-    mission: {
-        id: string
-        title: string
-        description: string
-        sale_enabled: boolean
-        sale_reward_amount: number | null
-        sale_reward_structure: string | null
-        lead_enabled: boolean
-        lead_reward_amount: number | null
-        recurring_enabled: boolean
-        recurring_reward_amount: number | null
-        recurring_reward_structure: string | null
-        recurring_duration_months: number | null
-        company_name: string | null
-        logo_url: string | null
-    }
-    linkUrl: string | null
-    linkSlug: string | null
-    stats: { clicks: number; leads: number; sales: number; revenue: number }
+    enrollments: EnrollmentData[]
+    availableMissions: AvailableMission[]
     balance: { pending: number; available: number; paid: number }
     sellerName: string
 }
 
-const PortalContext = createContext<PortalDashboardData | null>(null)
-export const usePortalData = () => useContext(PortalContext)
+const PortalContext = createContext<{
+    data: PortalDashboardData
+    refresh: () => Promise<void>
+} | null>(null)
+
+export const usePortalData = () => {
+    const ctx = useContext(PortalContext)
+    return ctx
+}
 
 export default function PortalDashboardLayout({ children }: { children: React.ReactNode }) {
     const params = useParams()
@@ -79,7 +108,7 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
     const primaryColor = data.workspace.portal_primary_color || '#7C3AED'
 
     return (
-        <PortalContext.Provider value={data}>
+        <PortalContext.Provider value={{ data, refresh: loadData }}>
             <div className="min-h-screen bg-gray-50/50">
                 <PortalNav
                     workspaceSlug={workspaceSlug}

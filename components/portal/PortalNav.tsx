@@ -25,9 +25,9 @@ export default function PortalNav({ workspaceSlug, workspaceName, logoUrl, prima
 
     const tabs = [
         { href: basePath, label: t('home'), exact: true },
+        { href: portalPath(workspaceSlug, '/dashboard/programs'), label: t('programs'), exact: false },
         { href: portalPath(workspaceSlug, '/dashboard/commissions'), label: t('commissions'), exact: false },
         { href: portalPath(workspaceSlug, '/dashboard/payouts'), label: t('payouts'), exact: false },
-        { href: portalPath(workspaceSlug, '/dashboard/assets'), label: t('assets'), exact: false },
     ]
 
     const isActive = (href: string, exact: boolean) => {
