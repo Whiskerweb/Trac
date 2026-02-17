@@ -95,7 +95,7 @@ model Mission {
   invite_code String? @unique
 
   /// Whether this mission is visible on the hosted affiliate portal
-  portal_visible     Boolean             @default(false)
+  portal_visible     Boolean             @default(true)
 
   /// If set, this mission is exclusive to an organization (not shown in marketplace)
   organization_id    String?

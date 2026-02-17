@@ -67,6 +67,7 @@ export default function PortalPage() {
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [isPreviewMode, setIsPreviewMode] = useState(false)
     const [workspace, setWorkspace] = useState<{
         id: string; name: string; slug: string;
         portal_welcome_text: string | null;
@@ -90,10 +91,15 @@ export default function PortalPage() {
             return
         }
 
-        // If authenticated, redirect to dashboard
-        if (statusResult.authenticated) {
+        // If authenticated AND has a seller profile, redirect to dashboard
+        if (statusResult.authenticated && statusResult.hasSeller) {
             router.replace(portalPath(workspaceSlug, '/dashboard'))
             return
+        }
+
+        // If authenticated but no seller (e.g. startup previewing), show preview mode
+        if (statusResult.authenticated && !statusResult.hasSeller) {
+            setIsPreviewMode(true)
         }
 
         setWorkspace(portalResult.data.workspace)
@@ -249,6 +255,13 @@ export default function PortalPage() {
                             </div>
                         )}
 
+                        {/* No missions message */}
+                        {missions.length === 0 && (
+                            <div className="mb-8 rounded-xl border border-gray-100 bg-gray-50/50 p-6 text-center">
+                                <p className="text-sm text-gray-500">{tLanding('noMissions')}</p>
+                            </div>
+                        )}
+
                         {/* Trust elements */}
                         <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400">
                             <span className="flex items-center gap-1.5">
@@ -267,7 +280,7 @@ export default function PortalPage() {
                     </div>
                 </motion.div>
 
-                {/* RIGHT PANEL — Auth Form */}
+                {/* RIGHT PANEL — Auth Form or Preview Mode */}
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -275,10 +288,20 @@ export default function PortalPage() {
                     className="lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-16 py-12 lg:py-0"
                 >
                     <div className="max-w-md mx-auto w-full">
-                        <PortalAuthForm
-                            workspaceSlug={workspaceSlug}
-                            primaryColor={primaryColor}
-                        />
+                        {isPreviewMode ? (
+                            <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-8 text-center">
+                                <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                    <Shield className="w-6 h-6 text-amber-500" />
+                                </div>
+                                <h3 className="text-base font-semibold text-gray-900 mb-1">{t('previewMode')}</h3>
+                                <p className="text-sm text-gray-500">{t('previewModeDesc')}</p>
+                            </div>
+                        ) : (
+                            <PortalAuthForm
+                                workspaceSlug={workspaceSlug}
+                                primaryColor={primaryColor}
+                            />
+                        )}
                     </div>
                 </motion.div>
             </div>

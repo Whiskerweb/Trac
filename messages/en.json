@@ -2962,13 +2962,16 @@
         "resending": "Resending...",
         "errorNameMin": "Name must be at least 2 characters",
         "errorPasswordMin": "Password must be at least 6 characters",
+        "previewMode": "Preview Mode",
+        "previewModeDesc": "You are viewing this portal as a startup owner. Affiliates will see a sign-up form here.",
         "landing": {
             "defaultHeadline": "Earn commissions with {name}",
             "whatYouEarn": "What you earn",
             "availablePrograms": "{count} programs available",
             "freeToJoin": "Free to join",
             "paidMonthly": "Paid monthly",
-            "realTimeTracking": "Real-time tracking"
+            "realTimeTracking": "Real-time tracking",
+            "noMissions": "No programs available yet. Check back soon!"
         },
         "nav": {
             "home": "Home",

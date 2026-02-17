@@ -2,7 +2,7 @@
 
 import { useState, useEffect, createContext, useContext, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
 import { getPortalFullDashboard } from '@/app/actions/portal'
 import PortalNav from '@/components/portal/PortalNav'
 import { portalPath } from '@/components/portal/portal-utils'
@@ -81,13 +81,19 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
 
     const [data, setData] = useState<PortalDashboardData | null>(null)
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
     const loadData = useCallback(async () => {
         const result = await getPortalFullDashboard(workspaceSlug)
 
         if (!result.success || !result.data) {
-            // Not authenticated or no enrollment — redirect to landing
-            router.replace(portalPath(workspaceSlug))
+            // Only redirect for auth errors — show error state for everything else
+            if (result.error === 'Not authenticated') {
+                router.replace(portalPath(workspaceSlug))
+                return
+            }
+            setError(result.error || 'Failed to load dashboard')
+            setLoading(false)
             return
         }
 
@@ -97,10 +103,31 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
 
     useEffect(() => { loadData() }, [loadData])
 
-    if (loading || !data) {
+    if (loading && !error) {
         return (
             <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            </div>
+        )
+    }
+
+    if (error || !data) {
+        return (
+            <div className="min-h-screen bg-gray-50/50 flex items-center justify-center p-4">
+                <div className="text-center max-w-md">
+                    <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <AlertCircle className="w-7 h-7 text-red-400" />
+                    </div>
+                    <h1 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h1>
+                    <p className="text-sm text-gray-500 mb-6">{error || 'Failed to load dashboard'}</p>
+                    <a
+                        href={portalPath(workspaceSlug)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to portal
+                    </a>
+                </div>
             </div>
         )
     }

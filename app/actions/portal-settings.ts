@@ -74,6 +74,20 @@ export async function togglePortal(enabled: boolean) {
             data: { portal_enabled: enabled },
         })
 
+        // When enabling portal, auto-set portal_visible=true on eligible missions
+        if (enabled) {
+            await prisma.mission.updateMany({
+                where: {
+                    workspace_id: ws.workspaceId,
+                    status: 'ACTIVE',
+                    visibility: { in: ['PUBLIC', 'PRIVATE'] },
+                    organization_id: null,
+                    portal_visible: false,
+                },
+                data: { portal_visible: true },
+            })
+        }
+
         revalidatePath('/dashboard/portal')
         return { success: true }
     } catch (error) {

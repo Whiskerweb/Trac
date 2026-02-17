@@ -2735,13 +2735,16 @@
         "resending": "Reenviando...",
         "errorNameMin": "El nombre debe tener al menos 2 caracteres",
         "errorPasswordMin": "La contraseña debe tener al menos 6 caracteres",
+        "previewMode": "Modo vista previa",
+        "previewModeDesc": "Estas viendo este portal como propietario de startup. Los afiliados veran un formulario de registro aqui.",
         "landing": {
             "defaultHeadline": "Gana comisiones con {name}",
             "whatYouEarn": "Lo que ganas",
             "availablePrograms": "{count} programas disponibles",
             "freeToJoin": "Gratis",
             "paidMonthly": "Pago mensual",
-            "realTimeTracking": "Seguimiento en tiempo real"
+            "realTimeTracking": "Seguimiento en tiempo real",
+            "noMissions": "No hay programas disponibles por el momento."
         },
         "nav": {
             "home": "Inicio",

@@ -225,7 +225,7 @@ export async function getPortalUserStatus(workspaceSlug: string) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-        return { authenticated: false, enrolled: false, enrolledMissionIds: [] as string[] }
+        return { authenticated: false, enrolled: false, hasSeller: false, enrolledMissionIds: [] as string[] }
     }
 
     try {
@@ -233,8 +233,13 @@ export async function getPortalUserStatus(workspaceSlug: string) {
             where: { slug: workspaceSlug },
         })
 
+        const seller = await prisma.seller.findFirst({
+            where: { user_id: user.id },
+            select: { id: true },
+        })
+
         if (!workspace) {
-            return { authenticated: true, enrolled: false, enrolledMissionIds: [] as string[] }
+            return { authenticated: true, enrolled: false, hasSeller: !!seller, enrolledMissionIds: [] as string[] }
         }
 
         const enrollments = await prisma.missionEnrollment.findMany({
@@ -249,11 +254,12 @@ export async function getPortalUserStatus(workspaceSlug: string) {
         return {
             authenticated: true,
             enrolled: enrollments.length > 0,
+            hasSeller: !!seller,
             enrolledMissionIds: enrollments.map(e => e.mission_id),
             userName: user.user_metadata?.full_name || user.email || '',
         }
     } catch {
-        return { authenticated: true, enrolled: false, enrolledMissionIds: [] as string[] }
+        return { authenticated: true, enrolled: false, hasSeller: false, enrolledMissionIds: [] as string[] }
     }
 }
 
@@ -286,12 +292,24 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
             return { success: false, error: 'Portal not available' }
         }
 
-        const seller = await prisma.seller.findFirst({
+        let seller = await prisma.seller.findFirst({
             where: { user_id: user.id },
         })
 
         if (!seller) {
-            return { success: false, error: 'Seller not found' }
+            // Auto-create seller for portal users (e.g. signed up via portal auth)
+            const { createGlobalSeller } = await import('@/app/actions/sellers')
+            await createGlobalSeller({
+                userId: user.id,
+                email: user.email || '',
+                name: user.user_metadata?.full_name || user.email || '',
+            })
+            seller = await prisma.seller.findFirst({
+                where: { user_id: user.id },
+            })
+            if (!seller) {
+                return { success: false, error: 'Seller creation failed' }
+            }
         }
 
         // Get all existing enrollments for this workspace
@@ -337,7 +355,11 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
             })
 
             for (const mission of publicMissions) {
-                await joinMission(mission.id)
+                try {
+                    await joinMission(mission.id)
+                } catch (e) {
+                    console.error(`[Portal] Auto-enroll failed ${mission.id}:`, e)
+                }
             }
 
             // Re-fetch enrollments

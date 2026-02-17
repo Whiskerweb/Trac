@@ -2735,13 +2735,16 @@
         "resending": "Envoi en cours...",
         "errorNameMin": "Le nom doit faire au moins 2 caractères",
         "errorPasswordMin": "Le mot de passe doit faire au moins 6 caractères",
+        "previewMode": "Mode apercu",
+        "previewModeDesc": "Vous visualisez ce portail en tant que startup. Les affilies verront un formulaire d'inscription ici.",
         "landing": {
             "defaultHeadline": "Gagnez des commissions avec {name}",
             "whatYouEarn": "Ce que vous gagnez",
             "availablePrograms": "{count} programmes disponibles",
             "freeToJoin": "Gratuit",
             "paidMonthly": "Paiement mensuel",
-            "realTimeTracking": "Suivi en temps réel"
+            "realTimeTracking": "Suivi en temps réel",
+            "noMissions": "Aucun programme disponible pour le moment."
         },
         "nav": {
             "home": "Accueil",
