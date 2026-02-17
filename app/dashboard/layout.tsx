@@ -1,6 +1,7 @@
 'use client'
 
 import { Sidebar, DashboardMode } from '@/components/dashboard/Sidebar'
+import { NotificationCenter } from '@/components/dashboard/NotificationCenter'
 import FeedbackWidget from '@/components/FeedbackWidget'
 import { Menu, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -142,6 +143,12 @@ export default function DashboardLayout({
                         />
                         <span className="font-bold text-lg text-gray-900 tracking-tight">Trac</span>
                     </div>
+                    <NotificationCenter />
+                </div>
+
+                {/* Desktop Top Bar */}
+                <div className="hidden md:flex justify-end px-8 py-2 border-b border-gray-100">
+                    <NotificationCenter />
                 </div>
 
                 {/* Page Content */}

@@ -1490,6 +1490,16 @@ export async function createReferralCommissions(sourceCommission: {
 
             if (!seller?.referred_by) break // No referrer → stop
 
+            // S3: Skip referrers who are not APPROVED (BANNED, PENDING, etc.)
+            const referrerSeller = await prisma.seller.findUnique({
+                where: { id: seller.referred_by },
+                select: { id: true, status: true }
+            })
+            if (!referrerSeller || referrerSeller.status !== 'APPROVED') {
+                console.log(`[Referral] ⏭️ Skipping gen ${generation}: referrer ${seller.referred_by} status=${referrerSeller?.status ?? 'NOT_FOUND'}`)
+                break
+            }
+
             const referrerId = seller.referred_by
             const referralAmount = Math.floor(ht_amount * rate)
 
@@ -1517,7 +1527,7 @@ export async function createReferralCommissions(sourceCommission: {
                     commission_type: 'PERCENTAGE',
                     currency: sourceCommission.currency,
                     status: 'PENDING',
-                    startup_payment_status: 'UNPAID',
+                    startup_payment_status: 'PAID', // Funded from Traaaction's 15% platform fee, not billed to startup
                     commission_source: sourceCommission.commission_source,
                     subscription_id: sourceCommission.subscription_id,
                     recurring_month: sourceCommission.recurring_month,

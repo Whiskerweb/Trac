@@ -18,6 +18,7 @@ import { useTranslations } from 'next-intl'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
 import { GlobeVisualization } from '@/components/dashboard/GlobeVisualization'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
+import { StartupOnboardingChecklist } from '@/components/dashboard/StartupOnboardingChecklist'
 import { subDays, format } from 'date-fns'
 
 // =============================================
@@ -808,6 +809,9 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-6">
+            {/* Startup Onboarding Checklist */}
+            <StartupOnboardingChecklist />
+
             {/* Date Range Bar */}
             <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">

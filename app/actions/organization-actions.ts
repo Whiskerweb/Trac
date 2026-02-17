@@ -496,6 +496,10 @@ export async function proposeOrgMission({ orgId, missionId, totalReward }: {
         })
         if (!template) return { success: false, error: 'Mission not found' }
 
+        if (template.visibility !== 'INVITE_ONLY') {
+            return { success: false, error: 'Only invite-only missions can be proposed to organizations' }
+        }
+
         // Verify org is active
         const org = await prisma.organization.findUnique({ where: { id: orgId } })
         if (!org || org.status !== 'ACTIVE') {

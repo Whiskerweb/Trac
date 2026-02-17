@@ -91,7 +91,7 @@ scripts/
 ├── test-recurring.ts       # 30 tests — scenarios core recurring
 ├── test-recurring-edge.ts  # 47 tests — edge cases (limites, concurrence, devises)
 ├── test-recurring-ui.ts    # 69 tests — integrite donnees UI (dashboards, wallet, payouts)
-├── test-referral.ts        # 25 tests (61 assertions) — referral/parrainage system
+├── test-referral.ts        # 31 tests (83 assertions) — referral/parrainage system
 ├── test-referral-ui.ts     # 24 tests (100 assertions) — referral UI data integrity
 ├── test-group-commissions.ts # 34 tests — group equal split, clawback, constraints
 └── [autres]                # migrations, diagnostics, infra tests
@@ -367,7 +367,7 @@ Responsabilites:
 - [x] Negative balance sur refund COMPLETE
 - [x] Guard grossAmount <= 0 (trials, credits)
 - [x] Annulation abonnement → suppression PENDING
-- [x] 195 tests automatises (core + edge + UI + referral)
+- [x] 201 tests automatises (core + edge + UI + referral)
 
 ### Integration page
 - [x] Guide Stripe metadata (mode payment + subscription)
@@ -492,7 +492,7 @@ npm run lint             # ESLint
 npx tsx scripts/test-recurring.ts       # 30 tests core
 npx tsx scripts/test-recurring-edge.ts  # 47 tests edge cases
 npx tsx scripts/test-recurring-ui.ts    # 69 tests UI data integrity
-npx tsx scripts/test-referral.ts        # 25 tests referral system
+npx tsx scripts/test-referral.ts        # 31 tests referral system
 npx tsx scripts/test-referral-ui.ts     # 24 tests referral UI data integrity
 npx tsx scripts/test-group-commissions.ts  # 35 tests group all-to-creator
 ```

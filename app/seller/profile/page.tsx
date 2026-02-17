@@ -54,10 +54,20 @@ const PROFILE_TASKS = [
     { id: 'how_you_work', label: 'Work style', icon: Sparkles },
 ]
 
+const TASK_SECTION_MAP: Record<string, string> = {
+    country: 'section-basic',
+    social_media: 'section-social',
+    description: 'section-about',
+    industry_interests: 'section-industries',
+    activity_type: 'section-activity',
+    how_you_work: 'section-activity',
+}
+
 // Reusable card component
-function ProfileCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function ProfileCard({ children, className = '', id }: { children: React.ReactNode; className?: string; id?: string }) {
     return (
         <motion.div
+            id={id}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -108,7 +118,7 @@ function Select({ label, required, children, ...props }: { label?: string; requi
 }
 
 export default function ProfilePage() {
-    const [isExpanded, setIsExpanded] = useState(false)
+    const [isExpanded, setIsExpanded] = useState(true)
     const [hasSeenValidation, setHasSeenValidation] = useState(false)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -298,6 +308,19 @@ export default function ProfilePage() {
     const isProfileComplete = completedTasks.length === PROFILE_TASKS.length
     const shouldShowValidatedBanner = isProfileComplete && !hasSeenValidation
 
+    // Find first incomplete section for highlight
+    const firstIncompleteSection = useMemo(() => {
+        const incomplete = PROFILE_TASKS.find(t => !completedTasks.includes(t.id))
+        return incomplete ? TASK_SECTION_MAP[incomplete.id] : null
+    }, [completedTasks])
+
+    const scrollToSection = (taskId: string) => {
+        const sectionId = TASK_SECTION_MAP[taskId]
+        if (sectionId) {
+            document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+    }
+
     useEffect(() => {
         if (shouldShowValidatedBanner && !loading) {
             const timer = setTimeout(() => {
@@ -373,7 +396,7 @@ export default function ProfilePage() {
                 <div className="space-y-6">
                     {/* Profile Completion */}
                     {!isProfileComplete && (
-                        <ProfileCard className="overflow-hidden">
+                        <ProfileCard className="overflow-hidden sticky top-16 z-30">
                             <div className="p-5">
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-3">
@@ -423,8 +446,9 @@ export default function ProfilePage() {
                                                         return (
                                                             <div
                                                                 key={task.id}
+                                                                onClick={() => !isCompleted && scrollToSection(task.id)}
                                                                 className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all ${
-                                                                    isCompleted ? 'bg-emerald-50' : 'bg-neutral-50'
+                                                                    isCompleted ? 'bg-emerald-50' : 'bg-neutral-50 cursor-pointer hover:bg-neutral-100'
                                                                 }`}
                                                             >
                                                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -452,7 +476,7 @@ export default function ProfilePage() {
                     )}
 
                     {/* Basic Info */}
-                    <ProfileCard>
+                    <ProfileCard id="section-basic" className={firstIncompleteSection === 'section-basic' ? 'ring-2 ring-violet-200' : ''}>
                         <div className="p-6">
                             <h2 className="text-[15px] font-semibold text-neutral-900 mb-6">Basic information</h2>
 
@@ -511,7 +535,7 @@ export default function ProfilePage() {
                     </ProfileCard>
 
                     {/* Social Links */}
-                    <ProfileCard>
+                    <ProfileCard id="section-social" className={firstIncompleteSection === 'section-social' ? 'ring-2 ring-violet-200' : ''}>
                         <div className="p-6">
                             <h2 className="text-[15px] font-semibold text-neutral-900 mb-1">Social links</h2>
                             <p className="text-[13px] text-neutral-500 mb-6">Add at least one social account <span className="text-red-500">*</span></p>
@@ -548,7 +572,7 @@ export default function ProfilePage() {
                     </ProfileCard>
 
                     {/* About */}
-                    <ProfileCard>
+                    <ProfileCard id="section-about" className={firstIncompleteSection === 'section-about' ? 'ring-2 ring-violet-200' : ''}>
                         <div className="p-6">
                             <h2 className="text-[15px] font-semibold text-neutral-900 mb-1">About you</h2>
                             <p className="text-[13px] text-neutral-500 mb-4">Share your background and expertise <span className="text-red-500">*</span></p>
@@ -568,7 +592,7 @@ export default function ProfilePage() {
                     </ProfileCard>
 
                     {/* Industries */}
-                    <ProfileCard>
+                    <ProfileCard id="section-industries" className={firstIncompleteSection === 'section-industries' ? 'ring-2 ring-violet-200' : ''}>
                         <div className="p-6">
                             <h2 className="text-[15px] font-semibold text-neutral-900 mb-1">Industry interests</h2>
                             <p className="text-[13px] text-neutral-500 mb-4">Select industries you're passionate about <span className="text-red-500">*</span></p>
@@ -592,7 +616,7 @@ export default function ProfilePage() {
                     </ProfileCard>
 
                     {/* Activity & Traffic */}
-                    <ProfileCard>
+                    <ProfileCard id="section-activity" className={firstIncompleteSection === 'section-activity' ? 'ring-2 ring-violet-200' : ''}>
                         <div className="p-6">
                             <h2 className="text-[15px] font-semibold text-neutral-900 mb-4">Activity details</h2>
 

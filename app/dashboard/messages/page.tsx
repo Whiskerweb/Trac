@@ -85,9 +85,9 @@ function QuickActionsPopover({
             const { getWorkspaceMissions } = await import('@/app/actions/missions')
             const missionsResult = await getWorkspaceMissions()
             if (missionsResult.success && missionsResult.missions) {
+                const filtered = missionsResult.missions.filter(m => m.status === 'ACTIVE' && !m.organization_id)
                 setMissions(
-                    missionsResult.missions
-                        .filter(m => m.status === 'ACTIVE' && !m.organization_id)
+                    (mode === 'deal' ? filtered.filter(m => m.visibility === 'INVITE_ONLY') : filtered)
                         .map(m => ({ id: m.id, title: m.title, reward: m.reward }))
                 )
             }

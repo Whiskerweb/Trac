@@ -164,6 +164,77 @@ export async function updateStartupProfile(input: {
     }
 }
 
+// =============================================
+// STARTUP ONBOARDING STATUS
+// =============================================
+
+export interface StartupOnboardingStatus {
+    isComplete: boolean
+    steps: {
+        profile: boolean   // logo_url + description + industry filled
+        mission: boolean   // at least 1 mission created
+        webhook: boolean   // at least 1 WebhookEndpoint
+        seller: boolean    // at least 1 MissionEnrollment APPROVED
+    }
+}
+
+/**
+ * Get onboarding completion status for the current workspace
+ */
+export async function getStartupOnboardingStatus(): Promise<{
+    success: boolean
+    status?: StartupOnboardingStatus
+    error?: string
+}> {
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+        if (!workspace) {
+            return { success: false, error: 'Not authenticated' }
+        }
+
+        const wsId = workspace.workspaceId
+
+        const [profileData, missionCount, webhookCount, enrollmentCount] = await Promise.all([
+            prisma.workspaceProfile.findUnique({
+                where: { workspace_id: wsId },
+                select: { logo_url: true, description: true, industry: true }
+            }),
+            prisma.mission.count({
+                where: { workspace_id: wsId }
+            }),
+            prisma.webhookEndpoint.count({
+                where: { workspace_id: wsId }
+            }),
+            prisma.missionEnrollment.count({
+                where: {
+                    Mission: { workspace_id: wsId },
+                    status: 'APPROVED'
+                }
+            }),
+        ])
+
+        const profileComplete = !!(profileData?.logo_url && profileData?.description && profileData?.industry)
+
+        const steps = {
+            profile: profileComplete,
+            mission: missionCount > 0,
+            webhook: webhookCount > 0,
+            seller: enrollmentCount > 0,
+        }
+
+        return {
+            success: true,
+            status: {
+                isComplete: Object.values(steps).every(Boolean),
+                steps,
+            }
+        }
+    } catch (error) {
+        console.error('[StartupOnboarding] Error:', error)
+        return { success: false, error: 'Error loading onboarding status' }
+    }
+}
+
 /**
  * Get a startup's public profile by workspace ID (for sellers viewing a startup)
  */

@@ -366,6 +366,28 @@
         "analytics": "Analytics",
         "recentActivity": "Recent Activity",
         "quickActions": "Quick Actions",
+        "onboarding": {
+            "title": "Launch your program",
+            "subtitle": "Complete these steps to start receiving sales",
+            "steps": {
+                "profile": "Complete your profile",
+                "mission": "Create your first mission",
+                "webhook": "Configure Stripe webhook",
+                "seller": "Welcome your first seller"
+            }
+        },
+        "notifications": {
+            "title": "Notifications",
+            "empty": "You're all caught up",
+            "markAllRead": "Mark all as read",
+            "messages": "Messages",
+            "sellers": "Seller requests",
+            "commissions": "Commissions to pay",
+            "pendingEnrollment": "Pending request",
+            "unpaidCommissions": "to pay",
+            "unreadMessages": "unread messages",
+            "viewAll": "View all"
+        },
         "kpi": {
             "clicks": "Clicks",
             "leads": "Leads",

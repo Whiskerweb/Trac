@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traaaction — Pipeline Commissions</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #FAFAFA;
+            color: #111;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        .header {
+            padding: 24px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e5e5e5;
+            background: white;
+        }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        .header-stats {
+            display: flex;
+            gap: 24px;
+        }
+        .header-stat {
+            text-align: right;
+        }
+        .header-stat .value {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .header-stat .label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Mobile tabs */
+        .mobile-tabs {
+            display: none;
+            padding: 12px 16px;
+            gap: 8px;
+            background: white;
+            border-bottom: 1px solid #e5e5e5;
+            overflow-x: auto;
+        }
+        .mobile-tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .mobile-tab.active-pending { background: #FFF3E0; color: #E65100; }
+        .mobile-tab.active-proceed { background: #E3F2FD; color: #1565C0; }
+        .mobile-tab.active-complete { background: #E8F5E9; color: #2E7D32; }
+        .mobile-tab:not([class*="active"]) { background: #f5f5f5; color: #666; }
+
+        /* Board */
+        .board {
+            display: flex;
+            gap: 20px;
+            padding: 24px;
+            overflow-x: auto;
+            min-height: calc(100vh - 80px);
+            align-items: flex-start;
+        }
+
+        /* Column */
+        .column {
+            flex: 1;
+            min-width: 320px;
+            max-width: 400px;
+        }
+        .column-header {
+            padding: 16px 20px;
+            border-radius: 16px 16px 0 0;
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .column-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .column-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .column-title {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+        }
+        .column-count {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .column-total {
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .column-body {
+            background: #f0f0f0;
+            border-radius: 0 0 16px 16px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* PENDING */
+        .col-pending .column-header { background: rgba(255, 152, 0, 0.08); border: 1px solid rgba(255, 152, 0, 0.15); border-bottom: none; }
+        .col-pending .column-dot { background: #FF9800; }
+        .col-pending .column-count { background: rgba(255, 152, 0, 0.12); color: #E65100; }
+        .col-pending .column-total { color: #E65100; }
+        .col-pending .column-body { background: rgba(255, 152, 0, 0.04); border: 1px solid rgba(255, 152, 0, 0.1); border-top: none; }
+
+        /* PROCEED */
+        .col-proceed .column-header { background: rgba(33, 150, 243, 0.08); border: 1px solid rgba(33, 150, 243, 0.15); border-bottom: none; }
+        .col-proceed .column-dot { background: #2196F3; }
+        .col-proceed .column-count { background: rgba(33, 150, 243, 0.12); color: #1565C0; }
+        .col-proceed .column-total { color: #1565C0; }
+        .col-proceed .column-body { background: rgba(33, 150, 243, 0.04); border: 1px solid rgba(33, 150, 243, 0.1); border-top: none; }
+
+        /* COMPLETE */
+        .col-complete .column-header { background: rgba(76, 175, 80, 0.08); border: 1px solid rgba(76, 175, 80, 0.15); border-bottom: none; }
+        .col-complete .column-dot { background: #4CAF50; }
+        .col-complete .column-count { background: rgba(76, 175, 80, 0.12); color: #2E7D32; }
+        .col-complete .column-total { color: #2E7D32; }
+        .col-complete .column-body { background: rgba(76, 175, 80, 0.04); border: 1px solid rgba(76, 175, 80, 0.1); border-top: none; }
+
+        /* Card */
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 16px;
+            border: 1px solid rgba(0,0,0,0.06);
+            transition: transform 0.15s, box-shadow 0.15s;
+            cursor: default;
+        }
+        .card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .card-seller {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+        .card-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111;
+        }
+        .card-mission {
+            font-size: 12px;
+            color: #888;
+        }
+        .card-amount {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        .badge-sale { background: #EDE7F6; color: #5E35B1; }
+        .badge-lead { background: #E8F5E9; color: #2E7D32; }
+        .badge-recurring { background: #E3F2FD; color: #1565C0; }
+        .card-date {
+            font-size: 11px;
+            color: #aaa;
+        }
+        .card-hold {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #FFF3E0;
+            color: #E65100;
+        }
+        .card-paid-date {
+            font-size: 11px;
+            color: #2E7D32;
+            font-weight: 500;
+        }
+
+        /* Proceed extras */
+        .card-checkbox {
+            width: 18px;
+            height: 18px;
+            border-radius: 6px;
+            border: 2px solid #ccc;
+            cursor: pointer;
+            transition: all 0.15s;
+            appearance: none;
+            -webkit-appearance: none;
+            flex-shrink: 0;
+        }
+        .card-checkbox:checked {
+            background: #2196F3;
+            border-color: #2196F3;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+            background-size: 14px;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .pay-btn {
+            padding: 8px 16px;
+            background: #1565C0;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .pay-btn:hover { background: #0D47A1; }
+
+        /* Gradients for avatars */
+        .grad-1 { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .grad-2 { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .grad-3 { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .grad-4 { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+        .grad-5 { background: linear-gradient(135deg, #fa709a, #fee140); }
+        .grad-6 { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
+        .grad-7 { background: linear-gradient(135deg, #fccb90, #d57eeb); }
+        .grad-8 { background: linear-gradient(135deg, #e0c3fc, #8ec5fc); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header { padding: 16px; }
+            .header-stats { display: none; }
+            .mobile-tabs { display: flex; }
+            .board { padding: 16px; gap: 0; }
+            .column { min-width: 100%; max-width: 100%; }
+            .column.hidden-mobile { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Pipeline Commissions</h1>
+    <div class="header-stats">
+        <div class="header-stat">
+            <div class="value" style="color: #E65100;">2 450,00 €</div>
+            <div class="label">En attente</div>
+        </div>
+        <div class="header-stat">
+            <div class="value" style="color: #1565C0;">1 875,50 €</div>
+            <div class="label">A payer</div>
+        </div>
+        <div class="header-stat">
+            <div class="value" style="color: #2E7D32;">8 320,00 €</div>
+            <div class="label">Payees</div>
+        </div>
+    </div>
+</div>
+
+<div class="mobile-tabs">
+    <button class="mobile-tab active-pending" onclick="showColumn('pending')">Pending (7)</button>
+    <button class="mobile-tab" onclick="showColumn('proceed')">Proceed (5)</button>
+    <button class="mobile-tab" onclick="showColumn('complete')">Complete (6)</button>
+</div>
+
+<div class="board">
+    <!-- PENDING Column -->
+    <div class="column col-pending" id="col-pending">
+        <div class="column-header">
+            <div class="column-header-left">
+                <div class="column-dot"></div>
+                <span class="column-title">PENDING</span>
+                <span class="column-count">7</span>
+            </div>
+            <span class="column-total">2 450,00 €</span>
+        </div>
+        <div class="column-body">
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-1">ML</div>
+                        <div>
+                            <div class="card-name">Marie Lecomte</div>
+                            <div class="card-mission">GrowthSuite Pro</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">450,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-hold">23j restants</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-2">TD</div>
+                        <div>
+                            <div class="card-name">Thomas Dupont</div>
+                            <div class="card-mission">DataSync AI</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">89,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-recurring">RECURRING (3/12)</span>
+                    <span class="card-hold">18j restants</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-3">SB</div>
+                        <div>
+                            <div class="card-name">Sophie Bernard</div>
+                            <div class="card-mission">CloudMetrics</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">750,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-hold">12j restants</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-5">JM</div>
+                        <div>
+                            <div class="card-name">Julien Moreau</div>
+                            <div class="card-mission">GrowthSuite Pro</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">450,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-hold">27j restants</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-4">CR</div>
+                        <div>
+                            <div class="card-name">Camille Rousseau</div>
+                            <div class="card-mission">DataSync AI</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">15,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-lead">LEAD</span>
+                    <span class="card-hold">2j restants</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-6">AG</div>
+                        <div>
+                            <div class="card-name">Antoine Garcia</div>
+                            <div class="card-mission">MailFlow Pro</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">607,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-hold">8j restants</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-7">LP</div>
+                        <div>
+                            <div class="card-name">Lea Petit</div>
+                            <div class="card-mission">DataSync AI</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">89,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-recurring">RECURRING (1/12)</span>
+                    <span class="card-hold">29j restants</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROCEED Column -->
+    <div class="column col-proceed" id="col-proceed">
+        <div class="column-header">
+            <div class="column-header-left">
+                <div class="column-dot"></div>
+                <span class="column-title">PROCEED</span>
+                <span class="column-count">5</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span class="column-total">1 875,50 €</span>
+                <button class="pay-btn">Payer la selection</button>
+            </div>
+        </div>
+        <div class="column-body">
+            <div class="card">
+                <div class="card-top">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" class="card-checkbox" checked>
+                        <div class="card-seller">
+                            <div class="avatar grad-1">ML</div>
+                            <div>
+                                <div class="card-name">Marie Lecomte</div>
+                                <div class="card-mission">CloudMetrics</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-amount">320,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-date">Mature le 2 fev. 2026</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" class="card-checkbox" checked>
+                        <div class="card-seller">
+                            <div class="avatar grad-3">SB</div>
+                            <div>
+                                <div class="card-name">Sophie Bernard</div>
+                                <div class="card-mission">GrowthSuite Pro</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-amount">450,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-date">Mature le 28 jan. 2026</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" class="card-checkbox">
+                        <div class="card-seller">
+                            <div class="avatar grad-8">NF</div>
+                            <div>
+                                <div class="card-name">Nicolas Fabre</div>
+                                <div class="card-mission">DataSync AI</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-amount">89,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-recurring">RECURRING (6/12)</span>
+                    <span class="card-date">Mature le 5 fev. 2026</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" class="card-checkbox" checked>
+                        <div class="card-seller">
+                            <div class="avatar grad-2">TD</div>
+                            <div>
+                                <div class="card-name">Thomas Dupont</div>
+                                <div class="card-mission">MailFlow Pro</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-amount">15,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-lead">LEAD</span>
+                    <span class="card-date">Mature le 10 fev. 2026</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" class="card-checkbox">
+                        <div class="card-seller">
+                            <div class="avatar grad-6">AG</div>
+                            <div>
+                                <div class="card-name">Antoine Garcia</div>
+                                <div class="card-mission">GrowthSuite Pro</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-amount">1 001,50 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-date">Mature le 1 fev. 2026</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPLETE Column -->
+    <div class="column col-complete" id="col-complete">
+        <div class="column-header">
+            <div class="column-header-left">
+                <div class="column-dot"></div>
+                <span class="column-title">COMPLETE</span>
+                <span class="column-count">6</span>
+            </div>
+            <span class="column-total">8 320,00 €</span>
+        </div>
+        <div class="column-body">
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-4">CR</div>
+                        <div>
+                            <div class="card-name">Camille Rousseau</div>
+                            <div class="card-mission">GrowthSuite Pro</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">450,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-paid-date">Paye le 15 jan. 2026</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-1">ML</div>
+                        <div>
+                            <div class="card-name">Marie Lecomte</div>
+                            <div class="card-mission">DataSync AI</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">2 340,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-paid-date">Paye le 12 jan. 2026</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-7">LP</div>
+                        <div>
+                            <div class="card-name">Lea Petit</div>
+                            <div class="card-mission">CloudMetrics</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">89,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-recurring">RECURRING (2/12)</span>
+                    <span class="card-paid-date">Paye le 10 jan. 2026</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-5">JM</div>
+                        <div>
+                            <div class="card-name">Julien Moreau</div>
+                            <div class="card-mission">MailFlow Pro</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">1 890,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-paid-date">Paye le 8 jan. 2026</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-3">SB</div>
+                        <div>
+                            <div class="card-name">Sophie Bernard</div>
+                            <div class="card-mission">DataSync AI</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">3 200,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-paid-date">Paye le 5 jan. 2026</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-top">
+                    <div class="card-seller">
+                        <div class="avatar grad-8">NF</div>
+                        <div>
+                            <div class="card-name">Nicolas Fabre</div>
+                            <div class="card-mission">GrowthSuite Pro</div>
+                        </div>
+                    </div>
+                    <div class="card-amount">351,00 €</div>
+                </div>
+                <div class="card-footer">
+                    <span class="badge badge-sale">SALE</span>
+                    <span class="card-paid-date">Paye le 2 jan. 2026</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showColumn(col) {
+        const columns = ['pending', 'proceed', 'complete'];
+        columns.forEach(c => {
+            const el = document.getElementById('col-' + c);
+            if (c === col) {
+                el.classList.remove('hidden-mobile');
+            } else {
+                el.classList.add('hidden-mobile');
+            }
+        });
+        // Update tab styles
+        const tabs = document.querySelectorAll('.mobile-tab');
+        tabs.forEach(tab => {
+            tab.className = 'mobile-tab';
+        });
+        const activeTab = document.querySelector(`.mobile-tab:nth-child(${columns.indexOf(col) + 1})`);
+        if (activeTab) {
+            activeTab.classList.add('active-' + col);
+        }
+    }
+</script>
+
+</body>
+</html>

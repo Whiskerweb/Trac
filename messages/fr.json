@@ -366,6 +366,28 @@
         "analytics": "Analytics",
         "recentActivity": "Activité récente",
         "quickActions": "Actions rapides",
+        "onboarding": {
+            "title": "Lancez votre programme",
+            "subtitle": "Completez ces etapes pour commencer a recevoir des ventes",
+            "steps": {
+                "profile": "Completer votre profil",
+                "mission": "Creer votre premiere mission",
+                "webhook": "Configurer le webhook Stripe",
+                "seller": "Accueillir votre premier seller"
+            }
+        },
+        "notifications": {
+            "title": "Notifications",
+            "empty": "Tout est a jour",
+            "markAllRead": "Tout marquer comme lu",
+            "messages": "Messages",
+            "sellers": "Demandes sellers",
+            "commissions": "Commissions a payer",
+            "pendingEnrollment": "Demande en attente",
+            "unpaidCommissions": "a payer",
+            "unreadMessages": "messages non lus",
+            "viewAll": "Voir tout"
+        },
         "kpi": {
             "clicks": "Clics",
             "leads": "Leads",

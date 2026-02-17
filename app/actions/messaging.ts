@@ -496,6 +496,30 @@ export async function createInvitationMessage(
     }
 }
 
+/**
+ * Mark all conversations as read for the current startup workspace
+ */
+export async function markAllMessagesAsRead(): Promise<{ success: boolean; error?: string }> {
+    try {
+        const workspace = await getActiveWorkspaceForUser()
+        if (!workspace) return { success: false, error: 'Not authenticated' }
+
+        await prisma.conversation.updateMany({
+            where: {
+                workspace_id: workspace.workspaceId,
+                unread_startup: { gt: 0 },
+            },
+            data: { unread_startup: 0 },
+        })
+
+        revalidatePath('/dashboard/messages')
+        return { success: true }
+    } catch (error) {
+        console.error('[Messaging] markAllMessagesAsRead error:', error)
+        return { success: false, error: 'Failed to mark all as read' }
+    }
+}
+
 // =============================================
 // RICH MESSAGES — Helpers & Actions
 // =============================================
