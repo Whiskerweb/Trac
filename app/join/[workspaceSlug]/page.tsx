@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { getPortalData, getPortalUserStatus } from '@/app/actions/portal'
 import PortalAuthForm from '@/components/portal/PortalAuthForm'
+import { portalPath } from '@/components/portal/portal-utils'
 
 // =============================================
 // TYPES
@@ -90,7 +91,7 @@ export default function PortalPage() {
 
         // If authenticated, redirect to dashboard
         if (statusResult.authenticated) {
-            router.replace(`/join/${workspaceSlug}/dashboard`)
+            router.replace(portalPath(workspaceSlug, '/dashboard'))
             return
         }
 

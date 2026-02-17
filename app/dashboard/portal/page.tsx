@@ -76,8 +76,8 @@ export default function PortalSettingsPage() {
         setSavingColor(false)
     }
 
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.traaaction.com'
-    const portalUrl = settings ? `${baseUrl}/join/${settings.slug}` : ''
+    const portalUrl = settings ? `https://${settings.slug}.traaaction.com` : ''
+    const portalUrlFallback = settings ? `https://traaaction.com/join/${settings.slug}` : ''
     const iframeSnippet = `<iframe src="${portalUrl}" style="width:100%;height:850px;border:none;" allow="clipboard-write"></iframe>`
 
     const handleCopy = (text: string, type: 'url' | 'iframe') => {
@@ -147,6 +147,14 @@ export default function PortalSettingsPage() {
                                 <a href={portalUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors">
                                     <ExternalLink className="w-4 h-4" />
                                 </a>
+                            </div>
+
+                            <div className="mt-3">
+                                <p className="text-xs text-gray-500 mb-1.5">{t('altUrl')}</p>
+                                <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
+                                    <Globe className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                                    <code className="text-sm text-gray-500 truncate flex-1">{portalUrlFallback}</code>
+                                </div>
                             </div>
 
                             {settings.customDomain && (

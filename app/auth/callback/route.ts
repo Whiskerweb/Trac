@@ -61,6 +61,20 @@ export async function GET(request: NextRequest) {
     }
 
     // =============================================
+    // PORTAL SUBDOMAIN DETECTION
+    // If callback comes from slug.traaaction.com (not www/seller/app), force seller role
+    // =============================================
+    const portalSlugMatch = callbackHostname.match(/^([a-z0-9-]+)\.(traaaction\.com|localhost)$/)
+    const isPortalSubdomain = !!portalSlugMatch &&
+        !['www', 'seller', 'app'].includes(portalSlugMatch[1]) &&
+        portalSlugMatch[1] !== 'localhost'
+
+    if (isPortalSubdomain && !roleIntent) {
+        roleIntent = 'seller'
+        console.log('[Auth Callback] Portal subdomain detected, forcing roleIntent=seller')
+    }
+
+    // =============================================
     // SUBDOMAIN-AWARE REDIRECT ORIGINS
     // In production, redirect directly to the correct subdomain
     // to avoid cross-origin RSC fetch issues (CORS)
@@ -167,7 +181,8 @@ export async function GET(request: NextRequest) {
         }
 
         // If explicit redirect was requested (e.g. from invite link), honor it
-        if (redirectTo) {
+        // BUT: portal flows (/join/*) must NOT redirect early — seller creation happens below
+        if (redirectTo && !redirectTo.startsWith('/join/') && !isPortalSubdomain) {
             return createRedirect(`${origin}${redirectTo}`)
         }
 
@@ -213,6 +228,15 @@ export async function GET(request: NextRequest) {
                     })
 
                     if (result.success) {
+                        // Portal flow: redirect back to portal instead of onboarding
+                        if (redirectTo && redirectTo.startsWith('/join/')) {
+                            console.log('[Auth Callback] Seller created, redirecting to portal:', redirectTo)
+                            return createRedirect(`${origin}${redirectTo}`)
+                        }
+                        if (isPortalSubdomain) {
+                            console.log('[Auth Callback] Seller created on portal subdomain, redirecting to /')
+                            return createRedirect(`${origin}/`)
+                        }
                         console.log('[Auth Callback] Auto-created Global Seller, redirecting to onboarding')
                         // ?new=1 tells the onboarding page to show step 1 immediately
                         // without waiting for the DB read (PgBouncer lag protection)
@@ -235,6 +259,16 @@ export async function GET(request: NextRequest) {
         // =============================================
         // EXISTING USER HANDLING
         // =============================================
+
+        // Portal flow: existing seller should go back to portal
+        if (redirectTo && redirectTo.startsWith('/join/')) {
+            console.log('[Auth Callback] Existing user, redirecting to portal:', redirectTo)
+            return createRedirect(`${origin}${redirectTo}`)
+        }
+        if (isPortalSubdomain) {
+            console.log('[Auth Callback] Existing user on portal subdomain, redirecting to /')
+            return createRedirect(`${origin}/`)
+        }
 
         // Dual Role User -> Auth Choice (Resume session)
         if (roles.hasWorkspace && roles.hasSeller) {

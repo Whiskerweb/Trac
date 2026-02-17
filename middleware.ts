@@ -73,6 +73,25 @@ const PRIMARY_DOMAINS = [
 // Seller subdomain for biface architecture
 const PARTNER_SUBDOMAIN = 'seller.traaaction.com'
 
+/**
+ * Detect portal subdomain (slug.traaaction.com)
+ * Returns the workspace slug or null
+ */
+function getPortalSlugFromSubdomain(hostname: string): string | null {
+    const h = hostname.toLowerCase().replace(/:\d+$/, '')
+    // Production: slug.traaaction.com
+    if (h.endsWith('.traaaction.com')) {
+        const sub = h.replace('.traaaction.com', '')
+        if (!['www', 'seller', 'app'].includes(sub)) return sub
+    }
+    // Dev: slug.localhost
+    if (process.env.NODE_ENV === 'development' && h.endsWith('.localhost')) {
+        const sub = h.replace('.localhost', '')
+        if (!['seller', 'app'].includes(sub) && sub !== 'localhost') return sub
+    }
+    return null
+}
+
 // Cache for domain lookups (Edge-compatible in-memory)
 const domainCache = new Map<string, { workspaceId: string | null; timestamp: number }>()
 const DOMAIN_CACHE_TTL = 60 * 60 * 1000 // 1 hour
@@ -372,6 +391,28 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             console.log(`[Middleware] 🔀 Rewriting App Domain: ${hostname}${pathname} -> ${newUrl.pathname}`)
             return NextResponse.rewrite(newUrl)
         }
+    }
+
+    // 🔄 PORTAL SUBDOMAIN ROUTING (slug.traaaction.com → /join/slug/*)
+    const portalSlug = getPortalSlugFromSubdomain(hostname)
+    if (portalSlug) {
+        const sharedPaths = ['/login', '/auth', '/_next', '/api', '/Logotrac', '/favicon']
+        const isShared = sharedPaths.some(p => pathname.startsWith(p))
+
+        if (!isShared) {
+            const newUrl = request.nextUrl.clone()
+            if (pathname === '/') {
+                newUrl.pathname = `/join/${portalSlug}`
+            } else {
+                newUrl.pathname = `/join/${portalSlug}${pathname}`
+            }
+            console.log(`[Middleware] 🔀 Rewriting Portal Subdomain: ${hostname}${pathname} -> ${newUrl.pathname}`)
+            const response = NextResponse.rewrite(newUrl)
+            response.headers.delete('X-Frame-Options')
+            response.headers.set('Content-Security-Policy', "frame-ancestors *")
+            return response
+        }
+        // Shared paths fall through to normal middleware (session refresh, etc.)
     }
 
     // ============================================

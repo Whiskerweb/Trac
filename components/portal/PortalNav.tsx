@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { LogOut, ChevronDown, User } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
+import { portalPath } from './portal-utils'
 
 interface PortalNavProps {
     workspaceSlug: string
@@ -20,13 +21,13 @@ export default function PortalNav({ workspaceSlug, workspaceName, logoUrl, prima
     const pathname = usePathname()
     const [showDropdown, setShowDropdown] = useState(false)
 
-    const basePath = `/join/${workspaceSlug}/dashboard`
+    const basePath = portalPath(workspaceSlug, '/dashboard')
 
     const tabs = [
         { href: basePath, label: t('home'), exact: true },
-        { href: `${basePath}/commissions`, label: t('commissions'), exact: false },
-        { href: `${basePath}/payouts`, label: t('payouts'), exact: false },
-        { href: `${basePath}/assets`, label: t('assets'), exact: false },
+        { href: portalPath(workspaceSlug, '/dashboard/commissions'), label: t('commissions'), exact: false },
+        { href: portalPath(workspaceSlug, '/dashboard/payouts'), label: t('payouts'), exact: false },
+        { href: portalPath(workspaceSlug, '/dashboard/assets'), label: t('assets'), exact: false },
     ]
 
     const isActive = (href: string, exact: boolean) => {
@@ -37,7 +38,7 @@ export default function PortalNav({ workspaceSlug, workspaceName, logoUrl, prima
     const handleLogout = async () => {
         const supabase = createClient()
         await supabase.auth.signOut()
-        window.location.href = `/join/${workspaceSlug}`
+        window.location.href = portalPath(workspaceSlug)
     }
 
     return (

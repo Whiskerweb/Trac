@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { getPortalFullDashboard } from '@/app/actions/portal'
 import PortalNav from '@/components/portal/PortalNav'
+import { portalPath } from '@/components/portal/portal-utils'
 
 interface PortalDashboardData {
     workspace: {
@@ -57,7 +58,7 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
 
         if (!result.success || !result.data) {
             // Not authenticated or no enrollment — redirect to landing
-            router.replace(`/join/${workspaceSlug}`)
+            router.replace(portalPath(workspaceSlug))
             return
         }
 

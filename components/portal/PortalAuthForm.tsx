@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Eye, EyeOff, Loader2, Mail } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
+import { isPortalSubdomain, portalPath } from './portal-utils'
 
 interface PortalAuthFormProps {
     workspaceSlug: string
@@ -34,7 +35,9 @@ export default function PortalAuthForm({ workspaceSlug, primaryColor }: PortalAu
         if (password.length < 6) { setError(t('errorPasswordMin')); setLoading(false); return }
 
         const siteUrl = window.location.origin
-        const redirectUrl = `${siteUrl}/auth/callback?role=seller&next=/join/${workspaceSlug}`
+        const onSub = isPortalSubdomain()
+        const nextPath = onSub ? '/' : `/join/${workspaceSlug}`
+        const redirectUrl = `${siteUrl}/auth/callback?role=seller&next=${nextPath}`
 
         const { error: err } = await supabase.auth.signUp({
             email,
@@ -64,7 +67,9 @@ export default function PortalAuthForm({ workspaceSlug, primaryColor }: PortalAu
     const handleResend = async () => {
         setResendLoading(true)
         const siteUrl = window.location.origin
-        const redirectUrl = `${siteUrl}/auth/callback?role=seller&next=/join/${workspaceSlug}`
+        const onSub = isPortalSubdomain()
+        const nextPath = onSub ? '/' : `/join/${workspaceSlug}`
+        const redirectUrl = `${siteUrl}/auth/callback?role=seller&next=${nextPath}`
         await supabase.auth.resend({
             type: 'signup',
             email,
