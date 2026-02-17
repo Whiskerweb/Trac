@@ -1502,7 +1502,7 @@ function Step4AccessControl({
                         <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-gray-900 text-base sm:text-lg">Invite Only</h3>
                             <p className="text-gray-500 mt-1 text-sm sm:text-base">
-                                Your program is hidden from the marketplace. Only partners with your unique invite link can join.
+                                Your program is hidden from the marketplace. Only partners with your unique invite link can join. Also required for proposing deals to organizations.
                             </p>
                             <div className="mt-3 flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-400">
                                 <span className="flex items-center gap-1.5">
@@ -1512,6 +1512,10 @@ function Step4AccessControl({
                                 <span className="flex items-center gap-1.5">
                                     <Check className="w-4 h-4" />
                                     Full control
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                    <Check className="w-4 h-4" />
+                                    Organization deals
                                 </span>
                             </div>
                         </div>

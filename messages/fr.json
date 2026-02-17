@@ -889,7 +889,7 @@
             "lead": "{count, plural, one {# lead} other {# leads}}",
             "revenueLabel": "de revenu",
             "howItWorksSteps": {
-                "step1": "Vous proposez un deal mission avec une recompense totale",
+                "step1": "Créez une mission sur invitation, puis proposez-la à l'organisation avec une récompense totale",
                 "step2": "Le leader accepte et definit sa part",
                 "step3": "Tous les membres actifs sont auto-inscrits avec des liens de tracking",
                 "step4": "Les membres gagnent leur recompense, le leader gagne sa part",
@@ -2818,6 +2818,7 @@
             "enablePortalDesc": "Rendre votre portail affilié publiquement accessible.",
             "portalUrl": "URL du portail",
             "portalUrlDesc": "Partagez ce lien avec vos futurs affiliés.",
+            "altUrl": "URL alternative (chemin)",
             "customDomainUrl": "URL domaine personnalisé",
             "embedCode": "Code d'intégration",
             "embedCodeDesc": "Ajoutez cet iframe sur votre site pour intégrer le portail.",

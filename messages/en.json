@@ -889,7 +889,7 @@
             "lead": "{count, plural, one {# lead} other {# leads}}",
             "revenueLabel": "revenue",
             "howItWorksSteps": {
-                "step1": "You propose a mission deal with a total reward",
+                "step1": "Create an invite-only mission, then propose it to the organization with a total reward",
                 "step2": "The leader accepts and sets their cut",
                 "step3": "All active members are auto-enrolled with tracking links",
                 "step4": "Members earn the member reward, leader earns their cut",
@@ -3045,6 +3045,7 @@
             "enablePortalDesc": "Make your affiliate portal publicly accessible.",
             "portalUrl": "Portal URL",
             "portalUrlDesc": "Share this link with potential affiliates.",
+            "altUrl": "Alternative URL (path-based)",
             "customDomainUrl": "Custom domain URL",
             "embedCode": "Embed Code",
             "embedCodeDesc": "Add this iframe to your website to embed the portal.",
