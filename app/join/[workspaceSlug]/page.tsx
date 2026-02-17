@@ -1,21 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
-import {
-    Loader2, DollarSign, RefreshCw, Users,
-    Shield, Clock, BarChart3, CheckCircle2
-} from 'lucide-react'
+import { Loader2, Shield, Clock, BarChart3, CheckCircle2, ArrowDown } from 'lucide-react'
 import { getPortalData, getPortalUserStatus } from '@/app/actions/portal'
 import PortalAuthForm from '@/components/portal/PortalAuthForm'
-import PortalMissionPreviewCard from '@/components/portal/PortalMissionPreviewCard'
+import PortalProgramShowcase from '@/components/portal/PortalProgramShowcase'
 import { portalPath } from '@/components/portal/portal-utils'
-
-// =============================================
-// TYPES
-// =============================================
 
 interface MissionCard {
     id: string
@@ -44,26 +37,13 @@ interface PortalProfile {
     linkedin_url: string | null
 }
 
-// =============================================
-// HELPERS
-// =============================================
-
-function formatReward(amount: number | null, structure: string | null) {
-    if (!amount) return null
-    if (structure === 'PERCENTAGE') return `${amount}%`
-    return `${(amount / 100).toFixed(0)}\u20AC`
-}
-
-// =============================================
-// MAIN PORTAL LANDING PAGE
-// =============================================
-
 export default function PortalPage() {
     const params = useParams()
     const router = useRouter()
     const t = useTranslations('portal')
     const tLanding = useTranslations('portal.landing')
     const workspaceSlug = params.workspaceSlug as string
+    const authRef = useRef<HTMLDivElement>(null)
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -110,9 +90,9 @@ export default function PortalPage() {
 
     useEffect(() => { loadData() }, [loadData])
 
-    // =============================================
-    // RENDER
-    // =============================================
+    const scrollToAuth = () => {
+        authRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
 
     if (loading) {
         return (
@@ -137,49 +117,31 @@ export default function PortalPage() {
     }
 
     const primaryColor = workspace.portal_primary_color || '#7C3AED'
-    const isMultiMission = missions.length > 1
-    const primaryMission = missions[0]
-
-    // Build reward items for single-mission display
-    const rewardItems: { icon: React.ElementType; label: string; value: string }[] = []
-    if (primaryMission && !isMultiMission) {
-        if (primaryMission.sale_enabled && primaryMission.sale_reward_amount) {
-            rewardItems.push({
-                icon: DollarSign,
-                label: t('perSale'),
-                value: formatReward(primaryMission.sale_reward_amount, primaryMission.sale_reward_structure) || '',
-            })
-        }
-        if (primaryMission.lead_enabled && primaryMission.lead_reward_amount) {
-            rewardItems.push({
-                icon: Users,
-                label: t('perLead'),
-                value: formatReward(primaryMission.lead_reward_amount, null) || '',
-            })
-        }
-        if (primaryMission.recurring_enabled && primaryMission.recurring_reward_amount) {
-            rewardItems.push({
-                icon: RefreshCw,
-                label: t('recurringCommission'),
-                value: formatReward(primaryMission.recurring_reward_amount, primaryMission.recurring_reward_structure) || '',
-            })
-        }
-    }
 
     return (
         <div className="min-h-screen bg-white">
-            {/* Desktop: Split layout, Mobile: Stacked */}
+            {/* Preview Mode Banner */}
+            {isPreviewMode && (
+                <div className="bg-amber-50 border-b border-amber-100 px-4 py-2 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                        <Shield className="w-4 h-4 text-amber-500" />
+                        <span className="text-xs font-medium text-amber-700">{t('previewMode')}</span>
+                        <span className="text-xs text-amber-600">{t('previewModeDesc')}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Desktop: 65/35 layout with sticky auth. Mobile: stacked */}
             <div className="flex flex-col lg:flex-row min-h-screen">
-                {/* LEFT PANEL — Branding */}
+                {/* LEFT — Content (programmes first) */}
                 <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-16 py-12 lg:py-0"
-                    style={{ backgroundColor: `${primaryColor}06` }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4 }}
+                    className="lg:w-[63%] px-6 sm:px-10 lg:px-14 py-10 lg:py-16"
                 >
-                    <div className="max-w-lg mx-auto lg:mx-0 w-full">
-                        {/* Logo */}
+                    <div className="max-w-xl">
+                        {/* Logo + Name */}
                         <div className="flex items-center gap-3 mb-8">
                             {profile?.logo_url ? (
                                 <img src={profile.logo_url} alt={workspace.name} className="w-11 h-11 rounded-xl object-cover" />
@@ -195,75 +157,29 @@ export default function PortalPage() {
                         </div>
 
                         {/* Headline */}
-                        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-4">
-                            {workspace.portal_headline || workspace.portal_welcome_text || tLanding('defaultHeadline', { name: workspace.name })}
+                        <h1 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-gray-900 leading-tight mb-4">
+                            {workspace.portal_headline || tLanding('defaultHeadline', { name: workspace.name })}
                         </h1>
 
                         {/* Description */}
-                        {profile?.description && (
-                            <p className="text-base text-gray-500 mb-8 leading-relaxed">{profile.description}</p>
+                        {(workspace.portal_welcome_text || profile?.description) && (
+                            <p className="text-base text-gray-500 mb-8 leading-relaxed">
+                                {workspace.portal_welcome_text || profile?.description}
+                            </p>
                         )}
 
-                        {/* Single mission: reward cards */}
-                        {!isMultiMission && rewardItems.length > 0 && (
-                            <div className="mb-8">
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{tLanding('whatYouEarn')}</p>
-                                <div className="space-y-2">
-                                    {rewardItems.map((item) => (
-                                        <div
-                                            key={item.label}
-                                            className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3"
-                                        >
-                                            <div
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                                                style={{ backgroundColor: `${primaryColor}12` }}
-                                            >
-                                                <item.icon className="w-4 h-4" style={{ color: primaryColor }} />
-                                            </div>
-                                            <span className="text-sm text-gray-600 flex-1">{item.label}</span>
-                                            <span className="text-lg font-bold text-gray-900">{item.value}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Multi-mission: mission cards grid */}
-                        {isMultiMission && (
-                            <div className="mb-8">
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                                    {tLanding('availablePrograms', { count: missions.length })}
-                                </p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {missions.map(mission => (
-                                        <PortalMissionPreviewCard
-                                            key={mission.id}
-                                            title={mission.title}
-                                            description={mission.description}
-                                            sale_enabled={mission.sale_enabled}
-                                            sale_reward_amount={mission.sale_reward_amount}
-                                            sale_reward_structure={mission.sale_reward_structure}
-                                            lead_enabled={mission.lead_enabled}
-                                            lead_reward_amount={mission.lead_reward_amount}
-                                            recurring_enabled={mission.recurring_enabled}
-                                            recurring_reward_amount={mission.recurring_reward_amount}
-                                            recurring_reward_structure={mission.recurring_reward_structure}
-                                            primaryColor={primaryColor}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* No missions message */}
-                        {missions.length === 0 && (
-                            <div className="mb-8 rounded-xl border border-gray-100 bg-gray-50/50 p-6 text-center">
-                                <p className="text-sm text-gray-500">{tLanding('noMissions')}</p>
-                            </div>
-                        )}
+                        {/* CTA (mobile: scroll to auth, desktop: visual anchor) */}
+                        <button
+                            onClick={scrollToAuth}
+                            className="lg:hidden inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl text-sm font-semibold transition-all hover:opacity-90 mb-8"
+                            style={{ backgroundColor: primaryColor }}
+                        >
+                            {t('createAccount')}
+                            <ArrowDown className="w-4 h-4" />
+                        </button>
 
                         {/* Trust elements */}
-                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400">
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400 mb-10">
                             <span className="flex items-center gap-1.5">
                                 <Shield className="w-3.5 h-3.5" />
                                 {tLanding('freeToJoin')}
@@ -277,31 +193,81 @@ export default function PortalPage() {
                                 {tLanding('realTimeTracking')}
                             </span>
                         </div>
+
+                        {/* Programs Section */}
+                        {missions.length === 0 ? (
+                            <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-8 text-center">
+                                <p className="text-sm text-gray-500">{tLanding('noMissions')}</p>
+                            </div>
+                        ) : missions.length === 1 ? (
+                            <PortalProgramShowcase
+                                title={missions[0].title}
+                                description={missions[0].description}
+                                sale_enabled={missions[0].sale_enabled}
+                                sale_reward_amount={missions[0].sale_reward_amount}
+                                sale_reward_structure={missions[0].sale_reward_structure}
+                                lead_enabled={missions[0].lead_enabled}
+                                lead_reward_amount={missions[0].lead_reward_amount}
+                                recurring_enabled={missions[0].recurring_enabled}
+                                recurring_reward_amount={missions[0].recurring_reward_amount}
+                                recurring_reward_structure={missions[0].recurring_reward_structure}
+                                recurring_duration_months={missions[0].recurring_duration_months}
+                                primaryColor={primaryColor}
+                            />
+                        ) : (
+                            <div>
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                                    {tLanding('availablePrograms', { count: missions.length })}
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {missions.map(mission => (
+                                        <PortalProgramShowcase
+                                            key={mission.id}
+                                            title={mission.title}
+                                            description={mission.description}
+                                            sale_enabled={mission.sale_enabled}
+                                            sale_reward_amount={mission.sale_reward_amount}
+                                            sale_reward_structure={mission.sale_reward_structure}
+                                            lead_enabled={mission.lead_enabled}
+                                            lead_reward_amount={mission.lead_reward_amount}
+                                            recurring_enabled={mission.recurring_enabled}
+                                            recurring_reward_amount={mission.recurring_reward_amount}
+                                            recurring_reward_structure={mission.recurring_reward_structure}
+                                            recurring_duration_months={mission.recurring_duration_months}
+                                            primaryColor={primaryColor}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
 
-                {/* RIGHT PANEL — Auth Form or Preview Mode */}
+                {/* RIGHT — Auth Form (sticky on desktop) */}
                 <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                    className="lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-16 py-12 lg:py-0"
+                    ref={authRef}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.1 }}
+                    className="lg:w-[37%] lg:border-l lg:border-gray-100"
                 >
-                    <div className="max-w-md mx-auto w-full">
-                        {isPreviewMode ? (
-                            <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-8 text-center">
-                                <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-                                    <Shield className="w-6 h-6 text-amber-500" />
+                    <div className="lg:sticky lg:top-0 lg:h-screen lg:flex lg:items-center px-6 sm:px-10 lg:px-10 py-10 lg:py-0">
+                        <div className="w-full max-w-sm mx-auto">
+                            {isPreviewMode ? (
+                                <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-8 text-center">
+                                    <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                        <Shield className="w-6 h-6 text-amber-500" />
+                                    </div>
+                                    <h3 className="text-base font-semibold text-gray-900 mb-1">{t('previewMode')}</h3>
+                                    <p className="text-sm text-gray-500">{t('previewModeDesc')}</p>
                                 </div>
-                                <h3 className="text-base font-semibold text-gray-900 mb-1">{t('previewMode')}</h3>
-                                <p className="text-sm text-gray-500">{t('previewModeDesc')}</p>
-                            </div>
-                        ) : (
-                            <PortalAuthForm
-                                workspaceSlug={workspaceSlug}
-                                primaryColor={primaryColor}
-                            />
-                        )}
+                            ) : (
+                                <PortalAuthForm
+                                    workspaceSlug={workspaceSlug}
+                                    primaryColor={primaryColor}
+                                />
+                            )}
+                        </div>
                     </div>
                 </motion.div>
             </div>

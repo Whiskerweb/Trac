@@ -1,26 +1,37 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useParams } from 'next/navigation'
-import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { ArrowRight, Loader2 } from 'lucide-react'
 import { usePortalData } from './layout'
 import PortalKPIRow from '@/components/portal/PortalKPIRow'
-import PortalEnrollmentCard from '@/components/portal/PortalEnrollmentCard'
-import { portalPath } from '@/components/portal/portal-utils'
+import PortalProgramCard from '@/components/portal/PortalProgramCard'
+import PortalEarningsSection from '@/components/portal/PortalEarningsSection'
+import { portalJoinMission } from '@/app/actions/portal'
 
-export default function PortalDashboardHome() {
+export default function PortalDashboardPage() {
     const ctx = usePortalData()
-    const t = useTranslations('portal.home')
+    const t = useTranslations('portal.dashboard')
     const tPrograms = useTranslations('portal.programs')
     const params = useParams()
     const workspaceSlug = params.workspaceSlug as string
 
+    const [expandedId, setExpandedId] = useState<string | null>(null)
+    const [joiningId, setJoiningId] = useState<string | null>(null)
+
     if (!ctx) return null
-    const { data } = ctx
+    const { data, refresh } = ctx
 
     const primaryColor = data.workspace.portal_primary_color || '#7C3AED'
+
+    const handleJoin = async (missionId: string) => {
+        setJoiningId(missionId)
+        await portalJoinMission(missionId)
+        await refresh()
+        setJoiningId(null)
+    }
 
     return (
         <div className="space-y-5">
@@ -34,81 +45,92 @@ export default function PortalDashboardHome() {
                 />
             </motion.div>
 
-            {/* My Programs Grid */}
+            {/* My Programs — Accordion */}
             <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 }}
-                className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6"
             >
-                <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm font-semibold text-gray-900">{t('myPrograms')}</p>
-                    <Link
-                        href={portalPath(workspaceSlug, '/dashboard/programs')}
-                        className="flex items-center gap-1 text-xs font-medium transition-colors"
-                        style={{ color: primaryColor }}
-                    >
-                        {t('viewAll')}
-                        <ArrowRight className="w-3 h-3" />
-                    </Link>
-                </div>
+                <p className="text-sm font-semibold text-gray-900 mb-3">{t('myPrograms')}</p>
 
                 {data.enrollments.length === 0 ? (
-                    <div className="text-center py-8">
+                    <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
                         <p className="text-sm text-gray-500">{tPrograms('noEnrolled')}</p>
-                        <Link
-                            href={portalPath(workspaceSlug, '/dashboard/programs')}
-                            className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium transition-colors"
-                            style={{ color: primaryColor }}
-                        >
-                            {tPrograms('browseAvailable')}
-                            <ArrowRight className="w-3 h-3" />
-                        </Link>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {data.enrollments.map(enrollment => (
-                            <PortalEnrollmentCard
+                    <div className="space-y-2">
+                        {data.enrollments.map((enrollment) => (
+                            <PortalProgramCard
                                 key={enrollment.id}
-                                workspaceSlug={workspaceSlug}
-                                missionId={enrollment.missionId}
                                 missionTitle={enrollment.missionTitle}
                                 missionDescription={enrollment.missionDescription}
                                 linkUrl={enrollment.linkUrl}
-                                clicks={enrollment.clicks}
+                                stats={enrollment.stats}
+                                sale_enabled={enrollment.sale_enabled}
+                                sale_reward_amount={enrollment.sale_reward_amount}
+                                sale_reward_structure={enrollment.sale_reward_structure}
+                                lead_enabled={enrollment.lead_enabled}
+                                lead_reward_amount={enrollment.lead_reward_amount}
+                                recurring_enabled={enrollment.recurring_enabled}
+                                recurring_reward_amount={enrollment.recurring_reward_amount}
+                                recurring_reward_structure={enrollment.recurring_reward_structure}
+                                recurring_duration_months={enrollment.recurring_duration_months}
+                                contents={enrollment.contents}
                                 primaryColor={primaryColor}
+                                expanded={expandedId === enrollment.id}
+                                onToggle={() => setExpandedId(expandedId === enrollment.id ? null : enrollment.id)}
                             />
                         ))}
                     </div>
                 )}
             </motion.div>
 
-            {/* Available Programs Teaser */}
+            {/* Available Programs */}
             {data.availableMissions.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6"
+                    transition={{ delay: 0.08 }}
                 >
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-semibold text-gray-900">{tPrograms('available')}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                                {tPrograms('availableCount', { count: data.availableMissions.length })}
-                            </p>
-                        </div>
-                        <Link
-                            href={portalPath(workspaceSlug, '/dashboard/programs')}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-colors"
-                            style={{ backgroundColor: primaryColor }}
-                        >
-                            {tPrograms('browseAvailable')}
-                            <ArrowRight className="w-3 h-3" />
-                        </Link>
+                    <p className="text-sm font-semibold text-gray-900 mb-3">{tPrograms('available')}</p>
+                    <div className="space-y-2">
+                        {data.availableMissions.map((mission) => (
+                            <div
+                                key={mission.id}
+                                className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-3"
+                            >
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">{mission.title}</p>
+                                    <p className="text-xs text-gray-500 truncate mt-0.5">{mission.description}</p>
+                                </div>
+                                <button
+                                    onClick={() => handleJoin(mission.id)}
+                                    disabled={joiningId === mission.id}
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+                                    style={{ backgroundColor: primaryColor }}
+                                >
+                                    {joiningId === mission.id ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <>
+                                            {mission.visibility === 'PRIVATE' ? tPrograms('requestJoin') : tPrograms('joinNow')}
+                                            <ArrowRight className="w-3 h-3" />
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        ))}
                     </div>
                 </motion.div>
             )}
+
+            {/* Recent Earnings + Payout */}
+            <PortalEarningsSection
+                workspaceSlug={workspaceSlug}
+                recentCommissions={data.recentCommissions}
+                payout={data.payout}
+                primaryColor={primaryColor}
+            />
         </div>
     )
 }

@@ -2747,11 +2747,14 @@
             "noMissions": "No hay programas disponibles por el momento."
         },
         "nav": {
-            "home": "Inicio",
-            "programs": "Programas",
-            "commissions": "Comisiones",
-            "payouts": "Pagos",
             "logout": "Cerrar sesión"
+        },
+        "dashboard": {
+            "myPrograms": "Mis programas",
+            "earnings": "Ganancias recientes",
+            "showMore": "Ver más",
+            "noStats": "Sin datos aún",
+            "payoutMethod": "Método de pago"
         },
         "home": {
             "due": "Pendiente",
@@ -2867,6 +2870,7 @@
             "brandColorDesc": "Color principal usado para botones, enlaces y acentos en el portal.",
             "previewButton": "Vista previa botón",
             "save": "Guardar",
+            "saved": "¡Guardado!",
             "copy": "Copiar",
             "copied": "¡Copiado!",
             "missionSelection": "Selección de misiones",

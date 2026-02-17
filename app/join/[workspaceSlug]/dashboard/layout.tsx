@@ -4,8 +4,15 @@ import { useState, useEffect, createContext, useContext, useCallback } from 'rea
 import { useParams, useRouter } from 'next/navigation'
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
 import { getPortalFullDashboard } from '@/app/actions/portal'
-import PortalNav from '@/components/portal/PortalNav'
+import PortalHeader from '@/components/portal/PortalHeader'
 import { portalPath } from '@/components/portal/portal-utils'
+
+interface EnrollmentStats {
+    clicks: number
+    leads: number
+    sales: number
+    revenue: number
+}
 
 interface EnrollmentData {
     id: string
@@ -28,6 +35,19 @@ interface EnrollmentData {
     recurring_duration_months: number | null
     company_name: string | null
     logo_url: string | null
+    stats: EnrollmentStats
+}
+
+interface RecentCommission {
+    id: string
+    amount: number
+    status: string
+    source: string
+    createdAt: string
+    maturedAt: string | null
+    holdDays: number
+    recurringMonth: number | null
+    rate: string | null
 }
 
 interface AvailableMission {
@@ -61,6 +81,15 @@ export interface PortalDashboardData {
     enrollments: EnrollmentData[]
     availableMissions: AvailableMission[]
     balance: { pending: number; available: number; paid: number }
+    recentCommissions: RecentCommission[]
+    payout: {
+        method: string
+        stripeConnected: boolean
+        balance: number
+        pending: number
+        due: number
+        paidTotal: number
+    }
     sellerName: string
 }
 
@@ -87,7 +116,6 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
         const result = await getPortalFullDashboard(workspaceSlug)
 
         if (!result.success || !result.data) {
-            // Only redirect for auth errors — show error state for everything else
             if (result.error === 'Not authenticated') {
                 router.replace(portalPath(workspaceSlug))
                 return
@@ -97,7 +125,7 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
             return
         }
 
-        setData(result.data)
+        setData(result.data as PortalDashboardData)
         setLoading(false)
     }, [workspaceSlug, router])
 
@@ -137,10 +165,10 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
     return (
         <PortalContext.Provider value={{ data, refresh: loadData }}>
             <div className="min-h-screen bg-gray-50/50">
-                <PortalNav
+                <PortalHeader
                     workspaceSlug={workspaceSlug}
                     workspaceName={data.workspace.name}
-                    logoUrl={data.profile?.logo_url}
+                    logoUrl={data.profile?.logo_url ?? null}
                     primaryColor={primaryColor}
                     userName={data.sellerName}
                 />
@@ -148,7 +176,6 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
                     {children}
                 </main>
 
-                {/* Footer */}
                 <footer className="border-t border-gray-100 py-4 mt-8 text-center">
                     <a
                         href="https://traaaction.com"

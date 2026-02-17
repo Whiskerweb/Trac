@@ -2974,11 +2974,14 @@
             "noMissions": "No programs available yet. Check back soon!"
         },
         "nav": {
-            "home": "Home",
-            "programs": "Programs",
-            "commissions": "Commissions",
-            "payouts": "Payouts",
             "logout": "Log out"
+        },
+        "dashboard": {
+            "myPrograms": "My Programs",
+            "earnings": "Recent Earnings",
+            "showMore": "Show more",
+            "noStats": "No data yet",
+            "payoutMethod": "Payout Method"
         },
         "home": {
             "due": "Due",
@@ -3094,6 +3097,7 @@
             "brandColorDesc": "Primary color used for buttons, links and accents across the portal.",
             "previewButton": "Preview Button",
             "save": "Save",
+            "saved": "Saved!",
             "copy": "Copy",
             "copied": "Copied!",
             "missionSelection": "Mission Selection",

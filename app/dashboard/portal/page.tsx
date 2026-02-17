@@ -6,13 +6,12 @@ import { motion } from 'framer-motion'
 import {
     Globe, Copy, Check, ExternalLink, Code, Loader2,
     ToggleRight, ToggleLeft, Type, Palette, MessageSquare,
-    Eye, EyeOff, Users, DollarSign, BarChart3
+    Eye, EyeOff, Users, DollarSign, BarChart3, ChevronDown
 } from 'lucide-react'
 import {
     getPortalSettings, togglePortal,
-    updatePortalWelcomeText, updatePortalHeadline,
-    updatePortalPrimaryColor, toggleMissionPortalVisibility,
-    getPortalOverview
+    toggleMissionPortalVisibility,
+    getPortalOverview, updatePortalBranding
 } from '@/app/actions/portal-settings'
 
 interface PortalSettings {
@@ -37,15 +36,15 @@ export default function PortalManagementPage() {
     const [loading, setLoading] = useState(true)
     const [settings, setSettings] = useState<PortalSettings | null>(null)
     const [stats, setStats] = useState<PortalStats | null>(null)
-    const [saving, setSaving] = useState(false)
-    const [savingHeadline, setSavingHeadline] = useState(false)
-    const [savingColor, setSavingColor] = useState(false)
+    const [savingBranding, setSavingBranding] = useState(false)
+    const [brandingSaved, setBrandingSaved] = useState(false)
     const [welcomeText, setWelcomeText] = useState('')
     const [headline, setHeadline] = useState('')
     const [primaryColor, setPrimaryColor] = useState('#7C3AED')
     const [copiedUrl, setCopiedUrl] = useState(false)
     const [copiedIframe, setCopiedIframe] = useState(false)
     const [togglingMission, setTogglingMission] = useState<string | null>(null)
+    const [showEmbed, setShowEmbed] = useState(false)
 
     const loadData = useCallback(async () => {
         const [settingsResult, overviewResult] = await Promise.all([
@@ -74,24 +73,25 @@ export default function PortalManagementPage() {
         const newVal = !settings.portal_enabled
         setSettings({ ...settings, portal_enabled: newVal })
         await togglePortal(newVal)
+        // Re-fetch to get updated mission visibility
+        if (newVal) {
+            const result = await getPortalSettings()
+            if (result.success && result.data) setSettings(result.data)
+        }
     }
 
-    const handleSaveWelcome = async () => {
-        setSaving(true)
-        await updatePortalWelcomeText(welcomeText)
-        setSaving(false)
-    }
-
-    const handleSaveHeadline = async () => {
-        setSavingHeadline(true)
-        await updatePortalHeadline(headline)
-        setSavingHeadline(false)
-    }
-
-    const handleSaveColor = async () => {
-        setSavingColor(true)
-        await updatePortalPrimaryColor(primaryColor)
-        setSavingColor(false)
+    const handleSaveBranding = async () => {
+        setSavingBranding(true)
+        const result = await updatePortalBranding({
+            headline,
+            welcomeText,
+            primaryColor,
+        })
+        setSavingBranding(false)
+        if (result.success) {
+            setBrandingSaved(true)
+            setTimeout(() => setBrandingSaved(false), 2000)
+        }
     }
 
     const handleToggleMission = async (missionId: string, currentVisible: boolean) => {
@@ -116,6 +116,8 @@ export default function PortalManagementPage() {
         if (type === 'url') { setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000) }
         else { setCopiedIframe(true); setTimeout(() => setCopiedIframe(false), 2000) }
     }
+
+    const visibleCount = settings?.missions.filter(m => m.portal_visible).length || 0
 
     if (loading) {
         return (
@@ -151,14 +153,36 @@ export default function PortalManagementPage() {
                 </div>
             </div>
 
+            {/* Overview Stats */}
+            {stats && settings.portal_enabled && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="bg-white rounded-2xl border border-gray-200 p-4 text-center">
+                        <Users className="w-5 h-5 text-purple-500 mx-auto mb-2" />
+                        <p className="text-2xl font-bold text-gray-900">{stats.totalAffiliates}</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">{t('totalAffiliates')}</p>
+                    </div>
+                    <div className="bg-white rounded-2xl border border-gray-200 p-4 text-center">
+                        <DollarSign className="w-5 h-5 text-emerald-500 mx-auto mb-2" />
+                        <p className="text-2xl font-bold text-gray-900">{stats.totalCommissions}</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">{t('totalCommissions')}</p>
+                    </div>
+                    <div className="bg-white rounded-2xl border border-gray-200 p-4 text-center">
+                        <BarChart3 className="w-5 h-5 text-blue-500 mx-auto mb-2" />
+                        <p className="text-2xl font-bold text-gray-900">{(stats.totalRevenue / 100).toFixed(0)}&euro;</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">{t('totalRevenue')}</p>
+                    </div>
+                </motion.div>
+            )}
+
             <div className="space-y-6">
-                {/* Toggle */}
+                {/* Section 1: Enable & Programs */}
                 <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-white rounded-2xl border border-gray-200 p-6"
                 >
-                    <div className="flex items-center justify-between">
+                    {/* Toggle */}
+                    <div className="flex items-center justify-between mb-5">
                         <div>
                             <h2 className="text-sm font-semibold text-gray-900">{t('enablePortal')}</h2>
                             <p className="text-xs text-gray-500 mt-0.5">{t('enablePortalDesc')}</p>
@@ -171,53 +195,63 @@ export default function PortalManagementPage() {
                             )}
                         </button>
                     </div>
+
+                    {/* Mission visibility */}
+                    {settings.portal_enabled && (
+                        <>
+                            <div className="border-t border-gray-100 pt-5">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                        <h3 className="text-xs font-semibold text-gray-700">{t('missionSelection')}</h3>
+                                        <p className="text-[11px] text-gray-400 mt-0.5">{t('missionSelectionDesc')}</p>
+                                    </div>
+                                    {visibleCount === 0 && settings.missions.length > 0 && (
+                                        <span className="text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                                            {t('noMissions')}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {settings.missions.length === 0 ? (
+                                    <div className="text-center py-6 bg-gray-50 rounded-xl">
+                                        <Eye className="w-5 h-5 text-gray-300 mx-auto mb-2" />
+                                        <p className="text-xs text-gray-500">{t('noMissions')}</p>
+                                        <p className="text-[11px] text-gray-400 mt-0.5">{t('noMissionsDesc')}</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1.5">
+                                        {settings.missions.map(mission => (
+                                            <div
+                                                key={mission.id}
+                                                className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3"
+                                            >
+                                                <p className="text-sm font-medium text-gray-900 truncate flex-1">{mission.title}</p>
+                                                <button
+                                                    onClick={() => handleToggleMission(mission.id, mission.portal_visible)}
+                                                    disabled={togglingMission === mission.id}
+                                                    className="flex-shrink-0 focus:outline-none ml-3"
+                                                >
+                                                    {togglingMission === mission.id ? (
+                                                        <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+                                                    ) : mission.portal_visible ? (
+                                                        <Eye className="w-5 h-5 text-purple-600" />
+                                                    ) : (
+                                                        <EyeOff className="w-5 h-5 text-gray-300" />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </motion.div>
 
                 {settings.portal_enabled && (
                     <>
-                        {/* Portal URLs */}
+                        {/* Section 2: Branding (single save) */}
                         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-2xl border border-gray-200 p-6">
-                            <h2 className="text-sm font-semibold text-gray-900 mb-1">{t('portalUrl')}</h2>
-                            <p className="text-xs text-gray-500 mb-3">{t('primaryUrlDesc')}</p>
-
-                            {/* Primary URL (path-based) */}
-                            <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
-                                <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                                <code className="text-sm text-gray-700 truncate flex-1">{portalUrl}</code>
-                                <button onClick={() => handleCopy(portalUrl, 'url')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
-                                    {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
-                                    {copiedUrl ? t('copied') : t('copy')}
-                                </button>
-                                <a href={portalUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors">
-                                    <ExternalLink className="w-4 h-4" />
-                                </a>
-                            </div>
-
-                            {/* Custom domain */}
-                            {settings.customDomain && (
-                                <div className="mt-3">
-                                    <p className="text-xs text-gray-500 mb-1.5">{t('customDomainUrl')}</p>
-                                    <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
-                                        <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                                        <code className="text-sm text-gray-700 truncate flex-1">{`https://${settings.customDomain}/join/${settings.slug}`}</code>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* View Portal button */}
-                            <a
-                                href={portalUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors mt-4"
-                            >
-                                <ExternalLink className="w-4 h-4" />
-                                {t('viewPortal')}
-                            </a>
-                        </motion.div>
-
-                        {/* Branding Section */}
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-white rounded-2xl border border-gray-200 p-6">
                             <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('branding')}</h2>
 
                             {/* Headline */}
@@ -235,17 +269,7 @@ export default function PortalManagementPage() {
                                     maxLength={80}
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300 transition-all"
                                 />
-                                <div className="flex items-center justify-between mt-2">
-                                    <span className="text-[11px] text-gray-400">{headline.length}/80</span>
-                                    <button
-                                        onClick={handleSaveHeadline}
-                                        disabled={savingHeadline}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
-                                    >
-                                        {savingHeadline ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Type className="w-3.5 h-3.5" />}
-                                        {t('save')}
-                                    </button>
-                                </div>
+                                <span className="text-[11px] text-gray-400 mt-1 block">{headline.length}/80</span>
                             </div>
 
                             {/* Brand Color */}
@@ -278,20 +302,10 @@ export default function PortalManagementPage() {
                                         {t('previewButton')}
                                     </div>
                                 </div>
-                                <div className="flex justify-end mt-2">
-                                    <button
-                                        onClick={handleSaveColor}
-                                        disabled={savingColor}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
-                                    >
-                                        {savingColor ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Palette className="w-3.5 h-3.5" />}
-                                        {t('save')}
-                                    </button>
-                                </div>
                             </div>
 
                             {/* Welcome Text */}
-                            <div>
+                            <div className="mb-5">
                                 <div className="flex items-center gap-2 mb-1">
                                     <MessageSquare className="w-4 h-4 text-gray-400" />
                                     <label className="text-xs font-medium text-gray-700">{t('welcomeText')}</label>
@@ -304,103 +318,92 @@ export default function PortalManagementPage() {
                                     rows={3}
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300 transition-all"
                                 />
-                                <div className="flex justify-end mt-2">
-                                    <button
-                                        onClick={handleSaveWelcome}
-                                        disabled={saving}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
-                                    >
-                                        {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
-                                        {t('save')}
-                                    </button>
-                                </div>
                             </div>
-                        </motion.div>
 
-                        {/* Mission Selection */}
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-2xl border border-gray-200 p-6">
-                            <h2 className="text-sm font-semibold text-gray-900 mb-1">{t('missionSelection')}</h2>
-                            <p className="text-xs text-gray-500 mb-4">{t('missionSelectionDesc')}</p>
-
-                            {settings.missions.length === 0 ? (
-                                <div className="text-center py-8">
-                                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                        <Eye className="w-5 h-5 text-gray-300" />
-                                    </div>
-                                    <p className="text-sm text-gray-500">{t('noMissions')}</p>
-                                    <p className="text-xs text-gray-400 mt-1">{t('noMissionsDesc')}</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {settings.missions.map(mission => (
-                                        <div
-                                            key={mission.id}
-                                            className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3"
-                                        >
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-sm font-medium text-gray-900 truncate">{mission.title}</p>
-                                            </div>
-                                            <button
-                                                onClick={() => handleToggleMission(mission.id, mission.portal_visible)}
-                                                disabled={togglingMission === mission.id}
-                                                className="flex-shrink-0 focus:outline-none ml-3"
-                                            >
-                                                {togglingMission === mission.id ? (
-                                                    <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
-                                                ) : mission.portal_visible ? (
-                                                    <Eye className="w-5 h-5 text-purple-600" />
-                                                ) : (
-                                                    <EyeOff className="w-5 h-5 text-gray-300" />
-                                                )}
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </motion.div>
-
-                        {/* Embed Code */}
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-white rounded-2xl border border-gray-200 p-6">
-                            <h2 className="text-sm font-semibold text-gray-900 mb-1">{t('embedCode')}</h2>
-                            <p className="text-xs text-gray-500 mb-3">{t('embedCodeDesc')}</p>
-                            <div className="relative">
-                                <pre className="bg-gray-900 text-gray-300 rounded-xl p-4 text-xs overflow-x-auto">
-                                    <code>{iframeSnippet}</code>
-                                </pre>
+                            {/* Single Save Button */}
+                            <div className="flex justify-end">
                                 <button
-                                    onClick={() => handleCopy(iframeSnippet, 'iframe')}
-                                    className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-700 text-gray-300 rounded-lg text-xs hover:bg-gray-600 transition-colors"
+                                    onClick={handleSaveBranding}
+                                    disabled={savingBranding}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
                                 >
-                                    {copiedIframe ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Code className="w-3.5 h-3.5" />}
-                                    {copiedIframe ? t('copied') : t('copy')}
+                                    {savingBranding ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : brandingSaved ? (
+                                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                    ) : null}
+                                    {brandingSaved ? t('saved') : t('save')}
                                 </button>
                             </div>
-                            <p className="text-[11px] text-gray-400 mt-2">{t('iframeNote')}</p>
                         </motion.div>
 
-                        {/* Stats */}
-                        {stats && (
-                            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white rounded-2xl border border-gray-200 p-6">
-                                <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('portalStats')}</h2>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="bg-gray-50 rounded-xl p-4 text-center">
-                                        <Users className="w-5 h-5 text-purple-500 mx-auto mb-2" />
-                                        <p className="text-2xl font-bold text-gray-900">{stats.totalAffiliates}</p>
-                                        <p className="text-[11px] text-gray-500 mt-0.5">{t('totalAffiliates')}</p>
-                                    </div>
-                                    <div className="bg-gray-50 rounded-xl p-4 text-center">
-                                        <DollarSign className="w-5 h-5 text-emerald-500 mx-auto mb-2" />
-                                        <p className="text-2xl font-bold text-gray-900">{stats.totalCommissions}</p>
-                                        <p className="text-[11px] text-gray-500 mt-0.5">{t('totalCommissions')}</p>
-                                    </div>
-                                    <div className="bg-gray-50 rounded-xl p-4 text-center">
-                                        <BarChart3 className="w-5 h-5 text-blue-500 mx-auto mb-2" />
-                                        <p className="text-2xl font-bold text-gray-900">{(stats.totalRevenue / 100).toFixed(0)}&euro;</p>
-                                        <p className="text-[11px] text-gray-500 mt-0.5">{t('totalRevenue')}</p>
+                        {/* Section 3: Share */}
+                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-white rounded-2xl border border-gray-200 p-6">
+                            <h2 className="text-sm font-semibold text-gray-900 mb-1">{t('portalUrl')}</h2>
+                            <p className="text-xs text-gray-500 mb-3">{t('primaryUrlDesc')}</p>
+
+                            {/* URL */}
+                            <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
+                                <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                <code className="text-sm text-gray-700 truncate flex-1">{portalUrl}</code>
+                                <button onClick={() => handleCopy(portalUrl, 'url')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
+                                    {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
+                                    {copiedUrl ? t('copied') : t('copy')}
+                                </button>
+                            </div>
+
+                            {/* Custom domain */}
+                            {settings.customDomain && (
+                                <div className="mt-3">
+                                    <p className="text-xs text-gray-500 mb-1.5">{t('customDomainUrl')}</p>
+                                    <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
+                                        <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                        <code className="text-sm text-gray-700 truncate flex-1">{`https://${settings.customDomain}/join/${settings.slug}`}</code>
                                     </div>
                                 </div>
-                            </motion.div>
-                        )}
+                            )}
+
+                            {/* Preview button */}
+                            <a
+                                href={portalUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors mt-4"
+                            >
+                                <ExternalLink className="w-4 h-4" />
+                                {t('viewPortal')}
+                            </a>
+
+                            {/* Embed — Accordion */}
+                            <div className="mt-5 border-t border-gray-100 pt-4">
+                                <button
+                                    onClick={() => setShowEmbed(!showEmbed)}
+                                    className="flex items-center gap-2 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                                >
+                                    <Code className="w-4 h-4" />
+                                    {t('embedCode')}
+                                    <ChevronDown className={`w-3 h-3 transition-transform ${showEmbed ? 'rotate-180' : ''}`} />
+                                </button>
+                                {showEmbed && (
+                                    <div className="mt-3">
+                                        <p className="text-[11px] text-gray-500 mb-2">{t('embedCodeDesc')}</p>
+                                        <div className="relative">
+                                            <pre className="bg-gray-900 text-gray-300 rounded-xl p-4 text-xs overflow-x-auto">
+                                                <code>{iframeSnippet}</code>
+                                            </pre>
+                                            <button
+                                                onClick={() => handleCopy(iframeSnippet, 'iframe')}
+                                                className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-700 text-gray-300 rounded-lg text-xs hover:bg-gray-600 transition-colors"
+                                            >
+                                                {copiedIframe ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Code className="w-3.5 h-3.5" />}
+                                                {copiedIframe ? t('copied') : t('copy')}
+                                            </button>
+                                        </div>
+                                        <p className="text-[11px] text-gray-400 mt-2">{t('iframeNote')}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
                     </>
                 )}
             </div>

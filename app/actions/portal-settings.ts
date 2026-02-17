@@ -200,6 +200,43 @@ export async function toggleMissionPortalVisibility(missionId: string, visible: 
 }
 
 /**
+ * Update portal branding (headline + welcome text + color) in a single call
+ */
+export async function updatePortalBranding(data: {
+    headline: string
+    welcomeText: string
+    primaryColor: string
+}) {
+    const ws = await getActiveWorkspaceForUser()
+    if (!ws) return { success: false, error: 'No workspace' }
+
+    if (data.headline.length > 80) {
+        return { success: false, error: 'Headline must be 80 characters or less' }
+    }
+
+    if (data.primaryColor && !/^#[0-9A-Fa-f]{6}$/.test(data.primaryColor)) {
+        return { success: false, error: 'Invalid color format (must be #RRGGBB)' }
+    }
+
+    try {
+        await prisma.workspace.update({
+            where: { id: ws.workspaceId },
+            data: {
+                portal_headline: data.headline || null,
+                portal_welcome_text: data.welcomeText || null,
+                portal_primary_color: data.primaryColor || '#7C3AED',
+            },
+        })
+
+        revalidatePath('/dashboard/portal')
+        return { success: true }
+    } catch (error) {
+        console.error('[Portal Settings] updatePortalBranding error:', error)
+        return { success: false, error: 'Failed to update branding' }
+    }
+}
+
+/**
  * Get portal overview stats: total affiliates, commissions, revenue
  */
 export async function getPortalOverview() {
