@@ -328,11 +328,14 @@ export async function GET(request: NextRequest) {
         // SOURCE FILTER: Marketing links only
         // ========================================
         const source = searchParams.get('source')
+        const campaignId = searchParams.get('campaign_id')
         let linkIdFilter = ''
         if (source === 'marketing') {
             const { prisma } = await import('@/lib/db')
+            const marketingWhere: Record<string, unknown> = { workspace_id: workspaceId, link_type: 'marketing' }
+            if (campaignId) marketingWhere.campaign_id = campaignId
             const marketingLinks = await prisma.shortLink.findMany({
-                where: { workspace_id: workspaceId, link_type: 'marketing' },
+                where: marketingWhere,
                 select: { id: true },
             })
             if (marketingLinks.length === 0) {
@@ -346,7 +349,7 @@ export async function GET(request: NextRequest) {
             }
             const ids = marketingLinks.map(l => `'${l.id}'`).join(',')
             linkIdFilter = `AND link_id IN (${ids})`
-            console.log(`[KPI Proxy] 🎯 Marketing filter: ${marketingLinks.length} link IDs`)
+            console.log(`[KPI Proxy] 🎯 Marketing filter: ${marketingLinks.length} link IDs${campaignId ? ` (campaign: ${campaignId})` : ''}`)
         }
 
         const dateFrom = searchParams.get('date_from') || '2020-01-01'

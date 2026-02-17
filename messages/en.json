@@ -846,6 +846,8 @@
             "paymentSuccess": "Payments confirmed!",
             "paymentProcessing": "Transfers are being processed.",
             "noCommissions": "No commissions",
+            "minimumWarning": "Minimum \u20AC10 per seller:",
+            "minimumDetail": "{name}: {amount} / \u20AC10.00",
             "drawer": {
                 "title": "Commission detail",
                 "retention": "Hold period",

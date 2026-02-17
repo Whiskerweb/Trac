@@ -846,6 +846,8 @@
             "paymentSuccess": "Paiements confirmes !",
             "paymentProcessing": "Les transferts sont en cours de traitement.",
             "noCommissions": "Aucune commission",
+            "minimumWarning": "Minimum 10\u20AC par seller :",
+            "minimumDetail": "{name} : {amount} / 10,00\u20AC",
             "drawer": {
                 "title": "Detail commission",
                 "retention": "Retention",

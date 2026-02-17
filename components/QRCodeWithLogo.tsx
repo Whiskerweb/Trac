@@ -26,15 +26,17 @@ export default function QRCodeWithLogo({
     const logoPadding = Math.round(logoSize * 0.15)
     const totalLogoArea = logoSize + logoPadding * 2
 
+    const containerSize = style?.width ? undefined : size
+
     return (
-        <div style={{ position: 'relative', display: 'inline-block', width: style?.width, maxWidth: style?.maxWidth }}>
+        <div style={{ position: 'relative', display: 'inline-block', width: style?.width ?? containerSize, height: style?.height ?? containerSize, maxWidth: style?.maxWidth }}>
             <QRCode
                 value={value}
                 size={size}
                 fgColor={fgColor}
                 bgColor={bgColor}
                 level="H"
-                style={style}
+                style={{ width: '100%', height: '100%', ...style }}
                 viewBox={viewBox}
             />
             <div
@@ -58,7 +60,7 @@ export default function QRCodeWithLogo({
                     alt="Traaaction"
                     width={logoSize}
                     height={logoSize}
-                    style={{ borderRadius: '50%' }}
+                    style={{ borderRadius: '50%', objectFit: 'cover' }}
                 />
             </div>
         </div>

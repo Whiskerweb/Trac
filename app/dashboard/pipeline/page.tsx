@@ -621,11 +621,35 @@ function PipelineContent() {
         })
     }
 
+    // Payment: minimum 10€ per seller
+    const MIN_PAYOUT_THRESHOLD = 1000 // 10€ in cents
+
     // Payment: total for selected
     const selectedTotal = useMemo(() => {
         return proceed
             .filter((c) => selectedIds.has(c.id))
             .reduce((sum, c) => sum + c.commissionAmount + c.platformFee, 0)
+    }, [proceed, selectedIds])
+
+    // Check which sellers are below the 10€ minimum
+    const sellersBelowMinimum = useMemo(() => {
+        const sellerTotals = new Map<string, { name: string; total: number }>()
+        proceed
+            .filter((c) => selectedIds.has(c.id))
+            .forEach((c) => {
+                const existing = sellerTotals.get(c.partnerId)
+                const amount = c.commissionAmount + c.platformFee
+                if (existing) {
+                    existing.total += amount
+                } else {
+                    sellerTotals.set(c.partnerId, { name: c.partnerName, total: amount })
+                }
+            })
+        const below = new Map<string, { name: string; total: number }>()
+        sellerTotals.forEach((v, k) => {
+            if (v.total < MIN_PAYOUT_THRESHOLD) below.set(k, v)
+        })
+        return below
     }, [proceed, selectedIds])
 
     // Payment: pay
@@ -757,23 +781,33 @@ function PipelineContent() {
                 >
                     {/* Sticky Pay Bar */}
                     {selectedIds.size > 0 && (
-                        <div className="sticky bottom-0 mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-sm font-semibold text-gray-900">
-                                    {selectedIds.size} {t('selected')}
-                                </p>
-                                <p className="text-xs text-gray-500">{formatCurrency(selectedTotal)}</p>
+                        <div className="sticky bottom-0 mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-900">
+                                        {selectedIds.size} {t('selected')}
+                                    </p>
+                                    <p className="text-xs text-gray-500">{formatCurrency(selectedTotal)}</p>
+                                </div>
+                                <button
+                                    onClick={handlePay}
+                                    disabled={paying || sellersBelowMinimum.size > 0}
+                                    className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 transition-colors"
+                                >
+                                    {paying ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : null}
+                                    {t('pay')}
+                                </button>
                             </div>
-                            <button
-                                onClick={handlePay}
-                                disabled={paying}
-                                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 transition-colors"
-                            >
-                                {paying ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : null}
-                                {t('pay')}
-                            </button>
+                            {sellersBelowMinimum.size > 0 && (
+                                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 mt-2">
+                                    <p className="font-semibold mb-1">{t('minimumWarning')}</p>
+                                    {Array.from(sellersBelowMinimum.values()).map((s) => (
+                                        <p key={s.name}>&bull; {t('minimumDetail', { name: s.name, amount: formatCurrency(s.total) })}</p>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </Column>

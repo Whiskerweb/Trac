@@ -35,6 +35,7 @@ const sellerNavigationConfig: NavSection[] = [
         items: [
             { nameKey: 'overview', href: '/dashboard', icon: Home },
             { nameKey: 'messages', href: '/dashboard/messages', icon: MessageSquare },
+            { nameKey: 'pipeline', href: '/dashboard/pipeline', icon: Coins },
         ]
     },
     {
@@ -50,7 +51,6 @@ const sellerNavigationConfig: NavSection[] = [
         items: [
             { nameKey: 'missions', href: '/dashboard/missions', icon: Target },
             { nameKey: 'customers', href: '/dashboard/customers', icon: Contact },
-            { nameKey: 'pipeline', href: '/dashboard/pipeline', icon: Coins },
             { nameKey: 'fraudDetection', href: '/dashboard/fraud', icon: Shield },
         ]
     },

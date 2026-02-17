@@ -46,7 +46,7 @@ interface KPIResponse {
 }
 
 interface ActiveFilter {
-    type: 'country' | 'device' | 'city' | 'region' | 'continent' | 'browser' | 'os' | 'event_type'
+    type: 'country' | 'device' | 'city' | 'region' | 'continent' | 'browser' | 'os' | 'event_type' | 'campaign'
     value: string
     label: string
     icon?: React.ReactNode
@@ -76,6 +76,7 @@ interface LinkData {
     clicks: number
     channel: string | null
     campaign: string | null
+    campaign_id: string | null
 }
 
 const kpiFetcher = async (url: string): Promise<KPIResponse> => {
@@ -398,6 +399,7 @@ export default function MarketingAnalyticsPage() {
         const deviceFilters = activeFilters.filter(f => f.type === 'device').map(f => f.value)
         const browserFilters = activeFilters.filter(f => f.type === 'browser').map(f => f.value)
         const osFilters = activeFilters.filter(f => f.type === 'os').map(f => f.value)
+        const campaignFilters = activeFilters.filter(f => f.type === 'campaign').map(f => f.value)
         if (countryFilters.length) params.push(`country=${countryFilters.join(',')}`)
         if (cityFilters.length) params.push(`city=${cityFilters.join(',')}`)
         if (regionFilters.length) params.push(`region=${regionFilters.join(',')}`)
@@ -405,6 +407,7 @@ export default function MarketingAnalyticsPage() {
         if (deviceFilters.length) params.push(`device=${deviceFilters.join(',')}`)
         if (browserFilters.length) params.push(`browser=${browserFilters.join(',')}`)
         if (osFilters.length) params.push(`os=${osFilters.join(',')}`)
+        if (campaignFilters.length) params.push(`campaign_id=${campaignFilters[0]}`)
         if (activeEventTypes.size < 3) params.push(`event_type=${Array.from(activeEventTypes).join(',')}`)
         return params.length ? '&' + params.join('&') : ''
     }
@@ -419,6 +422,7 @@ export default function MarketingAnalyticsPage() {
         const deviceFilters = activeFilters.filter(f => f.type === 'device').map(f => f.value)
         const browserFilters = activeFilters.filter(f => f.type === 'browser').map(f => f.value)
         const osFilters = activeFilters.filter(f => f.type === 'os').map(f => f.value)
+        const campaignFilters = activeFilters.filter(f => f.type === 'campaign').map(f => f.value)
         if (countryFilters.length && excludeType !== 'country') params.push(`country=${countryFilters.join(',')}`)
         if (cityFilters.length && excludeType !== 'city') params.push(`city=${cityFilters.join(',')}`)
         if (regionFilters.length && excludeType !== 'region') params.push(`region=${regionFilters.join(',')}`)
@@ -426,6 +430,7 @@ export default function MarketingAnalyticsPage() {
         if (deviceFilters.length && excludeType !== 'device') params.push(`device=${deviceFilters.join(',')}`)
         if (browserFilters.length && excludeType !== 'browser') params.push(`browser=${browserFilters.join(',')}`)
         if (osFilters.length && excludeType !== 'os') params.push(`os=${osFilters.join(',')}`)
+        if (campaignFilters.length) params.push(`campaign_id=${campaignFilters[0]}`)
         if (activeEventTypes.size < 3) params.push(`event_type=${Array.from(activeEventTypes).join(',')}`)
         return params.length ? '&' + params.join('&') : ''
     }
@@ -538,12 +543,17 @@ export default function MarketingAnalyticsPage() {
 
     // Campaign breakdown (DB-based)
     const campaignBreakdown = useMemo(() => {
-        const map = new Map<string, number>()
+        const map = new Map<string, { clicks: number; id: string | null }>()
         for (const link of marketingLinks) {
-            if (link.campaign) map.set(link.campaign, (map.get(link.campaign) || 0) + link.clicks)
+            if (link.campaign) {
+                const existing = map.get(link.campaign) || { clicks: 0, id: link.campaign_id }
+                existing.clicks += link.clicks
+                if (!existing.id && link.campaign_id) existing.id = link.campaign_id
+                map.set(link.campaign, existing)
+            }
         }
         return Array.from(map.entries())
-            .map(([name, clicks]) => ({ name, clicks }))
+            .map(([name, { clicks, id }]) => ({ name, clicks, id }))
             .sort((a, b) => b.clicks - a.clicks)
     }, [marketingLinks])
 
@@ -862,25 +872,18 @@ export default function MarketingAnalyticsPage() {
                             <p className="text-[13px] text-gray-400">{tm('analytics.noData')}</p>
                         </div>
                     ) : (
-                        <div className="space-y-4">
-                            {campaignBreakdown.map(({ name, clicks }) => {
-                                const pct = totalDbClicks > 0 ? (clicks / totalDbClicks) * 100 : 0
+                        <div>
+                            {campaignBreakdown.map(({ name, clicks, id }) => {
+                                const maxCampaign = Math.max(...campaignBreakdown.map(c => c.clicks), 1)
                                 return (
-                                    <div key={name} className="group">
-                                        <div className="flex items-center justify-between mb-1.5">
-                                            <span className="text-[13px] font-medium text-gray-700">{name}</span>
-                                            <div className="flex items-baseline gap-1.5">
-                                                <span className="text-[13px] font-semibold text-gray-900 tabular-nums">{clicks.toLocaleString()}</span>
-                                                <span className="text-[11px] text-gray-400 tabular-nums">{pct.toFixed(0)}%</span>
-                                            </div>
-                                        </div>
-                                        <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full rounded-full bg-purple-500 transition-all duration-700 ease-out"
-                                                style={{ width: `${Math.max(pct, 1)}%` }}
-                                            />
-                                        </div>
-                                    </div>
+                                    <SimpleListItem
+                                        key={name}
+                                        label={name}
+                                        count={clicks}
+                                        percentage={(clicks / maxCampaign) * 100}
+                                        isSelected={!!id && activeFilters.some(f => f.type === 'campaign' && f.value === id)}
+                                        onClick={() => id ? toggleFilter('campaign', id, name) : undefined}
+                                    />
                                 )
                             })}
                         </div>

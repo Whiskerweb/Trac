@@ -787,33 +787,42 @@ export default function MarketingLinksPage() {
                                             </button>
 
                                             {isQrOpen && (
-                                                <div
-                                                    ref={qrRef}
-                                                    className="absolute right-0 top-full mt-2 bg-white rounded-xl border border-gray-200 shadow-xl p-4 z-50 w-56"
-                                                >
-                                                    <div id={`qr-popover-${link.id}`} className="flex justify-center mb-3">
-                                                        <QRCodeWithLogo
-                                                            value={link.short_url}
-                                                            size={160}
-                                                            fgColor="#000000"
-                                                            bgColor="#FFFFFF"
-                                                            logoUrl={startupLogo || undefined}
-                                                        />
-                                                    </div>
-                                                    <p className="text-xs text-gray-500 text-center mb-3 font-mono truncate">/{link.slug}</p>
-                                                    <div className="flex items-center gap-2">
+                                                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setQrOpenId(null)}>
+                                                    <div
+                                                        ref={qrRef}
+                                                        className="bg-white rounded-2xl shadow-2xl p-6 w-72 relative"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
                                                         <button
-                                                            onClick={() => downloadQR(link.slug, link.id, 'png')}
-                                                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                                            onClick={() => setQrOpenId(null)}
+                                                            className="absolute top-3 right-3 p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
                                                         >
-                                                            <Download className="w-3 h-3" /> PNG
+                                                            <X className="w-4 h-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => downloadQR(link.slug, link.id, 'svg')}
-                                                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                                                        >
-                                                            <Download className="w-3 h-3" /> SVG
-                                                        </button>
+                                                        <div id={`qr-popover-${link.id}`} className="flex justify-center mb-4">
+                                                            <QRCodeWithLogo
+                                                                value={link.short_url}
+                                                                size={200}
+                                                                fgColor="#000000"
+                                                                bgColor="#FFFFFF"
+                                                                logoUrl={startupLogo || undefined}
+                                                            />
+                                                        </div>
+                                                        <p className="text-sm text-gray-500 text-center mb-4 font-mono truncate">/{link.slug}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => downloadQR(link.slug, link.id, 'png')}
+                                                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                                                            >
+                                                                <Download className="w-3.5 h-3.5" /> PNG
+                                                            </button>
+                                                            <button
+                                                                onClick={() => downloadQR(link.slug, link.id, 'svg')}
+                                                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                                                            >
+                                                                <Download className="w-3.5 h-3.5" /> SVG
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
