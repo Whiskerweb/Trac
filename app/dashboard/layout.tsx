@@ -1,25 +1,21 @@
 'use client'
 
-import { Sidebar, DashboardMode } from '@/components/dashboard/Sidebar'
+import { Sidebar } from '@/components/dashboard/Sidebar'
 import { NotificationCenter } from '@/components/dashboard/NotificationCenter'
 import FeedbackWidget from '@/components/FeedbackWidget'
 import { Menu, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
 
 const SIDEBAR_COLLAPSED_KEY = 'trac_sidebar_collapsed'
-const DASHBOARD_MODE_KEY = 'trac_dashboard_mode'
 
 export default function DashboardLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
-    const pathname = usePathname()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isCollapsed, setIsCollapsed] = useState(false)
     const [isHydrated, setIsHydrated] = useState(false)
-    const [dashboardMode, setDashboardMode] = useState<DashboardMode>('seller')
 
     // Load states from localStorage on mount
     useEffect(() => {
@@ -27,31 +23,14 @@ export default function DashboardLayout({
         if (savedCollapsed !== null) {
             setIsCollapsed(savedCollapsed === 'true')
         }
-        const savedMode = localStorage.getItem(DASHBOARD_MODE_KEY) as DashboardMode | null
-        if (savedMode === 'seller' || savedMode === 'marketing') {
-            setDashboardMode(savedMode)
-        }
         setIsHydrated(true)
     }, [])
-
-    // Auto-detect mode from pathname
-    useEffect(() => {
-        if (pathname.startsWith('/dashboard/marketing')) {
-            setDashboardMode('marketing')
-            localStorage.setItem(DASHBOARD_MODE_KEY, 'marketing')
-        }
-    }, [pathname])
 
     // Persist collapsed state to localStorage
     const handleToggleCollapse = () => {
         const newState = !isCollapsed
         setIsCollapsed(newState)
         localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(newState))
-    }
-
-    const handleSwitchMode = (mode: DashboardMode) => {
-        setDashboardMode(mode)
-        localStorage.setItem(DASHBOARD_MODE_KEY, mode)
     }
 
     // Close mobile menu on escape key
@@ -84,8 +63,6 @@ export default function DashboardLayout({
                 <Sidebar
                     collapsed={isCollapsed}
                     onToggleCollapse={handleToggleCollapse}
-                    dashboardMode={dashboardMode}
-                    onSwitchMode={handleSwitchMode}
                 />
             </div>
 
@@ -106,14 +83,7 @@ export default function DashboardLayout({
                         >
                             <X className="w-5 h-5" />
                         </button>
-                        <Sidebar
-                            isMobile
-                            dashboardMode={dashboardMode}
-                            onSwitchMode={(mode) => {
-                                handleSwitchMode(mode)
-                                setIsMobileMenuOpen(false)
-                            }}
-                        />
+                        <Sidebar isMobile />
                     </div>
                 </div>
             )}

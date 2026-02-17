@@ -463,8 +463,12 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
             return NextResponse.redirect(primaryUrl.toString())
         }
 
-        // Block auth endpoints on custom domains
-        if (pathname.startsWith('/api/auth') || pathname.startsWith('/login') || pathname.startsWith('/auth')) {
+        // Allow auth flow for portal redirects (/login and /auth/callback when next=/join/*)
+        const nextParam = request.nextUrl.searchParams.get('next') || ''
+        const isPortalAuthFlow = nextParam.startsWith('/join/')
+
+        // Block auth endpoints on custom domains — EXCEPT portal auth flow
+        if ((pathname.startsWith('/api/auth') || pathname.startsWith('/login') || pathname.startsWith('/auth')) && !isPortalAuthFlow) {
             console.log('[Edge] 🛡️ Blocking auth route on custom domain')
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
@@ -1027,6 +1031,15 @@ ${ogImg ? `<meta name="twitter:image" content="${escapeHtml(ogImg)}">` : ''}
             loginUrl.searchParams.set('redirectTo', pathname)
             return NextResponse.redirect(loginUrl)
         }
+    }
+
+    // ============================================
+    // PORTAL IFRAME HEADERS
+    // Allow /join/* to be embedded in iframes
+    // ============================================
+    if (pathname.startsWith('/join/')) {
+        supabaseResponse.headers.delete('X-Frame-Options')
+        supabaseResponse.headers.set('Content-Security-Policy', "frame-ancestors *")
     }
 
     return supabaseResponse

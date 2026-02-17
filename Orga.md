@@ -271,7 +271,6 @@ organization_mission_id   String?
 | **Browse seller** | getActiveOrganizations, getOrganizationBySlug, joinOrgByInviteCode | OK |
 | **Settings/Stats** | updateOrganizationSettings, getOrganizationStats, getOrganizationCommissions | OK |
 | **Public** | getPublicOrganization, getOrgByInviteCode | OK |
-| **Traaaction org** | autoJoinTraaactionOrg, getTraaactionOrgCard | OK |
 | **Auto-enrollment** | enrollMembersInOrgMission, enrollSingleMemberInMission | OK |
 | **NOUVEAU** | cancelOrgMission (startup annule) | A creer |
 
@@ -473,24 +472,9 @@ ORG :
 
 ---
 
-## 7. TRAAACTION TOP TIERCE (org systeme)
+## 7. CE QUI DOIT CHANGER
 
-| Propriete | Valeur |
-|-----------|--------|
-| slug | `traaaction-top-tierce` |
-| leader | Admin seller (lucas@traaaction.com) |
-| visibility | INVITE_ONLY (cache du browse) |
-| status | ACTIVE (auto-cree) |
-| join | Auto a l'onboarding step 4 |
-| leave | **IMPOSSIBLE** |
-
-Meme modele de commission org (15% inclus). L'admin negocie les deals pour tous les sellers.
-
----
-
-## 8. CE QUI DOIT CHANGER
-
-### 8.1 Schema Prisma
+### 7.1Schema Prisma
 
 ```prisma
 // OrganizationMission — modifications :
@@ -512,7 +496,7 @@ enum OrgMissionStatus {
 }
 ```
 
-### 8.2 Commission Engine — `createOrgCommissions()`
+### 7.2Commission Engine — `createOrgCommissions()`
 
 **Logique actuelle** : platform_fee facturee EN PLUS du deal
 **Logique cible** : platform_fee prelevee DANS le deal
@@ -535,7 +519,7 @@ const leaderAmount = parseFlat(leaderCut)    // 150 (1.50€)
 const memberAmount = dealFlat - platformFee - leaderAmount  // 700 (7€)
 ```
 
-### 8.3 Server Actions
+### 7.3Server Actions
 
 | Action | Modification |
 |--------|-------------|
@@ -544,7 +528,7 @@ const memberAmount = dealFlat - platformFee - leaderAmount  // 700 (7€)
 | `cancelOrgMission()` | **NOUVEAU** : startup annule, guards, notifications |
 | `getOrgMissionConfig()` | Retourner dealTotal + leaderCut (member calcule a la volee) |
 
-### 8.4 UI Startup — Proposition
+### 7.4UI Startup — Proposition
 
 ```
 AVANT : 3 champs (total, leader, member) — confus
@@ -554,7 +538,7 @@ APRES : La mission a deja son reward configure.
         + Bouton "Annuler l'arrangement" sur les missions ACCEPTED
 ```
 
-### 8.5 UI Leader — Acceptation
+### 7.5UI Leader — Acceptation
 
 ```
 AVANT : Accept/Reject sans choix du cut
@@ -567,13 +551,13 @@ APRES : Modal/section avec :
   - Accept = verrouille definitif
 ```
 
-### 8.6 Webhook
+### 7.6Webhook
 
 Le webhook appelle `createOrgCommissions()`. La seule modification est dans le calcul interne (platform_fee DANS le deal au lieu de EN PLUS). Le code webhook lui-meme ne change pas de structure.
 
 ---
 
-## 9. PLAN D'IMPLEMENTATION
+## 8. PLAN D'IMPLEMENTATION
 
 ### Phase 1 — Schema + Backend
 
@@ -629,7 +613,7 @@ Le webhook appelle `createOrgCommissions()`. La seule modification est dans le c
 
 ---
 
-## 10. FICHIERS CONCERNES
+## 9. FICHIERS CONCERNES
 
 ```
 prisma/schema.prisma                               → OrgMission nullable fields + CANCELLED enum
@@ -645,7 +629,7 @@ messages/{en,fr,es}.json                             → Traductions notificatio
 
 ---
 
-## 11. VALIDATION CHECKLIST
+## 10. VALIDATION CHECKLIST
 
 Avant de considerer l'implementation comme terminee :
 
@@ -665,7 +649,7 @@ Avant de considerer l'implementation comme terminee :
 
 ---
 
-## 12. CHANGELOG
+## 11. CHANGELOG
 
 ### Phase 1 — Schema + Backend (Fevrier 2026)
 

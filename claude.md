@@ -69,7 +69,8 @@ app/
 │   ├── webhooks/       # [endpointId] (Stripe), startup-payments
 │   ├── cron/           # commissions, mature-commissions, payouts
 │   └── seller/         # connect, wallet, withdraw, payout-method
-├── actions/            # Server Actions (commissions, sellers, payouts, missions, messaging, customers, organizations, admin-org, marketing-campaigns, marketing-folders)
+├── actions/            # Server Actions (commissions, sellers, payouts, missions, messaging, customers, organizations, admin-org, marketing-campaigns, marketing-folders, portal, portal-settings)
+├── join/               # Hosted affiliate portal: [workspaceSlug], [workspaceSlug]/[missionId]
 └── [pages legales]     # terms, privacy, seller-terms, startup-terms, about, report-abuse
 
 components/
@@ -464,6 +465,18 @@ Responsabilites:
 - [x] **Migration** : `scripts/migrate-campaigns.ts` — convertit strings campaign existants en entites MarketingCampaign
 - [x] **I18n** : ~40 cles (campaigns, folders, bulk) dans FR/EN/ES
 
+### Hosted Affiliate Portal (Fevrier 2026)
+- [x] **Schema** : `portal_enabled` (Boolean) + `portal_welcome_text` (String?) sur Workspace
+- [x] **Server Actions** : `portal.ts` (getPortalData, getPortalMission, portalJoinMission, getPortalDashboard, getPortalUserStatus) + `portal-settings.ts` (getPortalSettings, togglePortal, updatePortalWelcomeText)
+- [x] **Page portail** : `/join/[workspaceSlug]` — 3 etats (visiteur signup, seller join, enrolled dashboard) — design soigne avec hero, mission cards, auth inline
+- [x] **Page mission** : `/join/[workspaceSlug]/[missionId]` — page focalisee sur une seule mission avec rewards detailles et resources
+- [x] **Dashboard startup** : `/dashboard/portal` — toggle ON/OFF, URL portail, code iframe, message accueil, liens par mission
+- [x] **Middleware** : `/join/*` autorise sur custom domains, auth flow portal (`next=/join/*`), headers iframe (`frame-ancestors *`)
+- [x] **Sidebar** : lien "Portal" ajoute dans section configuration (seller + marketing modes)
+- [x] **Auth flow** : signup email/password inline → confirmation email → redirect `/join/{slug}` → auto-create seller → join mission
+- [x] **Iframe embed** : snippet `<iframe>` copiable, CSP `frame-ancestors *` pour integration site tiers
+- [x] **I18n** : ~50 cles (portal, settings) dans FR/EN/ES
+
 ---
 
 ## 12. REGLES METIER CRITIQUES
@@ -499,6 +512,11 @@ Responsabilites:
 | Group clawback | Standard (1 seule commission a supprimer) |
 | Group referral | Base sur HT total, creditee au referrer du createur |
 | Group priorite webhook | Check group avant org (group prend priorite) |
+| Portal activation | `portal_enabled` toggle sur Workspace, gratuit (0€) |
+| Portal visibility | Affiche uniquement missions PUBLIC + PRIVATE (pas INVITE_ONLY, pas org-exclusive) |
+| Portal auth | Email/password inline, confirmation email, auto-create seller via `createGlobalSeller()` |
+| Portal iframe | Headers `frame-ancestors *`, recommander custom domain CNAME pour cookies tiers |
+| Portal custom domain | `/join/*` autorise sur custom domains, auth flow aussi si `next=/join/*` |
 
 ---
 

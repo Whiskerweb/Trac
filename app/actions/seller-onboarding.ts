@@ -2,7 +2,6 @@
 
 import { prisma } from '@/lib/db'
 import { createClient } from '@/utils/supabase/server'
-import { autoJoinTraaactionOrg } from '@/app/actions/organization-actions'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -234,9 +233,6 @@ export async function completeOnboarding(sellerId: string) {
                     data: { profile_score: { increment: 40 } } // +40 for Stripe verified
                 })
 
-                // Auto-join Traaaction Top Tierce org
-                await autoJoinTraaactionOrg(sellerId)
-
                 return { success: true, payoutsEnabled: true }
             }
         }
@@ -246,8 +242,6 @@ export async function completeOnboarding(sellerId: string) {
             where: { id: sellerId },
             data: { onboarding_step: 4 }
         })
-
-        // Do NOT auto-join Traaaction Top Tierce — seller must be APPROVED (Stripe verified) first
 
         return { success: true, payoutsEnabled: false }
     } catch (error) {

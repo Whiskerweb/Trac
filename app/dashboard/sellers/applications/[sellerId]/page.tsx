@@ -154,7 +154,7 @@ export default function SellerProfilePage() {
                     <h3 className="font-medium text-gray-900 mb-2">Seller not found</h3>
                     <p className="text-gray-500 text-sm mb-4">This seller does not exist or you don't have access.</p>
                     <button
-                        onClick={() => router.push('/dashboard/sellers/applications')}
+                        onClick={() => router.push('/dashboard/sellers?view=my')}
                         className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800"
                     >
                         Back to sellers
@@ -168,7 +168,7 @@ export default function SellerProfilePage() {
         <div className="space-y-6">
             {/* Back Button */}
             <button
-                onClick={() => router.push('/dashboard/sellers/applications')}
+                onClick={() => router.push('/dashboard/sellers?view=my')}
                 className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors"
             >
                 <ChevronLeft className="w-4 h-4" />

@@ -1,27 +1,26 @@
 'use client'
 
 import {
-    Home, MessageSquare, Users, UserPlus,
-    Contact, Coins, Shield, Globe, Settings,
-    Puzzle, User, ExternalLink, Target,
-    ChevronLeft, ChevronRight, ChevronDown, Check,
+    LayoutDashboard, MessageSquare, Users,
+    Contact, Coins, Settings,
+    User, Target,
+    ChevronLeft, ChevronRight,
     Link2, BarChart3, Megaphone
 } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { usePathname } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { getUnreadCount } from '@/app/actions/messaging'
 
 // =============================================
-// NAVIGATION STRUCTURE (Traaaction style)
+// NAVIGATION STRUCTURE
 // =============================================
 
 interface NavItem {
     nameKey: string
     href: string
     icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
-    external?: boolean
 }
 
 interface NavSection {
@@ -29,56 +28,24 @@ interface NavSection {
     items: NavItem[]
 }
 
-const sellerNavigationConfig: NavSection[] = [
+const navigationConfig: NavSection[] = [
     {
-        titleKey: 'sellerProgram',
+        titleKey: '',
         items: [
-            { nameKey: 'overview', href: '/dashboard', icon: Home },
-            { nameKey: 'messages', href: '/dashboard/messages', icon: MessageSquare },
-            { nameKey: 'pipeline', href: '/dashboard/pipeline', icon: Coins },
-        ]
-    },
-    {
-        titleKey: 'sellers',
-        items: [
-            { nameKey: 'allSellers', href: '/dashboard/sellers', icon: Users },
-            { nameKey: 'organizations', href: '/dashboard/sellers/groups', icon: Users },
-            { nameKey: 'mySellers', href: '/dashboard/sellers/applications', icon: UserPlus },
-        ]
-    },
-    {
-        titleKey: 'insights',
-        items: [
+            { nameKey: 'home', href: '/dashboard', icon: LayoutDashboard },
             { nameKey: 'missions', href: '/dashboard/missions', icon: Target },
+            { nameKey: 'sellers', href: '/dashboard/sellers', icon: Users },
             { nameKey: 'customers', href: '/dashboard/customers', icon: Contact },
-            { nameKey: 'fraudDetection', href: '/dashboard/fraud', icon: Shield },
+            { nameKey: 'pipeline', href: '/dashboard/pipeline', icon: Coins },
+            { nameKey: 'messages', href: '/dashboard/messages', icon: MessageSquare },
         ]
     },
     {
-        titleKey: 'configuration',
+        titleKey: 'marketing',
         items: [
-            { nameKey: 'integration', href: '/dashboard/integration', icon: Puzzle, external: true },
-            { nameKey: 'domains', href: '/dashboard/domains', icon: Globe },
-            { nameKey: 'settings', href: '/dashboard/settings', icon: Settings },
-        ]
-    },
-]
-
-const marketingNavigationConfig: NavSection[] = [
-    {
-        titleKey: 'marketingLinks',
-        items: [
-            { nameKey: 'marketingAllLinks', href: '/dashboard/marketing', icon: Link2 },
-            { nameKey: 'marketingCampaigns', href: '/dashboard/marketing/campaigns', icon: Megaphone },
-            { nameKey: 'marketingAnalyticsPage', href: '/dashboard/marketing/analytics', icon: BarChart3 },
-        ]
-    },
-    {
-        titleKey: 'configuration',
-        items: [
-            { nameKey: 'integration', href: '/dashboard/integration', icon: Puzzle, external: true },
-            { nameKey: 'domains', href: '/dashboard/domains', icon: Globe },
-            { nameKey: 'settings', href: '/dashboard/settings', icon: Settings },
+            { nameKey: 'links', href: '/dashboard/marketing', icon: Link2 },
+            { nameKey: 'campaigns', href: '/dashboard/marketing/campaigns', icon: Megaphone },
+            { nameKey: 'analytics', href: '/dashboard/marketing/analytics', icon: BarChart3 },
         ]
     },
 ]
@@ -87,30 +54,18 @@ const marketingNavigationConfig: NavSection[] = [
 // SIDEBAR COMPONENT
 // =============================================
 
-export type DashboardMode = 'seller' | 'marketing'
-
 interface SidebarProps {
     collapsed?: boolean
     onToggleCollapse?: () => void
     isMobile?: boolean
-    dashboardMode?: DashboardMode
-    onSwitchMode?: (mode: DashboardMode) => void
 }
 
-export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false, dashboardMode = 'seller', onSwitchMode }: SidebarProps) {
+export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false }: SidebarProps) {
     const pathname = usePathname()
-    const router = useRouter()
     const t = useTranslations('dashboard.sidebarNav')
     const [userEmail, setUserEmail] = useState<string>('')
-    const [startupName, setStartupName] = useState<string>(t('sellerProgram'))
+    const [startupName, setStartupName] = useState<string>('')
     const [unreadMessages, setUnreadMessages] = useState(0)
-    const [switcherOpen, setSwitcherOpen] = useState(false)
-    const switcherRef = useRef<HTMLDivElement>(null)
-
-    // Auto-detect mode from pathname
-    const effectiveMode = pathname.startsWith('/dashboard/marketing') ? 'marketing' : dashboardMode
-
-    const navigationConfig = effectiveMode === 'marketing' ? marketingNavigationConfig : sellerNavigationConfig
 
     const loadUnread = useCallback(async () => {
         try {
@@ -134,31 +89,8 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false,
         return () => clearInterval(interval)
     }, [loadUnread])
 
-    // Close switcher on click outside
-    useEffect(() => {
-        function handleClickOutside(e: MouseEvent) {
-            if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
-                setSwitcherOpen(false)
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
-
-    const handleSwitchMode = (mode: DashboardMode) => {
-        setSwitcherOpen(false)
-        onSwitchMode?.(mode)
-        if (mode === 'marketing') {
-            router.push('/dashboard/marketing')
-        } else {
-            router.push('/dashboard')
-        }
-    }
-
     // Don't show collapse button on mobile drawer
     const showCollapseButton = !isMobile && onToggleCollapse
-
-    const subtitleLabel = effectiveMode === 'marketing' ? t('marketingMode') : t('startupProgram')
 
     return (
         <aside className={`
@@ -166,7 +98,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false,
             transition-all duration-300 ease-in-out
             ${collapsed ? 'w-[68px]' : 'w-64'}
         `}>
-            {/* Logo/Workspace Switcher */}
+            {/* Logo/Header */}
             <div className={`h-16 flex items-center border-b border-gray-100 ${collapsed ? 'px-2 justify-center' : 'px-4'}`}>
                 <div className={`flex items-center gap-2 p-2 rounded-lg text-left ${collapsed ? 'justify-center' : 'w-full'}`}>
                     <img
@@ -175,41 +107,9 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false,
                         className={`rounded-lg object-contain transition-all duration-300 ${collapsed ? 'w-10 h-10' : 'w-12 h-12'}`}
                     />
                     {!collapsed && (
-                        <div className="flex-1 min-w-0 relative" ref={switcherRef}>
-                            <p className="text-sm font-semibold text-gray-900 truncate">{startupName}</p>
-                            <button
-                                onClick={() => setSwitcherOpen(!switcherOpen)}
-                                className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                            >
-                                <span className="truncate">{subtitleLabel}</span>
-                                <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${switcherOpen ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {/* Mode Switcher Popover */}
-                            {switcherOpen && (
-                                <div className="absolute top-full left-0 mt-1 w-52 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-[60]">
-                                    <button
-                                        onClick={() => handleSwitchMode('seller')}
-                                        className="flex items-center justify-between w-full px-3 py-2.5 text-sm text-left hover:bg-gray-50 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <Users className="w-4 h-4 text-gray-500" />
-                                            <span className="font-medium text-gray-900">{t('sellerProgramLabel')}</span>
-                                        </div>
-                                        {effectiveMode === 'seller' && <Check className="w-4 h-4 text-purple-600" />}
-                                    </button>
-                                    <button
-                                        onClick={() => handleSwitchMode('marketing')}
-                                        className="flex items-center justify-between w-full px-3 py-2.5 text-sm text-left hover:bg-gray-50 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <Megaphone className="w-4 h-4 text-gray-500" />
-                                            <span className="font-medium text-gray-900">{t('marketingLabel')}</span>
-                                        </div>
-                                        {effectiveMode === 'marketing' && <Check className="w-4 h-4 text-purple-600" />}
-                                    </button>
-                                </div>
-                            )}
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{startupName || 'Traaaction'}</p>
+                            <p className="text-xs text-gray-400 truncate">Dashboard</p>
                         </div>
                     )}
                 </div>
@@ -218,9 +118,9 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false,
             {/* Navigation */}
             <nav className={`flex-1 py-4 overflow-y-auto ${collapsed ? 'px-2' : 'px-3'}`}>
                 {navigationConfig.map((section, idx) => (
-                    <div key={section.titleKey} className={idx > 0 ? 'mt-6' : ''}>
-                        {/* Section Title - hidden when collapsed */}
-                        {!collapsed && (
+                    <div key={section.titleKey || 'main'} className={idx > 0 ? 'mt-8' : ''}>
+                        {/* Section Title */}
+                        {!collapsed && section.titleKey && (
                             <p className="px-3 mb-2 text-xs font-medium text-gray-400 uppercase tracking-wide">
                                 {t(section.titleKey)}
                             </p>
@@ -233,7 +133,6 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false,
                         {/* Section Items */}
                         <ul className="space-y-0.5">
                             {section.items.map((item) => {
-                                // Routes that need exact matching (have sub-routes that should NOT trigger parent active state)
                                 const exactMatchRoutes = ['/dashboard/sellers', '/dashboard/marketing']
                                 const needsExactMatch = exactMatchRoutes.includes(item.href)
 
@@ -249,7 +148,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false,
                                             href={item.href}
                                             title={collapsed ? t(item.nameKey) : undefined}
                                             className={`
-                                                flex items-center gap-3 rounded-lg transition-all duration-150 text-sm
+                                                flex items-center gap-3 rounded-lg transition-all duration-150 text-sm relative
                                                 ${collapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2'}
                                                 ${isActive
                                                     ? 'bg-purple-50 text-purple-700 font-medium'
@@ -257,6 +156,10 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false,
                                                 }
                                             `}
                                         >
+                                            {/* Active indicator bar */}
+                                            {isActive && !collapsed && (
+                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-purple-500 rounded-r-full" />
+                                            )}
                                             <div className={`flex items-center ${collapsed ? '' : 'gap-3'}`}>
                                                 <div className="relative">
                                                     <Icon
@@ -276,9 +179,6 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false,
                                                     {badge > 99 ? '99+' : badge}
                                                 </span>
                                             )}
-                                            {!collapsed && !badge && item.external && (
-                                                <ExternalLink className="w-3 h-3 text-gray-400" />
-                                            )}
                                         </Link>
                                     </li>
                                 )
@@ -287,6 +187,28 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false,
                     </div>
                 ))}
             </nav>
+
+            {/* Settings - Bottom Rail */}
+            <div className={`border-t border-gray-100 ${collapsed ? 'px-2' : 'px-3'} py-2`}>
+                <Link
+                    href="/dashboard/settings"
+                    title={collapsed ? t('settings') : undefined}
+                    className={`
+                        flex items-center gap-3 rounded-lg transition-all duration-150 text-sm
+                        ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2'}
+                        ${pathname.startsWith('/dashboard/settings')
+                            ? 'bg-purple-50 text-purple-700 font-medium'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        }
+                    `}
+                >
+                    <Settings
+                        className={`w-4 h-4 ${pathname.startsWith('/dashboard/settings') ? 'text-purple-600' : 'text-gray-400'}`}
+                        strokeWidth={2}
+                    />
+                    {!collapsed && <span>{t('settings')}</span>}
+                </Link>
+            </div>
 
             {/* Collapse Toggle Button */}
             {showCollapseButton && (
