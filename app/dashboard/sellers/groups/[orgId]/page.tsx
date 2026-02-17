@@ -227,7 +227,7 @@ export default function OrgDetailPage() {
 
     // Missions already proposed (to filter from selector)
     const alreadyProposedMissionIds = new Set(org.Missions?.map((m: any) => m.mission_id) || [])
-    const availableMissions = missions.filter(m => !alreadyProposedMissionIds.has(m.id) && !m.organization_id)
+    const availableMissions = missions.filter(m => !alreadyProposedMissionIds.has(m.id) && !m.organization_id && m.visibility === 'INVITE_ONLY')
 
     return (
         <div className="space-y-8">
@@ -520,6 +520,11 @@ export default function OrgDetailPage() {
                     <Target className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                     <p className="text-gray-900 font-medium mb-1">No missions proposed yet</p>
                     <p className="text-gray-500 text-sm mb-4">Propose a mission to start working with this organization.</p>
+                    {availableMissions.length === 0 && missions.length > 0 && (
+                        <p className="text-xs text-gray-400 mt-2">
+                            You have no invite-only missions. Change a mission&apos;s visibility to &quot;Invite Only&quot; to propose it to an organization.
+                        </p>
+                    )}
                     {availableMissions.length > 0 && (
                         <button
                             onClick={() => setShowPropose(true)}
@@ -557,6 +562,10 @@ export default function OrgDetailPage() {
                                     </option>
                                 ))}
                             </select>
+                            <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+                                <Info className="w-3 h-3" />
+                                Only invite-only missions can be proposed to organizations.
+                            </p>
                         </div>
 
                         {/* Total reward (auto-filled, editable) */}
