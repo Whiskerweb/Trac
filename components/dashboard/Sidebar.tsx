@@ -5,7 +5,7 @@ import {
     Contact, Coins, Settings,
     User, Target,
     ChevronLeft, ChevronRight,
-    Link2, BarChart3, Megaphone
+    Link2, BarChart3, Megaphone, Globe
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -38,6 +38,12 @@ const navigationConfig: NavSection[] = [
             { nameKey: 'customers', href: '/dashboard/customers', icon: Contact },
             { nameKey: 'pipeline', href: '/dashboard/pipeline', icon: Coins },
             { nameKey: 'messages', href: '/dashboard/messages', icon: MessageSquare },
+        ]
+    },
+    {
+        titleKey: 'portal',
+        items: [
+            { nameKey: 'portal', href: '/dashboard/settings?tab=portal', icon: Globe },
         ]
     },
     {

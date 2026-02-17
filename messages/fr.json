@@ -373,7 +373,8 @@
                 "profile": "Completer votre profil",
                 "mission": "Creer votre premiere mission",
                 "webhook": "Configurer le webhook Stripe",
-                "seller": "Accueillir votre premier seller"
+                "seller": "Accueillir votre premier seller",
+                "portal": "Activer votre portail d'affiliation"
             }
         },
         "notifications": {
@@ -1171,7 +1172,8 @@
             "links": "Liens",
             "campaigns": "Campagnes",
             "analytics": "Statistiques",
-            "settings": "Paramètres"
+            "settings": "Paramètres",
+            "portal": "Portail"
         },
         "marketing": {
             "createLink": "Créer un lien",
@@ -2837,6 +2839,7 @@
             "copied": "Copié !",
             "missionLinks": "Liens directs par mission",
             "missionLinksDesc": "Partagez des liens vers des missions spécifiques pour des campagnes ciblées.",
+            "viewPortal": "Voir votre portail",
             "loadError": "Impossible de charger les paramètres du portail."
         }
     }

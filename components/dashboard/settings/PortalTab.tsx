@@ -5,24 +5,33 @@ import { useTranslations } from 'next-intl'
 import { motion } from 'framer-motion'
 import {
     Globe, Copy, Check, ExternalLink, Code, MessageSquare,
-    Loader2, Link2, ToggleLeft, ToggleRight
+    Loader2, Link2, ToggleLeft, ToggleRight, Palette, Type
 } from 'lucide-react'
-import { getPortalSettings, togglePortal, updatePortalWelcomeText } from '@/app/actions/portal-settings'
+import {
+    getPortalSettings, togglePortal, updatePortalWelcomeText,
+    updatePortalHeadline, updatePortalPrimaryColor
+} from '@/app/actions/portal-settings'
 
 export function PortalTab() {
     const t = useTranslations('portal.settings')
 
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [savingHeadline, setSavingHeadline] = useState(false)
+    const [savingColor, setSavingColor] = useState(false)
     const [settings, setSettings] = useState<{
         slug: string
         portal_enabled: boolean
         portal_welcome_text: string | null
+        portal_primary_color: string | null
+        portal_headline: string | null
         customDomain: string | null
         missions: { id: string; title: string }[]
     } | null>(null)
 
     const [welcomeText, setWelcomeText] = useState('')
+    const [headline, setHeadline] = useState('')
+    const [primaryColor, setPrimaryColor] = useState('#7C3AED')
     const [copiedUrl, setCopiedUrl] = useState(false)
     const [copiedIframe, setCopiedIframe] = useState(false)
     const [copiedMission, setCopiedMission] = useState<string | null>(null)
@@ -37,6 +46,8 @@ export function PortalTab() {
         if (result.success && result.data) {
             setSettings(result.data)
             setWelcomeText(result.data.portal_welcome_text || '')
+            setHeadline(result.data.portal_headline || '')
+            setPrimaryColor(result.data.portal_primary_color || '#7C3AED')
         }
         setLoading(false)
     }
@@ -54,8 +65,20 @@ export function PortalTab() {
         setSaving(false)
     }
 
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.traaaction.com'
-    const portalUrl = settings ? `${baseUrl}/join/${settings.slug}` : ''
+    const handleSaveHeadline = async () => {
+        setSavingHeadline(true)
+        await updatePortalHeadline(headline)
+        setSavingHeadline(false)
+    }
+
+    const handleSaveColor = async () => {
+        setSavingColor(true)
+        await updatePortalPrimaryColor(primaryColor)
+        setSavingColor(false)
+    }
+
+    const portalUrl = settings ? `https://${settings.slug}.traaaction.com` : ''
+    const altUrl = settings ? `https://traaaction.com/join/${settings.slug}` : ''
     const iframeSnippet = `<iframe src="${portalUrl}" style="width:100%;height:850px;border:none;" allow="clipboard-write"></iframe>`
 
     const handleCopy = (text: string, type: 'url' | 'iframe' | string) => {
@@ -107,7 +130,7 @@ export function PortalTab() {
 
                 {settings.portal_enabled && (
                     <>
-                        {/* Portal URL */}
+                        {/* Portal URLs */}
                         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-2xl border border-gray-200 p-6">
                             <h2 className="text-sm font-semibold text-gray-900 mb-1">{t('portalUrl')}</h2>
                             <p className="text-xs text-gray-500 mb-3">{t('portalUrlDesc')}</p>
@@ -123,6 +146,24 @@ export function PortalTab() {
                                 </a>
                             </div>
 
+                            <div className="mt-3">
+                                <p className="text-xs text-gray-500 mb-1.5">{t('altUrl')}</p>
+                                <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
+                                    <Globe className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                                    <code className="text-sm text-gray-500 truncate flex-1">{altUrl}</code>
+                                </div>
+                            </div>
+
+                            <a
+                                href={portalUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors mt-3"
+                            >
+                                <ExternalLink className="w-4 h-4" />
+                                {t('viewPortal')}
+                            </a>
+
                             {settings.customDomain && (
                                 <div className="mt-3">
                                     <p className="text-xs text-gray-500 mb-1.5">{t('customDomainUrl')}</p>
@@ -134,8 +175,78 @@ export function PortalTab() {
                             )}
                         </motion.div>
 
-                        {/* Iframe Embed */}
+                        {/* Headline */}
+                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-white rounded-2xl border border-gray-200 p-6">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Type className="w-4 h-4 text-gray-400" />
+                                <h2 className="text-sm font-semibold text-gray-900">{t('headline')}</h2>
+                            </div>
+                            <p className="text-xs text-gray-500 mb-3">{t('headlineDesc')}</p>
+                            <input
+                                type="text"
+                                value={headline}
+                                onChange={(e) => setHeadline(e.target.value)}
+                                placeholder={t('headlinePlaceholder')}
+                                maxLength={80}
+                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300 transition-all"
+                            />
+                            <div className="flex items-center justify-between mt-2">
+                                <span className="text-[11px] text-gray-400">{headline.length}/80</span>
+                                <button
+                                    onClick={handleSaveHeadline}
+                                    disabled={savingHeadline}
+                                    className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                                >
+                                    {savingHeadline ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Type className="w-3.5 h-3.5" />}
+                                    {t('save')}
+                                </button>
+                            </div>
+                        </motion.div>
+
+                        {/* Brand Color */}
                         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-2xl border border-gray-200 p-6">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Palette className="w-4 h-4 text-gray-400" />
+                                <h2 className="text-sm font-semibold text-gray-900">{t('brandColor')}</h2>
+                            </div>
+                            <p className="text-xs text-gray-500 mb-3">{t('brandColorDesc')}</p>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="color"
+                                    value={primaryColor}
+                                    onChange={(e) => setPrimaryColor(e.target.value)}
+                                    className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
+                                />
+                                <input
+                                    type="text"
+                                    value={primaryColor}
+                                    onChange={(e) => {
+                                        const val = e.target.value
+                                        if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) setPrimaryColor(val)
+                                    }}
+                                    className="w-28 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
+                                />
+                                <div
+                                    className="flex-1 h-10 rounded-xl flex items-center justify-center text-white text-xs font-semibold"
+                                    style={{ backgroundColor: primaryColor }}
+                                >
+                                    {t('previewButton')}
+                                </div>
+                            </div>
+                            <div className="flex justify-end mt-3">
+                                <button
+                                    onClick={handleSaveColor}
+                                    disabled={savingColor}
+                                    className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                                >
+                                    {savingColor ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Palette className="w-3.5 h-3.5" />}
+                                    {t('save')}
+                                </button>
+                            </div>
+                        </motion.div>
+
+                        {/* Iframe Embed */}
+                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-white rounded-2xl border border-gray-200 p-6">
                             <h2 className="text-sm font-semibold text-gray-900 mb-1">{t('embedCode')}</h2>
                             <p className="text-xs text-gray-500 mb-3">{t('embedCodeDesc')}</p>
                             <div className="relative">

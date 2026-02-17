@@ -175,6 +175,7 @@ export interface StartupOnboardingStatus {
         mission: boolean   // at least 1 mission created
         webhook: boolean   // at least 1 WebhookEndpoint
         seller: boolean    // at least 1 MissionEnrollment APPROVED
+        portal: boolean    // portal_enabled on workspace
     }
 }
 
@@ -194,7 +195,7 @@ export async function getStartupOnboardingStatus(): Promise<{
 
         const wsId = workspace.workspaceId
 
-        const [profileData, missionCount, webhookCount, enrollmentCount] = await Promise.all([
+        const [profileData, missionCount, webhookCount, enrollmentCount, workspaceData] = await Promise.all([
             prisma.workspaceProfile.findUnique({
                 where: { workspace_id: wsId },
                 select: { logo_url: true, description: true, industry: true }
@@ -211,6 +212,10 @@ export async function getStartupOnboardingStatus(): Promise<{
                     status: 'APPROVED'
                 }
             }),
+            prisma.workspace.findUnique({
+                where: { id: wsId },
+                select: { portal_enabled: true }
+            }),
         ])
 
         const profileComplete = !!(profileData?.logo_url && profileData?.description && profileData?.industry)
@@ -220,6 +225,7 @@ export async function getStartupOnboardingStatus(): Promise<{
             mission: missionCount > 0,
             webhook: webhookCount > 0,
             seller: enrollmentCount > 0,
+            portal: workspaceData?.portal_enabled === true,
         }
 
         return {

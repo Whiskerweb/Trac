@@ -373,7 +373,8 @@
                 "profile": "Complete your profile",
                 "mission": "Create your first mission",
                 "webhook": "Configure Stripe webhook",
-                "seller": "Welcome your first seller"
+                "seller": "Welcome your first seller",
+                "portal": "Enable your affiliate portal"
             }
         },
         "notifications": {
@@ -1171,7 +1172,8 @@
             "links": "Links",
             "campaigns": "Campaigns",
             "analytics": "Analytics",
-            "settings": "Settings"
+            "settings": "Settings",
+            "portal": "Portal"
         },
         "marketing": {
             "createLink": "Create Link",
@@ -3064,6 +3066,7 @@
             "copied": "Copied!",
             "missionLinks": "Direct Mission Links",
             "missionLinksDesc": "Share links to specific missions for focused campaigns.",
+            "viewPortal": "View your portal",
             "loadError": "Failed to load portal settings."
         }
     }

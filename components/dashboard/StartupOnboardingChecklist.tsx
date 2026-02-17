@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Check, X, Building2, Rocket, Webhook, Users } from 'lucide-react'
+import { Check, X, Building2, Rocket, Webhook, Users, Globe } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { getStartupOnboardingStatus, type StartupOnboardingStatus } from '@/app/actions/startup-profile'
@@ -59,6 +59,13 @@ export function StartupOnboardingChecklist() {
             label: t('steps.seller'),
             href: '/dashboard/sellers',
             done: status.steps.seller,
+        },
+        {
+            key: 'portal' as const,
+            icon: Globe,
+            label: t('steps.portal'),
+            href: '/dashboard/settings?tab=portal',
+            done: status.steps.portal,
         },
     ]
 
