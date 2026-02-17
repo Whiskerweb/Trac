@@ -1179,6 +1179,18 @@
                 "size": "Size",
                 "empty": "No QR codes",
                 "emptyDesc": "Create marketing links to generate QR codes."
+            },
+            "tags": {
+                "title": "Tags",
+                "manage": "Manage tags",
+                "create": "New tag",
+                "namePlaceholder": "Tag name",
+                "delete": "Delete tag",
+                "edit": "Edit tag",
+                "noTags": "No tags yet",
+                "addToLink": "Add tags",
+                "allTags": "All Tags",
+                "filterByTag": "Filter by tag"
             }
         }
     },

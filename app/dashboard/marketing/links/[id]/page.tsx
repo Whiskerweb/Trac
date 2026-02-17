@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { getMarketingLink, deleteMarketingLink } from '@/app/actions/marketing-links'
 import { getChannelConfig } from '@/lib/marketing/channels'
+import { getTagColor } from '@/lib/marketing/tags'
 
 interface LinkData {
     id: string
@@ -25,6 +26,7 @@ interface LinkData {
     utm_campaign: string | null
     utm_term: string | null
     utm_content: string | null
+    tags: { id: string; name: string; color: string }[]
 }
 
 export default function MarketingLinkDetailPage() {
@@ -131,6 +133,18 @@ export default function MarketingLinkDetailPage() {
                                         {link.campaign}
                                     </span>
                                 )}
+                                {link.tags?.map(tag => {
+                                    const tc = getTagColor(tag.color)
+                                    return (
+                                        <span
+                                            key={tag.id}
+                                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${tc.bg} ${tc.text}`}
+                                        >
+                                            <span className={`w-2 h-2 rounded-full ${tc.dot}`} />
+                                            {tag.name}
+                                        </span>
+                                    )
+                                })}
                             </div>
                             <p className="text-sm text-gray-400 mt-0.5 truncate max-w-lg">{link.original_url}</p>
                             <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">

@@ -1179,6 +1179,18 @@
                 "size": "Taille",
                 "empty": "Aucun QR code",
                 "emptyDesc": "Créez des liens marketing pour générer des QR codes."
+            },
+            "tags": {
+                "title": "Tags",
+                "manage": "Gérer les tags",
+                "create": "Nouveau tag",
+                "namePlaceholder": "Nom du tag",
+                "delete": "Supprimer le tag",
+                "edit": "Modifier le tag",
+                "noTags": "Aucun tag",
+                "addToLink": "Ajouter des tags",
+                "allTags": "Tous les tags",
+                "filterByTag": "Filtrer par tag"
             }
         }
     },

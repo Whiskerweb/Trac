@@ -1179,6 +1179,18 @@
                 "size": "Tamaño",
                 "empty": "Sin códigos QR",
                 "emptyDesc": "Crea enlaces de marketing para generar códigos QR."
+            },
+            "tags": {
+                "title": "Etiquetas",
+                "manage": "Gestionar etiquetas",
+                "create": "Nueva etiqueta",
+                "namePlaceholder": "Nombre de la etiqueta",
+                "delete": "Eliminar etiqueta",
+                "edit": "Editar etiqueta",
+                "noTags": "Sin etiquetas",
+                "addToLink": "Añadir etiquetas",
+                "allTags": "Todas las etiquetas",
+                "filterByTag": "Filtrar por etiqueta"
             }
         }
     },

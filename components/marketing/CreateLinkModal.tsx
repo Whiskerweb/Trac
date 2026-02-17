@@ -6,14 +6,21 @@ import {
     X, Link2, Loader2, Check, Copy, Globe,
     Shuffle, ChevronDown, ExternalLink,
     Image as ImageIcon, Upload, Trash2,
-    Eye, Twitter, Linkedin, Facebook, Tag
+    Eye, Twitter, Linkedin, Facebook, Tag, Plus
 } from 'lucide-react'
-import { createMarketingLink } from '@/app/actions/marketing-links'
+import { createMarketingLink, getMarketingTags, createMarketingTag } from '@/app/actions/marketing-links'
 import { getVerifiedDomainForWorkspace } from '@/app/actions/domains'
 import { getStartupProfile } from '@/app/actions/startup-profile'
 import { PREDEFINED_CHANNELS } from '@/lib/marketing/channels'
+import { TAG_COLORS, getTagColor } from '@/lib/marketing/tags'
 import QRCodeWithLogo from '@/components/QRCodeWithLogo'
 import { nanoid } from 'nanoid'
+
+interface TagOption {
+    id: string
+    name: string
+    color: string
+}
 
 interface CreateLinkModalProps {
     isOpen: boolean
@@ -56,6 +63,13 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
     const [selectedDomain, setSelectedDomain] = useState<string>('')
     const [showDomainDropdown, setShowDomainDropdown] = useState(false)
 
+    // Tags
+    const [availableTags, setAvailableTags] = useState<TagOption[]>([])
+    const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+    const [showNewTag, setShowNewTag] = useState(false)
+    const [inlineTagName, setInlineTagName] = useState('')
+    const [inlineTagColor, setInlineTagColor] = useState(TAG_COLORS[0].hex)
+
     // UTM popover ref
     const utmRef = useRef<HTMLDivElement>(null)
 
@@ -82,9 +96,18 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
             setOgDescription('')
             setOgImage('')
             setActivePreviewTab('generic')
+            setSelectedTagIds([])
+            setShowNewTag(false)
+            setInlineTagName('')
+            setInlineTagColor(TAG_COLORS[0].hex)
             setError('')
             setCopied(false)
 
+            getMarketingTags().then(res => {
+                if (res.success && res.data) {
+                    setAvailableTags(res.data as TagOption[])
+                }
+            })
             getVerifiedDomainForWorkspace().then(res => {
                 if (res.success && res.domain) {
                     setVerifiedDomain(res.domain)
@@ -171,6 +194,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
             og_title: ogTitle.trim() || undefined,
             og_description: ogDescription.trim() || undefined,
             og_image: ogImage || undefined,
+            tagIds: selectedTagIds.length ? selectedTagIds : undefined,
         })
 
         if (res.success && res.data) {
@@ -413,6 +437,103 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                         className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 transition-all"
                                     />
                                 </div>
+
+                                {/* Tags */}
+                                {availableTags.length > 0 && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            {t('modal.tags')}
+                                        </label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {availableTags.map(tag => {
+                                                const tc = getTagColor(tag.color)
+                                                const isSelected = selectedTagIds.includes(tag.id)
+                                                return (
+                                                    <button
+                                                        key={tag.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedTagIds(prev =>
+                                                                isSelected ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
+                                                            )
+                                                        }}
+                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                                            isSelected
+                                                                ? `${tc.bg} ${tc.text} shadow-sm`
+                                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                        }`}
+                                                    >
+                                                        <span className={`w-2 h-2 rounded-full ${tc.dot}`} />
+                                                        {tag.name}
+                                                    </button>
+                                                )
+                                            })}
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowNewTag(!showNewTag)}
+                                                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all"
+                                            >
+                                                <Plus className="w-3 h-3" />
+                                                {t('tags.create')}
+                                            </button>
+                                        </div>
+                                        {showNewTag && (
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <input
+                                                    type="text"
+                                                    value={inlineTagName}
+                                                    onChange={(e) => setInlineTagName(e.target.value)}
+                                                    onKeyDown={async (e) => {
+                                                        if (e.key === 'Enter' && inlineTagName.trim()) {
+                                                            e.preventDefault()
+                                                            const res = await createMarketingTag(inlineTagName, inlineTagColor)
+                                                            if (res.success && res.data) {
+                                                                const newTag = res.data as TagOption
+                                                                setAvailableTags(prev => [...prev, newTag])
+                                                                setSelectedTagIds(prev => [...prev, newTag.id])
+                                                                setInlineTagName('')
+                                                                setShowNewTag(false)
+                                                            }
+                                                        }
+                                                    }}
+                                                    placeholder={t('tags.namePlaceholder')}
+                                                    className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                                    autoFocus
+                                                />
+                                                <div className="flex items-center gap-0.5">
+                                                    {TAG_COLORS.map(c => (
+                                                        <button
+                                                            key={c.id}
+                                                            type="button"
+                                                            onClick={() => setInlineTagColor(c.hex)}
+                                                            className={`w-4 h-4 rounded-full ${c.dot} transition-all ${
+                                                                inlineTagColor === c.hex ? 'ring-2 ring-offset-1 ring-gray-400 scale-110' : 'hover:scale-110'
+                                                            }`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        if (!inlineTagName.trim()) return
+                                                        const res = await createMarketingTag(inlineTagName, inlineTagColor)
+                                                        if (res.success && res.data) {
+                                                            const newTag = res.data as TagOption
+                                                            setAvailableTags(prev => [...prev, newTag])
+                                                            setSelectedTagIds(prev => [...prev, newTag.id])
+                                                            setInlineTagName('')
+                                                            setShowNewTag(false)
+                                                        }
+                                                    }}
+                                                    disabled={!inlineTagName.trim()}
+                                                    className="px-2.5 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-40 transition-all"
+                                                >
+                                                    Add
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* Error */}
                                 {error && (

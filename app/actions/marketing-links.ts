@@ -38,6 +38,7 @@ interface MarketingLinkInput {
     og_title?: string
     og_description?: string
     og_image?: string
+    tagIds?: string[]
 }
 
 /**
@@ -114,6 +115,9 @@ export async function createMarketingLink(input: MarketingLinkInput) {
                 og_title: input.og_title || null,
                 og_description: input.og_description || null,
                 og_image: input.og_image || null,
+                ...(input.tagIds?.length ? {
+                    tags: { connect: input.tagIds.map(id => ({ id })) }
+                } : {}),
             }
         })
 
@@ -158,6 +162,7 @@ export async function getMarketingLinks(filters?: {
     channel?: string
     campaign?: string
     search?: string
+    tagIds?: string[]
 }) {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -181,10 +186,14 @@ export async function getMarketingLinks(filters?: {
             { campaign: { contains: filters.search, mode: 'insensitive' } },
         ]
     }
+    if (filters?.tagIds?.length) {
+        where.tags = { some: { id: { in: filters.tagIds } } }
+    }
 
     const links = await prisma.shortLink.findMany({
         where,
         orderBy: { created_at: 'desc' },
+        include: { tags: { select: { id: true, name: true, color: true } } },
     })
 
     const base = await getShortLinkBase(workspace.workspaceId)
@@ -209,7 +218,10 @@ export async function getMarketingLink(id: string) {
     const workspace = await getActiveWorkspaceForUser()
     if (!workspace) return { success: false, error: 'No workspace' }
 
-    const link = await prisma.shortLink.findUnique({ where: { id } })
+    const link = await prisma.shortLink.findUnique({
+        where: { id },
+        include: { tags: { select: { id: true, name: true, color: true } } },
+    })
 
     if (!link || link.workspace_id !== workspace.workspaceId || link.link_type !== 'marketing') {
         return { success: false, error: 'Link not found' }
@@ -395,6 +407,145 @@ export async function getMarketingChannelStats() {
         success: true,
         data: Array.from(channelMap.values()),
     }
+}
+
+// =============================================
+// MARKETING TAGS — CRUD + Assignment
+// =============================================
+
+/**
+ * Create a new marketing tag
+ */
+export async function createMarketingTag(name: string, color: string) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { success: false, error: 'Not authenticated' }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) return { success: false, error: 'No workspace' }
+
+    if (!name.trim()) return { success: false, error: 'Name is required' }
+
+    try {
+        const tag = await prisma.marketingTag.create({
+            data: {
+                name: name.trim(),
+                color,
+                workspace_id: workspace.workspaceId,
+            },
+        })
+        revalidatePath('/dashboard/marketing')
+        return { success: true, data: tag }
+    } catch {
+        return { success: false, error: 'Tag name already exists' }
+    }
+}
+
+/**
+ * Update a marketing tag (name and/or color)
+ */
+export async function updateMarketingTag(id: string, data: { name?: string; color?: string }) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { success: false, error: 'Not authenticated' }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) return { success: false, error: 'No workspace' }
+
+    const tag = await prisma.marketingTag.findUnique({ where: { id } })
+    if (!tag || tag.workspace_id !== workspace.workspaceId) {
+        return { success: false, error: 'Tag not found' }
+    }
+
+    const updateData: Record<string, string> = {}
+    if (data.name !== undefined) updateData.name = data.name.trim()
+    if (data.color !== undefined) updateData.color = data.color
+
+    try {
+        const updated = await prisma.marketingTag.update({ where: { id }, data: updateData })
+        revalidatePath('/dashboard/marketing')
+        return { success: true, data: updated }
+    } catch {
+        return { success: false, error: 'Tag name already exists' }
+    }
+}
+
+/**
+ * Delete a marketing tag
+ */
+export async function deleteMarketingTag(id: string) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { success: false, error: 'Not authenticated' }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) return { success: false, error: 'No workspace' }
+
+    const tag = await prisma.marketingTag.findUnique({ where: { id } })
+    if (!tag || tag.workspace_id !== workspace.workspaceId) {
+        return { success: false, error: 'Tag not found' }
+    }
+
+    await prisma.marketingTag.delete({ where: { id } })
+    revalidatePath('/dashboard/marketing')
+    return { success: true }
+}
+
+/**
+ * Get all marketing tags for current workspace (with link count)
+ */
+export async function getMarketingTags() {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { success: false, error: 'Not authenticated', data: [] }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) return { success: false, error: 'No workspace', data: [] }
+
+    const tags = await prisma.marketingTag.findMany({
+        where: { workspace_id: workspace.workspaceId },
+        include: { _count: { select: { links: true } } },
+        orderBy: { created_at: 'asc' },
+    })
+
+    return {
+        success: true,
+        data: tags.map(t => ({
+            id: t.id,
+            name: t.name,
+            color: t.color,
+            linkCount: t._count.links,
+        })),
+    }
+}
+
+/**
+ * Set tags on a link (replaces all existing tags)
+ */
+export async function setLinkTags(linkId: string, tagIds: string[]) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { success: false, error: 'Not authenticated' }
+
+    const workspace = await getActiveWorkspaceForUser()
+    if (!workspace) return { success: false, error: 'No workspace' }
+
+    const link = await prisma.shortLink.findUnique({ where: { id: linkId } })
+    if (!link || link.workspace_id !== workspace.workspaceId) {
+        return { success: false, error: 'Link not found' }
+    }
+
+    await prisma.shortLink.update({
+        where: { id: linkId },
+        data: {
+            tags: {
+                set: tagIds.map(id => ({ id })),
+            },
+        },
+    })
+
+    revalidatePath('/dashboard/marketing')
+    return { success: true }
 }
 
 /**

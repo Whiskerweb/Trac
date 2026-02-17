@@ -6,13 +6,21 @@ import { useRouter } from 'next/navigation'
 import {
     Plus, Search, Copy, QrCode, Trash2,
     ExternalLink, Link2, Check, MousePointerClick,
-    Download, ChevronDown
+    Download, ChevronDown, Tag, X, Pencil
 } from 'lucide-react'
-import { getMarketingLinks, getMarketingOverview, getMarketingCampaigns, deleteMarketingLink } from '@/app/actions/marketing-links'
+import { getMarketingLinks, getMarketingOverview, getMarketingCampaigns, deleteMarketingLink, getMarketingTags, createMarketingTag, updateMarketingTag, deleteMarketingTag, setLinkTags } from '@/app/actions/marketing-links'
 import { getStartupProfile } from '@/app/actions/startup-profile'
 import { PREDEFINED_CHANNELS, getChannelConfig } from '@/lib/marketing/channels'
+import { TAG_COLORS, getTagColor } from '@/lib/marketing/tags'
 import { CreateLinkModal } from '@/components/marketing/CreateLinkModal'
 import QRCodeWithLogo from '@/components/QRCodeWithLogo'
+
+interface MarketingTagData {
+    id: string
+    name: string
+    color: string
+    linkCount: number
+}
 
 interface MarketingLink {
     id: string
@@ -23,6 +31,7 @@ interface MarketingLink {
     channel: string | null
     campaign: string | null
     created_at: Date
+    tags: { id: string; name: string; color: string }[]
 }
 
 interface CampaignOption {
@@ -38,7 +47,9 @@ export default function MarketingLinksPage() {
     const [search, setSearch] = useState('')
     const [activeChannel, setActiveChannel] = useState<string | null>(null)
     const [activeCampaign, setActiveCampaign] = useState<string | null>(null)
+    const [activeTagIds, setActiveTagIds] = useState<string[]>([])
     const [campaigns, setCampaigns] = useState<CampaignOption[]>([])
+    const [tags, setTags] = useState<MarketingTagData[]>([])
     const [copiedId, setCopiedId] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -53,6 +64,19 @@ export default function MarketingLinksPage() {
     // Campaign dropdown state
     const [campaignDropdownOpen, setCampaignDropdownOpen] = useState(false)
     const campaignRef = useRef<HTMLDivElement>(null)
+
+    // Tag manager popover state
+    const [tagManagerOpen, setTagManagerOpen] = useState(false)
+    const tagManagerRef = useRef<HTMLDivElement>(null)
+    const [newTagName, setNewTagName] = useState('')
+    const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0].hex)
+    const [editingTagId, setEditingTagId] = useState<string | null>(null)
+    const [editingTagName, setEditingTagName] = useState('')
+    const [editingTagColor, setEditingTagColor] = useState('')
+
+    // Tag assignment popover state
+    const [tagAssignOpenId, setTagAssignOpenId] = useState<string | null>(null)
+    const tagAssignRef = useRef<HTMLDivElement>(null)
 
     // Load startup logo once
     useEffect(() => {
@@ -83,17 +107,28 @@ export default function MarketingLinksPage() {
         })
     }, [])
 
+    // Load tags
+    const loadTags = useCallback(async () => {
+        const res = await getMarketingTags()
+        if (res.success && res.data) {
+            setTags(res.data as MarketingTagData[])
+        }
+    }, [])
+
+    useEffect(() => { loadTags() }, [loadTags])
+
     const loadLinks = useCallback(async () => {
         const res = await getMarketingLinks({
             search: search || undefined,
             channel: activeChannel || undefined,
             campaign: activeCampaign || undefined,
+            tagIds: activeTagIds.length ? activeTagIds : undefined,
         })
         if (res.success) {
             setLinks(res.data as unknown as MarketingLink[])
         }
         setLoading(false)
-    }, [search, activeChannel, activeCampaign])
+    }, [search, activeChannel, activeCampaign, activeTagIds])
 
     useEffect(() => {
         setLoading(true)
@@ -123,6 +158,29 @@ export default function MarketingLinksPage() {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
+    // Close tag manager on click outside
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (tagManagerRef.current && !tagManagerRef.current.contains(e.target as Node)) {
+                setTagManagerOpen(false)
+                setEditingTagId(null)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    // Close tag assignment popover on click outside
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (tagAssignRef.current && !tagAssignRef.current.contains(e.target as Node)) {
+                setTagAssignOpenId(null)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
     const handleCopy = async (link: MarketingLink) => {
         await navigator.clipboard.writeText(link.short_url)
         setCopiedId(link.id)
@@ -137,6 +195,58 @@ export default function MarketingLinksPage() {
             setTotalLinks(prev => prev - 1)
         }
         setDeletingId(null)
+    }
+
+    const handleCreateTag = async () => {
+        if (!newTagName.trim()) return
+        const res = await createMarketingTag(newTagName, newTagColor)
+        if (res.success) {
+            setNewTagName('')
+            setNewTagColor(TAG_COLORS[0].hex)
+            loadTags()
+        }
+    }
+
+    const handleUpdateTag = async (id: string) => {
+        if (!editingTagName.trim()) return
+        await updateMarketingTag(id, { name: editingTagName, color: editingTagColor })
+        setEditingTagId(null)
+        loadTags()
+        loadLinks()
+    }
+
+    const handleDeleteTag = async (id: string) => {
+        await deleteMarketingTag(id)
+        setActiveTagIds(prev => prev.filter(t => t !== id))
+        loadTags()
+        loadLinks()
+    }
+
+    const handleToggleTagFilter = (tagId: string) => {
+        setActiveTagIds(prev =>
+            prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
+        )
+    }
+
+    const handleToggleLinkTag = async (linkId: string, tagId: string) => {
+        const link = links.find(l => l.id === linkId)
+        if (!link) return
+        const currentTagIds = link.tags.map(t => t.id)
+        const newTagIds = currentTagIds.includes(tagId)
+            ? currentTagIds.filter(id => id !== tagId)
+            : [...currentTagIds, tagId]
+        await setLinkTags(linkId, newTagIds)
+        // Optimistic update
+        setLinks(prev => prev.map(l => {
+            if (l.id !== linkId) return l
+            const newTags = newTagIds.map(id => {
+                const existing = l.tags.find(t => t.id === id)
+                if (existing) return existing
+                const fromAll = tags.find(t => t.id === id)
+                return fromAll ? { id: fromAll.id, name: fromAll.name, color: fromAll.color } : { id, name: '', color: '' }
+            })
+            return { ...l, tags: newTags }
+        }))
     }
 
     const downloadQR = useCallback(async (linkSlug: string, linkId: string, format: 'png' | 'svg') => {
@@ -265,6 +375,7 @@ export default function MarketingLinksPage() {
     const refreshData = () => {
         setIsCreateModalOpen(false)
         loadLinks()
+        loadTags()
         getMarketingOverview().then(res => {
             if (res.success && res.data) {
                 const d = res.data as { totalClicks: number; totalLinks: number }
@@ -381,6 +492,167 @@ export default function MarketingLinksPage() {
                         </div>
                     )}
                 </div>
+
+                {/* Tag filter pills */}
+                {tags.length > 0 && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                            onClick={() => setActiveTagIds([])}
+                            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                activeTagIds.length === 0
+                                    ? 'bg-gray-900 text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                        >
+                            {t('tags.allTags')}
+                        </button>
+                        {tags.map(tag => {
+                            const tc = getTagColor(tag.color)
+                            const isActive = activeTagIds.includes(tag.id)
+                            return (
+                                <button
+                                    key={tag.id}
+                                    onClick={() => handleToggleTagFilter(tag.id)}
+                                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                        isActive
+                                            ? `${tc.bg} ${tc.text}`
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    <span className={`w-2 h-2 rounded-full ${tc.dot}`} />
+                                    {tag.name}
+                                </button>
+                            )
+                        })}
+
+                        {/* Manage tags button + popover */}
+                        <div className="relative" ref={tagManagerRef}>
+                            <button
+                                onClick={() => setTagManagerOpen(!tagManagerOpen)}
+                                className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all"
+                            >
+                                <Plus className="w-3 h-3" />
+                                {t('tags.manage')}
+                            </button>
+
+                            {tagManagerOpen && (
+                                <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-xl border border-gray-200 shadow-xl z-50 p-3">
+                                    <h4 className="text-xs font-semibold text-gray-900 mb-2">{t('tags.title')}</h4>
+
+                                    {/* Existing tags */}
+                                    {tags.length === 0 ? (
+                                        <p className="text-xs text-gray-400 py-2">{t('tags.noTags')}</p>
+                                    ) : (
+                                        <div className="space-y-1 mb-3 max-h-48 overflow-y-auto">
+                                            {tags.map(tag => {
+                                                const tc = getTagColor(tag.color)
+                                                const isEditing = editingTagId === tag.id
+
+                                                if (isEditing) {
+                                                    return (
+                                                        <div key={tag.id} className="flex items-center gap-2 py-1">
+                                                            <input
+                                                                type="text"
+                                                                value={editingTagName}
+                                                                onChange={(e) => setEditingTagName(e.target.value)}
+                                                                onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateTag(tag.id) }}
+                                                                className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                                                autoFocus
+                                                            />
+                                                            <div className="flex items-center gap-0.5">
+                                                                {TAG_COLORS.map(c => (
+                                                                    <button
+                                                                        key={c.id}
+                                                                        onClick={() => setEditingTagColor(c.hex)}
+                                                                        className={`w-4 h-4 rounded-full ${c.dot} transition-all ${
+                                                                            editingTagColor === c.hex ? 'ring-2 ring-offset-1 ring-gray-400 scale-110' : 'hover:scale-110'
+                                                                        }`}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleUpdateTag(tag.id)}
+                                                                className="p-1 text-green-600 hover:bg-green-50 rounded"
+                                                            >
+                                                                <Check className="w-3 h-3" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setEditingTagId(null)}
+                                                                className="p-1 text-gray-400 hover:bg-gray-100 rounded"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
+                                                    )
+                                                }
+
+                                                return (
+                                                    <div key={tag.id} className="flex items-center justify-between py-1 group/tag">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`w-2.5 h-2.5 rounded-full ${tc.dot}`} />
+                                                            <span className="text-xs text-gray-700 font-medium">{tag.name}</span>
+                                                            <span className="text-[10px] text-gray-400">{tag.linkCount}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-0.5 opacity-0 group-hover/tag:opacity-100 transition-opacity">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingTagId(tag.id)
+                                                                    setEditingTagName(tag.name)
+                                                                    setEditingTagColor(tag.color)
+                                                                }}
+                                                                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                                                            >
+                                                                <Pencil className="w-3 h-3" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteTag(tag.id)}
+                                                                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {/* Create new tag */}
+                                    <div className="border-t border-gray-100 pt-2">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={newTagName}
+                                                onChange={(e) => setNewTagName(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') handleCreateTag() }}
+                                                placeholder={t('tags.namePlaceholder')}
+                                                className="flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                            />
+                                            <div className="flex items-center gap-0.5">
+                                                {TAG_COLORS.map(c => (
+                                                    <button
+                                                        key={c.id}
+                                                        onClick={() => setNewTagColor(c.hex)}
+                                                        className={`w-4 h-4 rounded-full ${c.dot} transition-all ${
+                                                            newTagColor === c.hex ? 'ring-2 ring-offset-1 ring-gray-400 scale-110' : 'hover:scale-110'
+                                                        }`}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <button
+                                                onClick={handleCreateTag}
+                                                disabled={!newTagName.trim()}
+                                                className="px-2 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:opacity-40 transition-all"
+                                            >
+                                                {t('tags.create')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Links List */}
@@ -419,6 +691,7 @@ export default function MarketingLinksPage() {
                         const isCopied = copiedId === link.id
                         const isDeleting = deletingId === link.id
                         const isQrOpen = qrOpenId === link.id
+                        const isTagAssignOpen = tagAssignOpenId === link.id
 
                         return (
                             <div
@@ -435,7 +708,7 @@ export default function MarketingLinksPage() {
                                     className="flex-1 min-w-0 cursor-pointer"
                                     onClick={() => router.push(`/dashboard/marketing/links/${link.id}`)}
                                 >
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         <p className="text-sm font-semibold text-gray-900 truncate">
                                             /{link.slug}
                                         </p>
@@ -444,6 +717,19 @@ export default function MarketingLinksPage() {
                                                 {link.campaign}
                                             </span>
                                         )}
+                                        {/* Tag pills on row */}
+                                        {link.tags?.map(tag => {
+                                            const tc = getTagColor(tag.color)
+                                            return (
+                                                <span
+                                                    key={tag.id}
+                                                    className={`hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${tc.bg} ${tc.text}`}
+                                                >
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${tc.dot}`} />
+                                                    {tag.name}
+                                                </span>
+                                            )
+                                        })}
                                     </div>
                                     <p className="text-xs text-gray-400 truncate mt-0.5">{link.original_url}</p>
                                 </div>
@@ -515,6 +801,51 @@ export default function MarketingLinksPage() {
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Tag assignment button + popover */}
+                                    {tags.length > 0 && (
+                                        <div className="relative">
+                                            <button
+                                                onClick={() => setTagAssignOpenId(isTagAssignOpen ? null : link.id)}
+                                                className={`p-1.5 rounded-lg transition-colors ${
+                                                    isTagAssignOpen
+                                                        ? 'text-purple-600 bg-purple-50'
+                                                        : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+                                                }`}
+                                                title={t('tags.addToLink')}
+                                            >
+                                                <Tag className="w-3.5 h-3.5" />
+                                            </button>
+
+                                            {isTagAssignOpen && (
+                                                <div
+                                                    ref={tagAssignRef}
+                                                    className="absolute right-0 top-full mt-2 bg-white rounded-xl border border-gray-200 shadow-xl z-50 w-48 py-1"
+                                                >
+                                                    <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{t('tags.addToLink')}</p>
+                                                    {tags.map(tag => {
+                                                        const tc = getTagColor(tag.color)
+                                                        const isAssigned = link.tags?.some(lt => lt.id === tag.id) ?? false
+                                                        return (
+                                                            <button
+                                                                key={tag.id}
+                                                                onClick={() => handleToggleLinkTag(link.id, tag.id)}
+                                                                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
+                                                            >
+                                                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                                                                    isAssigned ? `${tc.bg} border-transparent` : 'border-gray-300'
+                                                                }`}>
+                                                                    {isAssigned && <Check className={`w-3 h-3 ${tc.text}`} />}
+                                                                </div>
+                                                                <span className={`w-2 h-2 rounded-full ${tc.dot}`} />
+                                                                <span className="text-xs text-gray-700">{tag.name}</span>
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <button
                                         onClick={() => handleDelete(link.id)}

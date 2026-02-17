@@ -159,6 +159,7 @@ model ShortLink {
   og_image          String?
   MissionEnrollment MissionEnrollment?
   Workspace         Workspace          @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  tags              MarketingTag[]     @relation("ShortLinkTags")
 
   @@index([affiliate_id])
   @@index([slug])
@@ -231,6 +232,7 @@ model Workspace {
   WebhookEndpoint  WebhookEndpoint[]
   WorkspaceMember  WorkspaceMember[]
   StartupPayment   StartupPayment[]
+  MarketingTag     MarketingTag[]
 
   @@index([owner_id])
   @@index([slug])
@@ -470,6 +472,7 @@ model Seller {
   @@index([user_id])
   @@index([program_id])
   @@index([referred_by])
+  @@index([referred_at])
 }
 
 /// Partner Profile - Onboarding data and social links
@@ -628,6 +631,7 @@ model Commission {
   @@index([org_parent_commission_id])
   @@index([organization_mission_id])
   @@index([referral_source_commission_id])
+  @@index([referral_generation])
   @@index([group_id])
 }
 
@@ -1225,6 +1229,20 @@ model SellerGroupMember {
   Seller Seller      @relation(fields: [seller_id], references: [id])
 
   @@index([group_id])
+}
+
+/// Marketing tag for organizing short links (Apple Finder style)
+model MarketingTag {
+  id           String      @id @default(uuid())
+  name         String
+  color        String      // hex: "#EF4444", "#8B5CF6"...
+  workspace_id String
+  created_at   DateTime    @default(now())
+  Workspace    Workspace   @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  links        ShortLink[] @relation("ShortLinkTags")
+
+  @@unique([workspace_id, name])
+  @@index([workspace_id])
 }
 
 /// Group enrollment in a mission — all active members get ShortLinks
