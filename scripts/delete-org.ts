@@ -48,25 +48,28 @@ async function main() {
     console.log('Commissions unlinked from org missions:', cleared.count)
   }
 
-  // 2. Delete shortlinks, enrollments, commissions on exclusive (cloned) missions
+  // 2. Delete enrollments (+ their shortlinks), commissions on exclusive (cloned) missions
   if (exclusiveMissionIds.length > 0) {
-    // Delete shortlinks via their MissionEnrollment linkage
+    // Find shortlinks before deleting enrollments
     const enrollmentsWithLinks = await prisma.missionEnrollment.findMany({
       where: { mission_id: { in: exclusiveMissionIds }, link_id: { not: null } },
       select: { link_id: true }
     })
     const linkIds = enrollmentsWithLinks.map(e => e.link_id).filter((id): id is string => id !== null)
+
+    // Delete enrollments first (FK to shortlinks)
+    const delEnrollments = await prisma.missionEnrollment.deleteMany({
+      where: { mission_id: { in: exclusiveMissionIds } }
+    })
+    console.log('Enrollments deleted:', delEnrollments.count)
+
+    // Then delete orphaned shortlinks
     if (linkIds.length > 0) {
       const delShortlinks = await prisma.shortLink.deleteMany({
         where: { id: { in: linkIds } }
       })
       console.log('ShortLinks deleted:', delShortlinks.count)
     }
-
-    const delEnrollments = await prisma.missionEnrollment.deleteMany({
-      where: { mission_id: { in: exclusiveMissionIds } }
-    })
-    console.log('Enrollments deleted:', delEnrollments.count)
 
     // Delete commissions linked to these shortlinks
     if (linkIds.length > 0) {
