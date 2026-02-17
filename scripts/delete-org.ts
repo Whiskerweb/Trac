@@ -1,4 +1,13 @@
-import { prisma } from '../lib/db'
+import * as dotenv from 'dotenv'
+dotenv.config({ path: '.env.local', override: true })
+
+import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
+import { PrismaClient } from '../lib/generated/prisma/client'
+
+const pool = new Pool({ connectionString: process.env.DIRECT_URL || process.env.DATABASE_URL })
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
   const orgName = 'top tierce'
@@ -39,30 +48,20 @@ async function main() {
     console.log('Commissions unlinked from org missions:', cleared.count)
   }
 
-  // 2. Delete enrollments, shortlinks, commissions on exclusive (cloned) missions
+  // 2. Delete shortlinks, enrollments, commissions on exclusive (cloned) missions
   if (exclusiveMissionIds.length > 0) {
+    const delShortlinks = await prisma.shortLink.deleteMany({
+      where: { mission_id: { in: exclusiveMissionIds } }
+    })
+    console.log('ShortLinks deleted:', delShortlinks.count)
+
     const delEnrollments = await prisma.missionEnrollment.deleteMany({
       where: { mission_id: { in: exclusiveMissionIds } }
     })
     console.log('Enrollments deleted:', delEnrollments.count)
 
-    // Delete ShortLinks tied to enrollments of exclusive missions
-    const enrollmentLinks = await prisma.missionEnrollment.findMany({
-      where: { mission_id: { in: exclusiveMissionIds }, link_id: { not: null } },
-      select: { link_id: true },
-    })
-    const linkIds = enrollmentLinks.map(e => e.link_id).filter((id): id is string => id !== null)
-    if (linkIds.length > 0) {
-      const delShortlinks = await prisma.shortLink.deleteMany({
-        where: { id: { in: linkIds } }
-      })
-      console.log('ShortLinks deleted:', delShortlinks.count)
-    } else {
-      console.log('ShortLinks deleted: 0')
-    }
-
     const delCommissions = await prisma.commission.deleteMany({
-      where: { organization_mission_id: { in: exclusiveMissionIds } }
+      where: { mission_id: { in: exclusiveMissionIds } }
     })
     console.log('Commissions on exclusive missions deleted:', delCommissions.count)
 
@@ -77,7 +76,7 @@ async function main() {
   await prisma.organization.delete({ where: { id: org.id } })
   console.log('Organization deleted:', org.name)
 
-  // 5. Clean up any rich message cards related to this org
+  // 5. Cancel any pending org deal messages (all orgs — safe since we just deleted)
   const updatedMessages = await prisma.message.updateMany({
     where: {
       message_type: 'ORG_DEAL_PROPOSAL',
