@@ -580,6 +580,102 @@ export async function getPortalAnalytics() {
 }
 
 // =============================================
+// PORTAL REFERRAL PROGRAM
+// =============================================
+
+/**
+ * Get portal referral program settings for the active workspace
+ */
+export async function getPortalReferralSettings() {
+    const ws = await getActiveWorkspaceForUser()
+    if (!ws) return { success: false, error: 'No workspace' }
+
+    try {
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: ws.workspaceId },
+            select: {
+                portal_referral_enabled: true,
+                portal_referral_gen1_rate: true,
+                portal_referral_gen2_rate: true,
+                portal_referral_gen3_rate: true,
+            },
+        })
+
+        if (!workspace) return { success: false, error: 'Workspace not found' }
+
+        return {
+            success: true,
+            data: {
+                enabled: workspace.portal_referral_enabled,
+                gen1Rate: workspace.portal_referral_gen1_rate,
+                gen2Rate: workspace.portal_referral_gen2_rate,
+                gen3Rate: workspace.portal_referral_gen3_rate,
+            },
+        }
+    } catch (error) {
+        console.error('[Portal Settings] getPortalReferralSettings error:', error)
+        return { success: false, error: 'Failed to load referral settings' }
+    }
+}
+
+/**
+ * Update portal referral program settings
+ * Rates are in basis points (500 = 5.00%)
+ */
+export async function updatePortalReferralSettings(data: {
+    enabled: boolean
+    gen1Rate: number | null
+    gen2Rate: number | null
+    gen3Rate: number | null
+}) {
+    const ws = await getActiveWorkspaceForUser()
+    if (!ws) return { success: false, error: 'No workspace' }
+
+    // Validation
+    if (data.enabled) {
+        if (data.gen1Rate == null || data.gen1Rate <= 0) {
+            return { success: false, error: 'Gen 1 rate is required when referral is enabled' }
+        }
+        if (data.gen1Rate > 5000) {
+            return { success: false, error: 'Rate cannot exceed 50%' }
+        }
+        // gen2 requires gen1
+        if (data.gen2Rate != null) {
+            if (data.gen2Rate <= 0 || data.gen2Rate > 5000) {
+                return { success: false, error: 'Gen 2 rate must be between 0.01% and 50%' }
+            }
+        }
+        // gen3 requires gen2
+        if (data.gen3Rate != null && data.gen2Rate == null) {
+            return { success: false, error: 'Gen 3 requires Gen 2 to be configured' }
+        }
+        if (data.gen3Rate != null) {
+            if (data.gen3Rate <= 0 || data.gen3Rate > 5000) {
+                return { success: false, error: 'Gen 3 rate must be between 0.01% and 50%' }
+            }
+        }
+    }
+
+    try {
+        await prisma.workspace.update({
+            where: { id: ws.workspaceId },
+            data: {
+                portal_referral_enabled: data.enabled,
+                portal_referral_gen1_rate: data.enabled ? data.gen1Rate : null,
+                portal_referral_gen2_rate: data.enabled ? data.gen2Rate : null,
+                portal_referral_gen3_rate: data.enabled ? data.gen3Rate : null,
+            },
+        })
+
+        revalidatePath('/dashboard/portal')
+        return { success: true }
+    } catch (error) {
+        console.error('[Portal Settings] updatePortalReferralSettings error:', error)
+        return { success: false, error: 'Failed to update referral settings' }
+    }
+}
+
+// =============================================
 // PORTAL SOURCE SELLERS
 // =============================================
 

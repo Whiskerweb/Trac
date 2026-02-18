@@ -49,6 +49,12 @@ export default function PortalReferralsPage() {
     const primaryColor = data.workspace.portal_primary_color || '#7C3AED'
     const referralLink = `${typeof window !== 'undefined' ? window.location.origin : ''}${portalPath(workspaceSlug)}?ref=${data.referralCode}`
 
+    // Dynamic rates from workspace config (basis points → percentage string)
+    const config = data.referralConfig
+    const gen1Pct = config.gen1Rate ? `${(config.gen1Rate / 100).toFixed(config.gen1Rate % 100 === 0 ? 0 : 1)}%` : null
+    const gen2Pct = config.gen2Rate ? `${(config.gen2Rate / 100).toFixed(config.gen2Rate % 100 === 0 ? 0 : 1)}%` : null
+    const gen3Pct = config.gen3Rate ? `${(config.gen3Rate / 100).toFixed(config.gen3Rate % 100 === 0 ? 0 : 1)}%` : null
+
     const loadReferrals = useCallback(async (p: number, s?: string) => {
         setLoading(true)
         const result = await getPortalReferrals(workspaceSlug, p, s || undefined)
@@ -113,16 +119,24 @@ export default function PortalReferralsPage() {
                         <p className="text-2xl font-bold text-gray-900">{(stats.totalEarnings / 100).toFixed(0)}&euro;</p>
                         <p className="text-[11px] text-gray-500 mt-0.5">{t('totalEarnings')}</p>
                     </div>
-                    <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
-                        <p className="text-lg font-bold" style={{ color: primaryColor }}>5%</p>
-                        <p className="text-[11px] text-gray-500 mt-0.5">{t('gen1')}</p>
-                        <p className="text-xs font-semibold text-gray-700 mt-1">{(stats.genStats.gen1.amount / 100).toFixed(0)}&euro;</p>
-                    </div>
-                    <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
-                        <p className="text-lg font-bold" style={{ color: primaryColor }}>3% / 2%</p>
-                        <p className="text-[11px] text-gray-500 mt-0.5">{t('gen2')} / {t('gen3')}</p>
-                        <p className="text-xs font-semibold text-gray-700 mt-1">{((stats.genStats.gen2.amount + stats.genStats.gen3.amount) / 100).toFixed(0)}&euro;</p>
-                    </div>
+                    {gen1Pct && (
+                        <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
+                            <p className="text-lg font-bold" style={{ color: primaryColor }}>{gen1Pct}</p>
+                            <p className="text-[11px] text-gray-500 mt-0.5">{t('gen1')}</p>
+                            <p className="text-xs font-semibold text-gray-700 mt-1">{(stats.genStats.gen1.amount / 100).toFixed(0)}&euro;</p>
+                        </div>
+                    )}
+                    {(gen2Pct || gen3Pct) && (
+                        <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
+                            <p className="text-lg font-bold" style={{ color: primaryColor }}>
+                                {[gen2Pct, gen3Pct].filter(Boolean).join(' / ')}
+                            </p>
+                            <p className="text-[11px] text-gray-500 mt-0.5">
+                                {[gen2Pct ? t('gen2') : null, gen3Pct ? t('gen3') : null].filter(Boolean).join(' / ')}
+                            </p>
+                            <p className="text-xs font-semibold text-gray-700 mt-1">{((stats.genStats.gen2.amount + stats.genStats.gen3.amount) / 100).toFixed(0)}&euro;</p>
+                        </div>
+                    )}
                 </motion.div>
             )}
 

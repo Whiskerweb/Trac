@@ -3177,7 +3177,12 @@
             "dnsWarningTitle": "DNS setup issue",
             "portalSignups": "Portal sign-ups",
             "showAll": "Show all",
-            "showLess": "Show less"
+            "showLess": "Show less",
+            "referralProgram": "Referral Program",
+            "referralDescription": "Let your affiliates earn commissions by referring other affiliates.",
+            "enableReferral": "Enable referral program",
+            "generations": "Number of generations",
+            "rate": "Commission rate"
         }
     }
 }

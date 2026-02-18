@@ -139,6 +139,7 @@ MarketingFolder → ShortLink[] (folder_id FK, onDelete: SetNull), Children[] (s
 | **GroupMission** | Inscription groupe dans mission (@@unique group_id+mission_id) |
 | **MarketingCampaign** | Campagne marketing first-class (name, color, status, dates) — @@unique(workspace_id, name) |
 | **MarketingFolder** | Dossier organisation liens (self-relation max 2 niveaux, position ordering) — @@unique(workspace_id, name, parent_id) |
+| **PortalReferral** | Referral tracking per-workspace (referrer→referred, @@unique workspace_id+referred_seller_id) |
 
 ### Champs Commission (recurring + org)
 ```
@@ -153,6 +154,7 @@ startup_payment_status    String?          — UNPAID | PAID
 org_parent_commission_id  String?          — lie leader commission → member commission
 organization_mission_id   String?          — lie au contrat OrganizationMission
 group_id                  String?          — SellerGroup.id (revenu va au createur)
+portal_referral           Boolean @default(false) — true si referral portal (paye par startup)
 ```
 
 ### Champs Message (rich messages)
@@ -232,6 +234,7 @@ SELLER: Signup → Auto-create Seller → /seller/onboarding (4 etapes) → /sel
 | `findSellerForSale()` | Trouve seller par attribution click (link_id ou sellerId) |
 | `matureCommissions()` | Mature PENDING → PROCEED apres expiration hold_days |
 | `getMissionCommissionConfig()` | Config multi-commission (Lead, Sale, Recurring) |
+| `createPortalReferralCommissions()` | Referral commissions per-workspace (startup-configured, independent from Traaaction) |
 
 ### Calcul
 ```
@@ -477,6 +480,21 @@ Responsabilites:
 - [x] **Iframe embed** : snippet `<iframe>` copiable, CSP `frame-ancestors *` pour integration site tiers
 - [x] **I18n** : ~50 cles (portal, settings) dans FR/EN/ES
 
+### Portal Referral Program (Fevrier 2026)
+- [x] **Schema** : `PortalReferral` model (workspace_id + referrer/referred sellers), `portal_referral_*` fields on Workspace, `portal_referral` Boolean on Commission
+- [x] **Commission engine** : `createPortalReferralCommissions()` — walks PortalReferral chain, rates from workspace config (basis points), `platform_fee: 0`, `startup_payment_status: UNPAID`
+- [x] **Branching** : called after `createReferralCommissions()` in `createCommission()`, `createOrgCommissions()`, `createGroupCommissions()`
+- [x] **Cookie tracking** : `trac_portal_ref` cookie set alongside `trac_ref` on portal landing page
+- [x] **Seller creation** : `createGlobalSeller()` creates `PortalReferral` record if `trac_portal_ref` cookie + workspace has referral enabled
+- [x] **Settings** : `getPortalReferralSettings()` + `updatePortalReferralSettings()` in portal-settings.ts
+- [x] **Portal actions** : `getPortalFullDashboard()` returns `referralConfig`, `getPortalReferrals()` + `getPortalSubTree()` use PortalReferral table
+- [x] **Conditional tabs** : PortalHeader hides Referrals/Network tabs when `referralEnabled=false`
+- [x] **Dynamic rates** : referrals + network pages use workspace config rates instead of hardcoded 5%/3%/2%
+- [x] **Startup settings** : `/dashboard/portal` has Referral Program section (toggle, 1-3 generations, rate per gen)
+- [x] **Independent** : fully separate from Traaaction's global referral system (`Seller.referred_by`, `REFERRAL_RATES`)
+- [x] **Clawback** : automatic via existing `referral_source_commission_id` cascade
+- [x] **I18n** : ~5 new keys (referralProgram, referralDescription, etc.) in FR/EN/ES
+
 ---
 
 ## 12. REGLES METIER CRITIQUES
@@ -498,6 +516,7 @@ Responsabilites:
 | Refund COMPLETE | Supprime commission + applique solde negatif |
 | grossAmount <= 0 | Skip commission (trials, credits, ajustements) |
 | Org creation | Seller APPROVED fait demande → admin valide (PENDING→ACTIVE) |
+| Org mission visibility | Seules les missions INVITE_ONLY peuvent etre proposees aux organisations |
 | Org commission split | Membre = memberReward + platform_fee 15%, Leader = leaderReward + platform_fee 0 |
 | Leader sale_id | `{original}:orgcut` pour unicite (ne compte pas dans recurring count) |
 | Org enrollment | Leader accepte mission → tous membres ACTIVE auto-inscrits |
@@ -517,6 +536,12 @@ Responsabilites:
 | Portal auth | Email/password inline, confirmation email, auto-create seller via `createGlobalSeller()` |
 | Portal iframe | Headers `frame-ancestors *`, recommander custom domain CNAME pour cookies tiers |
 | Portal custom domain | `/join/*` autorise sur custom domains, auth flow aussi si `next=/join/*` |
+| Portal referral | Configurable par workspace, independant du systeme Traaaction |
+| Portal referral rates | Basis points (500 = 5%), 1-3 generations, gen2 requires gen1, gen3 requires gen2 |
+| Portal referral chain | Via `PortalReferral` table (pas `Seller.referred_by`), scope workspace |
+| Portal referral payment | `startup_payment_status: UNPAID`, `platform_fee: 0` — paye par startup, pas Traaaction |
+| Portal referral sale_id | `{original}:pref:gen{N}:{referrerId}` — distinct de `:ref:` (Traaaction) |
+| Portal referral clawback | Automatique via `referral_source_commission_id` existant |
 
 ---
 

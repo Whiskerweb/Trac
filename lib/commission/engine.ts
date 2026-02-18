@@ -224,6 +224,25 @@ export async function createCommission(params: {
             ht_amount: htAmount,
         })
 
+        // Create portal referral commissions (startup-configured, independent from Traaaction)
+        await createPortalReferralCommissions({
+            id: result.id,
+            seller_id: partnerId,
+            program_id: programId,
+            sale_id: saleId,
+            gross_amount: grossAmount,
+            net_amount: netAmount,
+            stripe_fee: stripeFee,
+            tax_amount: taxAmount,
+            currency: currency.toUpperCase(),
+            hold_days: holdDays,
+            commission_source: commissionSource as CommissionSource,
+            subscription_id: subscriptionId,
+            recurring_month: recurringMonth,
+            recurring_max: recurringMax,
+            ht_amount: htAmount,
+        })
+
         return { success: true, commission: { ...result, platform_fee: traaactionFee } }
 
     } catch (error) {
@@ -1229,6 +1248,25 @@ export async function createOrgCommissions(params: {
             ht_amount: htAmount,
         })
 
+        // Create portal referral commissions (startup-configured, independent from Traaaction)
+        await createPortalReferralCommissions({
+            id: memberResult.id,
+            seller_id: memberId,
+            program_id: programId,
+            sale_id: saleId,
+            gross_amount: grossAmount,
+            net_amount: netAmount,
+            stripe_fee: stripeFee,
+            tax_amount: taxAmount,
+            currency: currency.toUpperCase(),
+            hold_days: holdDays,
+            commission_source: commissionSource as CommissionSource,
+            subscription_id: subscriptionId ?? null,
+            recurring_month: recurringMonth ?? null,
+            recurring_max: recurringMax ?? null,
+            ht_amount: htAmount,
+        })
+
         return {
             success: true,
             memberCommission: { id: memberResult.id, commission_amount: memberAmount, platform_fee: platformFee },
@@ -1412,6 +1450,25 @@ export async function createGroupCommissions(params: {
             ht_amount: htAmount,
         })
 
+        // Create portal referral commissions (startup-configured, independent from Traaaction)
+        await createPortalReferralCommissions({
+            id: result.id,
+            seller_id: creatorId,
+            program_id: programId,
+            sale_id: saleId,
+            gross_amount: grossAmount,
+            net_amount: netAmount,
+            stripe_fee: stripeFee,
+            tax_amount: taxAmount,
+            currency: currency.toUpperCase(),
+            hold_days: holdDays,
+            commission_source: commissionSource as CommissionSource,
+            subscription_id: subscriptionId,
+            recurring_month: recurringMonth,
+            recurring_max: recurringMax,
+            ht_amount: htAmount,
+        })
+
         return {
             success: true,
             commission: { id: result.id, commission_amount: totalCommission, platform_fee: platformFee },
@@ -1549,5 +1606,147 @@ export async function createReferralCommissions(sourceCommission: {
     } catch (error) {
         // Non-blocking: referral failure should not break the main commission flow
         console.error('[Referral] ❌ Failed to create referral commissions:', error)
+    }
+}
+
+// =============================================
+// PORTAL REFERRAL COMMISSIONS (Startup-configured)
+// Independent from Traaaction's global referral system
+// =============================================
+
+/**
+ * Create portal referral commissions for the ancestors of a seller in a workspace's referral tree.
+ * Uses PortalReferral table (per-workspace) instead of Seller.referred_by (global).
+ *
+ * - Rates configured per workspace (portal_referral_gen1/2/3_rate in basis points)
+ * - Paid by startup (startup_payment_status: UNPAID), not Traaaction
+ * - Platform fee: 0 (no Traaaction cut on portal referrals)
+ * - Idempotent via sale_id = "{original}:pref:gen{N}:{referrerId}"
+ * - Same hold_days as the source commission
+ */
+export async function createPortalReferralCommissions(sourceCommission: {
+    id: string
+    seller_id: string
+    program_id: string
+    sale_id: string
+    gross_amount: number
+    net_amount: number
+    stripe_fee: number
+    tax_amount: number
+    currency: string
+    hold_days: number
+    commission_source: CommissionSource
+    subscription_id?: string | null
+    recurring_month?: number | null
+    recurring_max?: number | null
+    ht_amount: number
+}): Promise<void> {
+    try {
+        const { seller_id, program_id, ht_amount } = sourceCommission
+
+        if (ht_amount <= 0) return
+
+        // Load workspace portal referral config
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: program_id },
+            select: {
+                portal_referral_enabled: true,
+                portal_referral_gen1_rate: true,
+                portal_referral_gen2_rate: true,
+                portal_referral_gen3_rate: true,
+            }
+        })
+
+        if (!workspace?.portal_referral_enabled) return
+
+        // Build dynamic rates array (only generations with non-null rates)
+        const rates: { generation: number; rate: number }[] = []
+        if (workspace.portal_referral_gen1_rate != null && workspace.portal_referral_gen1_rate > 0) {
+            rates.push({ generation: 1, rate: workspace.portal_referral_gen1_rate / 10000 }) // basis points → decimal
+        }
+        if (workspace.portal_referral_gen2_rate != null && workspace.portal_referral_gen2_rate > 0) {
+            rates.push({ generation: 2, rate: workspace.portal_referral_gen2_rate / 10000 })
+        }
+        if (workspace.portal_referral_gen3_rate != null && workspace.portal_referral_gen3_rate > 0) {
+            rates.push({ generation: 3, rate: workspace.portal_referral_gen3_rate / 10000 })
+        }
+
+        if (rates.length === 0) return
+
+        // Walk up the portal referral chain (PortalReferral table, not Seller.referred_by)
+        let currentSellerId = seller_id
+
+        for (const { generation, rate } of rates) {
+            // Find portal referral: who referred currentSellerId in this workspace?
+            const portalRef = await prisma.portalReferral.findUnique({
+                where: {
+                    workspace_id_referred_seller_id: {
+                        workspace_id: program_id,
+                        referred_seller_id: currentSellerId,
+                    }
+                },
+                select: { referrer_seller_id: true }
+            })
+
+            if (!portalRef) break // No portal referrer → stop
+
+            const referrerId = portalRef.referrer_seller_id
+
+            // Skip referrers who are not APPROVED
+            const referrerSeller = await prisma.seller.findUnique({
+                where: { id: referrerId },
+                select: { id: true, status: true }
+            })
+            if (!referrerSeller || referrerSeller.status !== 'APPROVED') {
+                console.log(`[Portal Referral] ⏭️ Skipping gen ${generation}: referrer ${referrerId} status=${referrerSeller?.status ?? 'NOT_FOUND'}`)
+                break
+            }
+
+            const referralAmount = Math.floor(ht_amount * rate)
+
+            if (referralAmount <= 0) {
+                currentSellerId = referrerId
+                continue
+            }
+
+            const referralSaleId = `${sourceCommission.sale_id}:pref:gen${generation}:${referrerId}`
+
+            await prisma.commission.upsert({
+                where: { sale_id: referralSaleId },
+                create: {
+                    seller_id: referrerId,
+                    program_id: sourceCommission.program_id,
+                    sale_id: referralSaleId,
+                    gross_amount: sourceCommission.gross_amount,
+                    net_amount: sourceCommission.net_amount,
+                    stripe_fee: sourceCommission.stripe_fee,
+                    tax_amount: sourceCommission.tax_amount,
+                    commission_amount: referralAmount,
+                    platform_fee: 0,
+                    commission_rate: `pref:gen${generation}:${(rate * 100).toFixed(1)}%`,
+                    commission_type: 'PERCENTAGE',
+                    currency: sourceCommission.currency,
+                    status: 'PENDING',
+                    startup_payment_status: 'UNPAID', // Paid by startup, not Traaaction
+                    commission_source: sourceCommission.commission_source,
+                    subscription_id: sourceCommission.subscription_id,
+                    recurring_month: sourceCommission.recurring_month,
+                    recurring_max: sourceCommission.recurring_max,
+                    hold_days: sourceCommission.hold_days,
+                    referral_source_commission_id: sourceCommission.id,
+                    referral_generation: generation,
+                    portal_referral: true,
+                },
+                update: {}
+            })
+
+            await updateSellerBalance(referrerId)
+
+            console.log(`[Portal Referral] ✅ Gen ${generation}: ${referrerId} gets ${referralAmount / 100}€ (${(rate * 100).toFixed(1)}% of ${ht_amount / 100}€ HT)`)
+
+            currentSellerId = referrerId
+        }
+    } catch (error) {
+        console.error('[Portal Referral] ❌ Failed to create portal referral commissions:', error)
     }
 }

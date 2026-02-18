@@ -36,6 +36,14 @@ export default function PortalNetworkPage() {
     const { data } = ctx
     const primaryColor = data.workspace.portal_primary_color || '#7C3AED'
 
+    // Dynamic rates and max depth from workspace config
+    const config = data.referralConfig
+    const gen1Pct = config.gen1Rate ? `${(config.gen1Rate / 100).toFixed(config.gen1Rate % 100 === 0 ? 0 : 1)}%` : null
+    const gen2Pct = config.gen2Rate ? `${(config.gen2Rate / 100).toFixed(config.gen2Rate % 100 === 0 ? 0 : 1)}%` : null
+    const gen3Pct = config.gen3Rate ? `${(config.gen3Rate / 100).toFixed(config.gen3Rate % 100 === 0 ? 0 : 1)}%` : null
+    const maxGenerations = gen3Pct ? 3 : gen2Pct ? 2 : 1
+    const rateLabel = [gen1Pct && `Gen 1 (${gen1Pct})`, gen2Pct && `Gen 2 (${gen2Pct})`, gen3Pct && `Gen 3 (${gen3Pct})`].filter(Boolean).join(' → ')
+
     const loadInitial = useCallback(async () => {
         const result = await getPortalReferrals(workspaceSlug, 1)
         if (result.success && result.data) {
@@ -75,7 +83,7 @@ export default function PortalNetworkPage() {
         const isExpanded = expanded.has(node.id)
         const isLoading = loadingSub.has(node.id)
         const children = subTree[node.id]
-        const canExpand = node.hasSubReferrals && generation < 3
+        const canExpand = node.hasSubReferrals && generation < maxGenerations
 
         return (
             <div key={node.id}>
@@ -140,7 +148,7 @@ export default function PortalNetworkPage() {
         <div className="space-y-5">
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 <h1 className="text-lg font-semibold text-gray-900 mb-1">{t('title')}</h1>
-                <p className="text-xs text-gray-500 mb-4">Gen 1 (5%) → Gen 2 (3%) → Gen 3 (2%)</p>
+                <p className="text-xs text-gray-500 mb-4">{rateLabel}</p>
             </motion.div>
 
             <motion.div

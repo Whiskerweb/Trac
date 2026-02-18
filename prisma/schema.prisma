@@ -260,6 +260,14 @@ model Workspace {
   /// Custom subdomain for portal (e.g. "cardz" → cardz.traaaction.com)
   portal_subdomain     String?  @unique
 
+  /// Portal referral program (configurable per startup)
+  portal_referral_enabled   Boolean @default(false)
+  portal_referral_gen1_rate Int?    // basis points: 500 = 5.00%
+  portal_referral_gen2_rate Int?
+  portal_referral_gen3_rate Int?
+
+  PortalReferral  PortalReferral[]
+
   @@index([owner_id])
   @@index([slug])
 }
@@ -496,6 +504,8 @@ model Seller {
   Referrer            Seller?              @relation("SellerReferral", fields: [referred_by], references: [id], onDelete: SetNull)
   Referrals           Seller[]             @relation("SellerReferral")
   PortalSourceWorkspace Workspace?         @relation("PortalSourceSellers", fields: [portal_source_workspace_id], references: [id], onDelete: SetNull)
+  PortalReferralsAsReferrer  PortalReferral[] @relation("PortalReferralsAsReferrer")
+  PortalReferralsAsReferred  PortalReferral[] @relation("PortalReferralsAsReferred")
 
   @@unique([program_id, email])
   @@index([email])
@@ -647,6 +657,10 @@ model Commission {
   /// Generation depth: 1 = direct referrer, 2 = gen2, 3 = gen3
   referral_generation            Int?
 
+  // === PORTAL REFERRAL ===
+  /// True if this is a portal-level referral commission (paid by startup, not Traaaction)
+  portal_referral                Boolean @default(false)
+
   created_at     DateTime        @default(now())
   updated_at     DateTime        @updatedAt
   Seller         Seller          @relation(fields: [seller_id], references: [id], onDelete: Cascade)
@@ -665,6 +679,7 @@ model Commission {
   @@index([referral_source_commission_id])
   @@index([referral_generation])
   @@index([group_id])
+  @@index([portal_referral])
 }
 
 /// Partner Balance for tracking payouts and negative balances (clawbacks)
@@ -1346,4 +1361,20 @@ model MarketingFolder {
   @@unique([workspace_id, name, parent_id])
   @@index([workspace_id])
   @@index([parent_id])
+}
+
+/// Portal-level referral tracking (per workspace, independent from Traaaction's global referral)
+model PortalReferral {
+  id                  String   @id @default(uuid())
+  workspace_id        String
+  referrer_seller_id  String
+  referred_seller_id  String
+  created_at          DateTime @default(now())
+
+  Workspace  Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  Referrer   Seller    @relation("PortalReferralsAsReferrer", fields: [referrer_seller_id], references: [id], onDelete: Cascade)
+  Referred   Seller    @relation("PortalReferralsAsReferred", fields: [referred_seller_id], references: [id], onDelete: Cascade)
+
+  @@unique([workspace_id, referred_seller_id])
+  @@index([workspace_id, referrer_seller_id])
 }

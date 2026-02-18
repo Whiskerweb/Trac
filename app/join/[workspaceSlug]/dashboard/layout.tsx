@@ -97,6 +97,12 @@ export interface PortalDashboardData {
     sellerName: string
     sellerId: string
     referralCode: string
+    referralConfig: {
+        enabled: boolean
+        gen1Rate: number | null
+        gen2Rate: number | null
+        gen3Rate: number | null
+    }
 }
 
 const PortalContext = createContext<{
@@ -179,6 +185,7 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
                     portalLogoUrl={data.workspace.portal_logo_url ?? null}
                     primaryColor={primaryColor}
                     userName={data.sellerName}
+                    referralEnabled={data.referralConfig.enabled}
                 />
                 <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
                     {children}

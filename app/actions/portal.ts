@@ -560,6 +560,12 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
                 sellerName: user.user_metadata?.full_name || user.email || '',
                 sellerId: seller.id,
                 referralCode: seller.referral_code || '',
+                referralConfig: {
+                    enabled: workspace.portal_referral_enabled,
+                    gen1Rate: workspace.portal_referral_gen1_rate,
+                    gen2Rate: workspace.portal_referral_gen2_rate,
+                    gen3Rate: workspace.portal_referral_gen3_rate,
+                },
             },
         }
     } catch (error) {
@@ -723,50 +729,80 @@ export async function getPortalReferrals(
             ],
         } : {}
 
-        // Get Gen1 referred sellers
+        // Get Gen1 referred sellers via PortalReferral (workspace-scoped)
         const perPage = 20
         const skip = (page - 1) * perPage
 
-        const [referrals, total] = await Promise.all([
-            prisma.seller.findMany({
-                where: {
-                    referred_by: seller.id,
-                    ...searchFilter,
-                },
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    status: true,
-                    created_at: true,
-                    _count: {
-                        select: {
-                            Commissions: {
-                                where: {
-                                    program_id: workspace.id,
-                                    referral_generation: null,
-                                    org_parent_commission_id: null,
+        // Find portal referrals where this seller is the referrer
+        const portalRefs = await prisma.portalReferral.findMany({
+            where: { workspace_id: workspace.id, referrer_seller_id: seller.id },
+            select: { referred_seller_id: true },
+        })
+        const referredIds = portalRefs.map(r => r.referred_seller_id)
+
+        let referrals: { id: string; name: string | null; email: string; status: string; created_at: Date; _count: { Commissions: number } }[] = []
+        let total = 0
+
+        if (referredIds.length > 0) {
+            const [r, t] = await Promise.all([
+                prisma.seller.findMany({
+                    where: {
+                        id: { in: referredIds },
+                        ...searchFilter,
+                    },
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        status: true,
+                        created_at: true,
+                        _count: {
+                            select: {
+                                Commissions: {
+                                    where: {
+                                        program_id: workspace.id,
+                                        referral_generation: null,
+                                        org_parent_commission_id: null,
+                                    },
                                 },
                             },
-                            Referrals: true,
                         },
                     },
-                },
-                orderBy: { created_at: 'desc' },
-                skip,
-                take: perPage,
-            }),
-            prisma.seller.count({
-                where: { referred_by: seller.id, ...searchFilter },
-            }),
-        ])
+                    orderBy: { created_at: 'desc' },
+                    skip,
+                    take: perPage,
+                }),
+                prisma.seller.count({
+                    where: { id: { in: referredIds }, ...searchFilter },
+                }),
+            ])
+            referrals = r as typeof referrals
+            total = t
+        }
 
-        // Get earnings per generation
+        // Count sub-referrals for each referred seller (portal-scoped)
+        const subRefCounts: Record<string, number> = {}
+        if (referredIds.length > 0) {
+            const subRefs = await prisma.portalReferral.groupBy({
+                by: ['referrer_seller_id'],
+                where: {
+                    workspace_id: workspace.id,
+                    referrer_seller_id: { in: referredIds },
+                },
+                _count: true,
+            })
+            for (const sr of subRefs) {
+                subRefCounts[sr.referrer_seller_id] = sr._count
+            }
+        }
+
+        // Get earnings per generation (portal referral commissions only)
         const earningsByGen = await prisma.commission.groupBy({
             by: ['referral_generation'],
             where: {
                 seller_id: seller.id,
                 referral_generation: { not: null },
+                portal_referral: true,
                 program_id: workspace.id,
             },
             _sum: { commission_amount: true },
@@ -780,7 +816,7 @@ export async function getPortalReferrals(
             else if (g.referral_generation === 3) { genStats.gen3 = { amount: g._sum.commission_amount || 0, count: g._count.id } }
         }
 
-        // Get earnings from each referral
+        // Get earnings from each referral (portal only)
         const referralIds = referrals.map(r => r.id)
         let earningsByReferral: Record<string, number> = {}
         if (referralIds.length > 0) {
@@ -788,6 +824,7 @@ export async function getPortalReferrals(
                 where: {
                     seller_id: seller.id,
                     referral_generation: 1,
+                    portal_referral: true,
                     program_id: workspace.id,
                 },
                 select: { commission_amount: true, referral_source_commission_id: true },
@@ -811,6 +848,14 @@ export async function getPortalReferrals(
 
         const totalEarnings = genStats.gen1.amount + genStats.gen2.amount + genStats.gen3.amount
 
+        // Load workspace referral config for display
+        const referralConfig = {
+            enabled: workspace.portal_referral_enabled,
+            gen1Rate: workspace.portal_referral_gen1_rate,
+            gen2Rate: workspace.portal_referral_gen2_rate,
+            gen3Rate: workspace.portal_referral_gen3_rate,
+        }
+
         return {
             success: true,
             data: {
@@ -822,13 +867,14 @@ export async function getPortalReferrals(
                     joinedAt: r.created_at.toISOString(),
                     salesCount: r._count.Commissions,
                     totalEarnings: earningsByReferral[r.id] || 0,
-                    subReferralCount: r._count.Referrals,
+                    subReferralCount: subRefCounts[r.id] || 0,
                 })),
                 stats: {
                     totalReferred: total,
                     totalEarnings,
                     genStats,
                 },
+                referralConfig,
                 pagination: {
                     page,
                     totalPages: Math.ceil(total / perPage),
@@ -875,34 +921,55 @@ export async function getPortalSubTree(
 
         if (!currentSeller) return { success: false, error: 'Seller not found' }
 
-        // Security: validate parentSellerId is in the user's referral tree
+        // Security: validate parentSellerId is in the user's portal referral tree
         if (parentGeneration === 1) {
-            const parent = await prisma.seller.findUnique({
-                where: { id: parentSellerId },
-                select: { referred_by: true },
+            // parentSellerId should be referred by currentSeller (in this workspace)
+            const ref = await prisma.portalReferral.findUnique({
+                where: {
+                    workspace_id_referred_seller_id: {
+                        workspace_id: workspace.id,
+                        referred_seller_id: parentSellerId,
+                    }
+                },
             })
-            if (!parent || parent.referred_by !== currentSeller.id) {
+            if (!ref || ref.referrer_seller_id !== currentSeller.id) {
                 return { success: false, error: 'Unauthorized' }
             }
         } else if (parentGeneration === 2) {
-            const parent = await prisma.seller.findUnique({
-                where: { id: parentSellerId },
-                select: { referred_by: true },
+            // parentSellerId's referrer should be referred by currentSeller
+            const ref = await prisma.portalReferral.findUnique({
+                where: {
+                    workspace_id_referred_seller_id: {
+                        workspace_id: workspace.id,
+                        referred_seller_id: parentSellerId,
+                    }
+                },
             })
-            if (!parent?.referred_by) return { success: false, error: 'Unauthorized' }
-            const grandparent = await prisma.seller.findUnique({
-                where: { id: parent.referred_by },
-                select: { referred_by: true },
+            if (!ref) return { success: false, error: 'Unauthorized' }
+            const parentRef = await prisma.portalReferral.findUnique({
+                where: {
+                    workspace_id_referred_seller_id: {
+                        workspace_id: workspace.id,
+                        referred_seller_id: ref.referrer_seller_id,
+                    }
+                },
             })
-            if (!grandparent || grandparent.referred_by !== currentSeller.id) {
+            if (!parentRef || parentRef.referrer_seller_id !== currentSeller.id) {
                 return { success: false, error: 'Unauthorized' }
             }
         } else {
             return { success: false, error: 'Invalid generation' }
         }
 
-        const children = await prisma.seller.findMany({
-            where: { referred_by: parentSellerId },
+        // Find children via PortalReferral (workspace-scoped)
+        const childRefs = await prisma.portalReferral.findMany({
+            where: { workspace_id: workspace.id, referrer_seller_id: parentSellerId },
+            select: { referred_seller_id: true },
+        })
+        const childIds = childRefs.map(r => r.referred_seller_id)
+
+        const children = childIds.length > 0 ? await prisma.seller.findMany({
+            where: { id: { in: childIds } },
             select: {
                 id: true,
                 name: true,
@@ -922,28 +989,31 @@ export async function getPortalSubTree(
                 },
             },
             orderBy: { created_at: 'desc' },
-        })
+        }) : []
 
-        // For Gen2 children, check sub-referrals
-        const childIds = children.map(c => c.id)
+        // For Gen2 children, check sub-referrals via PortalReferral
         let subCountMap: Record<string, number> = {}
         if (parentGeneration === 1 && childIds.length > 0) {
-            const subCounts = await prisma.seller.groupBy({
-                by: ['referred_by'],
-                where: { referred_by: { in: childIds } },
+            const subCounts = await prisma.portalReferral.groupBy({
+                by: ['referrer_seller_id'],
+                where: {
+                    workspace_id: workspace.id,
+                    referrer_seller_id: { in: childIds },
+                },
                 _count: true,
             })
             for (const sc of subCounts) {
-                if (sc.referred_by) subCountMap[sc.referred_by] = sc._count
+                subCountMap[sc.referrer_seller_id] = sc._count
             }
         }
 
-        // Calculate earnings from each child
+        // Calculate earnings from each child (portal referral commissions)
         const nextGen = parentGeneration + 1
         const refCommissions = await prisma.commission.findMany({
             where: {
                 seller_id: currentSeller.id,
                 referral_generation: nextGen,
+                portal_referral: true,
                 program_id: workspace.id,
             },
             select: { commission_amount: true, referral_source_commission_id: true },

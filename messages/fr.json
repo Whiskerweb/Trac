@@ -2950,7 +2950,12 @@
             "dnsWarningTitle": "Problème de configuration DNS",
             "portalSignups": "Inscrits via le portail",
             "showAll": "Voir tous",
-            "showLess": "Voir moins"
+            "showLess": "Voir moins",
+            "referralProgram": "Programme de parrainage",
+            "referralDescription": "Permettez à vos affiliés de gagner des commissions en parrainant d'autres affiliés.",
+            "enableReferral": "Activer le programme de parrainage",
+            "generations": "Nombre de générations",
+            "rate": "Taux de commission"
         }
     }
 }

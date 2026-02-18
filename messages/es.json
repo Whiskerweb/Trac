@@ -2950,7 +2950,12 @@
             "dnsWarningTitle": "Problema de configuración DNS",
             "portalSignups": "Inscritos via el portal",
             "showAll": "Ver todos",
-            "showLess": "Ver menos"
+            "showLess": "Ver menos",
+            "referralProgram": "Programa de referidos",
+            "referralDescription": "Permite a tus afiliados ganar comisiones refiriendo a otros afiliados.",
+            "enableReferral": "Activar programa de referidos",
+            "generations": "Número de generaciones",
+            "rate": "Tasa de comisión"
         }
     }
 }

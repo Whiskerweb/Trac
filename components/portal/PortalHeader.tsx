@@ -15,6 +15,7 @@ interface PortalHeaderProps {
     portalLogoUrl: string | null
     primaryColor: string
     userName: string
+    referralEnabled?: boolean
 }
 
 const TABS = [
@@ -29,10 +30,17 @@ const TABS = [
 
 export default function PortalHeader({
     workspaceSlug, workspaceName, logoUrl, portalLogoUrl, primaryColor, userName,
+    referralEnabled = false,
 }: PortalHeaderProps) {
     const t = useTranslations('portal.nav')
     const [menuOpen, setMenuOpen] = useState(false)
     const pathname = usePathname()
+
+    // Filter tabs: hide referrals + network if portal referral is disabled
+    const visibleTabs = TABS.filter(tab => {
+        if (tab.key === 'referrals' || tab.key === 'network') return referralEnabled
+        return true
+    })
 
     const handleLogout = async () => {
         const supabase = createClient()
@@ -101,7 +109,7 @@ export default function PortalHeader({
                 {/* Tab navigation */}
                 <div className="-mb-px overflow-x-auto scrollbar-hide">
                     <nav className="flex gap-1 min-w-max">
-                        {TABS.map((tab) => {
+                        {visibleTabs.map((tab) => {
                             const active = isActiveTab(tab.path)
                             return (
                                 <Link

@@ -780,6 +780,43 @@ export async function createGlobalSeller(data: {
             console.log(`[Seller] Self-referral blocked for ${seller.id}`)
         }
 
+        // Portal referral tracking (separate from Traaaction's global referral)
+        if (data.portalSourceWorkspaceId) {
+            try {
+                const cookieStore = await cookies()
+                const portalRefCode = cookieStore.get('trac_portal_ref')?.value
+                if (portalRefCode) {
+                    const portalReferrer = await prisma.seller.findUnique({
+                        where: { referral_code: portalRefCode },
+                        select: { id: true, status: true }
+                    })
+                    if (portalReferrer && portalReferrer.status === 'APPROVED' && portalReferrer.id !== seller.id) {
+                        const workspace = await prisma.workspace.findUnique({
+                            where: { id: data.portalSourceWorkspaceId },
+                            select: { portal_referral_enabled: true }
+                        })
+                        if (workspace?.portal_referral_enabled) {
+                            await prisma.portalReferral.upsert({
+                                where: {
+                                    workspace_id_referred_seller_id: {
+                                        workspace_id: data.portalSourceWorkspaceId,
+                                        referred_seller_id: seller.id,
+                                    }
+                                },
+                                create: {
+                                    workspace_id: data.portalSourceWorkspaceId,
+                                    referrer_seller_id: portalReferrer.id,
+                                    referred_seller_id: seller.id,
+                                },
+                                update: {}
+                            })
+                            console.log(`[Seller] Portal referral created: ${portalRefCode} → referrer ${portalReferrer.id} in workspace ${data.portalSourceWorkspaceId}`)
+                        }
+                    }
+                }
+            } catch { /* non-blocking */ }
+        }
+
         return { success: true, sellerId: seller.id }
     } catch (error) {
         console.error('Error creating global seller:', error)

@@ -92,11 +92,12 @@ export default function PortalPage() {
 
     useEffect(() => { loadData() }, [loadData])
 
-    // Set trac_ref cookie if ?ref=CODE is in URL
+    // Set trac_ref cookie if ?ref=CODE is in URL (Traaaction global + portal referral)
     useEffect(() => {
         const refCode = searchParams.get('ref')
         if (refCode) {
             document.cookie = `trac_ref=${refCode};path=/;max-age=${90 * 24 * 60 * 60};samesite=lax`
+            document.cookie = `trac_portal_ref=${refCode};path=/;max-age=${90 * 24 * 60 * 60};samesite=lax`
         }
     }, [searchParams])
 
