@@ -222,7 +222,9 @@ export default function PortalManagementPage() {
     }
 
     const portalUrl = settings ? `https://traaaction.com/join/${settings.slug}` : ''
-    const iframeSnippet = `<iframe src="${portalUrl}" style="width:100%;height:850px;border:none;" allow="clipboard-write"></iframe>`
+    const subdomainUrl = settings ? `https://${settings.slug}.traaaction.com` : ''
+    const customDomainUrl = settings?.customDomain ? `https://${settings.customDomain}` : ''
+    const iframeSnippet = `<iframe src="${subdomainUrl || portalUrl}" style="width:100%;height:850px;border:none;" allow="clipboard-write"></iframe>`
 
     const handleCopy = (text: string, type: 'url' | 'iframe') => {
         navigator.clipboard.writeText(text)
@@ -711,7 +713,7 @@ export default function PortalManagementPage() {
                             <h2 className="text-sm font-semibold text-gray-900 mb-1">{t('portalUrl')}</h2>
                             <p className="text-xs text-gray-500 mb-3">{t('primaryUrlDesc')}</p>
 
-                            {/* URL */}
+                            {/* Primary URL (path-based) */}
                             <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
                                 <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
                                 <code className="text-sm text-gray-700 truncate flex-1">{portalUrl}</code>
@@ -721,20 +723,38 @@ export default function PortalManagementPage() {
                                 </button>
                             </div>
 
+                            {/* Subdomain URL */}
+                            <div className="mt-3">
+                                <p className="text-xs text-gray-500 mb-1.5">{t('subdomainUrl')}</p>
+                                <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
+                                    <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                    <code className="text-sm text-gray-700 truncate flex-1">{subdomainUrl}</code>
+                                    <button onClick={() => handleCopy(subdomainUrl, 'url')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
+                                        {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
+                                        {copiedUrl ? t('copied') : t('copy')}
+                                    </button>
+                                </div>
+                                <p className="text-[11px] text-gray-400 mt-1">{t('subdomainNote')}</p>
+                            </div>
+
                             {/* Custom domain */}
                             {settings.customDomain && (
                                 <div className="mt-3">
                                     <p className="text-xs text-gray-500 mb-1.5">{t('customDomainUrl')}</p>
                                     <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
                                         <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                                        <code className="text-sm text-gray-700 truncate flex-1">{`https://${settings.customDomain}/join/${settings.slug}`}</code>
+                                        <code className="text-sm text-gray-700 truncate flex-1">{customDomainUrl}</code>
+                                        <button onClick={() => handleCopy(customDomainUrl, 'url')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
+                                            {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
+                                            {copiedUrl ? t('copied') : t('copy')}
+                                        </button>
                                     </div>
                                 </div>
                             )}
 
                             {/* Preview button */}
                             <a
-                                href={portalUrl}
+                                href={customDomainUrl || subdomainUrl || portalUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors mt-4"
