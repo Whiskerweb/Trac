@@ -246,10 +246,8 @@ export default function PortalManagementPage() {
     }
 
     const portalSlug = settings?.portal_subdomain || settings?.slug || ''
-    const portalUrl = settings ? `https://traaaction.com/join/${settings.slug}` : ''
     const subdomainUrl = portalSlug ? `https://${portalSlug}.traaaction.com` : ''
-    const customDomainUrl = settings?.customDomain ? `https://${settings.customDomain}` : ''
-    const iframeSnippet = `<iframe src="${subdomainUrl || portalUrl}" style="width:100%;height:850px;border:none;" allow="clipboard-write"></iframe>`
+    const iframeSnippet = `<iframe src="${subdomainUrl}" style="width:100%;height:850px;border:none;" allow="clipboard-write"></iframe>`
 
     const handleCopy = (text: string, type: 'url' | 'iframe') => {
         navigator.clipboard.writeText(text)
@@ -736,118 +734,91 @@ export default function PortalManagementPage() {
                             className="bg-white rounded-2xl border border-gray-200 p-6"
                         >
                             <h2 className="text-sm font-semibold text-gray-900 mb-1">{t('portalUrl')}</h2>
-                            <p className="text-xs text-gray-500 mb-3">{t('primaryUrlDesc')}</p>
+                            <p className="text-xs text-gray-500 mb-4">{t('primaryUrlDesc')}</p>
 
-                            {/* Primary URL (path-based) */}
-                            <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
-                                <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                                <code className="text-sm text-gray-700 truncate flex-1">{portalUrl}</code>
-                                <button onClick={() => handleCopy(portalUrl, 'url')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
-                                    {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
-                                    {copiedUrl ? t('copied') : t('copy')}
+                            {/* Subdomain editor */}
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex-1">
+                                    <span className="text-sm text-gray-400 pl-4 flex-shrink-0">https://</span>
+                                    <input
+                                        type="text"
+                                        value={subdomain}
+                                        onChange={(e) => {
+                                            setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
+                                            setSubdomainError('')
+                                        }}
+                                        placeholder={settings.slug}
+                                        className="w-28 px-1 py-3 bg-transparent text-sm font-semibold text-gray-900 focus:outline-none"
+                                    />
+                                    <span className="text-sm text-gray-400 pr-4 flex-shrink-0">.traaaction.com</span>
+                                </div>
+                                <button
+                                    onClick={handleSaveSubdomain}
+                                    disabled={savingSubdomain}
+                                    className="flex items-center gap-1.5 px-4 py-3 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                                >
+                                    {savingSubdomain ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : subdomainSaved ? (
+                                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                    ) : null}
+                                    {subdomainSaved ? t('saved') : t('save')}
                                 </button>
                             </div>
+                            {subdomainError && (
+                                <p className="text-[11px] text-red-500 mt-1.5">{subdomainError}</p>
+                            )}
 
-                            {/* Subdomain URL — editable */}
-                            <div className="mt-4">
-                                <p className="text-xs font-medium text-gray-700 mb-1.5">{t('subdomainUrl')}</p>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex-1">
-                                        <span className="text-xs text-gray-400 pl-3 flex-shrink-0">https://</span>
-                                        <input
-                                            type="text"
-                                            value={subdomain}
-                                            onChange={(e) => {
-                                                setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
-                                                setSubdomainError('')
-                                            }}
-                                            placeholder={settings.slug}
-                                            className="w-24 px-1 py-2.5 bg-transparent text-sm font-medium text-gray-900 focus:outline-none"
-                                        />
-                                        <span className="text-xs text-gray-400 pr-3 flex-shrink-0">.traaaction.com</span>
-                                    </div>
-                                    <button
-                                        onClick={handleSaveSubdomain}
-                                        disabled={savingSubdomain}
-                                        className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
-                                    >
-                                        {savingSubdomain ? (
-                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        ) : subdomainSaved ? (
-                                            <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                        ) : null}
-                                        {subdomainSaved ? t('saved') : t('save')}
+                            {/* Result URL + actions */}
+                            {subdomainUrl && (
+                                <div className="flex items-center gap-2 mt-3 bg-gray-50 rounded-xl px-4 py-2.5">
+                                    <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                    <code className="text-sm text-gray-700 truncate flex-1">{subdomainUrl}</code>
+                                    <button onClick={() => handleCopy(subdomainUrl, 'url')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
+                                        {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
+                                        {copiedUrl ? t('copied') : t('copy')}
                                     </button>
-                                    {subdomainUrl && (
-                                        <button onClick={() => handleCopy(subdomainUrl, 'url')} className="flex items-center gap-1.5 px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium hover:bg-gray-50 transition-colors">
-                                            {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
-                                            {copiedUrl ? t('copied') : t('copy')}
-                                        </button>
-                                    )}
-                                </div>
-                                {subdomainError && (
-                                    <p className="text-[11px] text-red-500 mt-1">{subdomainError}</p>
-                                )}
-                                {subdomainUrl && !subdomainError && (
-                                    <p className="text-[11px] text-gray-400 mt-1">{subdomainUrl}</p>
-                                )}
-                            </div>
-
-                            {/* Custom domain */}
-                            {settings.customDomain && (
-                                <div className="mt-3">
-                                    <p className="text-xs text-gray-500 mb-1.5">{t('customDomainUrl')}</p>
-                                    <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
-                                        <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                                        <code className="text-sm text-gray-700 truncate flex-1">{customDomainUrl}</code>
-                                        <button onClick={() => handleCopy(customDomainUrl, 'url')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
-                                            {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
-                                            {copiedUrl ? t('copied') : t('copy')}
-                                        </button>
-                                    </div>
                                 </div>
                             )}
 
-                            {/* Preview button */}
-                            <a
-                                href={customDomainUrl || subdomainUrl || portalUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors mt-4"
-                            >
-                                <ExternalLink className="w-4 h-4" />
-                                {t('viewPortal')}
-                            </a>
-
-                            {/* Embed — Accordion */}
-                            <div className="mt-5 border-t border-gray-100 pt-4">
+                            {/* Preview + Embed */}
+                            <div className="flex items-center gap-3 mt-4">
+                                <a
+                                    href={subdomainUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors"
+                                >
+                                    <ExternalLink className="w-4 h-4" />
+                                    {t('viewPortal')}
+                                </a>
                                 <button
                                     onClick={() => setShowEmbed(!showEmbed)}
-                                    className="flex items-center gap-2 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
                                 >
                                     <Code className="w-4 h-4" />
                                     {t('embedCode')}
-                                    <ChevronDown className={`w-3 h-3 transition-transform ${showEmbed ? 'rotate-180' : ''}`} />
                                 </button>
-                                {showEmbed && (
-                                    <div className="mt-3">
-                                        <p className="text-[11px] text-gray-500 mb-2">{t('embedCodeDesc')}</p>
-                                        <div className="relative">
-                                            <pre className="bg-gray-900 text-gray-300 rounded-xl p-4 text-xs overflow-x-auto">
-                                                <code>{iframeSnippet}</code>
-                                            </pre>
-                                            <button
-                                                onClick={() => handleCopy(iframeSnippet, 'iframe')}
-                                                className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-700 text-gray-300 rounded-lg text-xs hover:bg-gray-600 transition-colors"
-                                            >
-                                                {copiedIframe ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Code className="w-3.5 h-3.5" />}
-                                                {copiedIframe ? t('copied') : t('copy')}
-                                            </button>
-                                        </div>
-                                        <p className="text-[11px] text-gray-400 mt-2">{t('iframeNote')}</p>
-                                    </div>
-                                )}
                             </div>
+
+                            {showEmbed && (
+                                <div className="mt-4 border-t border-gray-100 pt-4">
+                                    <p className="text-[11px] text-gray-500 mb-2">{t('embedCodeDesc')}</p>
+                                    <div className="relative">
+                                        <pre className="bg-gray-900 text-gray-300 rounded-xl p-4 text-xs overflow-x-auto">
+                                            <code>{iframeSnippet}</code>
+                                        </pre>
+                                        <button
+                                            onClick={() => handleCopy(iframeSnippet, 'iframe')}
+                                            className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-700 text-gray-300 rounded-lg text-xs hover:bg-gray-600 transition-colors"
+                                        >
+                                            {copiedIframe ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Code className="w-3.5 h-3.5" />}
+                                            {copiedIframe ? t('copied') : t('copy')}
+                                        </button>
+                                    </div>
+                                    <p className="text-[11px] text-gray-400 mt-2">{t('iframeNote')}</p>
+                                </div>
+                            )}
                         </motion.div>
                     </>
                 )}
