@@ -5,6 +5,22 @@ import { prisma } from '@/lib/db'
 import { joinMission } from '@/app/actions/marketplace'
 
 // =============================================
+// HELPERS
+// =============================================
+
+/** Find workspace by slug or portal_subdomain (for subdomain routing) */
+async function findPortalWorkspace(slugOrSubdomain: string) {
+    return prisma.workspace.findFirst({
+        where: {
+            OR: [
+                { slug: slugOrSubdomain },
+                { portal_subdomain: slugOrSubdomain },
+            ],
+        },
+    })
+}
+
+// =============================================
 // HELPERS — DB-based stats (replaces Tinybird)
 // =============================================
 
@@ -43,8 +59,8 @@ async function getDBLinkStats(linkId: string, sellerId: string) {
  */
 export async function getPortalData(workspaceSlug: string) {
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { slug: workspaceSlug },
+        const workspace = await prisma.workspace.findFirst({
+            where: { OR: [{ slug: workspaceSlug }, { portal_subdomain: workspaceSlug }] },
             include: {
                 Profile: true,
                 Domain: {
@@ -121,9 +137,7 @@ export async function getPortalData(workspaceSlug: string) {
  */
 export async function getPortalMission(workspaceSlug: string, missionId: string) {
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { slug: workspaceSlug },
-        })
+        const workspace = await findPortalWorkspace(workspaceSlug)
 
         if (!workspace || !workspace.portal_enabled) {
             return { success: false, error: 'Portal not available' }
@@ -213,9 +227,7 @@ export async function getPortalUserStatus(workspaceSlug: string) {
     }
 
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { slug: workspaceSlug },
-        })
+        const workspace = await findPortalWorkspace(workspaceSlug)
 
         const seller = await prisma.seller.findFirst({
             where: { user_id: user.id },
@@ -264,8 +276,8 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
     }
 
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { slug: workspaceSlug },
+        const workspace = await prisma.workspace.findFirst({
+            where: { OR: [{ slug: workspaceSlug }, { portal_subdomain: workspaceSlug }] },
             include: {
                 Profile: true,
                 Domain: { where: { verified: true }, take: 1 },
@@ -550,9 +562,7 @@ export async function getPortalCommissions(
     }
 
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { slug: workspaceSlug },
-        })
+        const workspace = await findPortalWorkspace(workspaceSlug)
 
         if (!workspace || !workspace.portal_enabled) {
             return { success: false, error: 'Portal not available' }
@@ -668,9 +678,7 @@ export async function getPortalReferrals(
     }
 
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { slug: workspaceSlug },
-        })
+        const workspace = await findPortalWorkspace(workspaceSlug)
 
         if (!workspace || !workspace.portal_enabled) {
             return { success: false, error: 'Portal not available' }
@@ -830,9 +838,7 @@ export async function getPortalSubTree(
     }
 
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { slug: workspaceSlug },
-        })
+        const workspace = await findPortalWorkspace(workspaceSlug)
 
         if (!workspace || !workspace.portal_enabled) {
             return { success: false, error: 'Portal not available' }
@@ -972,9 +978,7 @@ export async function getPortalPayoutData(workspaceSlug: string) {
     }
 
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { slug: workspaceSlug },
-        })
+        const workspace = await findPortalWorkspace(workspaceSlug)
 
         if (!workspace || !workspace.portal_enabled) {
             return { success: false, error: 'Portal not available' }
@@ -1055,9 +1059,7 @@ export async function getPortalAssets(workspaceSlug: string) {
     }
 
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { slug: workspaceSlug },
-        })
+        const workspace = await findPortalWorkspace(workspaceSlug)
 
         if (!workspace || !workspace.portal_enabled) {
             return { success: false, error: 'Portal not available' }
@@ -1123,9 +1125,7 @@ export async function getPortalReports(
     }
 
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { slug: workspaceSlug },
-        })
+        const workspace = await findPortalWorkspace(workspaceSlug)
 
         if (!workspace || !workspace.portal_enabled) {
             return { success: false, error: 'Portal not available' }

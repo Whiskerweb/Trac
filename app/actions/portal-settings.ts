@@ -21,6 +21,7 @@ export async function getPortalSettings() {
                 portal_primary_color: true,
                 portal_headline: true,
                 portal_logo_url: true,
+                portal_subdomain: true,
                 Domain: {
                     where: { verified: true },
                     take: 1,
@@ -74,6 +75,7 @@ export async function getPortalSettings() {
                 portal_primary_color: workspace.portal_primary_color,
                 portal_headline: workspace.portal_headline,
                 portal_logo_url: workspace.portal_logo_url,
+                portal_subdomain: workspace.portal_subdomain,
                 customDomain: workspace.Domain[0]?.name || null,
                 missions: workspace.Mission,
             },
@@ -155,6 +157,60 @@ export async function updatePortalBranding(data: {
     } catch (error) {
         console.error('[Portal Settings] updatePortalBranding error:', error)
         return { success: false, error: 'Failed to update branding' }
+    }
+}
+
+/**
+ * Update portal subdomain (e.g. "cardz" → cardz.traaaction.com)
+ */
+export async function updatePortalSubdomain(subdomain: string) {
+    const ws = await getActiveWorkspaceForUser()
+    if (!ws) return { success: false, error: 'No workspace' }
+
+    // Normalize
+    const clean = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
+
+    if (!clean) {
+        // Clear subdomain
+        await prisma.workspace.update({
+            where: { id: ws.workspaceId },
+            data: { portal_subdomain: null },
+        })
+        revalidatePath('/dashboard/portal')
+        return { success: true }
+    }
+
+    if (clean.length < 3 || clean.length > 30) {
+        return { success: false, error: 'Subdomain must be 3-30 characters' }
+    }
+
+    const reserved = ['www', 'seller', 'app', 'admin', 'api', 'mail', 'smtp', 'ftp']
+    if (reserved.includes(clean)) {
+        return { success: false, error: 'This subdomain is reserved' }
+    }
+
+    try {
+        // Check uniqueness (another workspace might have this subdomain or slug)
+        const existing = await prisma.workspace.findFirst({
+            where: {
+                OR: [{ portal_subdomain: clean }, { slug: clean }],
+                NOT: { id: ws.workspaceId },
+            },
+        })
+        if (existing) {
+            return { success: false, error: 'This subdomain is already taken' }
+        }
+
+        await prisma.workspace.update({
+            where: { id: ws.workspaceId },
+            data: { portal_subdomain: clean },
+        })
+
+        revalidatePath('/dashboard/portal')
+        return { success: true, data: { subdomain: clean } }
+    } catch (error) {
+        console.error('[Portal Settings] updatePortalSubdomain error:', error)
+        return { success: false, error: 'Failed to update subdomain' }
     }
 }
 

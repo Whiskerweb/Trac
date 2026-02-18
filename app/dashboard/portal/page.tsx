@@ -12,7 +12,7 @@ import {
 import {
     getPortalSettings, togglePortal, updatePortalBranding,
     getPortalOverview, createPortalMission, updatePortalMission,
-    deletePortalMission, getPortalAnalytics
+    deletePortalMission, getPortalAnalytics, updatePortalSubdomain
 } from '@/app/actions/portal-settings'
 
 interface PortalMission {
@@ -40,6 +40,7 @@ interface PortalSettings {
     portal_primary_color: string | null
     portal_headline: string | null
     portal_logo_url: string | null
+    portal_subdomain: string | null
     customDomain: string | null
     missions: PortalMission[]
 }
@@ -83,6 +84,12 @@ export default function PortalManagementPage() {
     const [primaryColor, setPrimaryColor] = useState('#7C3AED')
     const [logoUrl, setLogoUrl] = useState('')
 
+    // Subdomain
+    const [subdomain, setSubdomain] = useState('')
+    const [savingSubdomain, setSavingSubdomain] = useState(false)
+    const [subdomainSaved, setSubdomainSaved] = useState(false)
+    const [subdomainError, setSubdomainError] = useState('')
+
     // Share
     const [copiedUrl, setCopiedUrl] = useState(false)
     const [copiedIframe, setCopiedIframe] = useState(false)
@@ -107,6 +114,7 @@ export default function PortalManagementPage() {
             setHeadline(settingsResult.data.portal_headline || '')
             setPrimaryColor(settingsResult.data.portal_primary_color || '#7C3AED')
             setLogoUrl(settingsResult.data.portal_logo_url || '')
+            setSubdomain(settingsResult.data.portal_subdomain || '')
         }
 
         if (overviewResult.success && overviewResult.data) {
@@ -221,8 +229,25 @@ export default function PortalManagementPage() {
         }))
     }
 
+    const handleSaveSubdomain = async () => {
+        setSavingSubdomain(true)
+        setSubdomainError('')
+        const result = await updatePortalSubdomain(subdomain)
+        setSavingSubdomain(false)
+        if (result.success) {
+            setSubdomainSaved(true)
+            setTimeout(() => setSubdomainSaved(false), 2000)
+            // Reload settings to get updated portal_subdomain
+            const sr = await getPortalSettings()
+            if (sr.success && sr.data) setSettings(sr.data as unknown as PortalSettings)
+        } else {
+            setSubdomainError(result.error || 'Error')
+        }
+    }
+
+    const portalSlug = settings?.portal_subdomain || settings?.slug || ''
     const portalUrl = settings ? `https://traaaction.com/join/${settings.slug}` : ''
-    const subdomainUrl = settings ? `https://${settings.slug}.traaaction.com` : ''
+    const subdomainUrl = portalSlug ? `https://${portalSlug}.traaaction.com` : ''
     const customDomainUrl = settings?.customDomain ? `https://${settings.customDomain}` : ''
     const iframeSnippet = `<iframe src="${subdomainUrl || portalUrl}" style="width:100%;height:850px;border:none;" allow="clipboard-write"></iframe>`
 
@@ -723,18 +748,49 @@ export default function PortalManagementPage() {
                                 </button>
                             </div>
 
-                            {/* Subdomain URL */}
-                            <div className="mt-3">
-                                <p className="text-xs text-gray-500 mb-1.5">{t('subdomainUrl')}</p>
-                                <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
-                                    <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                                    <code className="text-sm text-gray-700 truncate flex-1">{subdomainUrl}</code>
-                                    <button onClick={() => handleCopy(subdomainUrl, 'url')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
-                                        {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
-                                        {copiedUrl ? t('copied') : t('copy')}
+                            {/* Subdomain URL — editable */}
+                            <div className="mt-4">
+                                <p className="text-xs font-medium text-gray-700 mb-1.5">{t('subdomainUrl')}</p>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex-1">
+                                        <span className="text-xs text-gray-400 pl-3 flex-shrink-0">https://</span>
+                                        <input
+                                            type="text"
+                                            value={subdomain}
+                                            onChange={(e) => {
+                                                setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
+                                                setSubdomainError('')
+                                            }}
+                                            placeholder={settings.slug}
+                                            className="w-24 px-1 py-2.5 bg-transparent text-sm font-medium text-gray-900 focus:outline-none"
+                                        />
+                                        <span className="text-xs text-gray-400 pr-3 flex-shrink-0">.traaaction.com</span>
+                                    </div>
+                                    <button
+                                        onClick={handleSaveSubdomain}
+                                        disabled={savingSubdomain}
+                                        className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                                    >
+                                        {savingSubdomain ? (
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : subdomainSaved ? (
+                                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                        ) : null}
+                                        {subdomainSaved ? t('saved') : t('save')}
                                     </button>
+                                    {subdomainUrl && (
+                                        <button onClick={() => handleCopy(subdomainUrl, 'url')} className="flex items-center gap-1.5 px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium hover:bg-gray-50 transition-colors">
+                                            {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
+                                            {copiedUrl ? t('copied') : t('copy')}
+                                        </button>
+                                    )}
                                 </div>
-                                <p className="text-[11px] text-gray-400 mt-1">{t('subdomainNote')}</p>
+                                {subdomainError && (
+                                    <p className="text-[11px] text-red-500 mt-1">{subdomainError}</p>
+                                )}
+                                {subdomainUrl && !subdomainError && (
+                                    <p className="text-[11px] text-gray-400 mt-1">{subdomainUrl}</p>
+                                )}
                             </div>
 
                             {/* Custom domain */}

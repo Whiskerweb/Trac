@@ -253,6 +253,8 @@ model Workspace {
   portal_primary_color String?  @default("#7C3AED")
   portal_headline      String?
   portal_logo_url      String?
+  /// Custom subdomain for portal (e.g. "cardz" → cardz.traaaction.com)
+  portal_subdomain     String?  @unique
 
   @@index([owner_id])
   @@index([slug])
