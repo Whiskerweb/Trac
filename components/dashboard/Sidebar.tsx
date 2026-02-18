@@ -15,6 +15,8 @@ import { motion, LayoutGroup } from 'framer-motion'
 import { getUnreadCount } from '@/app/actions/messaging'
 import { springSnappy } from '@/lib/animations'
 
+const MotionLink = motion.create(Link)
+
 // =============================================
 // NAVIGATION STRUCTURE
 // =============================================
@@ -153,11 +155,13 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
 
                                 return (
                                     <li key={item.nameKey}>
-                                        <Link
+                                        <MotionLink
                                             href={item.href}
                                             title={collapsed ? t(item.nameKey) : undefined}
+                                            whileTap={{ scale: 0.97 }}
+                                            transition={springSnappy}
                                             className={`
-                                                group flex items-center gap-3 rounded-lg transition-colors duration-150 text-sm relative
+                                                flex items-center gap-3 rounded-lg transition-colors duration-150 text-sm relative
                                                 ${collapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2'}
                                                 ${isActive
                                                     ? 'bg-purple-50 text-purple-700 font-medium'
@@ -176,7 +180,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                                             <div className={`flex items-center ${collapsed ? '' : 'gap-3'}`}>
                                                 <div className="relative">
                                                     <Icon
-                                                        className={`w-4 h-4 transition-transform duration-150 group-hover:scale-[1.12] ${isActive ? 'text-purple-600' : 'text-gray-400'}`}
+                                                        className={`w-4 h-4 ${isActive ? 'text-purple-600' : 'text-gray-400'}`}
                                                         strokeWidth={2}
                                                     />
                                                     {collapsed && badge > 0 && (
@@ -204,7 +208,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                                                     {badge > 99 ? '99+' : badge}
                                                 </motion.span>
                                             )}
-                                        </Link>
+                                        </MotionLink>
                                     </li>
                                 )
                             })}
@@ -216,11 +220,13 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
 
             {/* Settings - Bottom Rail */}
             <div className={`border-t border-gray-100 ${collapsed ? 'px-2' : 'px-3'} py-2`}>
-                <Link
+                <MotionLink
                     href="/dashboard/settings"
                     title={collapsed ? t('settings') : undefined}
+                    whileTap={{ scale: 0.97 }}
+                    transition={springSnappy}
                     className={`
-                        group flex items-center gap-3 rounded-lg transition-all duration-150 text-sm
+                        flex items-center gap-3 rounded-lg transition-colors duration-150 text-sm
                         ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2'}
                         ${pathname.startsWith('/dashboard/settings')
                             ? 'bg-purple-50 text-purple-700 font-medium'
@@ -229,20 +235,22 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                     `}
                 >
                     <Settings
-                        className={`w-4 h-4 transition-transform duration-150 group-hover:scale-[1.12] ${pathname.startsWith('/dashboard/settings') ? 'text-purple-600' : 'text-gray-400'}`}
+                        className={`w-4 h-4 ${pathname.startsWith('/dashboard/settings') ? 'text-purple-600' : 'text-gray-400'}`}
                         strokeWidth={2}
                     />
                     {!collapsed && <span>{t('settings')}</span>}
-                </Link>
+                </MotionLink>
             </div>
 
             {/* Collapse Toggle Button */}
             {showCollapseButton && (
                 <div className={`px-3 py-2 border-t border-gray-100 ${collapsed ? 'flex justify-center' : ''}`}>
-                    <button
+                    <motion.button
                         onClick={onToggleCollapse}
+                        whileTap={{ scale: 0.97 }}
+                        transition={springSnappy}
                         className={`
-                            group flex items-center gap-2 text-gray-500 hover:text-gray-700
+                            flex items-center gap-2 text-gray-500 hover:text-gray-700
                             hover:bg-gray-100 rounded-lg transition-colors
                             ${collapsed ? 'p-2' : 'px-3 py-2 w-full'}
                         `}
@@ -252,23 +260,25 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                             animate={{ rotate: collapsed ? 180 : 0 }}
                             transition={springSnappy}
                         >
-                            <ChevronLeft className="w-4 h-4 transition-transform duration-150 group-hover:scale-[1.12]" />
+                            <ChevronLeft className="w-4 h-4" />
                         </motion.div>
                         {!collapsed && <span className="text-xs font-medium">Collapse</span>}
-                    </button>
+                    </motion.button>
                 </div>
             )}
 
             {/* Profile Section */}
             <div className={`p-3 border-t border-gray-100 ${collapsed ? 'flex justify-center' : ''}`}>
-                <Link
+                <MotionLink
                     href="/dashboard/profile"
                     title={collapsed ? userEmail : undefined}
-                    className={`group flex items-center gap-3 rounded-lg hover:bg-gray-50 transition-colors ${
+                    whileTap={{ scale: 0.97 }}
+                    transition={springSnappy}
+                    className={`flex items-center gap-3 rounded-lg hover:bg-gray-50 transition-colors ${
                         collapsed ? 'p-2' : 'px-3 py-2'
                     } ${pathname === '/dashboard/profile' ? 'bg-purple-50' : ''}`}
                 >
-                    <div className={`rounded-full bg-gradient-to-tr from-gray-100 to-gray-200 border border-gray-200 flex items-center justify-center transition-transform duration-150 group-hover:scale-[1.08] ${
+                    <div className={`rounded-full bg-gradient-to-tr from-gray-100 to-gray-200 border border-gray-200 flex items-center justify-center ${
                         collapsed ? 'w-9 h-9' : 'w-8 h-8'
                     } ${pathname === '/dashboard/profile' ? 'border-purple-300' : 'text-gray-500'}`}>
                         <User className={`w-4 h-4 ${pathname === '/dashboard/profile' ? 'text-purple-600' : ''}`} />
@@ -280,7 +290,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                             }`}>{userEmail || 'Loading...'}</p>
                         </div>
                     )}
-                </Link>
+                </MotionLink>
             </div>
         </aside>
     )

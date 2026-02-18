@@ -25,6 +25,9 @@ import { motion, LayoutGroup } from 'framer-motion'
 import ProfileCompletionBanner from '@/components/seller/ProfileCompletionBanner'
 import FeedbackWidget from '@/components/FeedbackWidget'
 import { springSnappy } from '@/lib/animations'
+
+const MotionLink = motion.create(Link)
+
 import { getMySellerProfile } from '@/app/actions/sellers'
 import { getMyOrganizations } from '@/app/actions/organization-actions'
 import { getUnreadCount } from '@/app/actions/messaging'
@@ -225,12 +228,14 @@ export default function SellerLayout({
     const NavItem = ({ href, icon: Icon, label, collapsed = false, badge = 0 }: { href: string; icon: React.ElementType; label: string; collapsed?: boolean; badge?: number }) => {
         const active = isActive(href)
         return (
-            <Link
+            <MotionLink
                 href={href}
                 title={collapsed ? label : undefined}
                 onClick={() => setIsMobileMenuOpen(false)}
+                whileTap={{ scale: 0.97 }}
+                transition={springSnappy}
                 className={`
-                    group relative flex items-center gap-3 rounded-xl
+                    relative flex items-center gap-3 rounded-xl
                     text-[14px] font-medium
                     transition-colors duration-150
                     ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'}
@@ -252,7 +257,7 @@ export default function SellerLayout({
                     <Icon
                         strokeWidth={1.5}
                         size={18}
-                        className={`transition-transform duration-150 group-hover:scale-[1.12] ${active ? 'text-violet-600' : 'text-gray-400'}`}
+                        className={active ? 'text-violet-600' : 'text-gray-400'}
                     />
                     {collapsed && badge > 0 && (
                         <motion.span
@@ -282,7 +287,7 @@ export default function SellerLayout({
                         )}
                     </>
                 )}
-            </Link>
+            </MotionLink>
         )
     }
 
@@ -371,10 +376,12 @@ export default function SellerLayout({
             {/* Collapse Toggle Button (desktop only) */}
             {!isMobile && (
                 <div className={`px-3 py-2 border-t border-gray-200 ${collapsed ? 'flex justify-center' : ''}`}>
-                    <button
+                    <motion.button
                         onClick={handleToggleCollapse}
+                        whileTap={{ scale: 0.97 }}
+                        transition={springSnappy}
                         className={`
-                            group flex items-center gap-2 text-gray-500 hover:text-gray-700
+                            flex items-center gap-2 text-gray-500 hover:text-gray-700
                             hover:bg-white rounded-xl transition-colors
                             ${collapsed ? 'p-2' : 'px-3 py-2 w-full'}
                         `}
@@ -384,20 +391,22 @@ export default function SellerLayout({
                             animate={{ rotate: collapsed ? 180 : 0 }}
                             transition={springSnappy}
                         >
-                            <ChevronLeft className="w-4 h-4 transition-transform duration-150 group-hover:scale-[1.12]" />
+                            <ChevronLeft className="w-4 h-4" />
                         </motion.div>
                         {!collapsed && <span className="text-xs font-medium">Collapse</span>}
-                    </button>
+                    </motion.button>
                 </div>
             )}
 
             {/* Profile Footer */}
             <div className={`p-3 border-t border-gray-200 ${collapsed ? 'flex justify-center' : ''}`}>
-                <Link
+                <MotionLink
                     href="/seller/profile"
                     title={collapsed ? (profile?.email || 'Profile') : undefined}
                     onClick={() => isMobile && setIsMobileMenuOpen(false)}
-                    className={`group flex items-center gap-3 rounded-xl transition-colors ${
+                    whileTap={{ scale: 0.97 }}
+                    transition={springSnappy}
+                    className={`flex items-center gap-3 rounded-xl transition-colors ${
                         collapsed ? 'p-2' : 'px-3 py-2.5'
                     } ${isProfileActive ? 'bg-violet-50' : 'hover:bg-white'}`}
                 >
@@ -405,10 +414,10 @@ export default function SellerLayout({
                         <img
                             src={profile.avatarUrl}
                             alt={profile.name || 'Profil'}
-                            className={`rounded-full object-cover transition-transform duration-150 group-hover:scale-[1.08] ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}
+                            className={`rounded-full object-cover ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}
                         />
                     ) : (
-                        <div className={`rounded-full bg-gray-200 flex items-center justify-center transition-transform duration-150 group-hover:scale-[1.08] ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}>
+                        <div className={`rounded-full bg-gray-200 flex items-center justify-center ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}>
                             <User className="w-4 h-4 text-gray-500" />
                         </div>
                     )}
@@ -419,7 +428,7 @@ export default function SellerLayout({
                             </p>
                         </div>
                     )}
-                </Link>
+                </MotionLink>
             </div>
         </>
     )
