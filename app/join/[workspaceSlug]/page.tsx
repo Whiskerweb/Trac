@@ -274,6 +274,7 @@ export default function PortalPage() {
                             ) : (
                                 <PortalAuthForm
                                     workspaceSlug={workspaceSlug}
+                                    workspaceId={workspace.id}
                                     primaryColor={primaryColor}
                                 />
                             )}
@@ -290,7 +291,7 @@ export default function PortalPage() {
                     rel="noopener noreferrer"
                     className="text-[10px] text-gray-300 hover:text-gray-400 transition-colors"
                 >
-                    Powered by Traaaction
+                    {t('poweredBy')}
                 </a>
             </div>
         </div>

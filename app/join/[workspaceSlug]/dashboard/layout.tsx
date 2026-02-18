@@ -2,6 +2,7 @@
 
 import { useState, useEffect, createContext, useContext, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
 import { getPortalFullDashboard } from '@/app/actions/portal'
 import PortalHeader from '@/components/portal/PortalHeader'
@@ -111,6 +112,7 @@ export const usePortalData = () => {
 export default function PortalDashboardLayout({ children }: { children: React.ReactNode }) {
     const params = useParams()
     const router = useRouter()
+    const t = useTranslations('portal')
     const workspaceSlug = params.workspaceSlug as string
 
     const [data, setData] = useState<PortalDashboardData | null>(null)
@@ -189,7 +191,7 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
                         rel="noopener noreferrer"
                         className="text-[10px] text-gray-300 hover:text-gray-400 transition-colors"
                     >
-                        Powered by Traaaction
+                        {t('poweredBy')}
                     </a>
                 </footer>
             </div>

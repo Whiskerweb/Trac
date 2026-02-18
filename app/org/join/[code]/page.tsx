@@ -112,10 +112,10 @@ export default function InviteCodePage() {
 
                 {/* Branding */}
                 <div className="mt-12 pt-8 border-t border-gray-100">
-                    <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">
+                    <a href="https://traaaction.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">
                         <img src="/Logotrac/logo1.png" alt="Traaaction" className="w-6 h-6 rounded-lg" />
-                        Powered by Traaaction
-                    </Link>
+                        Propulsé par traaaction.com
+                    </a>
                 </div>
             </div>
         </div>

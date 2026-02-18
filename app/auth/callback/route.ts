@@ -220,14 +220,23 @@ export async function GET(request: NextRequest) {
             // New user - check role intent (from URL or user_metadata)
             if (roleIntent === 'seller') {
                 try {
+                    // Read portal source cookie (set by PortalAuthForm)
+                    const portalSourceWorkspaceId = request.cookies.get('trac_portal_source')?.value || undefined
+
                     // Create global seller for new user
                     const result = await createGlobalSeller({
                         userId: user.id,
                         email: user.email || '',
-                        name: user.user_metadata?.full_name || user.user_metadata?.name || ''
+                        name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+                        portalSourceWorkspaceId,
                     })
 
                     if (result.success) {
+                        // Clear portal source cookie after use
+                        if (portalSourceWorkspaceId) {
+                            cookiesToForward.push({ name: 'trac_portal_source', value: '', options: { path: '/', maxAge: 0 } })
+                        }
+
                         // Portal flow: redirect back to portal instead of onboarding
                         if (redirectTo && redirectTo.startsWith('/join/')) {
                             console.log('[Auth Callback] Seller created, redirecting to portal:', redirectTo)

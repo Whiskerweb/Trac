@@ -725,6 +725,7 @@ export async function createGlobalSeller(data: {
     userId: string
     email: string
     name: string
+    portalSourceWorkspaceId?: string
 }) {
     try {
         // Check if seller already exists
@@ -766,6 +767,7 @@ export async function createGlobalSeller(data: {
                 referral_code: nanoid(8),
                 referred_by: referredBy,
                 referred_at: referredBy ? new Date() : null,
+                portal_source_workspace_id: data.portalSourceWorkspaceId || null,
             }
         })
 

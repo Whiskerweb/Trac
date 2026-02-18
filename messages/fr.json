@@ -2735,6 +2735,9 @@
         "resending": "Envoi en cours...",
         "errorNameMin": "Le nom doit faire au moins 2 caractères",
         "errorPasswordMin": "Le mot de passe doit faire au moins 6 caractères",
+        "googleSignIn": "Continuer avec Google",
+        "orEmail": "ou continuer avec email",
+        "poweredBy": "Propulsé par traaaction.com",
         "previewMode": "Mode apercu",
         "previewModeDesc": "Vous visualisez ce portail en tant que startup. Les affilies verront un formulaire d'inscription ici.",
         "landing": {

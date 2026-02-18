@@ -2962,6 +2962,9 @@
         "resending": "Resending...",
         "errorNameMin": "Name must be at least 2 characters",
         "errorPasswordMin": "Password must be at least 6 characters",
+        "googleSignIn": "Continue with Google",
+        "orEmail": "or continue with email",
+        "poweredBy": "Powered by traaaction.com",
         "previewMode": "Preview Mode",
         "previewModeDesc": "You are viewing this portal as a startup owner. Affiliates will see a sign-up form here.",
         "landing": {

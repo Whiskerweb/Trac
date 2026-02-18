@@ -247,6 +247,8 @@ model Workspace {
   MarketingCampaign MarketingCampaign[]
   MarketingFolder   MarketingFolder[]
 
+  PortalSourceSellers  Seller[] @relation("PortalSourceSellers")
+
   /// Hosted affiliate portal
   portal_enabled       Boolean @default(false)
   portal_welcome_text  String?
@@ -473,6 +475,10 @@ model Seller {
   /// When this seller was referred (for 1-year expiry)
   referred_at   DateTime?
 
+  // === PORTAL SOURCE ===
+  /// Workspace ID of the portal through which this seller signed up
+  portal_source_workspace_id  String?
+
   created_at          DateTime             @default(now())
   updated_at          DateTime             @updatedAt
   Commissions         Commission[]
@@ -487,6 +493,7 @@ model Seller {
   GroupMembership     SellerGroupMember?
   Referrer            Seller?              @relation("SellerReferral", fields: [referred_by], references: [id], onDelete: SetNull)
   Referrals           Seller[]             @relation("SellerReferral")
+  PortalSourceWorkspace Workspace?         @relation("PortalSourceSellers", fields: [portal_source_workspace_id], references: [id], onDelete: SetNull)
 
   @@unique([program_id, email])
   @@index([email])
@@ -495,6 +502,7 @@ model Seller {
   @@index([program_id])
   @@index([referred_by])
   @@index([referred_at])
+  @@index([portal_source_workspace_id])
 }
 
 /// Partner Profile - Onboarding data and social links
