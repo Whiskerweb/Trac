@@ -4,8 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Bell, MessageSquare, Users, CreditCard, Check } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import { getNotificationSummary, type NotificationSummary } from '@/app/actions/notifications'
 import { markAllMessagesAsRead } from '@/app/actions/messaging'
+import { dropdownVariants } from '@/lib/animations'
 
 export function NotificationCenter() {
     const t = useTranslations('dashboard.notifications')
@@ -73,8 +75,14 @@ export function NotificationCenter() {
             </button>
 
             {/* Dropdown panel */}
+            <AnimatePresence>
             {isOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[380px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                <motion.div
+                    variants={dropdownVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="absolute right-0 top-full mt-2 w-[380px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200 z-50 overflow-hidden">
                     {/* Header */}
                     <div className="px-5 py-4 border-b border-gray-100">
                         <h3 className="text-[15px] font-semibold text-gray-900">{t('title')}</h3>
@@ -190,8 +198,9 @@ export function NotificationCenter() {
                             )}
                         </div>
                     )}
-                </div>
+                </motion.div>
             )}
+            </AnimatePresence>
         </div>
     )
 }

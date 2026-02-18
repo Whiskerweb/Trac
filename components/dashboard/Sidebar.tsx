@@ -4,14 +4,16 @@ import {
     LayoutDashboard, MessageSquare, Users,
     Contact, Coins, Settings,
     User, Target,
-    ChevronLeft, ChevronRight,
+    ChevronLeft,
     Link2, BarChart3, Megaphone, Globe
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { motion, LayoutGroup } from 'framer-motion'
 import { getUnreadCount } from '@/app/actions/messaging'
+import { springSnappy } from '@/lib/animations'
 
 // =============================================
 // NAVIGATION STRUCTURE
@@ -123,6 +125,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
 
             {/* Navigation */}
             <nav className={`flex-1 py-4 overflow-y-auto ${collapsed ? 'px-2' : 'px-3'}`}>
+                <LayoutGroup id="startup-sidebar">
                 {navigationConfig.map((section, idx) => (
                     <div key={section.titleKey || 'main'} className={idx > 0 ? 'mt-8' : ''}>
                         {/* Section Title */}
@@ -154,7 +157,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                                             href={item.href}
                                             title={collapsed ? t(item.nameKey) : undefined}
                                             className={`
-                                                flex items-center gap-3 rounded-lg transition-all duration-150 text-sm relative
+                                                flex items-center gap-3 rounded-lg transition-colors duration-150 text-sm relative
                                                 ${collapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2'}
                                                 ${isActive
                                                     ? 'bg-purple-50 text-purple-700 font-medium'
@@ -162,28 +165,44 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                                                 }
                                             `}
                                         >
-                                            {/* Active indicator bar */}
+                                            {/* Animated active indicator bar */}
                                             {isActive && !collapsed && (
-                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-purple-500 rounded-r-full" />
+                                                <motion.div
+                                                    layoutId="sidebar-indicator"
+                                                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-purple-500 rounded-r-full"
+                                                    transition={springSnappy}
+                                                />
                                             )}
                                             <div className={`flex items-center ${collapsed ? '' : 'gap-3'}`}>
-                                                <div className="relative">
+                                                <motion.div className="relative" whileHover={{ scale: 1.12 }} transition={springSnappy}>
                                                     <Icon
                                                         className={`w-4 h-4 ${isActive ? 'text-purple-600' : 'text-gray-400'}`}
                                                         strokeWidth={2}
                                                     />
                                                     {collapsed && badge > 0 && (
-                                                        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                                                        <motion.span
+                                                            key={badge}
+                                                            initial={{ scale: 0.6, opacity: 0 }}
+                                                            animate={{ scale: 1, opacity: 1 }}
+                                                            transition={springSnappy}
+                                                            className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+                                                        >
                                                             {badge > 9 ? '9+' : badge}
-                                                        </span>
+                                                        </motion.span>
                                                     )}
-                                                </div>
+                                                </motion.div>
                                                 {!collapsed && <span>{t(item.nameKey)}</span>}
                                             </div>
                                             {!collapsed && badge > 0 && (
-                                                <span className="min-w-[20px] h-5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1.5">
+                                                <motion.span
+                                                    key={badge}
+                                                    initial={{ scale: 0.6, opacity: 0 }}
+                                                    animate={{ scale: 1, opacity: 1 }}
+                                                    transition={springSnappy}
+                                                    className="min-w-[20px] h-5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1.5"
+                                                >
                                                     {badge > 99 ? '99+' : badge}
-                                                </span>
+                                                </motion.span>
                                             )}
                                         </Link>
                                     </li>
@@ -192,6 +211,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                         </ul>
                     </div>
                 ))}
+                </LayoutGroup>
             </nav>
 
             {/* Settings - Bottom Rail */}
@@ -228,14 +248,13 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                         `}
                         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     >
-                        {collapsed ? (
-                            <ChevronRight className="w-4 h-4" />
-                        ) : (
-                            <>
-                                <ChevronLeft className="w-4 h-4" />
-                                <span className="text-xs font-medium">Collapse</span>
-                            </>
-                        )}
+                        <motion.div
+                            animate={{ rotate: collapsed ? 180 : 0 }}
+                            transition={springSnappy}
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </motion.div>
+                        {!collapsed && <span className="text-xs font-medium">Collapse</span>}
                     </button>
                 </div>
             )}

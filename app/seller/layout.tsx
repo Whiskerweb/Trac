@@ -15,15 +15,16 @@ import {
     Menu,
     X,
     ChevronLeft,
-    ChevronRight,
     Search,
     FolderOpen,
     Crown,
     Loader2,
     Gift
 } from 'lucide-react'
+import { motion, LayoutGroup } from 'framer-motion'
 import ProfileCompletionBanner from '@/components/seller/ProfileCompletionBanner'
 import FeedbackWidget from '@/components/FeedbackWidget'
+import { springSnappy } from '@/lib/animations'
 import { getMySellerProfile } from '@/app/actions/sellers'
 import { getMyOrganizations } from '@/app/actions/organization-actions'
 import { getUnreadCount } from '@/app/actions/messaging'
@@ -231,7 +232,7 @@ export default function SellerLayout({
                 className={`
                     relative flex items-center gap-3 rounded-xl
                     text-[14px] font-medium
-                    transition-all duration-150
+                    transition-colors duration-150
                     ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'}
                     ${active
                         ? 'bg-violet-50 text-violet-700'
@@ -239,25 +240,45 @@ export default function SellerLayout({
                     }
                 `}
             >
-                <div className="relative">
+                {/* Animated active indicator */}
+                {active && !collapsed && (
+                    <motion.div
+                        layoutId="seller-sidebar-indicator"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-violet-500 rounded-r-full"
+                        transition={springSnappy}
+                    />
+                )}
+                <motion.div className="relative" whileHover={{ scale: 1.12 }} transition={springSnappy}>
                     <Icon
                         strokeWidth={1.5}
                         size={18}
                         className={active ? 'text-violet-600' : 'text-gray-400'}
                     />
                     {collapsed && badge > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                        <motion.span
+                            key={badge}
+                            initial={{ scale: 0.6, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={springSnappy}
+                            className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+                        >
                             {badge > 9 ? '9+' : badge}
-                        </span>
+                        </motion.span>
                     )}
-                </div>
+                </motion.div>
                 {!collapsed && (
                     <>
                         <span className="flex-1">{label}</span>
                         {badge > 0 && (
-                            <span className="min-w-[20px] h-5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1.5">
+                            <motion.span
+                                key={badge}
+                                initial={{ scale: 0.6, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={springSnappy}
+                                className="min-w-[20px] h-5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1.5"
+                            >
                                 {badge > 99 ? '99+' : badge}
-                            </span>
+                            </motion.span>
                         )}
                     </>
                 )}
@@ -303,6 +324,7 @@ export default function SellerLayout({
 
             {/* Navigation */}
             <nav className={`flex-1 overflow-y-auto ${collapsed ? 'px-2' : 'px-3'}`}>
+                <LayoutGroup id="seller-sidebar">
                 {/* PROGRAMMES Section */}
                 <SectionLabel collapsed={collapsed}>Programmes</SectionLabel>
                 <div className="space-y-1">
@@ -343,6 +365,7 @@ export default function SellerLayout({
                 <div className="space-y-1">
                     <NavItem href="/seller/settings" icon={Settings} label="Settings" collapsed={collapsed} />
                 </div>
+                </LayoutGroup>
             </nav>
 
             {/* Collapse Toggle Button (desktop only) */}
@@ -357,14 +380,13 @@ export default function SellerLayout({
                         `}
                         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     >
-                        {collapsed ? (
-                            <ChevronRight className="w-4 h-4" />
-                        ) : (
-                            <>
-                                <ChevronLeft className="w-4 h-4" />
-                                <span className="text-xs font-medium">Collapse</span>
-                            </>
-                        )}
+                        <motion.div
+                            animate={{ rotate: collapsed ? 180 : 0 }}
+                            transition={springSnappy}
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </motion.div>
+                        {!collapsed && <span className="text-xs font-medium">Collapse</span>}
                     </button>
                 </div>
             )}

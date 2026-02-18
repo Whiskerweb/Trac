@@ -272,19 +272,19 @@ export default function ReferralPage() {
         return (
             <div className="min-h-screen bg-[#FAFAFA]">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
-                    <div className="animate-pulse space-y-6">
+                    <div className="space-y-6">
                         <div>
-                            <div className="h-7 bg-gray-200 rounded w-56 mb-2" />
-                            <div className="h-4 bg-gray-100 rounded w-96" />
+                            <div className="h-7 rounded w-56 mb-2 skeleton-shimmer" />
+                            <div className="h-4 rounded w-96 skeleton-shimmer" />
                         </div>
-                        <div className="bg-white rounded-xl border border-gray-100 p-5 h-32" />
+                        <div className="rounded-xl border border-gray-100 h-32 skeleton-shimmer" />
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div className="bg-white rounded-xl border border-gray-100 p-4 h-20" />
-                            <div className="bg-white rounded-xl border border-gray-100 p-4 h-20" />
-                            <div className="bg-white rounded-xl border border-gray-100 p-4 h-20" />
+                            <div className="rounded-xl border border-gray-100 h-20 skeleton-shimmer" />
+                            <div className="rounded-xl border border-gray-100 h-20 skeleton-shimmer" />
+                            <div className="rounded-xl border border-gray-100 h-20 skeleton-shimmer" />
                         </div>
-                        <div className="bg-white rounded-xl border border-gray-100 p-5 h-48" />
-                        <div className="bg-white rounded-xl border border-gray-100 p-5 h-32" />
+                        <div className="rounded-xl border border-gray-100 h-48 skeleton-shimmer" />
+                        <div className="rounded-xl border border-gray-100 h-32 skeleton-shimmer" />
                     </div>
                 </div>
             </div>

@@ -15,11 +15,13 @@ import {
     MapPin
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { motion, AnimatePresence } from 'framer-motion'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
 import { GlobeVisualization } from '@/components/dashboard/GlobeVisualization'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { StartupOnboardingChecklist } from '@/components/dashboard/StartupOnboardingChecklist'
 import { subDays, format } from 'date-fns'
+import { dropdownVariants, springSnappy } from '@/lib/animations'
 
 // =============================================
 // TYPES & FETCHER
@@ -203,11 +205,19 @@ function Dropdown({
     return (
         <div ref={ref} className="relative">
             {trigger}
-            {isOpen && (
-                <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[200px] py-1 animate-in fade-in slide-in-from-top-2 duration-150">
-                    {children}
-                </div>
-            )}
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        variants={dropdownVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[200px] py-1"
+                    >
+                        {children}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }
@@ -299,7 +309,8 @@ function AnalyticsCard({
     settingsLabel,
     itemCount = 0,
     maxItems = 8,
-    viewAllText = 'View All'
+    viewAllText = 'View All',
+    tabGroupId = 'analytics'
 }: {
     title: string
     tabs?: { key: string; label: string }[]
@@ -310,6 +321,7 @@ function AnalyticsCard({
     itemCount?: number
     maxItems?: number
     viewAllText?: string
+    tabGroupId?: string
 }) {
     return (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -322,12 +334,19 @@ function AnalyticsCard({
                                 <button
                                     key={tab.key}
                                     onClick={() => onTabChange?.(tab.key)}
-                                    className={`text-sm font-medium transition-colors ${activeTab === tab.key
+                                    className={`relative text-sm font-medium transition-colors pb-1 ${activeTab === tab.key
                                         ? 'text-gray-900'
                                         : 'text-gray-400 hover:text-gray-600'
                                         }`}
                                 >
                                     {tab.label}
+                                    {activeTab === tab.key && (
+                                        <motion.div
+                                            layoutId={`tab-indicator-${tabGroupId}`}
+                                            className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 rounded-full"
+                                            transition={springSnappy}
+                                        />
+                                    )}
                                 </button>
                             ))
                         ) : (
@@ -919,6 +938,7 @@ export default function DashboardPage() {
                     onTabChange={setLocationTab}
                     settingsLabel={t('kpi.clicks').toUpperCase()}
                     viewAllText={t('viewAll')}
+                    tabGroupId="locations"
                 >
                     {locationTab === 'countries' && displayLocations.map((loc) => (
                         <SimpleListItem
@@ -978,6 +998,7 @@ export default function DashboardPage() {
                     onTabChange={setDeviceTab}
                     settingsLabel={t('kpi.clicks').toUpperCase()}
                     viewAllText={t('viewAll')}
+                    tabGroupId="devices"
                 >
                     {deviceTab === 'devices' && displayDevices.map((device) => {
                         const Icon = device.icon

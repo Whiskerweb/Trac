@@ -20,6 +20,8 @@ import {
     DollarSign,
     MousePointer2
 } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { springSnappy, modalOverlayVariants, modalContentVariants } from '@/lib/animations'
 import QRCodeWithLogo from '@/components/QRCodeWithLogo'
 import { deleteShortLink } from '@/app/actions/links'
 import { getStartupProfile } from '@/app/actions/startup-profile'
@@ -111,7 +113,11 @@ export function LinkDrawer({ isOpen, onClose, link, onDelete }: LinkDrawerProps)
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="bg-white rounded-xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
                 {/* Header with Tabs */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white sticky top-0 z-10">
@@ -132,11 +138,11 @@ export function LinkDrawer({ isOpen, onClose, link, onDelete }: LinkDrawerProps)
 
                     <div className="flex items-center gap-4">
                         {/* Tabs */}
-                        <div className="flex bg-gray-100 p-1 rounded-lg">
+                        <div className="flex bg-gray-100 p-1 rounded-lg relative">
                             <button
                                 onClick={() => setActiveTab('overview')}
-                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'overview'
-                                    ? 'bg-white text-gray-900 shadow-sm'
+                                className={`relative z-10 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'overview'
+                                    ? 'text-gray-900'
                                     : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
@@ -144,13 +150,23 @@ export function LinkDrawer({ isOpen, onClose, link, onDelete }: LinkDrawerProps)
                             </button>
                             <button
                                 onClick={() => setActiveTab('settings')}
-                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'settings'
-                                    ? 'bg-white text-gray-900 shadow-sm'
+                                className={`relative z-10 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'settings'
+                                    ? 'text-gray-900'
                                     : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
                                 Settings
                             </button>
+                            {/* Sliding background */}
+                            <motion.div
+                                layoutId="link-drawer-tab"
+                                className="absolute top-1 bottom-1 bg-white rounded-md shadow-sm"
+                                style={{
+                                    left: activeTab === 'overview' ? '4px' : '50%',
+                                    width: 'calc(50% - 4px)',
+                                }}
+                                transition={springSnappy}
+                            />
                         </div>
 
                         <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block"></div>
@@ -393,7 +409,7 @@ export function LinkDrawer({ isOpen, onClose, link, onDelete }: LinkDrawerProps)
                         </div>
                     )}
                 </div>
-            </div>
+            </motion.div>
         </div>
     )
 }

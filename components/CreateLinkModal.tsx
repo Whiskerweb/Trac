@@ -14,6 +14,7 @@ import {
     Image as ImageIcon,
     Twitter
 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { createShortLink } from '@/app/actions/links'
 import { getVerifiedDomainForWorkspace } from '@/app/actions/domains'
 import { getStartupProfile } from '@/app/actions/startup-profile'
@@ -158,7 +159,11 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className={`bg-white rounded-xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all ${result ? 'max-w-md' : 'max-w-5xl'}`}>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className={`bg-white rounded-xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all ${result ? 'max-w-md' : 'max-w-5xl'}`}>
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white sticky top-0 z-10">
@@ -374,14 +379,14 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                                     // Mock title from URL
                                                     tryParseUrl(url)?.pathname.split('/').filter(p => p).pop()?.replace(/-/g, ' ') || 'Home'
                                                 ) : (
-                                                    <div className="h-4 w-3/4 bg-gray-100 rounded animate-pulse"></div>
+                                                    <div className="h-4 w-3/4 rounded skeleton-shimmer"></div>
                                                 )}
                                             </div>
                                             <div className="text-sm text-gray-500 line-clamp-2">
                                                 {url && tryParseUrl(url) ? (
                                                     `Link to ${url}`
                                                 ) : (
-                                                    <div className="h-3 w-1/2 bg-gray-100 rounded animate-pulse"></div>
+                                                    <div className="h-3 w-1/2 rounded skeleton-shimmer"></div>
                                                 )}
                                             </div>
                                             <div className="pt-2 flex items-center gap-2">
@@ -421,7 +426,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                 <button
                                     onClick={handleSubmit}
                                     disabled={loading || !url}
-                                    className="flex-1 sm:flex-none py-2.5 px-6 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 disabled:hover:bg-gray-900 text-white font-medium rounded-lg transition-all shadow-lg shadow-gray-900/10 flex items-center justify-center gap-2 min-w-[120px]"
+                                    className="flex-1 sm:flex-none py-2.5 px-6 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 disabled:hover:bg-gray-900 text-white font-medium rounded-lg transition-all shadow-lg shadow-gray-900/10 flex items-center justify-center gap-2 min-w-[120px] btn-press"
                                 >
                                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Link'}
                                 </button>
@@ -429,7 +434,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                         </div>
                     </div>
                 )}
-            </div>
+            </motion.div>
         </div>
     )
 }

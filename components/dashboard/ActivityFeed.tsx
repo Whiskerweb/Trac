@@ -96,11 +96,11 @@ export function ActivityFeed({ workspaceId }: ActivityFeedProps) {
                 </div>
                 <div className="space-y-3">
                     {[...Array(5)].map((_, i) => (
-                        <div key={i} className="flex items-start gap-2 animate-pulse">
-                            <div className="w-8 h-8 rounded-full bg-gray-200" />
+                        <div key={i} className="flex items-start gap-2">
+                            <div className="w-8 h-8 rounded-full skeleton-shimmer" />
                             <div className="flex-1 space-y-1.5">
-                                <div className="h-3 bg-gray-200 rounded w-3/4" />
-                                <div className="h-2.5 bg-gray-100 rounded w-1/2" />
+                                <div className="h-3 rounded w-3/4 skeleton-shimmer" />
+                                <div className="h-2.5 rounded w-1/2 skeleton-shimmer" />
                             </div>
                         </div>
                     ))}

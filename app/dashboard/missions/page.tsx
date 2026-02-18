@@ -168,7 +168,7 @@ function MissionRow({
         <div className={`
             group relative bg-white border transition-all duration-200
             ${isActive
-                ? 'border-neutral-200 hover:border-neutral-300 hover:shadow-sm'
+                ? 'border-neutral-200 hover:border-neutral-300 card-hover'
                 : 'border-neutral-100 opacity-60 hover:opacity-80'
             }
             rounded-xl overflow-hidden
