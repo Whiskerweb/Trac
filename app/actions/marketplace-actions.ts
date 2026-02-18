@@ -31,6 +31,7 @@ export async function getMarketplaceMissions(filters?: MarketplaceFilters) {
                 in: ['PUBLIC', 'PRIVATE'] as MissionVisibility[]
             },
             organization_id: null,
+            portal_exclusive: false,
         }
 
         // Collect AND conditions
@@ -411,6 +412,11 @@ export async function getMissionDetailForMarketplace(missionId: string) {
         })
 
         if (!mission) {
+            return { success: false, error: 'Mission not found' }
+        }
+
+        // Portal-exclusive missions are not accessible from marketplace
+        if (mission.portal_exclusive) {
             return { success: false, error: 'Mission not found' }
         }
 

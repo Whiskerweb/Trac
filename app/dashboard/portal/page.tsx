@@ -22,6 +22,7 @@ interface PortalMission {
     description: string
     target_url: string
     portal_visible: boolean
+    portal_exclusive: boolean
     sale_enabled: boolean
     sale_reward_amount: number | null
     sale_reward_structure: string | null
@@ -556,7 +557,14 @@ export default function PortalManagementPage() {
                                             className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3"
                                         >
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-gray-900 truncate">{mission.title}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-medium text-gray-900 truncate">{mission.title}</p>
+                                                    {mission.portal_exclusive && (
+                                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 flex-shrink-0">
+                                                            Portal only
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     {mission.sale_enabled && (
                                                         <span className="text-[10px] text-gray-400 flex items-center gap-0.5">

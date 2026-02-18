@@ -212,7 +212,7 @@ export async function getPortalMission(workspaceSlug: string, missionId: string)
  * Join a mission via the portal — wraps existing joinMission()
  */
 export async function portalJoinMission(missionId: string) {
-    return joinMission(missionId)
+    return joinMission(missionId, { portalBypass: true })
 }
 
 /**
@@ -351,7 +351,7 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
 
             for (const mission of publicMissions) {
                 try {
-                    await joinMission(mission.id)
+                    await joinMission(mission.id, { portalBypass: true })
                 } catch (e) {
                     console.error(`[Portal] Auto-enroll failed ${mission.id}:`, e)
                 }

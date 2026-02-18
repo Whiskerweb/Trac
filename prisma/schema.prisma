@@ -96,6 +96,8 @@ model Mission {
 
   /// Whether this mission is visible on the hosted affiliate portal
   portal_visible     Boolean             @default(true)
+  /// If true, this mission is only accessible via the portal (hidden from marketplace)
+  portal_exclusive   Boolean             @default(false)
 
   /// If set, this mission is exclusive to an organization (not shown in marketplace)
   organization_id    String?

@@ -41,6 +41,7 @@ export async function getPortalSettings() {
                         description: true,
                         target_url: true,
                         portal_visible: true,
+                        portal_exclusive: true,
                         sale_enabled: true,
                         sale_reward_amount: true,
                         sale_reward_structure: true,
@@ -366,6 +367,7 @@ export async function createPortalMission(data: {
                 status: 'ACTIVE',
                 visibility: 'PUBLIC',
                 portal_visible: true,
+                portal_exclusive: true,
                 company_name: ws.workspaceName || null,
 
                 sale_enabled: data.sale.enabled,

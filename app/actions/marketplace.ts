@@ -557,6 +557,7 @@ export async function getAllMissions(): Promise<{
                     in: ['PUBLIC', 'PRIVATE']
                 },
                 organization_id: null,
+                portal_exclusive: false,
             },
             orderBy: { created_at: 'desc' },
             include: {
@@ -663,7 +664,7 @@ export async function getAllMissions(): Promise<{
  *
  * Link Structure: https://[CUSTOM_DOMAIN]/s/[MISSION_SLUG]/[AFFILIATE_CODE]
  */
-export async function joinMission(missionId: string): Promise<{
+export async function joinMission(missionId: string, options?: { portalBypass?: boolean }): Promise<{
     success: boolean
     type?: 'enrolled' | 'requested'  // ✅ Distinguish between direct join and request
     enrollment?: {
@@ -699,13 +700,18 @@ export async function joinMission(missionId: string): Promise<{
             return { success: false, error: 'Mission not found or inactive' }
         }
 
-        // 1b. Check visibility - INVITE_ONLY requires invite link
+        // 1b. Portal-exclusive guard
+        if (mission.portal_exclusive && !options?.portalBypass) {
+            return { success: false, error: 'This mission is only accessible via the portal' }
+        }
+
+        // 1c. Check visibility - INVITE_ONLY requires invite link
         if (mission.visibility === 'INVITE_ONLY') {
             console.log(`[Marketplace] ⛔ Mission ${missionId} is INVITE_ONLY - cannot join directly`)
             return { success: false, error: 'This mission requires an invitation link' }
         }
 
-        // 1c. Check country eligibility (from SellerProfile via Profile relation)
+        // 1d. Check country eligibility (from SellerProfile via Profile relation)
         const sellerWithProfile = await prisma.seller.findFirst({
             where: { user_id: user.id },
             include: {
@@ -1293,7 +1299,8 @@ export async function joinMissionByInviteCode(inviteCode: string): Promise<{
         const mission = await prisma.mission.findFirst({
             where: {
                 invite_code: inviteCode,
-                status: 'ACTIVE'
+                status: 'ACTIVE',
+                portal_exclusive: false,
             }
         })
 
@@ -1554,7 +1561,8 @@ export async function getMissionByInviteCode(inviteCode: string): Promise<{
         const mission = await prisma.mission.findFirst({
             where: {
                 invite_code: inviteCode,
-                status: 'ACTIVE'
+                status: 'ACTIVE',
+                portal_exclusive: false,
             },
             include: {
                 Workspace: {
