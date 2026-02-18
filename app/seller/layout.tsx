@@ -382,6 +382,7 @@ export default function SellerLayout({
                     >
                         <motion.div
                             animate={{ rotate: collapsed ? 180 : 0 }}
+                            whileHover={{ scale: 1.12 }}
                             transition={springSnappy}
                         >
                             <ChevronLeft className="w-4 h-4" />
@@ -401,17 +402,19 @@ export default function SellerLayout({
                         collapsed ? 'p-2' : 'px-3 py-2.5'
                     } ${isProfileActive ? 'bg-violet-50' : 'hover:bg-white'}`}
                 >
-                    {profile?.avatarUrl ? (
-                        <img
-                            src={profile.avatarUrl}
-                            alt={profile.name || 'Profil'}
-                            className={`rounded-full object-cover ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}
-                        />
-                    ) : (
-                        <div className={`rounded-full bg-gray-200 flex items-center justify-center ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}>
-                            <User className="w-4 h-4 text-gray-500" />
-                        </div>
-                    )}
+                    <motion.div whileHover={{ scale: 1.08 }} transition={springSnappy}>
+                        {profile?.avatarUrl ? (
+                            <img
+                                src={profile.avatarUrl}
+                                alt={profile.name || 'Profil'}
+                                className={`rounded-full object-cover ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}
+                            />
+                        ) : (
+                            <div className={`rounded-full bg-gray-200 flex items-center justify-center ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}>
+                                <User className="w-4 h-4 text-gray-500" />
+                            </div>
+                        )}
+                    </motion.div>
                     {!collapsed && (
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">

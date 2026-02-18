@@ -228,10 +228,12 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                         }
                     `}
                 >
-                    <Settings
-                        className={`w-4 h-4 ${pathname.startsWith('/dashboard/settings') ? 'text-purple-600' : 'text-gray-400'}`}
-                        strokeWidth={2}
-                    />
+                    <motion.div whileHover={{ scale: 1.12 }} transition={springSnappy}>
+                        <Settings
+                            className={`w-4 h-4 ${pathname.startsWith('/dashboard/settings') ? 'text-purple-600' : 'text-gray-400'}`}
+                            strokeWidth={2}
+                        />
+                    </motion.div>
                     {!collapsed && <span>{t('settings')}</span>}
                 </Link>
             </div>
@@ -250,6 +252,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                     >
                         <motion.div
                             animate={{ rotate: collapsed ? 180 : 0 }}
+                            whileHover={{ scale: 1.12 }}
                             transition={springSnappy}
                         >
                             <ChevronLeft className="w-4 h-4" />
@@ -268,11 +271,15 @@ export function Sidebar({ collapsed = false, onToggleCollapse, isMobile = false 
                         collapsed ? 'p-2' : 'px-3 py-2'
                     } ${pathname === '/dashboard/profile' ? 'bg-purple-50' : ''}`}
                 >
-                    <div className={`rounded-full bg-gradient-to-tr from-gray-100 to-gray-200 border border-gray-200 flex items-center justify-center ${
-                        collapsed ? 'w-9 h-9' : 'w-8 h-8'
-                    } ${pathname === '/dashboard/profile' ? 'border-purple-300' : 'text-gray-500'}`}>
+                    <motion.div
+                        whileHover={{ scale: 1.08 }}
+                        transition={springSnappy}
+                        className={`rounded-full bg-gradient-to-tr from-gray-100 to-gray-200 border border-gray-200 flex items-center justify-center ${
+                            collapsed ? 'w-9 h-9' : 'w-8 h-8'
+                        } ${pathname === '/dashboard/profile' ? 'border-purple-300' : 'text-gray-500'}`}
+                    >
                         <User className={`w-4 h-4 ${pathname === '/dashboard/profile' ? 'text-purple-600' : ''}`} />
-                    </div>
+                    </motion.div>
                     {!collapsed && (
                         <div className="flex-1 min-w-0">
                             <p className={`text-sm font-medium truncate ${
