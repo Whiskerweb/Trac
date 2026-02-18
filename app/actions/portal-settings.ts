@@ -112,6 +112,18 @@ export async function togglePortal(enabled: boolean) {
                 },
                 data: { portal_visible: true },
             })
+
+            // Ensure subdomain is registered in Vercel (idempotent)
+            const workspace = await prisma.workspace.findUnique({
+                where: { id: ws.workspaceId },
+                select: { portal_subdomain: true },
+            })
+            if (workspace?.portal_subdomain) {
+                const vercelResult = await addDomainToVercel(`${workspace.portal_subdomain}.traaaction.com`)
+                if (!vercelResult.success) {
+                    console.warn('[Portal Settings] Vercel domain sync on toggle:', vercelResult.error)
+                }
+            }
         }
 
         revalidatePath('/dashboard/portal')
@@ -192,9 +204,15 @@ export async function updatePortalSubdomain(subdomain: string) {
         return { success: true }
     }
 
-    // No-op if same
+    // Same subdomain — still ensure it's registered in Vercel (idempotent re-sync)
     if (clean === oldSubdomain) {
-        return { success: true, data: { subdomain: clean } }
+        let dnsWarning: string | undefined
+        const vercelResult = await addDomainToVercel(`${clean}.traaaction.com`)
+        if (!vercelResult.success) {
+            console.warn('[Portal Settings] Vercel re-sync failed:', vercelResult.error)
+            dnsWarning = vercelResult.error
+        }
+        return { success: true, data: { subdomain: clean }, dnsWarning }
     }
 
     if (clean.length < 3 || clean.length > 30) {

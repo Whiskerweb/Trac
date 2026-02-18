@@ -49,11 +49,13 @@ export function getTeamQuery(): string {
 /**
  * Add a domain to Vercel project.
  * Idempotent: if the domain is already on OUR project, returns success.
+ * Automatically triggers verification after adding.
  */
 export async function addDomainToVercel(domainName: string): Promise<{
     success: boolean
     error?: string
     data?: VercelDomainResponse
+    verified?: boolean
 }> {
     console.log('[Vercel] Adding domain:', domainName, {
         hasAuthToken: !!VERCEL_AUTH_TOKEN,
@@ -79,17 +81,26 @@ export async function addDomainToVercel(domainName: string): Promise<{
 
         const data = await res.json()
 
-        console.log('[Vercel] Response:', { status: res.status, ok: res.ok })
+        console.log('[Vercel] Add response:', {
+            status: res.status,
+            ok: res.ok,
+            verified: data.verified,
+            hasVerification: !!data.verification?.length,
+        })
 
         if (!res.ok) {
             // Idempotent: domain_already_in_use on OUR project = success
             if (data.error?.code === 'domain_already_in_use') {
-                // Check if it's on our project by fetching domain details
                 const checkUrl = `${VERCEL_API_BASE}/v10/projects/${VERCEL_PROJECT_ID}/domains/${domainName}${getTeamQuery()}`
                 const checkRes = await fetch(checkUrl, { method: 'GET', headers: getVercelHeaders() })
                 if (checkRes.ok) {
-                    console.log('[Vercel] Domain already on our project (idempotent):', domainName)
-                    return { success: true, data: await checkRes.json() }
+                    const existing = await checkRes.json()
+                    console.log('[Vercel] Domain already on our project (idempotent):', domainName, { verified: existing.verified })
+                    // If not verified, trigger verification
+                    if (!existing.verified) {
+                        await verifyDomainOnVercel(domainName)
+                    }
+                    return { success: true, data: existing, verified: existing.verified }
                 }
                 return { success: false, error: 'This domain is already used by another Vercel project' }
             }
@@ -106,11 +117,63 @@ export async function addDomainToVercel(domainName: string): Promise<{
             return { success: false, error: data.error?.message || `Vercel error (${res.status})` }
         }
 
-        console.log('[Vercel] Domain added:', domainName)
-        return { success: true, data }
+        console.log('[Vercel] Domain added:', domainName, { verified: data.verified })
+
+        // If domain was added but not yet verified, trigger verification
+        if (!data.verified) {
+            console.log('[Vercel] Domain not verified, triggering verification...')
+            await verifyDomainOnVercel(domainName)
+        }
+
+        return { success: true, data, verified: data.verified }
     } catch (err) {
         console.error('[Vercel] addDomain request failed:', err)
         return { success: false, error: 'Connection error to Vercel API' }
+    }
+}
+
+// =============================================
+// VERIFY DOMAIN
+// =============================================
+
+/**
+ * Trigger domain verification on Vercel.
+ * This tells Vercel to check DNS records and verify the domain.
+ */
+export async function verifyDomainOnVercel(domainName: string): Promise<{
+    success: boolean
+    verified?: boolean
+    error?: string
+}> {
+    if (!VERCEL_AUTH_TOKEN || !VERCEL_PROJECT_ID) {
+        return { success: false, error: 'Vercel API not configured' }
+    }
+
+    try {
+        const url = `${VERCEL_API_BASE}/v10/projects/${VERCEL_PROJECT_ID}/domains/${domainName}/verify${getTeamQuery()}`
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: getVercelHeaders(),
+        })
+
+        const data = await res.json()
+
+        console.log('[Vercel] Verify response:', {
+            status: res.status,
+            verified: data.verified,
+            domain: domainName,
+        })
+
+        if (!res.ok) {
+            console.warn('[Vercel] Verification request failed:', data.error?.message)
+            return { success: false, error: data.error?.message || 'Verification failed' }
+        }
+
+        return { success: true, verified: data.verified }
+    } catch (err) {
+        console.error('[Vercel] verifyDomain request failed:', err)
+        return { success: false, error: 'Connection error' }
     }
 }
 
