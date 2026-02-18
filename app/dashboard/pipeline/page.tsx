@@ -83,7 +83,7 @@ function TypeBadge({ type }: { type: 'SALE' | 'LEAD' | 'RECURRING' | null }) {
 
 function KpiCard({ dotColor, label, value, sub }: { dotColor: string; label: string; value: string; sub: string }) {
     return (
-        <div className="flex-1 min-w-0 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
+        <div className="flex-1 min-w-0 p-4 bg-white border border-gray-200 rounded-xl card-hover">
             <div className="flex items-center gap-2 mb-2">
                 <div className="w-[7px] h-[7px] rounded-full" style={{ background: dotColor }} />
                 <span className="text-xs font-medium text-gray-400">{label}</span>
@@ -150,7 +150,14 @@ function CommissionCard({
                 </div>
             </div>
             <div className="flex items-center justify-between">
-                <TypeBadge type={commission.rewardType} />
+                <div className="flex items-center gap-1.5">
+                    <TypeBadge type={commission.rewardType} />
+                    {commission.isPortalExclusive && (
+                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-purple-50 text-purple-600">
+                            Portal
+                        </span>
+                    )}
+                </div>
                 {commission.status === 'PENDING' && (
                     <span className="text-[11px] text-gray-400 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
@@ -170,7 +177,7 @@ function CommissionCard({
             {commission.status === 'PENDING' && (
                 <div className="mt-2.5 h-[3px] rounded-full bg-gray-100 overflow-hidden">
                     <div
-                        className="h-full rounded-full bg-amber-500 transition-all"
+                        className="h-full rounded-full bg-amber-500 progress-fill"
                         style={{ width: `${progress}%` }}
                     />
                 </div>
@@ -345,7 +352,14 @@ function Drawer({
                                         {detail.mission.title.charAt(0)}
                                     </div>
                                     <div>
-                                        <div className="text-sm font-semibold">{detail.mission.title}</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-sm font-semibold">{detail.mission.title}</div>
+                                            {detail.mission.isPortalExclusive && (
+                                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600">
+                                                    Portal
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="text-[11px] text-gray-400 mt-0.5">
                                             <TypeBadge type={detail.commissionSource} />
                                         </div>
@@ -792,7 +806,7 @@ function PipelineContent() {
                                 <button
                                     onClick={handlePay}
                                     disabled={paying || sellersBelowMinimum.size > 0}
-                                    className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 transition-colors"
+                                    className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 transition-colors btn-press"
                                 >
                                     {paying ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />

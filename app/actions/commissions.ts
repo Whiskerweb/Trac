@@ -166,6 +166,7 @@ export interface CommissionItem {
     createdAt: Date
     maturedAt: Date | null
     paidAt: Date | null
+    isPortalExclusive: boolean
 }
 
 export interface GetCommissionsResponse {
@@ -255,7 +256,8 @@ export async function getWorkspaceCommissions(
                                 select: {
                                     id: true,
                                     title: true,
-                                    reward_type: true
+                                    reward_type: true,
+                                    portal_exclusive: true,
                                 }
                             }
                         }
@@ -321,6 +323,7 @@ export async function getWorkspaceCommissions(
                 createdAt: c.created_at,
                 maturedAt: c.matured_at,
                 paidAt: c.paid_at,
+                isPortalExclusive: mission?.portal_exclusive || false,
             }
         })
 
@@ -380,6 +383,7 @@ export interface CommissionDetail {
         title: string
         status: string
         reward: string
+        isPortalExclusive: boolean
     } | null
 
     // Recurring
@@ -457,7 +461,7 @@ export async function getCommissionDetail(commissionId: string): Promise<{
         }
 
         // Fetch mission info via link_id → ShortLink → MissionEnrollment → Mission
-        let mission: { id: string; title: string; status: string; reward: string } | null = null
+        let mission: { id: string; title: string; status: string; reward: string; isPortalExclusive: boolean } | null = null
         let linkSlug: string | null = null
         let linkClicks: number | null = null
 
@@ -468,7 +472,7 @@ export async function getCommissionDetail(commissionId: string): Promise<{
                     MissionEnrollment: {
                         include: {
                             Mission: {
-                                select: { id: true, title: true, status: true, reward: true }
+                                select: { id: true, title: true, status: true, reward: true, portal_exclusive: true }
                             }
                         }
                     }
@@ -479,7 +483,14 @@ export async function getCommissionDetail(commissionId: string): Promise<{
                 linkSlug = shortLink.slug
                 linkClicks = shortLink.clicks
                 if (shortLink.MissionEnrollment?.Mission) {
-                    mission = shortLink.MissionEnrollment.Mission
+                    const m = shortLink.MissionEnrollment.Mission
+                    mission = {
+                        id: m.id,
+                        title: m.title,
+                        status: m.status,
+                        reward: m.reward,
+                        isPortalExclusive: m.portal_exclusive || false,
+                    }
                 }
             }
         }

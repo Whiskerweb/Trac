@@ -1231,6 +1231,7 @@ export async function getMyEnrollments(): Promise<{
                         id: e.Mission.id,
                         title: e.Mission.title,
                         reward: e.Mission.reward,
+                        isPortalExclusive: e.Mission.portal_exclusive,
                     },
                     startup: {
                         name: e.Mission.Workspace.name,

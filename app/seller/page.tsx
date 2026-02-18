@@ -3,9 +3,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Loader2, AlertCircle, ExternalLink, Copy, Check, ChevronRight, Link2, Users } from 'lucide-react'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { getSellerDashboard } from '@/app/actions/sellers'
 import { getMyEnrollments, getMyGlobalStatsWithTimeseries } from '@/app/actions/marketplace'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
+import { floatVariants } from '@/lib/animations'
 
 interface Stats {
     totalClicks: number
@@ -21,6 +23,7 @@ interface Enrollment {
         id: string
         title: string
         reward: string
+        isPortalExclusive: boolean
     }
     startup: {
         name: string
@@ -86,7 +89,7 @@ function MissionRow({ data, sellerId }: { data: Enrollment; sellerId: string | n
 
     return (
         <Link href={href}>
-            <div className="group px-6 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer">
+            <div className="group px-6 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer row-hover">
                 <div className="flex items-center gap-6">
                     {/* Startup Logo */}
                     {data.startup.logo_url ? (
@@ -107,6 +110,11 @@ function MissionRow({ data, sellerId }: { data: Enrollment; sellerId: string | n
                             <h3 className="text-sm font-medium text-gray-900 truncate group-hover:text-violet-600 transition-colors">
                                 {data.mission.title}
                             </h3>
+                            {data.mission.isPortalExclusive && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-medium flex-shrink-0">
+                                    Portal
+                                </span>
+                            )}
                             {data.organization && (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-medium flex-shrink-0">
                                     <Users className="w-2.5 h-2.5" />
@@ -340,15 +348,19 @@ export default function PartnerDashboardPage() {
                                     </div>
                                 ) : (
                                     <div className="px-6 py-16 text-center">
-                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-violet-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                        <motion.div
+                                            variants={floatVariants}
+                                            animate="float"
+                                            className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-violet-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4"
+                                        >
                                             <Link2 className="w-5 h-5 text-violet-500" />
-                                        </div>
+                                        </motion.div>
                                         <p className="text-sm text-gray-500 mb-4">
                                             No programs joined yet
                                         </p>
                                         <Link
                                             href="/seller/marketplace"
-                                            className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black transition-colors w-full sm:w-auto"
+                                            className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black transition-colors w-full sm:w-auto btn-press"
                                         >
                                             Discover programs
                                         </Link>

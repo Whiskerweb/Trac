@@ -21,6 +21,22 @@ async function findPortalWorkspace(slugOrSubdomain: string) {
 }
 
 // =============================================
+// HELPERS — Portal link IDs (scoped to portal_exclusive missions)
+// =============================================
+
+async function getPortalLinkIds(userId: string, workspaceId: string): Promise<string[]> {
+    const enrollments = await prisma.missionEnrollment.findMany({
+        where: {
+            user_id: userId,
+            status: 'APPROVED',
+            Mission: { workspace_id: workspaceId, portal_exclusive: true },
+        },
+        select: { ShortLink: { select: { id: true } } },
+    })
+    return enrollments.map(e => e.ShortLink?.id).filter((id): id is string => !!id)
+}
+
+// =============================================
 // HELPERS — DB-based stats (replaces Tinybird)
 // =============================================
 
@@ -307,12 +323,12 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
             }
         }
 
-        // Get all existing enrollments for this workspace
+        // Get all existing enrollments for this workspace (portal_exclusive only)
         let enrollments = await prisma.missionEnrollment.findMany({
             where: {
                 user_id: user.id,
                 status: 'APPROVED',
-                Mission: { workspace_id: workspace.id },
+                Mission: { workspace_id: workspace.id, portal_exclusive: true },
             },
             include: {
                 Mission: {
@@ -335,7 +351,7 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
             },
         })
 
-        // Auto-enroll in ALL portal_visible PUBLIC missions if no enrollments yet
+        // Auto-enroll in ALL portal_exclusive PUBLIC missions if no enrollments yet
         if (enrollments.length === 0) {
             const publicMissions = await prisma.mission.findMany({
                 where: {
@@ -344,6 +360,7 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
                     visibility: 'PUBLIC',
                     organization_id: null,
                     portal_visible: true,
+                    portal_exclusive: true,
                 },
                 orderBy: { created_at: 'asc' },
                 select: { id: true },
@@ -363,7 +380,7 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
                     where: {
                         user_id: user.id,
                         status: 'APPROVED',
-                        Mission: { workspace_id: workspace.id },
+                        Mission: { workspace_id: workspace.id, portal_exclusive: true },
                     },
                     include: {
                         Mission: {
@@ -388,7 +405,7 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
             }
         }
 
-        // Get available missions (portal_visible but not enrolled)
+        // Get available missions (portal_exclusive but not enrolled)
         const enrolledMissionIds = enrollments.map(e => e.Mission.id)
         const availableMissions = await prisma.mission.findMany({
             where: {
@@ -397,6 +414,7 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
                 visibility: { in: ['PUBLIC', 'PRIVATE'] },
                 organization_id: null,
                 portal_visible: true,
+                portal_exclusive: true,
                 id: { notIn: enrolledMissionIds.length > 0 ? enrolledMissionIds : ['__none__'] },
             },
             orderBy: { created_at: 'desc' },
@@ -410,12 +428,16 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
             },
         })
 
-        // Get commission balance breakdown
+        // Get commission balance breakdown (scoped to portal_exclusive links)
+        const portalLinkIds = enrollments
+            .map(e => e.ShortLink?.id)
+            .filter((id): id is string => !!id)
+
         const commissionsByStatus = await prisma.commission.groupBy({
             by: ['status'],
             where: {
                 seller_id: seller.id,
-                program_id: workspace.id,
+                link_id: { in: portalLinkIds.length > 0 ? portalLinkIds : ['__none__'] },
                 org_parent_commission_id: null,
                 referral_generation: null,
             },
@@ -444,11 +466,11 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
             })
         )
 
-        // Fetch 10 recent commissions
+        // Fetch 10 recent commissions (scoped to portal_exclusive links)
         const recentCommissions = await prisma.commission.findMany({
             where: {
                 seller_id: seller.id,
-                program_id: workspace.id,
+                link_id: { in: portalLinkIds.length > 0 ? portalLinkIds : ['__none__'] },
                 org_parent_commission_id: null,
                 referral_generation: null,
             },
@@ -576,12 +598,14 @@ export async function getPortalCommissions(
             return { success: false, error: 'Seller not found' }
         }
 
+        const portalLinkIds = await getPortalLinkIds(user.id, workspace.id)
+
         const perPage = 20
         const skip = (page - 1) * perPage
 
         const where: Record<string, unknown> = {
             seller_id: seller.id,
-            program_id: workspace.id,
+            link_id: { in: portalLinkIds.length > 0 ? portalLinkIds : ['__none__'] },
             org_parent_commission_id: null,
             referral_generation: null,
         }
@@ -616,7 +640,7 @@ export async function getPortalCommissions(
             by: ['status'],
             where: {
                 seller_id: seller.id,
-                program_id: workspace.id,
+                link_id: { in: portalLinkIds.length > 0 ? portalLinkIds : ['__none__'] },
                 org_parent_commission_id: null,
                 referral_generation: null,
             },
@@ -997,16 +1021,18 @@ export async function getPortalPayoutData(workspaceSlug: string) {
 
         if (!seller) return { success: false, error: 'Seller not found' }
 
+        const portalLinkIds = await getPortalLinkIds(user.id, workspace.id)
+
         const sellerBalance = await prisma.sellerBalance.findUnique({
             where: { seller_id: seller.id },
         })
 
-        // Commission totals scoped to this workspace
+        // Commission totals scoped to portal_exclusive links
         const commissionsByStatus = await prisma.commission.groupBy({
             by: ['status'],
             where: {
                 seller_id: seller.id,
-                program_id: workspace.id,
+                link_id: { in: portalLinkIds.length > 0 ? portalLinkIds : ['__none__'] },
                 org_parent_commission_id: null,
                 referral_generation: null,
             },
@@ -1069,7 +1095,7 @@ export async function getPortalAssets(workspaceSlug: string) {
             where: {
                 user_id: user.id,
                 status: 'APPROVED',
-                Mission: { workspace_id: workspace.id },
+                Mission: { workspace_id: workspace.id, portal_exclusive: true },
             },
             include: {
                 Mission: {
@@ -1147,24 +1173,25 @@ export async function getPortalReports(
 
         const dateWhere = dateFilter ? { created_at: { gte: dateFilter } } : {}
 
-        // Get enrolled links for clicks
+        // Get enrolled links for clicks (portal_exclusive only)
         const enrollments = await prisma.missionEnrollment.findMany({
             where: {
                 user_id: user.id,
                 status: 'APPROVED',
-                Mission: { workspace_id: workspace.id },
+                Mission: { workspace_id: workspace.id, portal_exclusive: true },
             },
             select: { ShortLink: { select: { id: true, clicks: true } } },
         })
 
+        const portalLinkIds = enrollments.map(e => e.ShortLink?.id).filter((id): id is string => !!id)
         const totalClicks = enrollments.reduce((sum, e) => sum + (e.ShortLink?.clicks || 0), 0)
 
-        // Commission stats
+        // Commission stats (scoped to portal_exclusive links)
         const [commissionAgg, leadCount] = await Promise.all([
             prisma.commission.aggregate({
                 where: {
                     seller_id: seller.id,
-                    program_id: workspace.id,
+                    link_id: { in: portalLinkIds.length > 0 ? portalLinkIds : ['__none__'] },
                     org_parent_commission_id: null,
                     referral_generation: null,
                     ...dateWhere,
@@ -1188,7 +1215,7 @@ export async function getPortalReports(
             by: ['created_at'],
             where: {
                 seller_id: seller.id,
-                program_id: workspace.id,
+                link_id: { in: portalLinkIds.length > 0 ? portalLinkIds : ['__none__'] },
                 org_parent_commission_id: null,
                 referral_generation: null,
                 created_at: { gte: startDate },
