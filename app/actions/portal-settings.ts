@@ -3,6 +3,7 @@
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 import { prisma } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
+import { addDomainToVercel, removeDomainFromVercel } from '@/lib/vercel-domains'
 
 /**
  * Get portal settings for the active workspace (includes portal missions with configs)
@@ -162,22 +163,38 @@ export async function updatePortalBranding(data: {
 
 /**
  * Update portal subdomain (e.g. "cardz" → cardz.traaaction.com)
+ * Registers/removes the subdomain in Vercel via API.
  */
 export async function updatePortalSubdomain(subdomain: string) {
     const ws = await getActiveWorkspaceForUser()
     if (!ws) return { success: false, error: 'No workspace' }
 
+    // Fetch current subdomain from DB
+    const currentWorkspace = await prisma.workspace.findUnique({
+        where: { id: ws.workspaceId },
+        select: { portal_subdomain: true },
+    })
+    const oldSubdomain = currentWorkspace?.portal_subdomain || null
+
     // Normalize
     const clean = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
 
     if (!clean) {
-        // Clear subdomain
+        // Clear subdomain — remove old from Vercel if exists
+        if (oldSubdomain) {
+            await removeDomainFromVercel(`${oldSubdomain}.traaaction.com`)
+        }
         await prisma.workspace.update({
             where: { id: ws.workspaceId },
             data: { portal_subdomain: null },
         })
         revalidatePath('/dashboard/portal')
         return { success: true }
+    }
+
+    // No-op if same
+    if (clean === oldSubdomain) {
+        return { success: true, data: { subdomain: clean } }
     }
 
     if (clean.length < 3 || clean.length > 30) {
@@ -201,13 +218,27 @@ export async function updatePortalSubdomain(subdomain: string) {
             return { success: false, error: 'This subdomain is already taken' }
         }
 
+        // Save to DB first
         await prisma.workspace.update({
             where: { id: ws.workspaceId },
             data: { portal_subdomain: clean },
         })
 
+        // Remove old domain from Vercel (if changing)
+        if (oldSubdomain && oldSubdomain !== clean) {
+            await removeDomainFromVercel(`${oldSubdomain}.traaaction.com`)
+        }
+
+        // Add new domain to Vercel
+        let dnsWarning: string | undefined
+        const vercelResult = await addDomainToVercel(`${clean}.traaaction.com`)
+        if (!vercelResult.success) {
+            console.warn('[Portal Settings] Vercel domain add failed (DB saved):', vercelResult.error)
+            dnsWarning = vercelResult.error
+        }
+
         revalidatePath('/dashboard/portal')
-        return { success: true, data: { subdomain: clean } }
+        return { success: true, data: { subdomain: clean }, dnsWarning }
     } catch (error) {
         console.error('[Portal Settings] updatePortalSubdomain error:', error)
         return { success: false, error: 'Failed to update subdomain' }

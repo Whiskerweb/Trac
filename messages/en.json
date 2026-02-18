@@ -3163,7 +3163,15 @@
             "resources": "Resources",
             "addResource": "Add Resource",
             "logoUrl": "Portal Logo URL",
-            "noMissionsWarning": "No missions yet. Add at least one mission to activate your portal."
+            "noMissionsWarning": "No missions yet. Add at least one mission to activate your portal.",
+            "changeSubdomainTitle": "Change subdomain?",
+            "changeSubdomainDesc": "This action has immediate consequences.",
+            "warningUrlStops": "Your current portal URL will stop working immediately.",
+            "warningLinksBreak": "All shared links with the old subdomain will break.",
+            "warningDnsPropagation": "DNS propagation may take a few minutes.",
+            "typeToConfirm": "Type \"{subdomain}\" to confirm:",
+            "confirmChange": "Change subdomain",
+            "dnsWarningTitle": "DNS setup issue"
         }
     }
 }

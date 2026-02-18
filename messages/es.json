@@ -2936,7 +2936,15 @@
             "resources": "Recursos",
             "addResource": "Agregar recurso",
             "logoUrl": "URL del logo del portal",
-            "noMissionsWarning": "Sin misiones. Agrega al menos una misión para activar tu portal."
+            "noMissionsWarning": "Sin misiones. Agrega al menos una misión para activar tu portal.",
+            "changeSubdomainTitle": "¿Cambiar subdominio?",
+            "changeSubdomainDesc": "Esta acción tiene consecuencias inmediatas.",
+            "warningUrlStops": "La URL actual de tu portal dejará de funcionar inmediatamente.",
+            "warningLinksBreak": "Todos los enlaces compartidos con el antiguo subdominio dejarán de funcionar.",
+            "warningDnsPropagation": "La propagación DNS puede tardar unos minutos.",
+            "typeToConfirm": "Escribe \"{subdomain}\" para confirmar:",
+            "confirmChange": "Cambiar subdominio",
+            "dnsWarningTitle": "Problema de configuración DNS"
         }
     }
 }

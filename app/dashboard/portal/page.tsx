@@ -7,7 +7,7 @@ import {
     Globe, Copy, Check, ExternalLink, Code, Loader2,
     ToggleRight, ToggleLeft, Type, Palette, MessageSquare, Image,
     Users, DollarSign, BarChart3, ChevronDown, Plus,
-    Pencil, Trash2, X, Link2, RefreshCw, UserPlus
+    Pencil, Trash2, X, Link2, RefreshCw, UserPlus, AlertTriangle
 } from 'lucide-react'
 import {
     getPortalSettings, togglePortal, updatePortalBranding,
@@ -89,6 +89,9 @@ export default function PortalManagementPage() {
     const [savingSubdomain, setSavingSubdomain] = useState(false)
     const [subdomainSaved, setSubdomainSaved] = useState(false)
     const [subdomainError, setSubdomainError] = useState('')
+    const [showChangeConfirm, setShowChangeConfirm] = useState(false)
+    const [confirmInput, setConfirmInput] = useState('')
+    const [dnsWarning, setDnsWarning] = useState('')
 
     // Share
     const [copiedUrl, setCopiedUrl] = useState(false)
@@ -229,14 +232,34 @@ export default function PortalManagementPage() {
         }))
     }
 
-    const handleSaveSubdomain = async () => {
+    const handleSaveSubdomain = () => {
+        const currentSub = settings?.portal_subdomain || ''
+        const newSub = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
+
+        // If there's an existing subdomain and the new one is different, show confirmation modal
+        if (currentSub && newSub !== currentSub) {
+            setConfirmInput('')
+            setShowChangeConfirm(true)
+            return
+        }
+
+        // First setup or same value — save directly
+        performSubdomainSave()
+    }
+
+    const performSubdomainSave = async () => {
         setSavingSubdomain(true)
         setSubdomainError('')
+        setDnsWarning('')
+        setShowChangeConfirm(false)
         const result = await updatePortalSubdomain(subdomain)
         setSavingSubdomain(false)
         if (result.success) {
             setSubdomainSaved(true)
             setTimeout(() => setSubdomainSaved(false), 2000)
+            if (result.dnsWarning) {
+                setDnsWarning(result.dnsWarning)
+            }
             // Reload settings to get updated portal_subdomain
             const sr = await getPortalSettings()
             if (sr.success && sr.data) setSettings(sr.data as unknown as PortalSettings)
@@ -768,6 +791,15 @@ export default function PortalManagementPage() {
                             {subdomainError && (
                                 <p className="text-[11px] text-red-500 mt-1.5">{subdomainError}</p>
                             )}
+                            {dnsWarning && (
+                                <div className="flex items-start gap-2 mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                    <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-xs font-medium text-amber-800">{t('dnsWarningTitle')}</p>
+                                        <p className="text-[11px] text-amber-600 mt-0.5">{dnsWarning}</p>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Result URL + actions */}
                             {subdomainUrl && (
@@ -823,6 +855,83 @@ export default function PortalManagementPage() {
                     </>
                 )}
             </div>
+
+            {/* Subdomain change confirmation modal */}
+            <AnimatePresence>
+                {showChangeConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        onClick={() => setShowChangeConfirm(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6"
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-semibold text-gray-900">{t('changeSubdomainTitle')}</h3>
+                                    <p className="text-xs text-gray-500">{t('changeSubdomainDesc')}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 mb-5">
+                                <div className="flex items-start gap-2 p-2.5 bg-red-50 rounded-xl">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
+                                    <p className="text-xs text-red-700">{t('warningUrlStops')}</p>
+                                </div>
+                                <div className="flex items-start gap-2 p-2.5 bg-amber-50 rounded-xl">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                                    <p className="text-xs text-amber-700">{t('warningLinksBreak')}</p>
+                                </div>
+                                <div className="flex items-start gap-2 p-2.5 bg-blue-50 rounded-xl">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                                    <p className="text-xs text-blue-700">{t('warningDnsPropagation')}</p>
+                                </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="text-xs font-medium text-gray-700 block mb-1.5">
+                                    {t('typeToConfirm', { subdomain: settings?.portal_subdomain || '' })}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={confirmInput}
+                                    onChange={(e) => setConfirmInput(e.target.value)}
+                                    placeholder={settings?.portal_subdomain || ''}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-300"
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setShowChangeConfirm(false)}
+                                    className="flex-1 px-4 py-2.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={performSubdomainSave}
+                                    disabled={confirmInput !== settings?.portal_subdomain || savingSubdomain}
+                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl text-xs font-medium hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {savingSubdomain && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                    {t('confirmChange')}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

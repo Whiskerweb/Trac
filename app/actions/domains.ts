@@ -11,6 +11,14 @@ import {
     CNAME_TARGET,
 } from '@/lib/config/constants'
 import { redis } from '@/lib/redis'
+import {
+    addDomainToVercel,
+    removeDomainFromVercel,
+    VERCEL_API_BASE,
+    getVercelHeaders,
+    getTeamQuery,
+    type VercelDomainResponse,
+} from '@/lib/vercel-domains'
 
 // Cache TTL for Vercel API responses (seconds)
 const DNS_CACHE_TTL = 60
@@ -58,23 +66,6 @@ interface VerifyDomainResult extends DomainResult {
     }
 }
 
-interface VercelDomainResponse {
-    name: string
-    apexName: string
-    projectId: string
-    verified: boolean
-    verification?: Array<{
-        type: string
-        domain: string
-        value: string
-        reason: string
-    }>
-    error?: {
-        code: string
-        message: string
-    }
-}
-
 interface VercelDomainConfigResponse {
     configuredBy: string | null
     acceptedChallenges: string[]
@@ -85,110 +76,6 @@ interface VercelDomainConfigResponse {
         value: string
     }>
 }
-
-// =============================================
-// VERCEL API HELPERS
-// =============================================
-
-const VERCEL_API_BASE = 'https://api.vercel.com'
-
-function getVercelHeaders(): HeadersInit {
-    return {
-        'Authorization': `Bearer ${VERCEL_AUTH_TOKEN}`,
-        'Content-Type': 'application/json',
-    }
-}
-
-function getTeamQuery(): string {
-    return VERCEL_TEAM_ID ? `?teamId=${VERCEL_TEAM_ID}` : ''
-}
-
-/**
- * Add a domain to Vercel project
- * CRITICAL: Requires VERCEL_AUTH_TOKEN and VERCEL_PROJECT_ID env vars
- */
-async function addDomainToVercel(domainName: string): Promise<{
-    success: boolean
-    error?: string
-    data?: VercelDomainResponse
-}> {
-    // 🔍 DEBUG: Log configuration status
-    console.log('[Domains] 🔐 Vercel API Config Check:', {
-        hasAuthToken: !!VERCEL_AUTH_TOKEN,
-        hasProjectId: !!VERCEL_PROJECT_ID,
-        hasTeamId: !!VERCEL_TEAM_ID,
-        projectId: VERCEL_PROJECT_ID ? `${VERCEL_PROJECT_ID.slice(0, 8)}...` : 'NOT SET',
-    })
-
-    if (!VERCEL_AUTH_TOKEN || !VERCEL_PROJECT_ID) {
-        console.error('[Domains] ❌ CRITICAL: Vercel API credentials not configured!')
-        console.error('[Domains] ❌ Missing:', {
-            VERCEL_AUTH_TOKEN: VERCEL_AUTH_TOKEN ? 'SET' : 'MISSING',
-            VERCEL_PROJECT_ID: VERCEL_PROJECT_ID ? 'SET' : 'MISSING',
-        })
-        return {
-            success: false,
-            error: 'Configuration Vercel manquante. Contactez le support.'
-        }
-    }
-
-    try {
-        const url = `${VERCEL_API_BASE}/v10/projects/${VERCEL_PROJECT_ID}/domains${getTeamQuery()}`
-
-        console.log('[Domains] 🚀 Adding domain to Vercel:', {
-            domain: domainName,
-            url: url,
-            teamQuery: getTeamQuery() || '(no team)',
-        })
-
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: getVercelHeaders(),
-            body: JSON.stringify({ name: domainName }),
-        })
-
-        const data = await res.json()
-
-        // 🔍 DEBUG: Log full response for troubleshooting
-        console.log('[Domains] 📡 Vercel API Response:', {
-            status: res.status,
-            statusText: res.statusText,
-            ok: res.ok,
-            data: JSON.stringify(data).slice(0, 500), // Truncate for logs
-        })
-
-        if (!res.ok) {
-            console.error('[Domains] ❌ Vercel API error:', {
-                status: res.status,
-                error: data.error,
-                fullResponse: data,
-            })
-
-            // Handle specific error codes
-            if (data.error?.code === 'domain_already_in_use') {
-                return { success: false, error: 'This domain is already used by another Vercel project' }
-            }
-            if (data.error?.code === 'forbidden') {
-                return { success: false, error: 'Token Vercel invalide ou permissions insuffisantes' }
-            }
-            if (data.error?.code === 'not_found') {
-                return { success: false, error: 'Vercel project not found. Check VERCEL_PROJECT_ID.' }
-            }
-            if (data.error?.code === 'team_not_found') {
-                return { success: false, error: 'Vercel team not found. Check VERCEL_TEAM_ID.' }
-            }
-
-            return { success: false, error: data.error?.message || `Vercel error (${res.status})` }
-        }
-
-        console.log('[Domains] ✅ Domain successfully added to Vercel:', domainName)
-        return { success: true, data }
-    } catch (err) {
-        console.error('[Domains] ❌ Vercel API request failed:', err)
-        return { success: false, error: 'Connection error to Vercel API' }
-    }
-}
-
 
 /**
  * Check domain configuration status on Vercel
@@ -303,37 +190,6 @@ async function getDomainVerification(domainName: string): Promise<{
         }
     } catch (err) {
         console.error('[Domains] ❌ Domain verification fetch request failed:', err)
-        return { success: false, error: 'Connection error' }
-    }
-}
-
-/**
- * Remove a domain from Vercel project
- */
-async function removeDomainFromVercel(domainName: string): Promise<{ success: boolean; error?: string }> {
-    if (!VERCEL_AUTH_TOKEN || !VERCEL_PROJECT_ID) {
-        console.warn('[Domains] ⚠️ Vercel API not configured')
-        return { success: true }
-    }
-
-    try {
-        const url = `${VERCEL_API_BASE}/v9/projects/${VERCEL_PROJECT_ID}/domains/${domainName}${getTeamQuery()}`
-
-        const res = await fetch(url, {
-            method: 'DELETE',
-            headers: getVercelHeaders(),
-        })
-
-        if (!res.ok && res.status !== 404) {
-            const data = await res.json()
-            console.error('[Domains] ❌ Vercel domain removal failed:', data)
-            return { success: false, error: data.error?.message || 'Failed to delete' }
-        }
-
-        console.log('[Domains] ✅ Domain removed from Vercel:', domainName)
-        return { success: true }
-    } catch (err) {
-        console.error('[Domains] ❌ Vercel domain removal request failed:', err)
         return { success: false, error: 'Connection error' }
     }
 }
