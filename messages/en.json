@@ -3174,7 +3174,10 @@
             "warningDnsPropagation": "DNS propagation may take a few minutes.",
             "typeToConfirm": "Type \"{subdomain}\" to confirm:",
             "confirmChange": "Change subdomain",
-            "dnsWarningTitle": "DNS setup issue"
+            "dnsWarningTitle": "DNS setup issue",
+            "portalSignups": "Portal sign-ups",
+            "showAll": "Show all",
+            "showLess": "Show less"
         }
     }
 }

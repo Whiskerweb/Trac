@@ -12,7 +12,8 @@ import {
 import {
     getPortalSettings, togglePortal, updatePortalBranding,
     getPortalOverview, createPortalMission, updatePortalMission,
-    deletePortalMission, getPortalAnalytics, updatePortalSubdomain
+    deletePortalMission, getPortalAnalytics, updatePortalSubdomain,
+    getPortalSellers
 } from '@/app/actions/portal-settings'
 
 interface PortalMission {
@@ -51,6 +52,14 @@ interface PortalStats {
     totalRevenue: number
 }
 
+interface PortalSeller {
+    id: string
+    name: string | null
+    email: string
+    status: string
+    created_at: string
+}
+
 interface MissionFormData {
     title: string
     description: string
@@ -75,6 +84,8 @@ export default function PortalManagementPage() {
     const [loading, setLoading] = useState(true)
     const [settings, setSettings] = useState<PortalSettings | null>(null)
     const [stats, setStats] = useState<PortalStats | null>(null)
+    const [portalSellers, setPortalSellers] = useState<PortalSeller[]>([])
+    const [showAllSellers, setShowAllSellers] = useState(false)
 
     // Branding form
     const [savingBranding, setSavingBranding] = useState(false)
@@ -106,9 +117,10 @@ export default function PortalManagementPage() {
     const [deletingMission, setDeletingMission] = useState<string | null>(null)
 
     const loadData = useCallback(async () => {
-        const [settingsResult, overviewResult] = await Promise.all([
+        const [settingsResult, overviewResult, sellersResult] = await Promise.all([
             getPortalSettings(),
             getPortalOverview(),
+            getPortalSellers(),
         ])
 
         if (settingsResult.success && settingsResult.data) {
@@ -122,6 +134,10 @@ export default function PortalManagementPage() {
 
         if (overviewResult.success && overviewResult.data) {
             setStats(overviewResult.data)
+        }
+
+        if (sellersResult.success && sellersResult.data) {
+            setPortalSellers(sellersResult.data as unknown as PortalSeller[])
         }
 
         setLoading(false)
@@ -329,6 +345,59 @@ export default function PortalManagementPage() {
                         <BarChart3 className="w-5 h-5 text-blue-500 mx-auto mb-2" />
                         <p className="text-2xl font-bold text-gray-900">{(stats.totalRevenue / 100).toFixed(0)}&euro;</p>
                         <p className="text-[11px] text-gray-500 mt-0.5">{t('totalRevenue')}</p>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Portal Sellers */}
+            {settings.portal_enabled && portalSellers.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.03 }}
+                    className="bg-white rounded-2xl border border-gray-200 p-6 mb-6"
+                >
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <UserPlus className="w-4 h-4 text-purple-500" />
+                            <h2 className="text-sm font-semibold text-gray-900">{t('portalSignups')}</h2>
+                            <span className="text-[11px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{portalSellers.length}</span>
+                        </div>
+                        {portalSellers.length > 5 && (
+                            <button
+                                onClick={() => setShowAllSellers(!showAllSellers)}
+                                className="text-xs font-medium text-purple-600 hover:text-purple-700"
+                            >
+                                {showAllSellers ? t('showLess') : t('showAll')}
+                            </button>
+                        )}
+                    </div>
+                    <div className="space-y-1.5">
+                        {(showAllSellers ? portalSellers : portalSellers.slice(0, 5)).map(seller => (
+                            <div key={seller.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-2.5">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 text-xs font-bold flex-shrink-0">
+                                        {(seller.name || seller.email).charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 truncate">{seller.name || seller.email.split('@')[0]}</p>
+                                        <p className="text-[11px] text-gray-400 truncate">{seller.email}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                                        seller.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
+                                        seller.status === 'PENDING' ? 'bg-amber-50 text-amber-600' :
+                                        'bg-gray-100 text-gray-500'
+                                    }`}>
+                                        {seller.status}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">
+                                        {new Date(seller.created_at).toLocaleDateString()}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </motion.div>
             )}

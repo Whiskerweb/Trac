@@ -2947,7 +2947,10 @@
             "warningDnsPropagation": "La propagación DNS puede tardar unos minutos.",
             "typeToConfirm": "Escribe \"{subdomain}\" para confirmar:",
             "confirmChange": "Cambiar subdominio",
-            "dnsWarningTitle": "Problema de configuración DNS"
+            "dnsWarningTitle": "Problema de configuración DNS",
+            "portalSignups": "Inscritos via el portal",
+            "showAll": "Ver todos",
+            "showLess": "Ver menos"
         }
     }
 }

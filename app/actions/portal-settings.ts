@@ -576,3 +576,34 @@ export async function getPortalAnalytics() {
         return { success: false, error: 'Failed to load analytics' }
     }
 }
+
+// =============================================
+// PORTAL SOURCE SELLERS
+// =============================================
+
+/**
+ * Get sellers who signed up through this workspace's portal
+ */
+export async function getPortalSellers() {
+    const ws = await getActiveWorkspaceForUser()
+    if (!ws) return { success: false, error: 'No workspace' }
+
+    try {
+        const sellers = await prisma.seller.findMany({
+            where: { portal_source_workspace_id: ws.workspaceId },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                status: true,
+                created_at: true,
+            },
+            orderBy: { created_at: 'desc' },
+        })
+
+        return { success: true, data: sellers }
+    } catch (error) {
+        console.error('[Portal Settings] getPortalSellers error:', error)
+        return { success: false, error: 'Failed to load portal sellers' }
+    }
+}
