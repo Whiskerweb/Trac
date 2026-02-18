@@ -230,7 +230,7 @@ export default function SellerLayout({
                 title={collapsed ? label : undefined}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`
-                    relative flex items-center gap-3 rounded-xl
+                    group relative flex items-center gap-3 rounded-xl
                     text-[14px] font-medium
                     transition-colors duration-150
                     ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'}
@@ -248,11 +248,11 @@ export default function SellerLayout({
                         transition={springSnappy}
                     />
                 )}
-                <motion.div className="relative" whileHover={{ scale: 1.12 }} transition={springSnappy}>
+                <div className="relative">
                     <Icon
                         strokeWidth={1.5}
                         size={18}
-                        className={active ? 'text-violet-600' : 'text-gray-400'}
+                        className={`transition-transform duration-150 group-hover:scale-[1.12] ${active ? 'text-violet-600' : 'text-gray-400'}`}
                     />
                     {collapsed && badge > 0 && (
                         <motion.span
@@ -265,7 +265,7 @@ export default function SellerLayout({
                             {badge > 9 ? '9+' : badge}
                         </motion.span>
                     )}
-                </motion.div>
+                </div>
                 {!collapsed && (
                     <>
                         <span className="flex-1">{label}</span>
@@ -374,7 +374,7 @@ export default function SellerLayout({
                     <button
                         onClick={handleToggleCollapse}
                         className={`
-                            flex items-center gap-2 text-gray-500 hover:text-gray-700
+                            group flex items-center gap-2 text-gray-500 hover:text-gray-700
                             hover:bg-white rounded-xl transition-colors
                             ${collapsed ? 'p-2' : 'px-3 py-2 w-full'}
                         `}
@@ -382,10 +382,9 @@ export default function SellerLayout({
                     >
                         <motion.div
                             animate={{ rotate: collapsed ? 180 : 0 }}
-                            whileHover={{ scale: 1.12 }}
                             transition={springSnappy}
                         >
-                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="w-4 h-4 transition-transform duration-150 group-hover:scale-[1.12]" />
                         </motion.div>
                         {!collapsed && <span className="text-xs font-medium">Collapse</span>}
                     </button>
@@ -398,23 +397,21 @@ export default function SellerLayout({
                     href="/seller/profile"
                     title={collapsed ? (profile?.email || 'Profile') : undefined}
                     onClick={() => isMobile && setIsMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 rounded-xl transition-colors ${
+                    className={`group flex items-center gap-3 rounded-xl transition-colors ${
                         collapsed ? 'p-2' : 'px-3 py-2.5'
                     } ${isProfileActive ? 'bg-violet-50' : 'hover:bg-white'}`}
                 >
-                    <motion.div whileHover={{ scale: 1.08 }} transition={springSnappy}>
-                        {profile?.avatarUrl ? (
-                            <img
-                                src={profile.avatarUrl}
-                                alt={profile.name || 'Profil'}
-                                className={`rounded-full object-cover ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}
-                            />
-                        ) : (
-                            <div className={`rounded-full bg-gray-200 flex items-center justify-center ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}>
-                                <User className="w-4 h-4 text-gray-500" />
-                            </div>
-                        )}
-                    </motion.div>
+                    {profile?.avatarUrl ? (
+                        <img
+                            src={profile.avatarUrl}
+                            alt={profile.name || 'Profil'}
+                            className={`rounded-full object-cover transition-transform duration-150 group-hover:scale-[1.08] ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}
+                        />
+                    ) : (
+                        <div className={`rounded-full bg-gray-200 flex items-center justify-center transition-transform duration-150 group-hover:scale-[1.08] ${collapsed ? 'w-9 h-9' : 'w-9 h-9'}`}>
+                            <User className="w-4 h-4 text-gray-500" />
+                        </div>
+                    )}
                     {!collapsed && (
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">
