@@ -4,6 +4,7 @@ import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { getMissionByInviteCode, joinMissionByInviteCode } from '@/app/actions/marketplace'
 import { Gift, Check, ArrowRight, AlertCircle, Loader2, Lock, ExternalLink } from 'lucide-react'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 import Link from 'next/link'
 
 interface MissionData {
@@ -66,7 +67,7 @@ export default function InvitePage(props: { params: Promise<{ code: string }> })
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
                 <div className="text-center">
-                    <Loader2 className="w-10 h-10 animate-spin text-gray-400 mx-auto mb-4" />
+                    <TraaactionLoader size={40} className="text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500">Loading invitation...</p>
                 </div>
             </div>

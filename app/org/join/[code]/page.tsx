@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Users, Check, ArrowRight } from 'lucide-react'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 import { getOrgByInviteCode, joinOrgByInviteCode } from '@/app/actions/organization-actions'
 
 export default function InviteCodePage() {
@@ -46,7 +47,7 @@ export default function InviteCodePage() {
     if (loading) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <TraaactionLoader size={28} className="text-gray-300" />
             </div>
         )
     }

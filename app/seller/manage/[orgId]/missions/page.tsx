@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Loader2, Check, X, AlertTriangle, Info, ExternalLink, Globe, Building2, TrendingUp, DollarSign, Clock, ChevronRight } from 'lucide-react'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOrg } from '../layout'
 import { getOrgMissionProposalsForLeader, acceptOrgMission, rejectOrgMission, getOrgMissionStats } from '@/app/actions/organization-actions'
@@ -461,7 +462,7 @@ export default function ManageOrgMissions() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                <TraaactionLoader size={24} className="text-neutral-300" />
             </div>
         )
     }
