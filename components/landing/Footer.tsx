@@ -14,6 +14,12 @@ export function Footer() {
             { labelKey: 'aboutUs', href: '/about' },
             { labelKey: 'reportAbuse', href: '/report-abuse' },
         ],
+        resources: [
+            { labelKey: 'docs', href: '/docs' },
+            { labelKey: 'docsTracking', href: '/docs/tracking' },
+            { labelKey: 'docsAttribution', href: '/docs/attribution' },
+            { labelKey: 'docsCommissions', href: '/docs/commissions' },
+        ],
         legal: [
             { labelKey: 'privacy', href: '/privacy' },
             { labelKey: 'terms', href: '/terms' },
@@ -25,8 +31,8 @@ export function Footer() {
     return (
         <footer className="bg-white border-t border-gray-100 pt-16 pb-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 lg:gap-12">
-                    <div className="col-span-2 lg:col-span-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
+                    <div className="col-span-2">
                         <Link href="/" className="flex items-center gap-2 mb-4">
                             <Image
                                 src="/Logotrac/Logo5.png"
@@ -63,6 +69,21 @@ export function Footer() {
                         <h3 className="font-semibold text-slate-900 text-sm mb-4">{t('company')}</h3>
                         <ul className="space-y-3">
                             {footerLinks.company.map((link) => (
+                                <li key={link.labelKey}>
+                                    <Link href={link.href} className="text-gray-500 hover:text-black text-sm transition-colors flex items-center gap-1 group">
+                                        {t(link.labelKey)}
+                                        <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity -translate-y-1 group-hover:translate-y-0" />
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Resources Links */}
+                    <div>
+                        <h3 className="font-semibold text-slate-900 text-sm mb-4">{t('resources')}</h3>
+                        <ul className="space-y-3">
+                            {footerLinks.resources.map((link) => (
                                 <li key={link.labelKey}>
                                     <Link href={link.href} className="text-gray-500 hover:text-black text-sm transition-colors flex items-center gap-1 group">
                                         {t(link.labelKey)}

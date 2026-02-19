@@ -229,7 +229,12 @@
             "terms": "Conditions d'utilisation",
             "sellerTerms": "Conditions Seller",
             "startupTerms": "Conditions Startup",
-            "copyright": "© {year} Traaaction. Tous droits réservés."
+            "copyright": "© {year} Traaaction. Tous droits réservés.",
+            "resources": "Ressources",
+            "docs": "Documentation",
+            "docsTracking": "Tracking",
+            "docsAttribution": "Attribution",
+            "docsCommissions": "Commissions"
         }
     },
     "auth": {
@@ -2965,6 +2970,459 @@
             "enableReferral": "Activer le programme de parrainage",
             "generations": "Nombre de générations",
             "rate": "Taux de commission"
+        }
+    },
+    "docs": {
+        "common": {
+            "backToHome": "Retour à Traaaction",
+            "backToDocs": "Retour à la documentation",
+            "headerLabel": "Documentation",
+            "remember": "À retenir",
+            "continueReading": "Continuer la lecture",
+            "allRightsReserved": "Tous droits réservés.",
+            "terms": "Conditions",
+            "privacy": "Confidentialité",
+            "home": "Accueil"
+        },
+        "index": {
+            "badge": "Centre de ressources",
+            "title": "Documentation",
+            "titleAccent": "Comprendre Traaaction",
+            "subtitle": "Découvrez en détail comment fonctionne notre plateforme, du premier clic au paiement des commissions.",
+            "cards": {
+                "tracking": {
+                    "title": "Le Tracking",
+                    "description": "Comment un clic devient traçable"
+                },
+                "attribution": {
+                    "title": "L'Attribution",
+                    "description": "Le lien permanent entre seller et client"
+                },
+                "commissions": {
+                    "title": "Les Commissions",
+                    "description": "Calcul, validation et paiement"
+                },
+                "organizations": {
+                    "title": "Organisations & Groupes",
+                    "description": "Vendre en équipe"
+                },
+                "portal": {
+                    "title": "Le Portail Affilié",
+                    "description": "Votre programme d'affiliation clé en main"
+                },
+                "security": {
+                    "title": "Sécurité & Données",
+                    "description": "Protection des données et fiabilité"
+                }
+            }
+        },
+        "tracking": {
+            "badge": "Traçabilité",
+            "title": "Le",
+            "titleAccent": "Tracking",
+            "subtitle": "Du clic sur un lien d'affiliation jusqu'à l'injection automatique dans Stripe — chaque étape expliquée.",
+            "s1": {
+                "title": "Le lien d'affiliation",
+                "p1": "Chaque seller dispose d'un lien unique au format traaaction.com/s/{mission-slug}/{code-seller}.",
+                "p2": "Le code seller est un identifiant unique de 8 caractères, attribué automatiquement à chaque seller.",
+                "p3": "Ce lien pointe vers le site de la startup. Quand un visiteur clique, le système enregistre l'événement avant de rediriger."
+            },
+            "s2": {
+                "title": "Le Click ID",
+                "p1": "À chaque clic sur un lien d'affiliation, un identifiant unique est généré côté serveur.",
+                "p2": "Ce Click ID relie trois informations : le visiteur, le seller source, et la mission concernée.",
+                "p3": "Généré côté serveur, il est impossible à falsifier ou à deviner."
+            },
+            "s3": {
+                "title": "Stockage du Click ID",
+                "colLocation": "Emplacement",
+                "colDuration": "Durée",
+                "colRole": "Rôle",
+                "row1": {
+                    "location": "Cookie navigateur (clk_id)",
+                    "duration": "90 jours",
+                    "role": "Reconnaître le visiteur s'il revient"
+                },
+                "row2": {
+                    "location": "Paramètre URL (trac_id)",
+                    "duration": "Immédiat",
+                    "role": "Transmission au script trac.js et à Stripe"
+                },
+                "row3": {
+                    "location": "Serveurs Traaaction",
+                    "duration": "90 jours",
+                    "role": "Attribution côté serveur"
+                }
+            },
+            "s4": {
+                "title": "La redirection",
+                "p1": "La redirection est instantanée (moins de 100ms). Le visiteur ne voit rien — il arrive directement sur le site de la startup.",
+                "p2": "L'URL de destination contient le Click ID en paramètre, ce qui permet au script trac.js de le récupérer."
+            },
+            "s5": {
+                "title": "Le script trac.js",
+                "p1": "Le script trac.js est installé sur le site de la startup. Il détecte automatiquement le Click ID (depuis l'URL ou le cookie) et le sauvegarde en double sécurité (cookie + localStorage).",
+                "p2": "Il scanne ensuite la page pour détecter les éléments de paiement Stripe :",
+                "item1": "Liens buy.stripe.com",
+                "item2": "Boutons <stripe-buy-button>",
+                "item3": "Tableaux <stripe-pricing-table>",
+                "item4": "Formulaires de paiement personnalisés",
+                "p3": "Le Click ID est injecté automatiquement dans chaque élément Stripe détecté, sans aucune intervention du développeur."
+            },
+            "s6": {
+                "title": "Les données analytics enregistrées",
+                "item1": "Seller source, mission et lien tracké",
+                "item2": "Appareil (Mobile / Desktop / Tablette)",
+                "item3": "Pays et ville",
+                "item4": "Source de trafic (referrer)",
+                "item5": "Horodatage",
+                "p1": "Ces données sont enregistrées en arrière-plan et n'ont aucun impact sur la vitesse de navigation du visiteur."
+            },
+            "remember": {
+                "p1": "Tout est automatique — aucune configuration côté seller",
+                "p2": "Le cookie dure 90 jours",
+                "p3": "L'injection Stripe se fait sans écrire une seule ligne de code",
+                "p4": "Aucun impact sur la vitesse de chargement du site"
+            }
+        },
+        "attribution": {
+            "badge": "Attribution",
+            "title": "L'",
+            "titleAccent": "Attribution",
+            "subtitle": "Comment Traaaction relie définitivement un client à son seller, et pourquoi cette attribution ne change jamais.",
+            "s1": {
+                "title": "Le principe : first-click attribution",
+                "p1": "Le premier seller qui amène un visiteur est crédité. Cette attribution ne change jamais, même si le visiteur clique sur un autre lien d'affiliation plus tard.",
+                "p2": "C'est le modèle le plus équitable : celui qui fait découvrir le produit est récompensé.",
+                "p3": "Ce modèle est utilisé par les plus grandes plateformes d'affiliation."
+            },
+            "s2": {
+                "title": "Comment le lien seller ↔ client se crée",
+                "step1": "Le client s'inscrit sur le site de la startup",
+                "step2": "Le Click ID est envoyé à Traaaction via le script de tracking ou l'API",
+                "step3": "Traaaction retrouve le seller associé à ce Click ID",
+                "step4": "Le client est alors rattaché définitivement à ce seller"
+            },
+            "s3": {
+                "title": "Les données de liaison",
+                "item1": "quel clic a amené ce client",
+                "item2Label": "Lien tracké",
+                "item2": "quel lien a été partagé",
+                "item3": "qui est crédité pour ce client",
+                "item4Label": "Identifiant client",
+                "item4": "qui est ce client (ID unique côté startup)",
+                "locked": "Ces 4 données sont verrouillées à la création, jamais modifiées ensuite."
+            },
+            "s4": {
+                "title": "Attribution à vie",
+                "p1": "Une fois créée, l'attribution est permanente :",
+                "item1": "Même si le cookie expire (après 90 jours)",
+                "item2": "Même si le client change de navigateur ou d'appareil",
+                "item3": "L'attribution est conservée dans notre base de données",
+                "item4": "Toute vente future de ce client → même seller crédité"
+            },
+            "s5": {
+                "title": "Scénarios concrets",
+                "scenario1": {
+                    "situation": "Client clique lundi, achète vendredi",
+                    "result": "→ Seller crédité (cookie actif)"
+                },
+                "scenario2": {
+                    "situation": "Client clique en janvier, achète en mars",
+                    "result": "→ Seller crédité (cookie 90 jours)"
+                },
+                "scenario3": {
+                    "situation": "Client s'inscrit sur mobile, achète sur desktop",
+                    "result": "→ Seller crédité (identifiant client)"
+                },
+                "scenario4": {
+                    "situation": "Client clique lien seller A, puis lien seller B, puis achète",
+                    "result": "→ Seller A crédité (first-click)"
+                }
+            },
+            "s6": {
+                "title": "Pour les abonnements",
+                "p1": "L'attribution s'applique à tous les renouvellements automatiques.",
+                "p2": "Le seller est crédité mois après mois tant que l'abonnement est actif.",
+                "p3": "Pas besoin de cookie pour les renouvellements — l'attribution se fait via l'identifiant client."
+            }
+        },
+        "commissions": {
+            "badge": "Rémunération",
+            "title": "Les",
+            "titleAccent": "Commissions",
+            "subtitle": "Trois modes de rémunération, un calcul transparent, et un cycle de vie rigoureux pour chaque commission.",
+            "s1": {
+                "title": "Les 3 modes de rémunération",
+                "colMode": "Mode",
+                "colTrigger": "Déclencheur",
+                "colConfig": "Configuration",
+                "saleTrigger": "Achat unique",
+                "saleConfig": "% du HT ou montant fixe",
+                "leadTrigger": "Inscription / action",
+                "leadConfig": "Montant fixe uniquement",
+                "recurringTrigger": "Renouvellement abonnement",
+                "recurringConfig": "% du HT ou fixe, limite en mois ou à vie"
+            },
+            "s2": {
+                "title": "Le calcul détaillé",
+                "priceTTC": "Prix TTC",
+                "vat": "TVA",
+                "amountHT": "Montant HT",
+                "paymentFees": "Frais de paiement",
+                "netAmount": "Montant net",
+                "sellerCommission": "Commission seller",
+                "platformFee": "Frais plateforme",
+                "startupReceives": "La startup reçoit",
+                "note1": "La commission est toujours calculée sur le montant HT (hors taxes).",
+                "note2": "Les frais plateforme sont toujours de 15% du HT.",
+                "note3": "Les frais de paiement Stripe sont déduits avant la répartition."
+            },
+            "s3": {
+                "title": "Le cycle de vie d'une commission",
+                "holdPeriod": "hold period",
+                "startupPays": "startup paye",
+                "pendingDesc": "En attente de validation (hold period en cours)",
+                "proceedDesc": "Validée, en attente de paiement par la startup",
+                "completeDesc": "Payée au seller",
+                "holdTitle": "Périodes de rétention",
+                "colType": "Type",
+                "colHold": "Durée",
+                "colReason": "Raison",
+                "leadHold": "3 jours",
+                "leadReason": "Pas de remboursement possible",
+                "saleHold": "30 jours",
+                "saleReason": "Protection contre les chargebacks",
+                "recurringHold": "30 jours",
+                "recurringReason": "Protection contre les annulations"
+            },
+            "s4": {
+                "title": "Les abonnements (RECURRING)",
+                "item1": "Mois 1 : commission créée au premier paiement",
+                "item2": "Mois 2, 3... N : commission automatique à chaque renouvellement",
+                "item3": "Le numéro du mois est calculé automatiquement (compteur en base de données)",
+                "item4": "Limite configurable par la startup (ex: 12 mois max) ou illimité",
+                "item5": "Annulation de l'abonnement : commissions en attente supprimées, commissions validées conservées"
+            },
+            "s5": {
+                "title": "Les remboursements (clawback)",
+                "item1": "Commission PENDING ou PROCEED → supprimée automatiquement",
+                "item2": "Commission déjà COMPLETE → supprimée + solde négatif appliqué au seller",
+                "item3": "Le solde négatif est déduit des prochains gains",
+                "item4": "Les remboursements sont détectés automatiquement via Stripe"
+            },
+            "s6": {
+                "title": "Transparence des frais",
+                "item1": "Plateforme : 15% du HT sur chaque transaction",
+                "item2": "Pas de frais cachés, pas de frais d'inscription, pas de minimum mensuel",
+                "item3": "Le seller voit le détail complet de chaque commission dans son dashboard"
+            }
+        },
+        "organizations": {
+            "badge": "Travail en équipe",
+            "title": "Organisations",
+            "titleAccent": "& Groupes",
+            "subtitle": "Deux façons de vendre en équipe sur Traaaction : les organisations structurées et les groupes informels.",
+            "s1": {
+                "title": "Les Organisations",
+                "p1": "Les organisations sont des équipes structurées avec un leader qui négocie les deals directement avec les startups.",
+                "item1": "Un seller approuvé crée une organisation → validation par l'administrateur Traaaction",
+                "item2": "Le créateur devient le leader (négociation, gestion des membres)",
+                "item3": "Les membres rejoignent l'organisation par invitation ou candidature"
+            },
+            "s2": {
+                "title": "Comment fonctionne un deal organisation",
+                "step1": "La startup propose une mission à l'organisation avec une récompense totale",
+                "step2": "Le leader accepte et définit sa part (ex: 3€ par vente)",
+                "step3": "La récompense membre est calculée automatiquement : total - frais plateforme 15% - part leader",
+                "step4": "Le deal est verrouillé une fois accepté (immuable)",
+                "step5": "Tous les membres actifs sont automatiquement inscrits à la mission"
+            },
+            "s3": {
+                "title": "La double commission (dual commission)",
+                "p1": "À chaque vente d'un membre de l'organisation, deux commissions sont créées simultanément :",
+                "memberTitle": "Commission membre",
+                "memberDesc": "Sa part de la récompense, avec les frais plateforme de 15%",
+                "leaderTitle": "Commission leader",
+                "leaderDesc": "Sa part négociée, sans frais plateforme (financée directement par la startup)",
+                "refundNote": "En cas de remboursement, les deux commissions sont supprimées ensemble automatiquement."
+            },
+            "s4": {
+                "title": "Les Groupes (petites équipes)",
+                "p1": "Les groupes sont des équipes informelles pour vendre ensemble de manière simple.",
+                "item1": "Tout seller approuvé peut créer un groupe librement (pas d'approbation admin)",
+                "item2": "Maximum 10 membres, un seul groupe par seller",
+                "item3": "Invitation via un code partageable"
+            },
+            "s5": {
+                "title": "Commission des groupes : tout au créateur",
+                "item1": "Toute la commission va au créateur du groupe",
+                "item2": "Pas de répartition automatique → le créateur redistribue manuellement",
+                "item3": "Avantage : moins de frais de transfert, plus de simplicité",
+                "item4": "Si le créateur quitte → groupe archivé (les commissions existantes continuent leur cycle de vie)"
+            },
+            "s6": {
+                "title": "Organisations vs Groupes",
+                "colOrg": "Organisations",
+                "colGroup": "Groupes",
+                "approval": {
+                    "label": "Approbation",
+                    "org": "Admin requise",
+                    "group": "Libre"
+                },
+                "size": {
+                    "label": "Taille",
+                    "org": "Illimitée",
+                    "group": "Max 10"
+                },
+                "commission": {
+                    "label": "Commission",
+                    "org": "Split leader + membres",
+                    "group": "Tout au créateur"
+                },
+                "negotiation": {
+                    "label": "Négociation",
+                    "org": "Leader ↔ startup",
+                    "group": "Standard"
+                },
+                "multi": {
+                    "label": "Multi-appartenance",
+                    "org": "Oui (plusieurs orgs)",
+                    "group": "Non (1 seul groupe)"
+                },
+                "useCase": {
+                    "label": "Cas d'usage",
+                    "org": "Agences, réseaux structurés",
+                    "group": "Amis, micro-équipes"
+                }
+            }
+        },
+        "portal": {
+            "badge": "Portail affilié",
+            "title": "Le Portail",
+            "titleAccent": "Affilié",
+            "subtitle": "Une page d'affiliation clé en main, hébergée par Traaaction, que chaque startup peut activer et personnaliser.",
+            "s1": {
+                "title": "Qu'est-ce que le portail ?",
+                "item1": "Une page d'affiliation clé en main, hébergée par Traaaction",
+                "item2": "Personnalisable (texte d'accueil, missions affichées)",
+                "item3": "Accessible via URL dédiée : traaaction.com/join/{nom-startup}",
+                "item4": "Intégrable en iframe sur le site de la startup"
+            },
+            "s2": {
+                "title": "L'expérience seller sur le portail",
+                "step1": "Le seller arrive sur la page portail et voit les missions disponibles",
+                "step2": "Il s'inscrit directement (email et mot de passe, inline)",
+                "step3": "Confirmation email → auto-créé comme seller → auto-inscrit aux missions",
+                "step4": "Dashboard intégré : liens, clics, commissions, wallet"
+            },
+            "s3": {
+                "title": "Les missions du portail",
+                "p1": "Seules les missions PUBLIC et PRIVATE sont affichées sur le portail.",
+                "p2": "Les missions INVITE_ONLY et les missions réservées aux organisations ne sont pas visibles.",
+                "p3": "Chaque mission montre les récompenses détaillées, les ressources disponibles et les limites éventuelles."
+            },
+            "s4": {
+                "title": "L'intégration iframe",
+                "p1": "Le code iframe est copiable depuis le dashboard de la startup.",
+                "p2": "Il est compatible avec tous les sites (les headers CSP sont pré-configurés).",
+                "p3": "Pour les cookies tiers, il est recommandé d'utiliser un custom domain CNAME."
+            },
+            "s5": {
+                "title": "Le programme de parrainage portail",
+                "item1": "Optionnel, configurable par la startup",
+                "item2": "1 à 3 niveaux de parrainage (ex: Gen1 5%, Gen2 3%, Gen3 2%)",
+                "item3": "Taux configurables librement par la startup",
+                "item4": "Financé par la startup (pas par les 15% de la plateforme Traaaction)",
+                "item5": "Indépendant du système de parrainage global Traaaction",
+                "item6": "Chaque seller voit son arbre de parrainages et ses gains"
+            },
+            "s6": {
+                "title": "Pour la startup : configuration",
+                "item1": "Toggle ON/OFF depuis le dashboard",
+                "item2": "Gratuit (pas de frais supplémentaire)",
+                "item3": "URL portail auto-générée",
+                "item4": "Personnalisation : texte d'accueil, programme de parrainage",
+                "item5": "Lien par mission pour partage direct"
+            }
+        },
+        "security": {
+            "badge": "Sécurité",
+            "title": "Sécurité",
+            "titleAccent": "& Données",
+            "subtitle": "Quelles données sont collectées, comment elles sont protégées, et comment nous garantissons la fiabilité du système.",
+            "s1": {
+                "title": "Données collectées lors d'un clic",
+                "colData": "Donnée",
+                "colRetention": "Durée de conservation",
+                "colPurpose": "Finalité",
+                "clickId": {
+                    "data": "Click ID",
+                    "retention": "90 jours",
+                    "purpose": "Attribution seller ↔ visiteur"
+                },
+                "country": {
+                    "data": "Pays et ville",
+                    "retention": "Durée des analytics",
+                    "purpose": "Tableaux de bord startup"
+                },
+                "device": {
+                    "data": "Type d'appareil",
+                    "retention": "Durée des analytics",
+                    "purpose": "Statistiques"
+                },
+                "referrer": {
+                    "data": "Source de trafic (referrer)",
+                    "retention": "Durée des analytics",
+                    "purpose": "Analyse d'origine"
+                },
+                "timestamp": {
+                    "data": "Horodatage",
+                    "retention": "Durée des analytics",
+                    "purpose": "Chronologie des événements"
+                },
+                "ip": {
+                    "data": "Adresse IP",
+                    "retention": "Non stockée durablement",
+                    "purpose": "Géolocalisation uniquement"
+                }
+            },
+            "s2": {
+                "title": "Le cookie : un seul, minimaliste",
+                "nameLabel": "Nom : ",
+                "contentLabel": "Contenu : ",
+                "content": "uniquement le Click ID (ex: clk_a7k2m9x5p3q1)",
+                "durationLabel": "Durée : ",
+                "duration": "90 jours",
+                "p1": "Pas de tracking publicitaire, pas de profilage, pas de revente de données."
+            },
+            "s3": {
+                "title": "Fiabilité des paiements",
+                "item1": "Signature cryptographique Stripe (HMAC) sur chaque webhook",
+                "item2": "Idempotence : un même événement traité deux fois ne crée pas de doublon (identifiant unique par transaction)",
+                "item3": "Les transactions à 0€ (essais gratuits, crédits) sont automatiquement ignorées"
+            },
+            "s4": {
+                "title": "Protection contre la fraude",
+                "item1": "Périodes de rétention avant validation (3 à 30 jours selon le type de commission)",
+                "item2": "Remboursements automatiquement répercutés (clawback)",
+                "item3": "Solde négatif si commission déjà payée puis remboursée",
+                "item4": "Détection des abonnements non trackés (ignorés)"
+            },
+            "s5": {
+                "title": "Conformité RGPD",
+                "item1": "Données hébergées en Europe",
+                "item2": "Droit d'accès, de rectification et de suppression",
+                "item3": "Pas de partage avec des tiers non essentiels au service",
+                "item4": "Consentement explicite lors de l'inscription"
+            },
+            "s6": {
+                "title": "Isolation des données",
+                "item1": "Chaque startup n'accède qu'à ses propres données (isolation par workspace)",
+                "item2": "Les sellers ne voient que leurs propres statistiques et commissions",
+                "item3": "Les organisations et groupes sont cloisonnés",
+                "item4": "Pas d'accès croisé entre workspaces"
+            }
         }
     }
 }
