@@ -2982,7 +2982,11 @@
             "allRightsReserved": "Todos los derechos reservados.",
             "terms": "Condiciones",
             "privacy": "Privacidad",
-            "home": "Inicio"
+            "home": "Inicio",
+            "onThisPage": "En esta página",
+            "previous": "Anterior",
+            "next": "Siguiente",
+            "overview": "Vista general"
         },
         "index": {
             "badge": "Centro de recursos",

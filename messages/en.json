@@ -3209,7 +3209,11 @@
             "allRightsReserved": "All rights reserved.",
             "terms": "Terms",
             "privacy": "Privacy",
-            "home": "Home"
+            "home": "Home",
+            "onThisPage": "On this page",
+            "previous": "Previous",
+            "next": "Next",
+            "overview": "Overview"
         },
         "index": {
             "badge": "Resource center",
