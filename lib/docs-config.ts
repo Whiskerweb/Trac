@@ -1,11 +1,11 @@
-import { MousePointerClick, Link2, Coins, Users, Globe, ShieldCheck, type LucideIcon } from 'lucide-react'
+import { MousePointerClick, Link2, Coins, Users, Globe, ShieldCheck, Code2, type LucideIcon } from 'lucide-react'
 
 export interface DocsTopic {
     slug: string
     titleKey: string       // key under docs.index.cards.{slug}.title
     descriptionKey: string // key under docs.index.cards.{slug}.description
     Icon: LucideIcon
-    color: 'blue' | 'emerald' | 'violet' | 'sky' | 'amber' | 'red'
+    color: 'blue' | 'emerald' | 'violet' | 'sky' | 'amber' | 'red' | 'orange'
 }
 
 export const DOCS_TOPICS: DocsTopic[] = [
@@ -15,6 +15,7 @@ export const DOCS_TOPICS: DocsTopic[] = [
     { slug: 'organizations', titleKey: 'organizations', descriptionKey: 'organizations', Icon: Users, color: 'sky' },
     { slug: 'portal', titleKey: 'portal', descriptionKey: 'portal', Icon: Globe, color: 'amber' },
     { slug: 'security', titleKey: 'security', descriptionKey: 'security', Icon: ShieldCheck, color: 'red' },
+    { slug: 'integration', titleKey: 'integration', descriptionKey: 'integration', Icon: Code2, color: 'orange' },
 ]
 
 export function getPrevNext(currentSlug: string): { prev: DocsTopic | null; next: DocsTopic | null } {
@@ -34,6 +35,7 @@ export const COLOR_MAP = {
     sky:     { badge: 'bg-sky-50 border-sky-200 text-sky-700', badgeDot: 'bg-sky-500', number: 'bg-sky-600', numberShadow: 'shadow-sky-900/20', bullet: 'bg-sky-400', remember: 'bg-sky-50 border-sky-200 text-sky-800', rememberTitle: 'text-sky-900' },
     amber:   { badge: 'bg-amber-50 border-amber-200 text-amber-700', badgeDot: 'bg-amber-500', number: 'bg-amber-600', numberShadow: 'shadow-amber-900/20', bullet: 'bg-amber-400', remember: 'bg-amber-50 border-amber-200 text-amber-800', rememberTitle: 'text-amber-900' },
     red:     { badge: 'bg-red-50 border-red-200 text-red-700', badgeDot: 'bg-red-500', number: 'bg-red-600', numberShadow: 'shadow-red-900/20', bullet: 'bg-red-400', remember: 'bg-red-50 border-red-200 text-red-800', rememberTitle: 'text-red-900' },
+    orange:  { badge: 'bg-orange-50 border-orange-200 text-orange-700', badgeDot: 'bg-orange-500', number: 'bg-orange-600', numberShadow: 'shadow-orange-900/20', bullet: 'bg-orange-400', remember: 'bg-orange-50 border-orange-200 text-orange-800', rememberTitle: 'text-orange-900' },
 } as const
 
 export type DocsColor = keyof typeof COLOR_MAP

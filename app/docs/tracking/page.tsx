@@ -14,6 +14,8 @@ const TOC_ITEMS: TocItem[] = [
     { id: 's4', titleKey: 's4.title' },
     { id: 's5', titleKey: 's5.title' },
     { id: 's6', titleKey: 's6.title' },
+    { id: 's7', titleKey: 's7.title' },
+    { id: 's8', titleKey: 's8.title' },
 ]
 
 export default function DocsTrackingPage() {
@@ -36,7 +38,7 @@ export default function DocsTrackingPage() {
                         <div className="space-y-4 text-slate-600 leading-relaxed">
                             <p>{t('s1.p1')}</p>
                             <div className="p-4 rounded-xl bg-slate-900 text-slate-300 font-mono text-sm">
-                                traaaction.com/s/mission-slug/a7k2m9x5
+                                traaaction.com/s/<span className="text-blue-400">{'mission-slug'}</span>/<span className="text-emerald-400">{'a7k2m9x5'}</span>
                             </div>
                             <p>{t('s1.p2')}</p>
                             <p>{t('s1.p3')}</p>
@@ -47,41 +49,50 @@ export default function DocsTrackingPage() {
                         <div className="space-y-4 text-slate-600 leading-relaxed">
                             <p>{t('s2.p1')}</p>
                             <div className="p-4 rounded-xl bg-slate-900 text-blue-400 font-mono text-sm">
-                                clk_a7k2m9x5p3q1
+                                clk_<span className="text-slate-400">{'1708012345'}</span>_<span className="text-emerald-400">{'a7k2m9x5'}</span>
                             </div>
                             <p>{t('s2.p2')}</p>
                             <p>{t('s2.p3')}</p>
+                            <p className="text-sm text-slate-500 italic">{t('s2.p4')}</p>
                         </div>
                     </DocsSection>
 
                     <DocsSection id="s3" number="03" title={t('s3.title')} color="blue">
-                        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-slate-200 bg-slate-50">
-                                        <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s3.colLocation')}</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s3.colDuration')}</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s3.colRole')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr className="border-b border-slate-100">
-                                        <td className="py-3 px-4 text-slate-800 font-medium">{t('s3.row1.location')}</td>
-                                        <td className="py-3 px-4 text-slate-600">{t('s3.row1.duration')}</td>
-                                        <td className="py-3 px-4 text-slate-600">{t('s3.row1.role')}</td>
-                                    </tr>
-                                    <tr className="border-b border-slate-100">
-                                        <td className="py-3 px-4 text-slate-800 font-medium">{t('s3.row2.location')}</td>
-                                        <td className="py-3 px-4 text-slate-600">{t('s3.row2.duration')}</td>
-                                        <td className="py-3 px-4 text-slate-600">{t('s3.row2.role')}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-3 px-4 text-slate-800 font-medium">{t('s3.row3.location')}</td>
-                                        <td className="py-3 px-4 text-slate-600">{t('s3.row3.duration')}</td>
-                                        <td className="py-3 px-4 text-slate-600">{t('s3.row3.role')}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div className="space-y-4">
+                            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-slate-200 bg-slate-50">
+                                            <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s3.colLocation')}</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s3.colDuration')}</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s3.colRole')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr className="border-b border-slate-100">
+                                            <td className="py-3 px-4 text-slate-800 font-medium">{t('s3.row1.location')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s3.row1.duration')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s3.row1.role')}</td>
+                                        </tr>
+                                        <tr className="border-b border-slate-100">
+                                            <td className="py-3 px-4 text-slate-800 font-medium">{t('s3.row2.location')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s3.row2.duration')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s3.row2.role')}</td>
+                                        </tr>
+                                        <tr className="border-b border-slate-100">
+                                            <td className="py-3 px-4 text-slate-800 font-medium">{t('s3.row3.location')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s3.row3.duration')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s3.row3.role')}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="py-3 px-4 text-slate-800 font-medium">{t('s3.row4.location')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s3.row4.duration')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s3.row4.role')}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p className="text-sm text-slate-500 italic">{t('s3.rateLimit')}</p>
                         </div>
                     </DocsSection>
 
@@ -89,9 +100,10 @@ export default function DocsTrackingPage() {
                         <div className="space-y-4 text-slate-600 leading-relaxed">
                             <p>{t('s4.p1')}</p>
                             <div className="p-4 rounded-xl bg-slate-900 text-slate-300 font-mono text-xs md:text-sm break-all">
-                                startup.com/pricing?trac_id=clk_a7k2m9x5&client_reference_id=clk_a7k2m9x5
+                                startup.com/pricing?<span className="text-blue-400">trac_id</span>=clk_a7k2m9x5&<span className="text-emerald-400">client_reference_id</span>=clk_a7k2m9x5
                             </div>
                             <p>{t('s4.p2')}</p>
+                            <p className="text-sm text-slate-500 italic">{t('s4.p3')}</p>
                         </div>
                     </DocsSection>
 
@@ -119,6 +131,40 @@ export default function DocsTrackingPage() {
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" /><span>{t('s6.item5')}</span></li>
                             </ul>
                             <p>{t('s6.p1')}</p>
+                        </div>
+                    </DocsSection>
+
+                    <DocsSection id="s7" number="07" title={t('s7.title')} color="blue">
+                        <div className="space-y-4 text-slate-600 leading-relaxed">
+                            <p>{t('s7.p1')}</p>
+                            <div className="p-5 rounded-xl bg-slate-900 text-slate-300 font-mono text-xs md:text-sm leading-relaxed space-y-1">
+                                <div className="text-slate-500">{'// POST /api/track/lead'}</div>
+                                <div>{'{'}</div>
+                                <div className="pl-4"><span className="text-blue-400">&quot;eventName&quot;</span>: <span className="text-emerald-400">&quot;signup&quot;</span>,</div>
+                                <div className="pl-4"><span className="text-blue-400">&quot;customerExternalId&quot;</span>: <span className="text-emerald-400">&quot;user_123&quot;</span>,</div>
+                                <div className="pl-4"><span className="text-blue-400">&quot;clickId&quot;</span>: <span className="text-emerald-400">&quot;clk_...&quot;</span>,</div>
+                                <div className="pl-4"><span className="text-blue-400">&quot;customerEmail&quot;</span>: <span className="text-emerald-400">&quot;user@example.com&quot;</span></div>
+                                <div>{'}'}</div>
+                            </div>
+                            <p>{t('s7.p2')}</p>
+                        </div>
+                    </DocsSection>
+
+                    <DocsSection id="s8" number="08" title={t('s8.title')} color="blue">
+                        <div className="space-y-4 text-slate-600 leading-relaxed">
+                            <p>{t('s8.p1')}</p>
+                            <div className="p-5 rounded-xl bg-slate-900 text-slate-300 font-mono text-xs md:text-sm leading-relaxed space-y-1">
+                                <div>{'<script'}</div>
+                                <div className="pl-4 text-blue-400">{'src="https://traaaction.com/trac.js"'}</div>
+                                <div className="pl-4">{'defer'}</div>
+                                <div>{'></script>'}</div>
+                            </div>
+                            <ul className="space-y-2 ml-1">
+                                <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" /><span>{t('s8.item1')}</span></li>
+                                <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" /><span>{t('s8.item2')}</span></li>
+                                <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" /><span>{t('s8.item3')}</span></li>
+                                <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" /><span>{t('s8.item4')}</span></li>
+                            </ul>
                         </div>
                     </DocsSection>
                 </div>

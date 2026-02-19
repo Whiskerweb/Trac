@@ -68,6 +68,7 @@ export default function DocsOrganizationsPage() {
                                 </div>
                             </div>
                             <p className="text-sm text-slate-500 italic">{t('s3.refundNote')}</p>
+                            <p className="text-sm text-slate-500 italic">{t('s3.technicalNote')}</p>
                         </div>
                     </DocsSection>
 
@@ -79,6 +80,8 @@ export default function DocsOrganizationsPage() {
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" /><span>{t('s4.item2')}</span></li>
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" /><span>{t('s4.item3')}</span></li>
                             </ul>
+                            <p className="text-sm text-slate-500 italic">{t('s4.visibilityNote')}</p>
+                            <p className="text-sm text-slate-500 italic">{t('s4.enrollmentNote')}</p>
                         </div>
                     </DocsSection>
 
@@ -90,6 +93,8 @@ export default function DocsOrganizationsPage() {
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" /><span>{t('s5.item3')}</span></li>
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" /><span>{t('s5.item4')}</span></li>
                             </ul>
+                            <p className="text-sm text-slate-500 italic">{t('s5.multiOrgNote')}</p>
+                            <p className="text-sm text-slate-500 italic">{t('s5.clawbackNote')}</p>
                         </div>
                     </DocsSection>
 

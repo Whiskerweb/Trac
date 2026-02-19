@@ -14,6 +14,7 @@ const TOC_ITEMS: TocItem[] = [
     { id: 's4', titleKey: 's4.title' },
     { id: 's5', titleKey: 's5.title' },
     { id: 's6', titleKey: 's6.title' },
+    { id: 's7', titleKey: 's7.title' },
 ]
 
 export default function DocsPortalPage() {
@@ -58,6 +59,7 @@ export default function DocsPortalPage() {
                             <p>{t('s3.p1')}</p>
                             <p>{t('s3.p2')}</p>
                             <p>{t('s3.p3')}</p>
+                            <p className="text-sm text-slate-500 italic">{t('s3.cnameNote')}</p>
                         </div>
                     </DocsSection>
 
@@ -91,6 +93,41 @@ export default function DocsPortalPage() {
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" /><span>{t('s6.item4')}</span></li>
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" /><span>{t('s6.item5')}</span></li>
                             </ul>
+                        </div>
+                    </DocsSection>
+
+                    <DocsSection id="s7" number="07" title={t('s7.title')} color="amber">
+                        <div className="space-y-6">
+                            <p className="text-slate-600 leading-relaxed">{t('s7.p1')}</p>
+                            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-slate-200 bg-slate-50">
+                                            <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s7.colSetting')}</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s7.colDetail')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr className="border-b border-slate-100">
+                                            <td className="py-3 px-4 font-medium text-slate-800">{t('s7.ratesLabel')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s7.ratesDetail')}</td>
+                                        </tr>
+                                        <tr className="border-b border-slate-100">
+                                            <td className="py-3 px-4 font-medium text-slate-800">{t('s7.generationsLabel')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s7.generationsDetail')}</td>
+                                        </tr>
+                                        <tr className="border-b border-slate-100">
+                                            <td className="py-3 px-4 font-medium text-slate-800">{t('s7.fundingLabel')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s7.fundingDetail')}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="py-3 px-4 font-medium text-slate-800">{t('s7.scopeLabel')}</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s7.scopeDetail')}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p className="text-sm text-slate-500 italic">{t('s7.independentNote')}</p>
                         </div>
                     </DocsSection>
                 </div>

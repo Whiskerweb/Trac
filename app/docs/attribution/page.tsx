@@ -14,6 +14,7 @@ const TOC_ITEMS: TocItem[] = [
     { id: 's4', titleKey: 's4.title' },
     { id: 's5', titleKey: 's5.title' },
     { id: 's6', titleKey: 's6.title' },
+    { id: 's7', titleKey: 's7.title' },
 ]
 
 export default function DocsAttributionPage() {
@@ -59,6 +60,7 @@ export default function DocsAttributionPage() {
                                     <span>{t('s2.step4')}</span>
                                 </li>
                             </ol>
+                            <p className="text-sm text-slate-500 italic">{t('s2.webhookNote')}</p>
                         </div>
                     </DocsSection>
 
@@ -71,6 +73,10 @@ export default function DocsAttributionPage() {
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" /><span><strong className="text-slate-800">{t('s3.item4Label')}</strong> — {t('s3.item4')}</span></li>
                             </ul>
                             <p className="text-sm text-slate-500 italic">{t('s3.locked')}</p>
+                            <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50">
+                                <h4 className="font-semibold text-emerald-900 mb-2">{t('s3.customerTitle')}</h4>
+                                <p className="text-sm text-emerald-800">{t('s3.customerDesc')}</p>
+                            </div>
                         </div>
                     </DocsSection>
 
@@ -102,6 +108,41 @@ export default function DocsAttributionPage() {
                             <p>{t('s6.p1')}</p>
                             <p>{t('s6.p2')}</p>
                             <p>{t('s6.p3')}</p>
+                        </div>
+                    </DocsSection>
+
+                    <DocsSection id="s7" number="07" title={t('s7.title')} color="emerald">
+                        <div className="space-y-6">
+                            <p className="text-slate-600 leading-relaxed">{t('s7.p1')}</p>
+                            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-slate-200 bg-slate-50">
+                                            <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s7.colEvent')}</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s7.colAttribution')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr className="border-b border-slate-100">
+                                            <td className="py-3 px-4 font-mono text-xs text-emerald-700">checkout.session.completed</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s7.checkoutAttribution')}</td>
+                                        </tr>
+                                        <tr className="border-b border-slate-100">
+                                            <td className="py-3 px-4 font-mono text-xs text-emerald-700">invoice.paid</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s7.invoiceAttribution')}</td>
+                                        </tr>
+                                        <tr className="border-b border-slate-100">
+                                            <td className="py-3 px-4 font-mono text-xs text-emerald-700">charge.refunded</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s7.refundAttribution')}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="py-3 px-4 font-mono text-xs text-emerald-700">customer.subscription.deleted</td>
+                                            <td className="py-3 px-4 text-slate-600">{t('s7.subDeletedAttribution')}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p className="text-sm text-slate-500 italic">{t('s7.p2')}</p>
                         </div>
                     </DocsSection>
                 </div>

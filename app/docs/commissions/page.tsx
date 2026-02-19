@@ -14,6 +14,8 @@ const TOC_ITEMS: TocItem[] = [
     { id: 's4', titleKey: 's4.title' },
     { id: 's5', titleKey: 's5.title' },
     { id: 's6', titleKey: 's6.title' },
+    { id: 's7', titleKey: 's7.title' },
+    { id: 's8', titleKey: 's8.title' },
 ]
 
 export default function DocsCommissionsPage() {
@@ -60,25 +62,41 @@ export default function DocsCommissionsPage() {
                                 </tbody>
                             </table>
                         </div>
+                        <div className="mt-4 space-y-2 text-sm text-slate-500 italic">
+                            <p>{t('s1.leadNote')}</p>
+                            <p>{t('s1.recurringNote')}</p>
+                        </div>
                     </DocsSection>
 
                     <DocsSection id="s2" number="02" title={t('s2.title')} color="violet">
                         <div className="space-y-6">
                             <div className="p-5 rounded-xl bg-slate-900 text-slate-300 font-mono text-sm leading-relaxed space-y-1">
+                                <div className="text-slate-500 mb-2">{t('s2.examplePercent')}</div>
                                 <div className="flex justify-between"><span>{t('s2.priceTTC')}</span><span className="text-white">100,00&euro;</span></div>
                                 <div className="flex justify-between"><span>- {t('s2.vat')} (20%)</span><span className="text-red-400">-16,67&euro;</span></div>
                                 <div className="flex justify-between border-t border-slate-700 pt-1"><span>= {t('s2.amountHT')}</span><span className="text-white">83,33&euro;</span></div>
                                 <div className="flex justify-between"><span>- {t('s2.paymentFees')}</span><span className="text-red-400">-2,50&euro;</span></div>
                                 <div className="flex justify-between border-t border-slate-700 pt-1"><span>= {t('s2.netAmount')}</span><span className="text-white">80,83&euro;</span></div>
                                 <div className="h-2" />
-                                <div className="flex justify-between"><span>{t('s2.sellerCommission')} (10%)</span><span className="text-emerald-400">8,33&euro;</span></div>
-                                <div className="flex justify-between"><span>{t('s2.platformFee')} (15%)</span><span className="text-violet-400">12,50&euro;</span></div>
-                                <div className="flex justify-between border-t border-slate-700 pt-1"><span>{t('s2.startupReceives')}</span><span className="text-amber-400">60,00&euro;</span></div>
+                                <div className="flex justify-between"><span>{t('s2.sellerCommission')} (10%)</span><span className="text-emerald-400">8,08&euro;</span></div>
+                                <div className="flex justify-between"><span>{t('s2.platformFee')} (15%)</span><span className="text-violet-400">12,12&euro;</span></div>
+                                <div className="flex justify-between border-t border-slate-700 pt-1"><span>{t('s2.startupReceives')}</span><span className="text-amber-400">60,63&euro;</span></div>
+                            </div>
+                            <div className="p-5 rounded-xl bg-slate-900 text-slate-300 font-mono text-sm leading-relaxed space-y-1">
+                                <div className="text-slate-500 mb-2">{t('s2.exampleFlat')}</div>
+                                <div className="flex justify-between"><span>{t('s2.priceTTC')}</span><span className="text-white">100,00&euro;</span></div>
+                                <div className="flex justify-between"><span>- {t('s2.vat')} (20%)</span><span className="text-red-400">-16,67&euro;</span></div>
+                                <div className="flex justify-between border-t border-slate-700 pt-1"><span>= {t('s2.netAmount')}</span><span className="text-white">80,83&euro;</span></div>
+                                <div className="h-2" />
+                                <div className="flex justify-between"><span>{t('s2.sellerCommission')} (flat)</span><span className="text-emerald-400">5,00&euro;</span></div>
+                                <div className="flex justify-between"><span>{t('s2.platformFee')} (15%)</span><span className="text-violet-400">12,12&euro;</span></div>
+                                <div className="flex justify-between border-t border-slate-700 pt-1"><span>{t('s2.startupReceives')}</span><span className="text-amber-400">63,71&euro;</span></div>
                             </div>
                             <div className="space-y-2 text-slate-600 text-sm leading-relaxed">
                                 <p>{t('s2.note1')}</p>
                                 <p>{t('s2.note2')}</p>
                                 <p>{t('s2.note3')}</p>
+                                <p>{t('s2.note4')}</p>
                             </div>
                         </div>
                     </DocsSection>
@@ -100,6 +118,14 @@ export default function DocsCommissionsPage() {
                                 <p><strong className="text-slate-800">PENDING</strong> — {t('s3.pendingDesc')}</p>
                                 <p><strong className="text-slate-800">PROCEED</strong> — {t('s3.proceedDesc')}</p>
                                 <p><strong className="text-slate-800">COMPLETE</strong> — {t('s3.completeDesc')}</p>
+                            </div>
+                            <div className="p-4 rounded-xl border border-violet-200 bg-violet-50">
+                                <h4 className="font-semibold text-violet-900 mb-2">{t('s3.balanceTitle')}</h4>
+                                <div className="space-y-1 text-sm text-violet-800">
+                                    <p><strong>pending</strong> — {t('s3.balancePending')}</p>
+                                    <p><strong>due</strong> — {t('s3.balanceDue')}</p>
+                                    <p><strong>balance</strong> — {t('s3.balanceComplete')}</p>
+                                </div>
                             </div>
                             <div>
                                 <h3 className="text-sm font-semibold text-slate-700 mb-3">{t('s3.holdTitle')}</h3>
@@ -143,6 +169,7 @@ export default function DocsCommissionsPage() {
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" /><span>{t('s4.item3')}</span></li>
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" /><span>{t('s4.item4')}</span></li>
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" /><span>{t('s4.item5')}</span></li>
+                                <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" /><span>{t('s4.item6')}</span></li>
                             </ul>
                         </div>
                     </DocsSection>
@@ -155,6 +182,7 @@ export default function DocsCommissionsPage() {
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" /><span>{t('s5.item3')}</span></li>
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" /><span>{t('s5.item4')}</span></li>
                             </ul>
+                            <p className="text-sm text-slate-500 italic">{t('s5.orderNote')}</p>
                         </div>
                     </DocsSection>
 
@@ -166,6 +194,63 @@ export default function DocsCommissionsPage() {
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" /><span>{t('s6.item3')}</span></li>
                             </ul>
                         </div>
+                    </DocsSection>
+
+                    <DocsSection id="s7" number="07" title={t('s7.title')} color="violet">
+                        <div className="space-y-4 text-slate-600 leading-relaxed">
+                            <p>{t('s7.p1')}</p>
+                            <ol className="space-y-3 list-none">
+                                <li className="flex items-start gap-3">
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+                                    <span>{t('s7.step1')}</span>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+                                    <span>{t('s7.step2')}</span>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+                                    <span>{t('s7.step3')}</span>
+                                </li>
+                            </ol>
+                        </div>
+                    </DocsSection>
+
+                    <DocsSection id="s8" number="08" title={t('s8.title')} color="violet">
+                        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-slate-200 bg-slate-50">
+                                        <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s8.colMethod')}</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s8.colMin')}</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-slate-700">{t('s8.colNote')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr className="border-b border-slate-100">
+                                        <td className="py-3 px-4 font-medium text-slate-800">Stripe Connect</td>
+                                        <td className="py-3 px-4 text-slate-600">10&euro;</td>
+                                        <td className="py-3 px-4 text-slate-600">{t('s8.stripeNote')}</td>
+                                    </tr>
+                                    <tr className="border-b border-slate-100">
+                                        <td className="py-3 px-4 font-medium text-slate-800">PayPal</td>
+                                        <td className="py-3 px-4 text-slate-600">10&euro;</td>
+                                        <td className="py-3 px-4 text-slate-600">{t('s8.paypalNote')}</td>
+                                    </tr>
+                                    <tr className="border-b border-slate-100">
+                                        <td className="py-3 px-4 font-medium text-slate-800">IBAN</td>
+                                        <td className="py-3 px-4 text-slate-600">25&euro;</td>
+                                        <td className="py-3 px-4 text-slate-600">{t('s8.ibanNote')}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-3 px-4 font-medium text-slate-800">Wallet</td>
+                                        <td className="py-3 px-4 text-slate-600">0&euro;</td>
+                                        <td className="py-3 px-4 text-slate-600">{t('s8.walletNote')}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p className="mt-4 text-sm text-slate-500 italic">{t('s8.walletInfo')}</p>
                     </DocsSection>
                 </div>
 

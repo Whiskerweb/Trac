@@ -3017,6 +3017,10 @@
                 "security": {
                     "title": "Sécurité & Données",
                     "description": "Protection des données et fiabilité"
+                },
+                "integration": {
+                    "title": "Integration",
+                    "description": "Connecter votre compte Stripe"
                 }
             }
         },
@@ -3035,7 +3039,8 @@
                 "title": "Le Click ID",
                 "p1": "À chaque clic sur un lien d'affiliation, un identifiant unique est généré côté serveur.",
                 "p2": "Ce Click ID relie trois informations : le visiteur, le seller source, et la mission concernée.",
-                "p3": "Généré côté serveur, il est impossible à falsifier ou à deviner."
+                "p3": "Généré côté serveur, il est impossible à falsifier ou à deviner.",
+                "p4": "Format : clk_{timestamp}_{hex} — inclut un horodatage et un hex aleatoire pour l'unicite. Les robots sociaux (bots) sont detectes via le User-Agent et rediriges sans poser de cookie."
             },
             "s3": {
                 "title": "Stockage du Click ID",
@@ -3056,12 +3061,19 @@
                     "location": "Serveurs Traaaction",
                     "duration": "90 jours",
                     "role": "Attribution côté serveur"
-                }
+                },
+                "row4": {
+                    "location": "localStorage (fallback)",
+                    "duration": "Persistant",
+                    "role": "Secours si les cookies sont bloques"
+                },
+                "rateLimit": "Le tracking des clics est rate-limite via Redis (fenetre glissante) pour prevenir les abus."
             },
             "s4": {
                 "title": "La redirection",
                 "p1": "La redirection est instantanée (moins de 100ms). Le visiteur ne voit rien — il arrive directement sur le site de la startup.",
-                "p2": "L'URL de destination contient le Click ID en paramètre, ce qui permet au script trac.js de le récupérer."
+                "p2": "L'URL de destination contient le Click ID en paramètre, ce qui permet au script trac.js de le récupérer.",
+                "p3": "Les robots des reseaux sociaux (bots) sont detectes et rediriges sans injection de cookie pour eviter les faux clics."
             },
             "s5": {
                 "title": "Le script trac.js",
@@ -3081,6 +3093,19 @@
                 "item4": "Source de trafic (referrer)",
                 "item5": "Horodatage",
                 "p1": "Ces données sont enregistrées en arrière-plan et n'ont aucun impact sur la vitesse de navigation du visiteur."
+            },
+            "s7": {
+                "title": "API de tracking des leads",
+                "p1": "Pour les evenements hors paiement (inscriptions, soumissions de formulaires), les startups peuvent utiliser l'API Lead pour declencher des commissions LEAD de maniere programmatique :",
+                "p2": "Authentification via le header x-workspace-id. Cree un LeadEvent et attribue le client au seller."
+            },
+            "s8": {
+                "title": "Le SDK trac.js",
+                "p1": "Le SDK trac.js peut etre installe sur le site de la startup pour gerer automatiquement le tracking des clics et l'injection Stripe. Une seule balise script suffit :",
+                "item1": "Detection automatique du Click ID depuis les parametres URL (trac_id) ou le cookie existant",
+                "item2": "Double stockage : cookie + localStorage pour la resilience contre les bloqueurs de cookies",
+                "item3": "Scanne et injecte le Click ID dans tous les elements de paiement Stripe automatiquement",
+                "item4": "Compatible SPA : surveille les changements d'URL via l'API History pour les applications single-page"
             },
             "remember": {
                 "p1": "Tout est automatique — aucune configuration côté seller",
@@ -3105,7 +3130,8 @@
                 "step1": "Le client s'inscrit sur le site de la startup",
                 "step2": "Le Click ID est envoyé à Traaaction via le script de tracking ou l'API",
                 "step3": "Traaaction retrouve le seller associé à ce Click ID",
-                "step4": "Le client est alors rattaché définitivement à ce seller"
+                "step4": "Le client est alors rattaché définitivement à ce seller",
+                "webhookNote": "Priorite webhook : session.metadata.tracClickId → client_reference_id → recherche dans la table Customer. Pour les renouvellements (invoice.paid), l'attribution utilise directement la table Customer."
             },
             "s3": {
                 "title": "Les données de liaison",
@@ -3115,7 +3141,9 @@
                 "item3": "qui est crédité pour ce client",
                 "item4Label": "Identifiant client",
                 "item4": "qui est ce client (ID unique côté startup)",
-                "locked": "Ces 4 données sont verrouillées à la création, jamais modifiées ensuite."
+                "locked": "Ces 4 données sont verrouillées à la création, jamais modifiées ensuite.",
+                "customerTitle": "L'enregistrement Customer",
+                "customerDesc": "external_id = ID client Stripe, lie a link_id et affiliate_id. Une fois definis, ces champs ne sont jamais ecrases — garantissant une attribution first-click permanente."
             },
             "s4": {
                 "title": "Attribution à vie",
@@ -3149,6 +3177,17 @@
                 "p1": "L'attribution s'applique à tous les renouvellements automatiques.",
                 "p2": "Le seller est crédité mois après mois tant que l'abonnement est actif.",
                 "p3": "Pas besoin de cookie pour les renouvellements — l'attribution se fait via l'identifiant client."
+            },
+            "s7": {
+                "title": "Configuration webhook Stripe",
+                "p1": "L'attribution repose sur 4 evenements webhook Stripe configures par la startup. Chaque evenement a un role d'attribution different :",
+                "colEvent": "Evenement",
+                "colAttribution": "Role d'attribution",
+                "checkoutAttribution": "Attribution initiale — lie Click ID → Seller → Customer via les metadata",
+                "invoiceAttribution": "Attribution renouvellement — utilise l'enregistrement Customer existant (pas besoin de Click ID)",
+                "refundAttribution": "Clawback — trouve la commission via la session checkout ou la facture, puis supprime",
+                "subDeletedAttribution": "Annulation — supprime toutes les commissions PENDING de l'abonnement",
+                "p2": "La startup doit configurer ces 4 evenements dans son dashboard Stripe pointant vers l'URL webhook Traaaction. Les modes payment et subscription utilisent le meme endpoint."
             }
         },
         "commissions": {
@@ -3166,7 +3205,9 @@
                 "leadTrigger": "Inscription / action",
                 "leadConfig": "Montant fixe uniquement",
                 "recurringTrigger": "Renouvellement abonnement",
-                "recurringConfig": "% du HT ou fixe, limite en mois ou à vie"
+                "recurringConfig": "% du HT ou fixe, limite en mois ou à vie",
+                "leadNote": "Le mode LEAD supporte uniquement les montants fixes (pas de pourcentage).",
+                "recurringNote": "Le mois 1 d'un abonnement utilise la recompense recurring (pas la recompense sale)."
             },
             "s2": {
                 "title": "Le calcul détaillé",
@@ -3180,7 +3221,10 @@
                 "startupReceives": "La startup reçoit",
                 "note1": "La commission est toujours calculée sur le montant HT (hors taxes).",
                 "note2": "Les frais plateforme sont toujours de 15% du HT.",
-                "note3": "Les frais de paiement Stripe sont déduits avant la répartition."
+                "note3": "Les frais de paiement Stripe sont déduits avant la répartition.",
+                "examplePercent": "Exemple : commission de 10% sur une vente",
+                "exampleFlat": "Exemple : commission fixe de 5€ sur une vente",
+                "note4": "Pour le mode LEAD : les frais plateforme = 15% de la commission elle-meme (pas du montant de la transaction)."
             },
             "s3": {
                 "title": "Le cycle de vie d'une commission",
@@ -3198,7 +3242,11 @@
                 "saleHold": "30 jours",
                 "saleReason": "Protection contre les chargebacks",
                 "recurringHold": "30 jours",
-                "recurringReason": "Protection contre les annulations"
+                "recurringReason": "Protection contre les annulations",
+                "balanceTitle": "Champs du solde seller",
+                "balancePending": "Somme des commissions PENDING (hold period en cours)",
+                "balanceDue": "Somme des commissions PROCEED non encore payees par la startup",
+                "balanceComplete": "Solde disponible (commissions payees)"
             },
             "s4": {
                 "title": "Les abonnements (RECURRING)",
@@ -3206,20 +3254,40 @@
                 "item2": "Mois 2, 3... N : commission automatique à chaque renouvellement",
                 "item3": "Le numéro du mois est calculé automatiquement (compteur en base de données)",
                 "item4": "Limite configurable par la startup (ex: 12 mois max) ou illimité",
-                "item5": "Annulation de l'abonnement : commissions en attente supprimées, commissions validées conservées"
+                "item5": "Annulation de l'abonnement : commissions en attente supprimées, commissions validées conservées",
+                "item6": "Les transactions a 0€ (essais gratuits, credits, ajustements) sont automatiquement ignorees"
             },
             "s5": {
                 "title": "Les remboursements (clawback)",
                 "item1": "Commission PENDING ou PROCEED → supprimée automatiquement",
                 "item2": "Commission déjà COMPLETE → supprimée + solde négatif appliqué au seller",
                 "item3": "Le solde négatif est déduit des prochains gains",
-                "item4": "Les remboursements sont détectés automatiquement via Stripe"
+                "item4": "Les remboursements sont détectés automatiquement via Stripe",
+                "orderNote": "Ordre critique : supprimer la commission → recalculer le solde → puis appliquer le negatif (si COMPLETE). Le negatif doit etre applique apres le recalcul."
             },
             "s6": {
                 "title": "Transparence des frais",
                 "item1": "Plateforme : 15% du HT sur chaque transaction",
                 "item2": "Pas de frais cachés, pas de frais d'inscription, pas de minimum mensuel",
                 "item3": "Le seller voit le détail complet de chaque commission dans son dashboard"
+            },
+            "s7": {
+                "title": "Paiements startup → plateforme",
+                "p1": "Une fois les commissions validees (statut PROCEED), la startup doit payer la plateforme pour que les sellers puissent etre payes :",
+                "step1": "La startup selectionne les commissions PROCEED + UNPAID dans son dashboard",
+                "step2": "Paiement via Stripe Checkout — la startup paye Traaaction",
+                "step3": "Confirmation webhook → commissions marquees PAID (startup_payment_status)"
+            },
+            "s8": {
+                "title": "Methodes de paiement seller",
+                "colMethod": "Methode",
+                "colMin": "Minimum",
+                "colNote": "Details",
+                "stripeNote": "Transfert automatique, recommande",
+                "paypalNote": "Traitement manuel",
+                "ibanNote": "Virement bancaire manuel",
+                "walletNote": "Echange de gift cards uniquement",
+                "walletInfo": "Le solde du wallet est reserve a l'echange de gift cards uniquement. Il ne peut pas etre transfere vers Stripe Connect. Quand un seller connecte Stripe, les gains futurs vont vers Stripe — le solde wallet existant reste separe."
             }
         },
         "organizations": {
@@ -3249,21 +3317,26 @@
                 "memberDesc": "Sa part de la récompense, avec les frais plateforme de 15%",
                 "leaderTitle": "Commission leader",
                 "leaderDesc": "Sa part négociée, sans frais plateforme (financée directement par la startup)",
-                "refundNote": "En cas de remboursement, les deux commissions sont supprimées ensemble automatiquement."
+                "refundNote": "En cas de remboursement, les deux commissions sont supprimées ensemble automatiquement.",
+                "technicalNote": "Technique : le sale_id de la commission leader = {original}:orgcut (garantit l'unicite). Les commissions leader sont exclues du comptage recurring pour eviter les fausses limites."
             },
             "s4": {
                 "title": "Les Groupes (petites équipes)",
                 "p1": "Les groupes sont des équipes informelles pour vendre ensemble de manière simple.",
                 "item1": "Tout seller approuvé peut créer un groupe librement (pas d'approbation admin)",
                 "item2": "Maximum 10 membres, un seul groupe par seller",
-                "item3": "Invitation via un code partageable"
+                "item3": "Invitation via un code partageable",
+                "visibilityNote": "Seules les missions INVITE_ONLY peuvent etre proposees aux organisations.",
+                "enrollmentNote": "Auto-inscription : quand le leader accepte une mission, tous les membres actifs sont automatiquement inscrits (ShortLink, cache Redis et MissionEnrollment crees)."
             },
             "s5": {
                 "title": "Commission des groupes : tout au créateur",
                 "item1": "Toute la commission va au créateur du groupe",
                 "item2": "Pas de répartition automatique → le créateur redistribue manuellement",
                 "item3": "Avantage : moins de frais de transfert, plus de simplicité",
-                "item4": "Si le créateur quitte → groupe archivé (les commissions existantes continuent leur cycle de vie)"
+                "item4": "Si le créateur quitte → groupe archivé (les commissions existantes continuent leur cycle de vie)",
+                "multiOrgNote": "Un seller peut etre membre de plusieurs organisations simultanement.",
+                "clawbackNote": "Cascade de remboursement : lors d'un remboursement, les commissions du membre et du leader sont automatiquement supprimees ensemble."
             },
             "s6": {
                 "title": "Organisations vs Groupes",
@@ -3330,7 +3403,8 @@
                 "title": "L'intégration iframe",
                 "p1": "Le code iframe est copiable depuis le dashboard de la startup.",
                 "p2": "Il est compatible avec tous les sites (les headers CSP sont pré-configurés).",
-                "p3": "Pour les cookies tiers, il est recommandé d'utiliser un custom domain CNAME."
+                "p3": "Pour les cookies tiers, il est recommandé d'utiliser un custom domain CNAME.",
+                "cnameNote": "Pour l'integration iframe, un domaine CNAME personnalise est recommande pour garantir le bon fonctionnement des cookies tiers sur tous les navigateurs."
             },
             "s5": {
                 "title": "Le programme de parrainage portail",
@@ -3348,6 +3422,21 @@
                 "item3": "URL portail auto-générée",
                 "item4": "Personnalisation : texte d'accueil, programme de parrainage",
                 "item5": "Lien par mission pour partage direct"
+            },
+            "s7": {
+                "title": "Parrainage portail : details techniques",
+                "p1": "Le programme de parrainage portail est totalement independant du systeme de parrainage global Traaaction. Il utilise sa propre table de tracking (PortalReferral) scopee par workspace :",
+                "colSetting": "Parametre",
+                "colDetail": "Detail",
+                "ratesLabel": "Taux",
+                "ratesDetail": "Configures en points de base (ex : 500 = 5%). Ajustables librement par generation.",
+                "generationsLabel": "Generations",
+                "generationsDetail": "1 a 3 niveaux. Gen2 necessite Gen1 active, Gen3 necessite Gen2.",
+                "fundingLabel": "Financement",
+                "fundingDetail": "Paye par la startup (platform_fee = 0, startup_payment_status = UNPAID). Non deduit des 15% de Traaaction.",
+                "scopeLabel": "Perimetre",
+                "scopeDetail": "Par workspace. Chaque workspace configure ses propres taux et profondeur de generations.",
+                "independentNote": "Completement independant du systeme de parrainage Traaaction (Seller.referred_by). Utilise un format sale_id dedie : {original}:pref:gen{N}:{referrerId}."
             }
         },
         "security": {
@@ -3398,13 +3487,15 @@
                 "content": "uniquement le Click ID (ex: clk_a7k2m9x5p3q1)",
                 "durationLabel": "Durée : ",
                 "duration": "90 jours",
-                "p1": "Pas de tracking publicitaire, pas de profilage, pas de revente de données."
+                "p1": "Pas de tracking publicitaire, pas de profilage, pas de revente de données.",
+                "authCookieNote": "Les cookies d'authentification (session Supabase) utilisent les flags HttpOnly + Secure pour la protection contre les attaques XSS."
             },
             "s3": {
                 "title": "Fiabilité des paiements",
                 "item1": "Signature cryptographique Stripe (HMAC) sur chaque webhook",
                 "item2": "Idempotence : un même événement traité deux fois ne crée pas de doublon (identifiant unique par transaction)",
-                "item3": "Les transactions à 0€ (essais gratuits, crédits) sont automatiquement ignorées"
+                "item3": "Les transactions à 0€ (essais gratuits, crédits) sont automatiquement ignorées",
+                "saleIdNote": "Le champ sale_id utilise des formats specifiques pour l'idempotence : {checkoutSessionId} pour le standard, {id}:orgcut pour le leader org, {id}:ref:gen{N}:{sellerId} pour le parrainage, {id}:pref:gen{N}:{referrerId} pour le parrainage portail."
             },
             "s4": {
                 "title": "Protection contre la fraude",
@@ -3426,6 +3517,96 @@
                 "item2": "Les sellers ne voient que leurs propres statistiques et commissions",
                 "item3": "Les organisations et groupes sont cloisonnés",
                 "item4": "Pas d'accès croisé entre workspaces"
+            }
+        },
+        "integration": {
+            "badge": "Integration",
+            "title": "Integration",
+            "titleAccent": "Startup",
+            "subtitle": "Guide etape par etape pour connecter votre compte Stripe avec Traaaction et commencer a suivre les ventes affiliees.",
+            "s1": {
+                "title": "Vue d'ensemble : 3 etapes pour integrer",
+                "p1": "L'integration de Traaaction avec votre startup necessite trois etapes :",
+                "step1": "Configurer votre webhook Stripe pour envoyer les evenements a Traaaction",
+                "step2": "Ajouter les metadata de tracking a vos sessions Stripe Checkout",
+                "step3": "Optionnellement, installer le SDK trac.js pour l'injection automatique du Click ID",
+                "p2": "Le webhook gere automatiquement toute la creation de commissions, le suivi des abonnements et le traitement des remboursements."
+            },
+            "s2": {
+                "title": "Configuration du webhook",
+                "p1": "Dans votre dashboard Stripe, creez un endpoint webhook pointant vers l'URL fournie par Traaaction. Selectionnez ces 4 evenements requis :",
+                "colEvent": "Evenement",
+                "colRole": "Role",
+                "checkout": {
+                    "event": "checkout.session.completed",
+                    "role": "Cree une commission SALE ou RECURRING mois 1"
+                },
+                "invoice": {
+                    "event": "invoice.paid",
+                    "role": "Cree les commissions RECURRING mois 2+ sur les renouvellements"
+                },
+                "refund": {
+                    "event": "charge.refunded",
+                    "role": "Declenche le clawback (suppression commission + solde negatif si necessaire)"
+                },
+                "subscription": {
+                    "event": "customer.subscription.deleted",
+                    "role": "Supprime toutes les commissions PENDING de l'abonnement annule"
+                },
+                "p2": "Chaque webhook est verifie via la signature HMAC Stripe (secret de signature par workspace). Stockez votre secret de signature dans le dashboard Traaaction."
+            },
+            "s3": {
+                "title": "Metadata Stripe",
+                "p1": "Lors de la creation d'une session Stripe Checkout, incluez le Click ID dans vos metadata pour que Traaaction puisse attribuer la vente au bon seller :",
+                "paymentTitle": "Mode payment (achat unique)",
+                "paymentDesc": "Definissez client_reference_id et metadata.tracClickId avec le Click ID. Ajoutez optionnellement tracCustomerExternalId pour l'identification du client.",
+                "subscriptionTitle": "Mode subscription",
+                "subscriptionDesc": "Memes metadata qu'en mode payment. L'abonnement est automatiquement suivi — les renouvellements via invoice.paid utilisent l'enregistrement Customer.",
+                "p2": "Priorite : tracClickId (metadata) → client_reference_id → recherche Customer. Si vous utilisez trac.js, le Click ID est injecte automatiquement."
+            },
+            "s4": {
+                "title": "SDK trac.js (optionnel)",
+                "p1": "Installez le script trac.js sur votre site pour automatiser la detection du Click ID et l'injection Stripe :",
+                "item1": "Detecte le Click ID depuis les parametres URL, les cookies ou le localStorage",
+                "item2": "Injecte automatiquement le Click ID dans les Payment Links, Buy Buttons et Pricing Tables Stripe",
+                "item3": "Double stockage (cookie + localStorage) pour la resilience contre les bloqueurs de cookies",
+                "item4": "Compatible SPA : surveille l'API History pour les changements d'URL dans les applications single-page",
+                "p2": "Avec trac.js installe, aucune configuration manuelle des metadata n'est necessaire — le script gere tout automatiquement."
+            },
+            "s5": {
+                "title": "API de tracking des leads",
+                "p1": "Pour les missions de type LEAD (inscriptions, soumissions de formulaires), utilisez l'API Lead pour creer des commissions sans paiement Stripe :",
+                "colField": "Champ",
+                "colRequired": "Requis",
+                "colDesc": "Description",
+                "eventName": {
+                    "required": "Oui",
+                    "desc": "Nom de l'evenement (ex : 'signup', 'trial_start')"
+                },
+                "customerExternalId": {
+                    "required": "Oui",
+                    "desc": "Identifiant unique de l'utilisateur dans votre systeme"
+                },
+                "clickId": {
+                    "required": "Non",
+                    "desc": "Click ID pour l'attribution (detecte automatiquement avec trac.js)"
+                },
+                "customerEmail": {
+                    "required": "Non",
+                    "desc": "Email du client pour l'identification"
+                },
+                "metadata": {
+                    "required": "Non",
+                    "desc": "Donnees JSON supplementaires attachees a l'evenement lead"
+                }
+            },
+            "s6": {
+                "title": "Test et debogage",
+                "item1": "Utilisez le mode test Stripe pour verifier la livraison des webhooks avant la mise en production",
+                "item2": "Verifiez dans le dashboard Stripe (Developers → Webhooks) les logs de livraison des evenements",
+                "item3": "Verifiez l'attribution dans votre dashboard Traaaction — chaque commission affiche le seller attribue",
+                "item4": "Testez le flux complet : clic sur le lien affilie → achat → verification de la commission",
+                "item5": "Probleme courant : metadata tracClickId manquant → commission creee mais pas d'attribution seller"
             }
         }
     }

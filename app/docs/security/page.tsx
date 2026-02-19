@@ -62,6 +62,7 @@ export default function DocsSecurityPage() {
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" /><span><strong className="text-slate-800">{t('s2.durationLabel')}</strong> {t('s2.duration')}</span></li>
                             </ul>
                             <p>{t('s2.p1')}</p>
+                            <p className="text-sm text-slate-500 italic">{t('s2.authCookieNote')}</p>
                         </div>
                     </DocsSection>
 
@@ -72,6 +73,7 @@ export default function DocsSecurityPage() {
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" /><span>{t('s3.item2')}</span></li>
                                 <li className="flex items-start gap-2"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" /><span>{t('s3.item3')}</span></li>
                             </ul>
+                            <p className="text-sm text-slate-500 italic">{t('s3.saleIdNote')}</p>
                         </div>
                     </DocsSection>
 
