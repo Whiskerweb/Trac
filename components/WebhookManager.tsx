@@ -10,6 +10,7 @@ import {
     getWebhookConfig,
     updateWebhookSecret
 } from '@/app/actions/webhooks'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 interface WebhookConfig {
     endpointId: string
@@ -115,7 +116,7 @@ export function WebhookManager({ onStatusChange }: WebhookManagerProps) {
         return (
             <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
                 <div className="flex items-center gap-3 text-slate-500">
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <TraaactionLoader size={20} className="text-gray-400" />
                     <span className="text-sm sm:text-base">Chargement...</span>
                 </div>
             </div>

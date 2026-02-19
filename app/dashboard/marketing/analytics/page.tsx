@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import useSWR from 'swr'
+import { motion } from 'framer-motion'
+import { fadeInUp, staggerContainer, springGentle } from '@/lib/animations'
 import {
     Calendar,
     RefreshCw,
@@ -257,7 +259,7 @@ function SimpleListItem({ icon, label, count, percentage = 100, isSelected, onCl
     return (
         <div
             onClick={onClick}
-            className={`group relative flex items-center justify-between px-4 py-2.5 cursor-pointer transition-all duration-200
+            className={`row-hover group relative flex items-center justify-between px-4 py-2.5 cursor-pointer transition-all duration-200
                 ${isSelected
                     ? 'bg-purple-50/60'
                     : 'hover:bg-gray-50/60'
@@ -614,9 +616,14 @@ export default function MarketingAnalyticsPage() {
     }, [activeFilters.length, activeEventTypes.size, clearAllFilters])
 
     return (
-        <div className="space-y-6">
+        <motion.div
+            className="space-y-6"
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+        >
             {/* ===== HEADER ===== */}
-            <div className="flex items-end justify-between">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex items-end justify-between">
                 <div>
                     <h1 className="text-[22px] font-semibold text-gray-900 tracking-tight">{tm('analytics.title')}</h1>
                     <p className="text-[13px] text-gray-400 mt-0.5">{tm('analytics.subtitle')}</p>
@@ -630,7 +637,7 @@ export default function MarketingAnalyticsPage() {
                         trigger={
                             <button
                                 onClick={() => setDateRangeOpen(!dateRangeOpen)}
-                                className="flex items-center gap-2 px-3.5 py-2 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl text-[13px] font-medium text-gray-600 hover:border-gray-300 hover:bg-white transition-all shadow-sm shadow-black/[0.02]"
+                                className="btn-press flex items-center gap-2 px-3.5 py-2 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl text-[13px] font-medium text-gray-600 hover:border-gray-300 hover:bg-white transition-all shadow-sm shadow-black/[0.02]"
                             >
                                 <Calendar className="w-3.5 h-3.5 text-gray-400" />
                                 {selectedRange.label}
@@ -642,7 +649,7 @@ export default function MarketingAnalyticsPage() {
                             <button
                                 key={range.value}
                                 onClick={() => handleSelectRange(range)}
-                                className={`w-full flex items-center justify-between px-4 py-2 text-[13px] transition-colors rounded-lg mx-1 ${
+                                className={`btn-press w-full flex items-center justify-between px-4 py-2 text-[13px] transition-colors rounded-lg mx-1 ${
                                     selectedRange.value === range.value
                                         ? 'text-gray-900 font-medium bg-gray-50'
                                         : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
@@ -659,12 +666,12 @@ export default function MarketingAnalyticsPage() {
                     <button
                         onClick={() => mutate()}
                         disabled={isValidating}
-                        className={`p-2 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl text-gray-400 hover:text-gray-600 hover:border-gray-300 hover:bg-white transition-all shadow-sm shadow-black/[0.02] ${isValidating ? 'animate-spin' : ''}`}
+                        className={`btn-press p-2 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl text-gray-400 hover:text-gray-600 hover:border-gray-300 hover:bg-white transition-all shadow-sm shadow-black/[0.02] ${isValidating ? 'animate-spin' : ''}`}
                     >
                         <RefreshCw className="w-3.5 h-3.5" />
                     </button>
                 </div>
-            </div>
+            </motion.div>
 
             {/* ===== ACTIVE FILTERS ===== */}
             {(activeFilters.length > 0 || activeEventTypes.size < 3) && (
@@ -701,6 +708,7 @@ export default function MarketingAnalyticsPage() {
             )}
 
             {/* ===== ANALYTICS CHART (KPIs + funnel/timeseries) ===== */}
+            <motion.div variants={fadeInUp} transition={springGentle}>
             <AnalyticsChart
                 clicks={kpi.clicks}
                 leads={kpi.leads}
@@ -710,9 +718,10 @@ export default function MarketingAnalyticsPage() {
                 activeEventTypes={activeEventTypes}
                 onEventTypeToggle={toggleEventType}
             />
+            </motion.div>
 
             {/* ===== BREAKDOWNS GRID ===== */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {/* Locations */}
                 <AnalyticsCard
                     title={t('locations.title')}
@@ -821,10 +830,10 @@ export default function MarketingAnalyticsPage() {
                         />
                     ))}
                 </AnalyticsCard>
-            </div>
+            </motion.div>
 
             {/* ===== CHANNEL & CAMPAIGN ===== */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {/* Channels */}
                 <div className="bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-2xl p-6 shadow-sm shadow-black/[0.02]">
                     <div className="flex items-center justify-between mb-5">
@@ -889,7 +898,7 @@ export default function MarketingAnalyticsPage() {
                         </div>
                     )}
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     )
 }

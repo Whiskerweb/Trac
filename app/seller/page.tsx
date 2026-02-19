@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import { getSellerDashboard } from '@/app/actions/sellers'
 import { getMyEnrollments, getMyGlobalStatsWithTimeseries } from '@/app/actions/marketplace'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
-import { floatVariants } from '@/lib/animations'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 
 interface Stats {
     totalClicks: number
@@ -111,18 +111,18 @@ function MissionRow({ data, sellerId }: { data: Enrollment; sellerId: string | n
                                 {data.mission.title}
                             </h3>
                             {data.mission.isPortalExclusive && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-medium flex-shrink-0">
+                                <span className="inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-medium flex-shrink-0 badge-pop">
                                     Portal
                                 </span>
                             )}
                             {data.organization && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-medium flex-shrink-0">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-medium flex-shrink-0 badge-pop">
                                     <Users className="w-2.5 h-2.5" />
                                     {data.organization.name}
                                 </span>
                             )}
                             {data.group && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-violet-50 text-violet-700 rounded text-[10px] font-medium flex-shrink-0">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-violet-50 text-violet-700 rounded text-[10px] font-medium flex-shrink-0 badge-pop">
                                     <Users className="w-2.5 h-2.5" />
                                     {data.group.name}
                                 </span>
@@ -170,7 +170,7 @@ function MissionRow({ data, sellerId }: { data: Enrollment; sellerId: string | n
                     {data.link && !isArchived && (
                         <button
                             onClick={copyLink}
-                            className={`flex-shrink-0 p-2 rounded-lg transition-all ${
+                            className={`flex-shrink-0 p-2 rounded-lg transition-all btn-press ${
                                 copied
                                     ? 'bg-green-50 text-green-600'
                                     : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
@@ -178,7 +178,7 @@ function MissionRow({ data, sellerId }: { data: Enrollment; sellerId: string | n
                             title={copied ? 'Copied!' : 'Copy link'}
                         >
                             {copied ? (
-                                <Check className="w-4 h-4" />
+                                <Check className="w-4 h-4 copy-success" />
                             ) : (
                                 <Copy className="w-4 h-4" />
                             )}
@@ -271,8 +271,33 @@ export default function PartnerDashboardPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#FAFAFB] flex items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <div className="min-h-screen bg-[#FAFAFB]">
+                <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
+                    <div className="mb-8">
+                        <div className="h-7 w-32 rounded-lg skeleton-shimmer mb-2" />
+                        <div className="h-4 w-56 rounded-lg skeleton-shimmer" />
+                    </div>
+                    <div className="h-64 rounded-2xl skeleton-shimmer mb-8" />
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100">
+                            <div className="h-5 w-28 rounded skeleton-shimmer" />
+                        </div>
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="px-6 py-4 flex items-center gap-6 border-b border-gray-50">
+                                <div className="w-10 h-10 rounded-lg skeleton-shimmer flex-shrink-0" />
+                                <div className="flex-1">
+                                    <div className="h-4 w-40 rounded skeleton-shimmer mb-2" />
+                                    <div className="h-3 w-24 rounded skeleton-shimmer" />
+                                </div>
+                                <div className="hidden md:flex gap-6">
+                                    {[1, 2, 3].map(j => (
+                                        <div key={j} className="h-8 w-12 rounded skeleton-shimmer" />
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         )
     }
@@ -293,16 +318,21 @@ export default function PartnerDashboardPage() {
 
     return (
         <div className="min-h-screen bg-[#FAFAFB]">
-            <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
+            <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer}
+                className="max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-10"
+            >
 
                 {/* Header */}
-                <div className="mb-8">
+                <motion.div variants={fadeInUp} transition={springGentle} className="mb-8">
                     <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">Analytics</h1>
                     <p className="text-gray-500 mt-1">Overview of your performance</p>
-                </div>
+                </motion.div>
 
                 {/* Analytics Chart (same as startup dashboard) */}
-                <div className="mb-8">
+                <motion.div variants={fadeInUp} transition={springGentle} className="mb-8">
                     <AnalyticsChart
                         clicks={totalClicks}
                         leads={leads}
@@ -313,7 +343,7 @@ export default function PartnerDashboardPage() {
                         onRangeChange={handleRangeChange}
                         loadingTimeseries={loadingTimeseries}
                     />
-                </div>
+                </motion.div>
 
                 {/* Missions Section - Minimalist Table Design */}
                 {(() => {
@@ -322,12 +352,12 @@ export default function PartnerDashboardPage() {
 
                     return (
                         <>
-                            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                            <motion.div variants={fadeInUp} transition={springGentle} className="bg-white border border-gray-200 rounded-xl overflow-hidden card-hover">
                                 {/* Header */}
                                 <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <h2 className="text-sm font-semibold text-gray-900">Programmes</h2>
-                                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full badge-pop">
                                             {activeEnrollments.length}
                                         </span>
                                     </div>
@@ -341,11 +371,13 @@ export default function PartnerDashboardPage() {
                                 </div>
 
                                 {activeEnrollments.length > 0 ? (
-                                    <div className="divide-y divide-gray-50">
+                                    <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="divide-y divide-gray-50">
                                         {activeEnrollments.map((enrollment) => (
-                                            <MissionRow key={enrollment.id} data={enrollment} sellerId={sellerId} />
+                                            <motion.div key={enrollment.id} variants={staggerItem}>
+                                                <MissionRow data={enrollment} sellerId={sellerId} />
+                                            </motion.div>
                                         ))}
-                                    </div>
+                                    </motion.div>
                                 ) : (
                                     <div className="px-6 py-16 text-center">
                                         <motion.div
@@ -366,14 +398,14 @@ export default function PartnerDashboardPage() {
                                         </Link>
                                     </div>
                                 )}
-                            </div>
+                            </motion.div>
 
                             {/* Archived enrollments */}
                             {archivedEnrollments.length > 0 && (
-                                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mt-6 opacity-60">
+                                <motion.div variants={fadeInUp} transition={springGentle} className="bg-white border border-gray-200 rounded-xl overflow-hidden mt-6 opacity-60">
                                     <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
                                         <h2 className="text-sm font-semibold text-gray-500">Archived</h2>
-                                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full badge-pop">
                                             {archivedEnrollments.length}
                                         </span>
                                     </div>
@@ -382,12 +414,12 @@ export default function PartnerDashboardPage() {
                                             <MissionRow key={enrollment.id} data={enrollment} sellerId={sellerId} />
                                         ))}
                                     </div>
-                                </div>
+                                </motion.div>
                             )}
                         </>
                     )
                 })()}
-            </div>
+            </motion.div>
         </div>
     )
 }

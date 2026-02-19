@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Check, X, Building2, Link2, ArrowRight } from 'lucide-react'
 import { checkSlugAvailability, createWorkspaceOnboarding } from './actions'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 export default function OnboardingPage() {
     const router = useRouter()
@@ -115,7 +116,7 @@ export default function OnboardingPage() {
     if (!roleChecked) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                <TraaactionLoader size={20} className="text-gray-400" />
             </div>
         )
     }

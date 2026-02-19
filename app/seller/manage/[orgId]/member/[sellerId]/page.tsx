@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Loader2, Globe, MapPin, Briefcase, BarChart3, ExternalLink, FileText } from 'lucide-react'
 import { getOrgMemberProfile } from '@/app/actions/organization-actions'
 import type { OrgMemberProfileData } from '@/app/actions/organization-actions'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 /* ── Palette for avatar gradients keyed off first letter ── */
 const AVATAR_GRADIENTS: Record<string, string> = {
@@ -73,7 +74,7 @@ export default function OrgMemberProfilePage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                <TraaactionLoader size={20} className="text-gray-400" />
             </div>
         )
     }

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { Loader2, DollarSign } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { getOrganizationCommissions } from '@/app/actions/organization-actions'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 function CommissionStatusBadge({ status }: { status: string }) {
     const styles: Record<string, string> = {
@@ -37,7 +38,7 @@ export default function ManageOrgCommissions() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                <TraaactionLoader size={20} className="text-gray-400" />
             </div>
         )
     }

@@ -21,6 +21,7 @@ import { leaveMission } from '@/app/actions/marketplace'
 import { getOrCreateConversationForSeller } from '@/app/actions/messaging'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
 import { useTranslations } from 'next-intl'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 // =============================================
 // TYPES
@@ -208,7 +209,7 @@ export default function SellerProgramDetailPage() {
     if (loading) {
         return (
             <div className="min-h-screen bg-[#FAFAFB] flex items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <TraaactionLoader size={24} className="text-gray-400" />
             </div>
         )
     }

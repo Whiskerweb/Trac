@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { fadeInUp, staggerContainer, springGentle } from '@/lib/animations'
 import {
     Plus, Search, Copy, QrCode, Trash2,
     ExternalLink, Link2, Check, MousePointerClick,
@@ -381,9 +383,14 @@ export default function MarketingLinksPage() {
             )}
 
             {/* Main Content */}
-            <div className="flex-1 min-w-0 space-y-6 p-0 md:pl-6">
+            <motion.div
+                className="flex-1 min-w-0 space-y-6 p-0 md:pl-6"
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer}
+            >
                 {/* Header with KPI */}
-                <div className="flex items-center justify-between">
+                <motion.div variants={fadeInUp} transition={springGentle} className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t('links.title')}</h1>
                         <p className="text-sm text-gray-500 mt-1">
@@ -392,15 +399,15 @@ export default function MarketingLinksPage() {
                     </div>
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors shadow-sm"
+                        className="btn-press flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors shadow-sm"
                     >
                         <Plus className="w-4 h-4" />
                         {t('createLink')}
                     </button>
-                </div>
+                </motion.div>
 
                 {/* Search + Filters */}
-                <div className="space-y-3">
+                <motion.div variants={fadeInUp} transition={springGentle} className="space-y-3">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
@@ -630,11 +637,11 @@ export default function MarketingLinksPage() {
                             </div>
                         </div>
                     )}
-                </div>
+                </motion.div>
 
                 {/* Links List */}
                 {loading ? (
-                    <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-50">
+                    <motion.div variants={fadeInUp} transition={springGentle} className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-50">
                         {[...Array(5)].map((_, i) => (
                             <div key={i} className="flex items-center gap-4 px-5 py-4">
                                 <div className="w-10 h-10 rounded-lg skeleton-shimmer" />
@@ -645,7 +652,7 @@ export default function MarketingLinksPage() {
                                 <div className="h-5 w-16 rounded skeleton-shimmer" />
                             </div>
                         ))}
-                    </div>
+                    </motion.div>
                 ) : !links.length ? (
                     <div className="bg-white rounded-xl border border-gray-200 px-6 py-20 text-center">
                         <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -662,7 +669,7 @@ export default function MarketingLinksPage() {
                         </button>
                     </div>
                 ) : (
-                    <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-50 overflow-hidden">
+                    <motion.div variants={fadeInUp} transition={springGentle} className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-50 overflow-hidden">
                         {/* Select all header */}
                         <div className="flex items-center gap-3 px-5 py-2 bg-gray-50/50 border-b border-gray-100">
                             <button
@@ -689,7 +696,7 @@ export default function MarketingLinksPage() {
                             return (
                                 <div
                                     key={link.id}
-                                    className={`flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/60 transition-colors group ${
+                                    className={`card-hover flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/60 transition-colors group ${
                                         isSelected ? 'bg-purple-50/40' : ''
                                     }`}
                                 >
@@ -885,9 +892,9 @@ export default function MarketingLinksPage() {
                                 </div>
                             )
                         })}
-                    </div>
+                    </motion.div>
                 )}
-            </div>
+            </motion.div>
 
             {/* Bulk Action Bar */}
             <BulkActionBar

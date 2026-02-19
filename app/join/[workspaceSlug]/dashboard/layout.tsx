@@ -3,10 +3,12 @@
 import { useState, useEffect, createContext, useContext, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
+import { AlertCircle, ArrowLeft } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { getPortalFullDashboard } from '@/app/actions/portal'
 import PortalHeader from '@/components/portal/PortalHeader'
 import { portalPath } from '@/components/portal/portal-utils'
+import { fadeInUp, springGentle, floatVariants } from '@/lib/animations'
 
 interface EnrollmentStats {
     clicks: number
@@ -147,7 +149,7 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
     if (loading && !error) {
         return (
             <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <div className="skeleton-shimmer w-6 h-6 rounded-full" />
             </div>
         )
     }
@@ -155,20 +157,26 @@ export default function PortalDashboardLayout({ children }: { children: React.Re
     if (error || !data) {
         return (
             <div className="min-h-screen bg-gray-50/50 flex items-center justify-center p-4">
-                <div className="text-center max-w-md">
-                    <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <motion.div
+                    initial="hidden"
+                    animate="visible"
+                    variants={fadeInUp}
+                    transition={springGentle}
+                    className="text-center max-w-md"
+                >
+                    <motion.div variants={floatVariants} animate="float" className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <AlertCircle className="w-7 h-7 text-red-400" />
-                    </div>
+                    </motion.div>
                     <h1 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h1>
                     <p className="text-sm text-gray-500 mb-6">{error || 'Failed to load dashboard'}</p>
                     <a
                         href={portalPath(workspaceSlug)}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors btn-press"
                     >
                         <ArrowLeft className="w-4 h-4" />
                         Back to portal
                     </a>
-                </div>
+                </motion.div>
             </div>
         )
     }

@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { createGroup } from '@/app/actions/group-actions'
 import { getMyStripeAccountInfo } from '@/app/actions/sellers'
 import { useTranslations } from 'next-intl'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 function GroupCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
@@ -67,7 +68,7 @@ export default function CreateGroupPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex flex-col items-center gap-3"
                 >
-                    <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+                    <TraaactionLoader size={32} className="text-gray-400" />
                     <span className="text-sm text-neutral-500">Loading...</span>
                 </motion.div>
             </div>

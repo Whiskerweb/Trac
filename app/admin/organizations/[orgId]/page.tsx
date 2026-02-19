@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 import {
     Loader2, ArrowLeft, Users, Crown, Target, Check, Ban, RotateCcw,
     ExternalLink, Globe, Lock, KeyRound, Calendar, CreditCard, Wallet,
@@ -23,7 +25,7 @@ function StatusBadge({ status, size = 'sm' }: { status: string; size?: 'sm' | 'm
         BANNED: 'bg-red-500/20 text-red-400',
     }
     return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-medium ${styles[status] || 'bg-neutral-500/20 text-neutral-400'} ${size === 'md' ? 'text-sm' : 'text-xs'}`}>
+        <span className={`badge-pop inline-flex items-center px-2.5 py-0.5 rounded-full font-medium ${styles[status] || 'bg-neutral-500/20 text-neutral-400'} ${size === 'md' ? 'text-sm' : 'text-xs'}`}>
             {status}
         </span>
     )
@@ -38,7 +40,7 @@ function VisibilityBadge({ visibility }: { visibility: string }) {
     const c = config[visibility] || config.PUBLIC
     const Icon = c.icon
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${c.color}`}>
+        <span className={`badge-pop inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${c.color}`}>
             <Icon className="w-3 h-3" /> {c.label}
         </span>
     )
@@ -109,8 +111,20 @@ export default function AdminOrgDetailPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-500" />
+            <div className="max-w-5xl mx-auto p-6 md:p-8 space-y-6">
+                <div className="skeleton-shimmer h-8 w-48 rounded-lg" />
+                <div className="skeleton-shimmer h-28 rounded-xl" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="skeleton-shimmer h-20 rounded-xl" />
+                    ))}
+                </div>
+                <div className="skeleton-shimmer h-40 rounded-xl" />
+                <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="skeleton-shimmer h-16 rounded-xl" />
+                    ))}
+                </div>
             </div>
         )
     }
@@ -131,7 +145,7 @@ export default function AdminOrgDetailPage() {
     const proposedMissions = org.Missions?.filter((m: any) => m.status === 'PROPOSED') || []
 
     return (
-        <div className="max-w-5xl mx-auto p-6 md:p-8 space-y-8">
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="max-w-5xl mx-auto p-6 md:p-8 space-y-8">
             {/* Back */}
             <Link
                 href="/admin/organizations"
@@ -141,7 +155,7 @@ export default function AdminOrgDetailPage() {
             </Link>
 
             {/* ========== HEADER ========== */}
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
                 <div className="flex items-start gap-4">
                     <div className="w-14 h-14 bg-neutral-800 rounded-2xl flex items-center justify-center flex-shrink-0">
                         <span className="text-xl font-semibold text-neutral-300">
@@ -190,13 +204,13 @@ export default function AdminOrgDetailPage() {
                         <>
                             <button
                                 onClick={() => handleAction('approve')}
-                                className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-xl text-sm font-medium hover:bg-emerald-500/30 transition-colors flex items-center gap-1.5"
+                                className="btn-press px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-xl text-sm font-medium hover:bg-emerald-500/30 transition-colors flex items-center gap-1.5"
                             >
                                 <Check className="w-4 h-4" /> Approve
                             </button>
                             <button
                                 onClick={() => handleAction('reject')}
-                                className="px-4 py-2 bg-red-500/20 text-red-400 rounded-xl text-sm font-medium hover:bg-red-500/30 transition-colors flex items-center gap-1.5"
+                                className="btn-press px-4 py-2 bg-red-500/20 text-red-400 rounded-xl text-sm font-medium hover:bg-red-500/30 transition-colors flex items-center gap-1.5"
                             >
                                 <Ban className="w-4 h-4" /> Reject
                             </button>
@@ -205,7 +219,7 @@ export default function AdminOrgDetailPage() {
                     {org.status === 'ACTIVE' && (
                         <button
                             onClick={() => handleAction('suspend')}
-                            className="px-4 py-2 bg-red-500/20 text-red-400 rounded-xl text-sm font-medium hover:bg-red-500/30 transition-colors flex items-center gap-1.5"
+                            className="btn-press px-4 py-2 bg-red-500/20 text-red-400 rounded-xl text-sm font-medium hover:bg-red-500/30 transition-colors flex items-center gap-1.5"
                         >
                             <Ban className="w-4 h-4" /> Suspend
                         </button>
@@ -213,34 +227,34 @@ export default function AdminOrgDetailPage() {
                     {org.status === 'SUSPENDED' && (
                         <button
                             onClick={() => handleAction('reactivate')}
-                            className="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-xl text-sm font-medium hover:bg-blue-500/30 transition-colors flex items-center gap-1.5"
+                            className="btn-press px-4 py-2 bg-blue-500/20 text-blue-400 rounded-xl text-sm font-medium hover:bg-blue-500/30 transition-colors flex items-center gap-1.5"
                         >
                             <RotateCcw className="w-4 h-4" /> Reactivate
                         </button>
                     )}
                 </div>
-            </div>
+            </motion.div>
 
             {/* ========== STATS GRID ========== */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <StatCard label="Active Members" value={activeMembers.length} sub={pendingMembers.length > 0 ? `+ ${pendingMembers.length} pending` : undefined} />
                 <StatCard label="Active Missions" value={acceptedMissions.length} sub={proposedMissions.length > 0 ? `+ ${proposedMissions.length} proposed` : undefined} />
                 <StatCard label="Visibility" value={org.visibility} />
                 <StatCard label="Audience" value={org.estimated_audience || '—'} />
-            </div>
+            </motion.div>
 
             {/* ========== MOTIVATION (PENDING) ========== */}
             {org.motivation && (
-                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+                <motion.div variants={fadeInUp} transition={springGentle} className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
                     <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                         <MessageSquare className="w-3.5 h-3.5" /> Motivation
                     </h3>
                     <p className="text-sm text-neutral-300 whitespace-pre-wrap leading-relaxed">{org.motivation}</p>
-                </div>
+                </motion.div>
             )}
 
             {/* ========== LEADER CARD ========== */}
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
+            <motion.div variants={fadeInUp} transition={springGentle} className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
                 <div className="px-5 py-3 border-b border-neutral-800 flex items-center gap-2">
                     <Crown className="w-4 h-4 text-amber-500" />
                     <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wider">Leader</h2>
@@ -322,20 +336,20 @@ export default function AdminOrgDetailPage() {
                         <div className="flex-1" />
                         <Link
                             href={`/admin/sellers/${leader?.id}`}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-neutral-800 text-neutral-300 rounded-lg hover:bg-neutral-700 hover:text-white transition-colors"
+                            className="btn-press inline-flex items-center gap-1 px-3 py-1.5 bg-neutral-800 text-neutral-300 rounded-lg hover:bg-neutral-700 hover:text-white transition-colors"
                         >
                             View full profile <ExternalLink className="w-3 h-3" />
                         </Link>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* ========== TABS: MEMBERS / MISSIONS ========== */}
-            <div>
+            <motion.div variants={fadeInUp} transition={springGentle}>
                 <div className="flex gap-2 mb-5">
                     <button
                         onClick={() => setActiveTab('members')}
-                        className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors flex items-center gap-2 ${
+                        className={`btn-press px-4 py-2 text-sm font-medium rounded-xl transition-colors flex items-center gap-2 ${
                             activeTab === 'members'
                                 ? 'bg-white text-black'
                                 : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'
@@ -345,7 +359,7 @@ export default function AdminOrgDetailPage() {
                     </button>
                     <button
                         onClick={() => setActiveTab('missions')}
-                        className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors flex items-center gap-2 ${
+                        className={`btn-press px-4 py-2 text-sm font-medium rounded-xl transition-colors flex items-center gap-2 ${
                             activeTab === 'missions'
                                 ? 'bg-white text-black'
                                 : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'
@@ -357,15 +371,17 @@ export default function AdminOrgDetailPage() {
 
                 {/* Members Tab */}
                 {activeTab === 'members' && (
-                    <div className="space-y-2">
+                    <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-2">
                         {(!org.Members || org.Members.length === 0) ? (
-                            <div className="text-center py-12 text-neutral-500">
-                                <Users className="w-8 h-8 mx-auto mb-2 text-neutral-600" />
+                            <motion.div variants={fadeInUp} transition={springGentle} className="text-center py-12 text-neutral-500">
+                                <motion.div variants={floatVariants} animate="float">
+                                    <Users className="w-8 h-8 mx-auto mb-2 text-neutral-600" />
+                                </motion.div>
                                 <p>No members yet</p>
-                            </div>
+                            </motion.div>
                         ) : (
                             org.Members.map((m: any) => (
-                                <div key={m.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center gap-4">
+                                <motion.div key={m.id} variants={staggerItem} transition={springGentle} className="row-hover bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center gap-4">
                                     {m.Seller?.Profile?.avatar_url ? (
                                         <img src={m.Seller.Profile.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
                                     ) : (
@@ -402,23 +418,25 @@ export default function AdminOrgDetailPage() {
                                             <ExternalLink className="w-3.5 h-3.5" />
                                         </Link>
                                     </div>
-                                </div>
+                                </motion.div>
                             ))
                         )}
-                    </div>
+                    </motion.div>
                 )}
 
                 {/* Missions Tab */}
                 {activeTab === 'missions' && (
-                    <div className="space-y-2">
+                    <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-2">
                         {(!org.Missions || org.Missions.length === 0) ? (
-                            <div className="text-center py-12 text-neutral-500">
-                                <Target className="w-8 h-8 mx-auto mb-2 text-neutral-600" />
+                            <motion.div variants={fadeInUp} transition={springGentle} className="text-center py-12 text-neutral-500">
+                                <motion.div variants={floatVariants} animate="float">
+                                    <Target className="w-8 h-8 mx-auto mb-2 text-neutral-600" />
+                                </motion.div>
                                 <p>No missions yet</p>
-                            </div>
+                            </motion.div>
                         ) : (
                             org.Missions.map((m: any) => (
-                                <div key={m.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+                                <motion.div key={m.id} variants={staggerItem} transition={springGentle} className="row-hover bg-neutral-900 border border-neutral-800 rounded-xl p-4">
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
                                             <p className="text-sm font-medium text-white">{m.Mission?.title || m.mission_id}</p>
@@ -447,12 +465,12 @@ export default function AdminOrgDetailPage() {
                                             <p className="text-violet-400">{m.member_reward || '—'}</p>
                                         </div>
                                     </div>
-                                </div>
+                                </motion.div>
                             ))
                         )}
-                    </div>
+                    </motion.div>
                 )}
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     )
 }

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Users, Briefcase, ArrowRight } from 'lucide-react'
 import { getPublicOrganization } from '@/app/actions/organization-actions'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 export default function PublicOrgPage() {
     const params = useParams()
@@ -27,7 +28,7 @@ export default function PublicOrgPage() {
     if (loading) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <TraaactionLoader size={24} className="text-gray-400" />
             </div>
         )
     }

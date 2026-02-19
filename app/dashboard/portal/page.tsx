@@ -9,6 +9,7 @@ import {
     Users, DollarSign, BarChart3, ChevronDown, Plus,
     Pencil, Trash2, X, Link2, RefreshCw, UserPlus, AlertTriangle
 } from 'lucide-react'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 import {
     getPortalSettings, togglePortal, updatePortalBranding,
     getPortalOverview, createPortalMission, updatePortalMission,
@@ -336,8 +337,16 @@ export default function PortalManagementPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <div className="w-full max-w-4xl mx-auto px-2 sm:px-6 py-8 space-y-6">
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="w-10 h-10 rounded-xl skeleton-shimmer" />
+                    <div className="space-y-2">
+                        <div className="h-6 w-48 rounded-lg skeleton-shimmer" />
+                        <div className="h-4 w-64 rounded-lg skeleton-shimmer" />
+                    </div>
+                </div>
+                <div className="h-64 w-full rounded-2xl skeleton-shimmer" />
+                <div className="h-48 w-full rounded-2xl skeleton-shimmer" />
             </div>
         )
     }
@@ -353,7 +362,12 @@ export default function PortalManagementPage() {
     return (
         <div className="w-full max-w-4xl mx-auto px-2 sm:px-6 py-8">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={springGentle}
+                className="flex items-center justify-between mb-8"
+            >
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
                         <Globe className="w-5 h-5 text-purple-600" />
@@ -363,10 +377,10 @@ export default function PortalManagementPage() {
                         <p className="text-sm text-gray-500">{t('subtitle')}</p>
                     </div>
                 </div>
-                <div className={`px-3 py-1 rounded-full text-xs font-medium ${settings.portal_enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                <div className={`px-3 py-1 rounded-full text-xs font-medium badge-pop ${settings.portal_enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
                     {settings.portal_enabled ? t('enabled') : t('disabled')}
                 </div>
-            </div>
+            </motion.div>
 
             {/* Overview Stats */}
             {stats && settings.portal_enabled && (
@@ -412,9 +426,14 @@ export default function PortalManagementPage() {
                             </button>
                         )}
                     </div>
-                    <div className="space-y-1.5">
+                    <motion.div
+                        variants={staggerContainer}
+                        initial="hidden"
+                        animate="visible"
+                        className="space-y-1.5"
+                    >
                         {(showAllSellers ? portalSellers : portalSellers.slice(0, 5)).map(seller => (
-                            <div key={seller.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-2.5">
+                            <motion.div key={seller.id} variants={staggerItem} transition={springGentle} className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-2.5 row-hover">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 text-xs font-bold flex-shrink-0">
                                         {(seller.name || seller.email).charAt(0).toUpperCase()}
@@ -436,9 +455,9 @@ export default function PortalManagementPage() {
                                         {new Date(seller.created_at).toLocaleDateString()}
                                     </span>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
                 </motion.div>
             )}
 
@@ -455,7 +474,7 @@ export default function PortalManagementPage() {
                             <h2 className="text-sm font-semibold text-gray-900">{t('enablePortal')}</h2>
                             <p className="text-xs text-gray-500 mt-0.5">{t('enablePortalDesc')}</p>
                         </div>
-                        <button onClick={handleToggle} className="focus:outline-none">
+                        <button onClick={handleToggle} className="focus:outline-none btn-press">
                             {settings.portal_enabled ? (
                                 <ToggleRight className="w-10 h-10 text-purple-600" />
                             ) : (
@@ -550,7 +569,7 @@ export default function PortalManagementPage() {
                                 <button
                                     onClick={handleSaveBranding}
                                     disabled={savingBranding}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors btn-press"
                                 >
                                     {savingBranding ? (
                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -582,7 +601,7 @@ export default function PortalManagementPage() {
                                     onClick={() => {
                                         setReferralEnabled(!referralEnabled)
                                     }}
-                                    className="flex-shrink-0"
+                                    className="flex-shrink-0 btn-press"
                                 >
                                     {referralEnabled ? (
                                         <ToggleRight className="w-8 h-8 text-emerald-500" />
@@ -720,11 +739,18 @@ export default function PortalManagementPage() {
                                     <p className="text-xs text-amber-700">{t('noMissionsWarning')}</p>
                                 </div>
                             ) : (
-                                <div className="space-y-2">
+                                <motion.div
+                                    variants={staggerContainer}
+                                    initial="hidden"
+                                    animate="visible"
+                                    className="space-y-2"
+                                >
                                     {settings.missions.map(mission => (
-                                        <div
+                                        <motion.div
                                             key={mission.id}
-                                            className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3"
+                                            variants={staggerItem}
+                                            transition={springGentle}
+                                            className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 row-hover"
                                         >
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2">
@@ -772,9 +798,9 @@ export default function PortalManagementPage() {
                                                     )}
                                                 </button>
                                             </div>
-                                        </div>
+                                        </motion.div>
                                     ))}
-                                </div>
+                                </motion.div>
                             )}
 
                             {/* Mission Form */}
@@ -1025,7 +1051,7 @@ export default function PortalManagementPage() {
                                 <button
                                     onClick={handleSaveSubdomain}
                                     disabled={savingSubdomain}
-                                    className="flex items-center gap-1.5 px-4 py-3 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                                    className="flex items-center gap-1.5 px-4 py-3 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors btn-press"
                                 >
                                     {savingSubdomain ? (
                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1053,7 +1079,7 @@ export default function PortalManagementPage() {
                                 <div className="flex items-center gap-2 mt-3 bg-gray-50 rounded-xl px-4 py-2.5">
                                     <Globe className="w-4 h-4 text-purple-500 flex-shrink-0" />
                                     <code className="text-sm text-gray-700 truncate flex-1">{subdomainUrl}</code>
-                                    <button onClick={() => handleCopy(subdomainUrl, 'url')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
+                                    <button onClick={() => handleCopy(subdomainUrl, 'url')} className={`flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors btn-press ${copiedUrl ? 'copy-success' : ''}`}>
                                         {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
                                         {copiedUrl ? t('copied') : t('copy')}
                                     </button>
@@ -1089,7 +1115,7 @@ export default function PortalManagementPage() {
                                         </pre>
                                         <button
                                             onClick={() => handleCopy(iframeSnippet, 'iframe')}
-                                            className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-700 text-gray-300 rounded-lg text-xs hover:bg-gray-600 transition-colors"
+                                            className={`absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-700 text-gray-300 rounded-lg text-xs hover:bg-gray-600 transition-colors btn-press ${copiedIframe ? 'copy-success' : ''}`}
                                         >
                                             {copiedIframe ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Code className="w-3.5 h-3.5" />}
                                             {copiedIframe ? t('copied') : t('copy')}

@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl'
 import { getDomains, addDomain, verifyDomain, removeDomain, updateDomain } from '@/app/actions/domains'
 import { CNAME_TARGET } from '@/lib/config/constants'
 import confetti from 'canvas-confetti'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 
 // =============================================
@@ -474,7 +475,7 @@ export function DomainsTab() {
             {/* Content */}
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-gray-500">
-                    <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                    <TraaactionLoader size={24} className="text-gray-400" />
                     <p className="text-sm">{t('loading')}</p>
                 </div>
             ) : domains.length === 0 ? (

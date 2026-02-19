@@ -18,6 +18,7 @@ import {
 import { formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { useTranslations } from 'next-intl'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 interface ProgramRequest {
     id: string
@@ -157,7 +158,7 @@ export default function SellerRequestsPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-24">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                <TraaactionLoader size={32} className="text-gray-400" />
             </div>
         )
     }

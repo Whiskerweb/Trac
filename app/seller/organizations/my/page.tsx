@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Crown, Users, ChevronRight, FolderOpen } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 import { getMyOrganizations } from '@/app/actions/organization-actions'
 
 function OrgStatusBadge({ status }: { status: string }) {
@@ -14,7 +15,7 @@ function OrgStatusBadge({ status }: { status: string }) {
         SUSPENDED: 'bg-red-50 text-red-700 border-red-200',
     }
     return (
-        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${styles[status] || 'bg-neutral-100 text-neutral-500 border-neutral-200'}`}>
+        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border badge-pop ${styles[status] || 'bg-neutral-100 text-neutral-500 border-neutral-200'}`}>
             {status}
         </span>
     )
@@ -26,7 +27,7 @@ function OrgCard({ children, className = '', delay = 0 }: { children: React.Reac
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay }}
-            className={`bg-white rounded-2xl border border-neutral-200/60 shadow-sm ${className}`}
+            className={`bg-white rounded-2xl border border-neutral-200/60 shadow-sm card-hover ${className}`}
         >
             {children}
         </motion.div>
@@ -54,8 +55,13 @@ export default function MyOrganizationsPage() {
     if (loading) {
         return (
             <div className="bg-[#FAFAFA] min-h-screen">
-                <div className="flex items-center justify-center min-h-[400px]">
-                    <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+                    <div className="skeleton-shimmer h-7 w-48 rounded-lg mb-2" />
+                    <div className="skeleton-shimmer h-4 w-64 rounded mb-8" />
+                    <div className="space-y-4">
+                        <div className="skeleton-shimmer h-20 rounded-2xl" />
+                        <div className="skeleton-shimmer h-20 rounded-2xl" />
+                    </div>
                 </div>
             </div>
         )
@@ -84,7 +90,7 @@ export default function MyOrganizationsPage() {
                         </div>
                         <p className="text-[15px] font-medium text-neutral-900 mb-1">No organizations yet</p>
                         <p className="text-[14px] text-neutral-500 mb-6">Browse organizations to find a team and start earning together.</p>
-                        <Link href="/seller/organizations" className="h-11 px-5 inline-flex items-center bg-neutral-900 text-white rounded-xl text-[14px] font-medium hover:bg-neutral-800 transition-colors">
+                        <Link href="/seller/organizations" className="h-11 px-5 inline-flex items-center bg-neutral-900 text-white rounded-xl text-[14px] font-medium hover:bg-neutral-800 transition-colors btn-press">
                             Browse organizations
                         </Link>
                     </OrgCard>

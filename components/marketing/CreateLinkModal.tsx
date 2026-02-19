@@ -17,6 +17,7 @@ import { CampaignSelect } from '@/components/marketing/CampaignSelect'
 import { FolderSelect } from '@/components/marketing/FolderSelect'
 import QRCodeWithLogo from '@/components/QRCodeWithLogo'
 import { nanoid } from 'nanoid'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 interface TagOption {
     id: string
@@ -621,7 +622,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                                         ) : (
                                             <label className="flex flex-col items-center justify-center w-full h-[140px] border-b border-dashed border-gray-200 cursor-pointer hover:bg-gray-50/50 transition-all">
                                                 {uploadingOg ? (
-                                                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                                                    <TraaactionLoader size={20} className="text-gray-400" />
                                                 ) : (
                                                     <>
                                                         <Upload className="w-5 h-5 text-gray-300 mb-1" />

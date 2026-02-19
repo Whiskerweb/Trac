@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, DollarSign } from 'lucide-react'
 import { usePortalData } from '../layout'
 import { getPortalCommissions } from '@/app/actions/portal'
 import PortalCommissionTable from '@/components/portal/PortalCommissionTable'
+import { staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 
 interface Commission {
     id: string
@@ -69,11 +70,16 @@ export default function PortalCommissionsPage() {
     const totalAll = statusTotals.PENDING + statusTotals.PROCEED + statusTotals.COMPLETE
 
     return (
-        <div className="space-y-5">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="space-y-5"
+        >
             {/* Status totals */}
             <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
+                variants={staggerItem}
+                transition={springGentle}
                 className="grid grid-cols-3 gap-3"
             >
                 {[
@@ -81,7 +87,7 @@ export default function PortalCommissionsPage() {
                     { label: t('available'), amount: statusTotals.PROCEED, color: primaryColor },
                     { label: t('paid'), amount: statusTotals.COMPLETE, color: '#10b981' },
                 ].map((s) => (
-                    <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
+                    <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-4 text-center card-hover">
                         <div className="w-2 h-2 rounded-full mx-auto mb-2" style={{ backgroundColor: s.color }} />
                         <p className="text-xl font-bold text-gray-900">{(s.amount / 100).toFixed(0)}&euro;</p>
                         <p className="text-[11px] text-gray-500 mt-0.5">{s.label}</p>
@@ -91,9 +97,8 @@ export default function PortalCommissionsPage() {
 
             {/* Filter chips */}
             <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
+                variants={staggerItem}
+                transition={springGentle}
                 className="flex gap-2"
             >
                 {STATUS_FILTERS.map((f) => {
@@ -102,7 +107,7 @@ export default function PortalCommissionsPage() {
                         <button
                             key={f}
                             onClick={() => handleFilterChange(f)}
-                            className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                            className={`px-4 py-2 rounded-xl text-xs font-medium transition-all btn-press ${
                                 active
                                     ? 'text-white shadow-sm'
                                     : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -117,18 +122,21 @@ export default function PortalCommissionsPage() {
 
             {/* Commission table */}
             <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.08 }}
-                className="bg-white rounded-2xl border border-gray-100 p-5"
+                variants={staggerItem}
+                transition={springGentle}
+                className="bg-white rounded-2xl border border-gray-100 card-hover p-5"
             >
                 {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+                    <div className="space-y-3 py-4">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="skeleton-shimmer h-10 rounded-lg" />
+                        ))}
                     </div>
                 ) : commissions.length === 0 ? (
                     <div className="text-center py-12">
-                        <DollarSign className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+                        <motion.div variants={floatVariants} animate="float">
+                            <DollarSign className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+                        </motion.div>
                         <p className="text-sm text-gray-500">{t('empty')}</p>
                     </div>
                 ) : (
@@ -141,7 +149,7 @@ export default function PortalCommissionsPage() {
                         <button
                             onClick={() => loadCommissions(page - 1, statusFilter)}
                             disabled={page <= 1}
-                            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors"
+                            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors btn-press"
                         >
                             <ChevronLeft className="w-4 h-4" />
                         </button>
@@ -149,13 +157,13 @@ export default function PortalCommissionsPage() {
                         <button
                             onClick={() => loadCommissions(page + 1, statusFilter)}
                             disabled={page >= totalPages}
-                            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors"
+                            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors btn-press"
                         >
                             <ChevronRight className="w-4 h-4" />
                         </button>
                     </div>
                 )}
             </motion.div>
-        </div>
+        </motion.div>
     )
 }

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 import Link from 'next/link'
 import {
     ArrowLeft,
@@ -129,8 +130,16 @@ export default function AdminUserDetailPage() {
 
     if (loading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-500" />
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+                <div className="space-y-4 w-full max-w-3xl px-8">
+                    <div className="skeleton-shimmer h-24 rounded-xl" />
+                    <div className="grid grid-cols-3 gap-4">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="skeleton-shimmer h-20 rounded-xl" />
+                        ))}
+                    </div>
+                    <div className="skeleton-shimmer h-48 rounded-xl" />
+                </div>
             </div>
         )
     }
@@ -147,7 +156,7 @@ export default function AdminUserDetailPage() {
     const displayName = profile.name || profile.email || profile.userId.slice(0, 8)
 
     return (
-        <div className="p-8">
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="p-8">
             {/* Back */}
             <Link
                 href="/admin/users"
@@ -159,8 +168,8 @@ export default function AdminUserDetailPage() {
 
             {/* Header */}
             <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+                variants={fadeInUp}
+                transition={springGentle}
                 className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8"
             >
                 <div className="flex items-center gap-4">
@@ -183,7 +192,7 @@ export default function AdminUserDetailPage() {
                         )}
                         <div className="flex items-center gap-2 mt-2">
                             <RoleBadge role={profile.role} />
-                            <span className="px-2 py-0.5 text-xs bg-neutral-800 text-neutral-400 rounded-full">
+                            <span className="badge-pop px-2 py-0.5 text-xs bg-neutral-800 text-neutral-400 rounded-full">
                                 {profile.provider}
                             </span>
                         </div>
@@ -193,9 +202,8 @@ export default function AdminUserDetailPage() {
 
             {/* Auth info */}
             <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
+                variants={fadeInUp}
+                transition={springGentle}
                 className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
             >
                 <InfoCard icon={Calendar} label="Inscription" value={formatDate(profile.createdAt)} />
@@ -211,9 +219,8 @@ export default function AdminUserDetailPage() {
             {/* Seller section */}
             {profile.seller && (
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
+                    variants={fadeInUp}
+                    transition={springGentle}
                     className="mb-8"
                 >
                     <h2 className="text-sm font-medium text-neutral-400 mb-4 flex items-center gap-2">
@@ -224,7 +231,7 @@ export default function AdminUserDetailPage() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                             <div>
                                 <p className="text-xs text-neutral-500 mb-1">Status</p>
-                                <span className={`px-2 py-1 text-xs rounded-full ${
+                                <span className={`badge-pop px-2 py-1 text-xs rounded-full ${
                                     profile.seller.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400' :
                                     profile.seller.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' :
                                     'bg-red-500/20 text-red-400'
@@ -331,18 +338,17 @@ export default function AdminUserDetailPage() {
             {/* Startup section */}
             {profile.workspaces.length > 0 && (
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 }}
+                    variants={fadeInUp}
+                    transition={springGentle}
                     className="mb-8"
                 >
                     <h2 className="text-sm font-medium text-neutral-400 mb-4 flex items-center gap-2">
                         <Building2 className="w-4 h-4" />
                         Workspace{profile.workspaces.length > 1 ? 's' : ''} Startup
                     </h2>
-                    <div className="space-y-4">
+                    <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4">
                         {profile.workspaces.map(ws => (
-                            <div key={ws.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
+                            <motion.div key={ws.id} variants={staggerItem} transition={springGentle} className="row-hover bg-neutral-900 border border-neutral-800 rounded-xl p-6">
                                 <div className="flex items-start gap-4 mb-4">
                                     {ws.profile?.logoUrl ? (
                                         <img src={ws.profile.logoUrl} alt="" className="w-12 h-12 rounded-xl object-cover" />
@@ -355,7 +361,7 @@ export default function AdminUserDetailPage() {
                                         <h3 className="text-lg font-medium text-white">{ws.name}</h3>
                                         <p className="text-xs text-neutral-500">/{ws.slug}</p>
                                     </div>
-                                    <span className="px-2 py-0.5 text-xs bg-violet-500/20 text-violet-400 rounded-full">
+                                    <span className="badge-pop px-2 py-0.5 text-xs bg-violet-500/20 text-violet-400 rounded-full">
                                         {ws.role}
                                     </span>
                                 </div>
@@ -404,28 +410,29 @@ export default function AdminUserDetailPage() {
                                         </span>
                                     )}
                                 </div>
-                            </div>
+                            </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
                 </motion.div>
             )}
 
             {/* Missions */}
             {profile.missions.length > 0 && (
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
+                    variants={fadeInUp}
+                    transition={springGentle}
                 >
                     <h2 className="text-sm font-medium text-neutral-400 mb-4 flex items-center gap-2">
                         <Target className="w-4 h-4" />
                         Missions ({profile.missions.length})
                     </h2>
-                    <div className="space-y-2">
+                    <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-2">
                         {profile.missions.map(m => (
-                            <div
+                            <motion.div
                                 key={m.id}
-                                className="flex items-center justify-between p-4 bg-neutral-900 border border-neutral-800 rounded-xl"
+                                variants={staggerItem}
+                                transition={springGentle}
+                                className="row-hover flex items-center justify-between p-4 bg-neutral-900 border border-neutral-800 rounded-xl"
                             >
                                 <div className="flex items-center gap-3">
                                     <div className={`w-2 h-2 rounded-full ${
@@ -440,33 +447,34 @@ export default function AdminUserDetailPage() {
                                         </p>
                                     </div>
                                 </div>
-                                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                <span className={`badge-pop px-2 py-0.5 text-xs rounded-full ${
                                     m.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' :
                                     m.status === 'DRAFT' ? 'bg-amber-500/20 text-amber-400' :
                                     'bg-neutral-700 text-neutral-400'
                                 }`}>
                                     {m.status}
                                 </span>
-                            </div>
+                            </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
                 </motion.div>
             )}
 
             {/* No role */}
             {profile.role === 'NO_ROLE' && (
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.1 }}
+                    variants={fadeInUp}
+                    transition={springGentle}
                     className="text-center py-12 text-neutral-500"
                 >
-                    <Users className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                    <motion.div variants={floatVariants} animate="float">
+                        <Users className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                    </motion.div>
                     <p>Cet utilisateur n'a pas encore de role (ni seller, ni startup)</p>
                     <p className="text-xs text-neutral-600 mt-1">Compte cree mais onboarding non termine</p>
                 </motion.div>
             )}
-        </div>
+        </motion.div>
     )
 }
 
@@ -474,25 +482,25 @@ function RoleBadge({ role }: { role: string }) {
     switch (role) {
         case 'SELLER':
             return (
-                <span className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-full flex items-center gap-1">
+                <span className="badge-pop px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-full flex items-center gap-1">
                     <UserCheck className="w-3 h-3" /> Seller
                 </span>
             )
         case 'STARTUP':
             return (
-                <span className="px-2 py-0.5 text-xs bg-violet-500/20 text-violet-400 rounded-full flex items-center gap-1">
+                <span className="badge-pop px-2 py-0.5 text-xs bg-violet-500/20 text-violet-400 rounded-full flex items-center gap-1">
                     <Building2 className="w-3 h-3" /> Startup
                 </span>
             )
         case 'BOTH':
             return (
-                <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded-full flex items-center gap-1">
+                <span className="badge-pop px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded-full flex items-center gap-1">
                     <Layers className="w-3 h-3" /> Both
                 </span>
             )
         default:
             return (
-                <span className="px-2 py-0.5 text-xs bg-neutral-700 text-neutral-400 rounded-full">No role</span>
+                <span className="badge-pop px-2 py-0.5 text-xs bg-neutral-700 text-neutral-400 rounded-full">No role</span>
             )
     }
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Search, Users, Building2, ChevronRight } from 'lucide-react'
 import { getActiveOrganizationsForStartup } from '@/app/actions/organization-actions'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 function StatusBadge({ status }: { status: string }) {
     const styles: Record<string, string> = {
@@ -43,7 +44,7 @@ export function OrganizationsTab() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <TraaactionLoader size={24} className="text-gray-400" />
             </div>
         )
     }

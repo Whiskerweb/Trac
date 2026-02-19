@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 import { Loader2, Building2, Users, Check, Ban, ChevronRight, RotateCcw, Globe, Lock, KeyRound, MessageSquare } from 'lucide-react'
 import { getAllOrgs, approveOrg, suspendOrg, reactivateOrg, rejectOrg } from '@/app/actions/admin-org-actions'
 
@@ -12,7 +14,7 @@ function StatusBadge({ status }: { status: string }) {
         SUSPENDED: 'bg-red-50 text-red-700 border-red-200',
     }
     return (
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status] || 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+        <span className={`badge-pop px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status] || 'bg-gray-100 text-gray-500 border-gray-200'}`}>
             {status}
         </span>
     )
@@ -57,40 +59,44 @@ export default function AdminOrganizationsPage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div>
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-6">
+            <motion.div variants={fadeInUp} transition={springGentle}>
                 <h1 className="text-2xl font-bold text-white">Organizations</h1>
                 <p className="text-gray-400 mt-1">Review and manage seller organizations</p>
-            </div>
+            </motion.div>
 
             {/* Filter tabs */}
-            <div className="flex gap-2">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex gap-2">
                 {(['all', 'PENDING', 'ACTIVE', 'SUSPENDED'] as const).map(f => (
                     <button
                         key={f}
                         onClick={() => setFilter(f)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        className={`btn-press px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                             filter === f ? 'bg-white text-black' : 'bg-white/10 text-gray-400 hover:text-white'
                         }`}
                     >
                         {f === 'all' ? 'All' : f}
                     </button>
                 ))}
-            </div>
+            </motion.div>
 
             {loading ? (
-                <div className="flex items-center justify-center min-h-[300px]">
-                    <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
+                <div className="space-y-3">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="skeleton-shimmer h-20 rounded-xl" />
+                    ))}
                 </div>
             ) : organizations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
-                    <Building2 className="w-10 h-10 text-gray-600 mb-3" />
+                <motion.div variants={fadeInUp} transition={springGentle} className="flex flex-col items-center justify-center min-h-[300px] text-center">
+                    <motion.div variants={floatVariants} animate="float">
+                        <Building2 className="w-10 h-10 text-gray-600 mb-3" />
+                    </motion.div>
                     <p className="text-gray-400">No organizations found</p>
-                </div>
+                </motion.div>
             ) : (
-                <div className="space-y-3">
+                <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
                     {organizations.map(org => (
-                        <div key={org.id} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                        <motion.div key={org.id} variants={staggerItem} transition={springGentle} className="row-hover bg-white/5 border border-white/10 rounded-xl p-4">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
@@ -100,7 +106,7 @@ export default function AdminOrganizationsPage() {
                                         <div className="flex items-center gap-2">
                                             <p className="font-medium text-white">{org.name}</p>
                                             {org.visibility && (
-                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                                <span className={`badge-pop px-1.5 py-0.5 rounded text-[10px] font-medium ${
                                                     org.visibility === 'PUBLIC' ? 'bg-green-500/20 text-green-400' :
                                                     org.visibility === 'PRIVATE' ? 'bg-amber-500/20 text-amber-400' :
                                                     'bg-purple-500/20 text-purple-400'
@@ -125,14 +131,14 @@ export default function AdminOrganizationsPage() {
                                         <>
                                             <button
                                                 onClick={() => handleApprove(org.id)}
-                                                className="p-1.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30"
+                                                className="btn-press p-1.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30"
                                                 title="Approve"
                                             >
                                                 <Check className="w-4 h-4" />
                                             </button>
                                             <button
                                                 onClick={() => handleReject(org.id)}
-                                                className="p-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30"
+                                                className="btn-press p-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30"
                                                 title="Reject"
                                             >
                                                 <Ban className="w-4 h-4" />
@@ -142,7 +148,7 @@ export default function AdminOrganizationsPage() {
                                     {org.status === 'ACTIVE' && (
                                         <button
                                             onClick={() => handleSuspend(org.id)}
-                                            className="p-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30"
+                                            className="btn-press p-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30"
                                             title="Suspend"
                                         >
                                             <Ban className="w-4 h-4" />
@@ -151,7 +157,7 @@ export default function AdminOrganizationsPage() {
                                     {org.status === 'SUSPENDED' && (
                                         <button
                                             onClick={() => handleReactivate(org.id)}
-                                            className="p-1.5 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30"
+                                            className="btn-press p-1.5 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30"
                                             title="Reactivate"
                                         >
                                             <RotateCcw className="w-4 h-4" />
@@ -160,7 +166,7 @@ export default function AdminOrganizationsPage() {
 
                                     <button
                                         onClick={() => router.push(`/admin/organizations/${org.id}`)}
-                                        className="p-1.5 text-gray-400 hover:text-white"
+                                        className="btn-press p-1.5 text-gray-400 hover:text-white"
                                     >
                                         <ChevronRight className="w-4 h-4" />
                                     </button>
@@ -181,10 +187,10 @@ export default function AdminOrganizationsPage() {
                                     </div>
                                 </div>
                             )}
-                        </div>
+                        </motion.div>
                     ))}
-                </div>
+                </motion.div>
             )}
-        </div>
+        </motion.div>
     )
 }

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronRight, Users, Loader2 } from 'lucide-react'
 import { usePortalData } from '../layout'
 import { getPortalReferrals, getPortalSubTree } from '@/app/actions/portal'
+import { staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 
 interface TreeNode {
     id: string
@@ -88,7 +89,7 @@ export default function PortalNetworkPage() {
         return (
             <div key={node.id}>
                 <div
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl row-hover transition-colors cursor-pointer"
                     style={{ paddingLeft: `${12 + depth * 24}px` }}
                     onClick={() => canExpand && toggleExpand(node.id, generation)}
                 >
@@ -112,7 +113,7 @@ export default function PortalNetworkPage() {
                             {node.subReferralCount > 0 && ` · ${node.subReferralCount} referrals`}
                         </p>
                     </div>
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full badge-pop ${
                         node.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'
                     }`}>
                         {node.status}
@@ -145,25 +146,33 @@ export default function PortalNetworkPage() {
     }
 
     return (
-        <div className="space-y-5">
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="space-y-5"
+        >
+            <motion.div variants={staggerItem} transition={springGentle}>
                 <h1 className="text-lg font-semibold text-gray-900 mb-1">{t('title')}</h1>
                 <p className="text-xs text-gray-500 mb-4">{rateLabel}</p>
             </motion.div>
 
             <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
-                className="bg-white rounded-2xl border border-gray-100 p-4"
+                variants={staggerItem}
+                transition={springGentle}
+                className="bg-white rounded-2xl border border-gray-100 card-hover p-4"
             >
                 {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <div className="space-y-3 py-4">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="skeleton-shimmer h-12 rounded-xl" />
+                        ))}
                     </div>
                 ) : gen1.length === 0 ? (
                     <div className="text-center py-12">
-                        <Users className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+                        <motion.div variants={floatVariants} animate="float">
+                            <Users className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+                        </motion.div>
                         <p className="text-sm text-gray-500">{t('empty')}</p>
                     </div>
                 ) : (
@@ -172,6 +181,6 @@ export default function PortalNetworkPage() {
                     </div>
                 )}
             </motion.div>
-        </div>
+        </motion.div>
     )
 }

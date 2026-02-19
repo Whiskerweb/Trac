@@ -21,7 +21,7 @@ import { GlobeVisualization } from '@/components/dashboard/GlobeVisualization'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { StartupOnboardingChecklist } from '@/components/dashboard/StartupOnboardingChecklist'
 import { subDays, format } from 'date-fns'
-import { dropdownVariants, springSnappy } from '@/lib/animations'
+import { dropdownVariants, springSnappy, fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 
 // =============================================
 // TYPES & FETCHER
@@ -236,7 +236,7 @@ function FilterBadge({
     isText: string
 }) {
     return (
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm animate-in fade-in slide-in-from-left-2 duration-200">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm badge-pop">
             {filter.icon}
             <span className="text-gray-500 capitalize">{filter.type}</span>
             <span className="text-gray-400">{isText}</span>
@@ -324,7 +324,7 @@ function AnalyticsCard({
     tabGroupId?: string
 }) {
     return (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden card-hover">
             {/* Header with tabs */}
             <div className="px-4 py-3 border-b border-gray-100">
                 <div className="flex items-center justify-between">
@@ -334,7 +334,7 @@ function AnalyticsCard({
                                 <button
                                     key={tab.key}
                                     onClick={() => onTabChange?.(tab.key)}
-                                    className={`relative text-sm font-medium transition-colors pb-1 ${activeTab === tab.key
+                                    className={`relative text-sm font-medium transition-colors pb-1 btn-press ${activeTab === tab.key
                                         ? 'text-gray-900'
                                         : 'text-gray-400 hover:text-gray-600'
                                         }`}
@@ -841,7 +841,7 @@ export default function DashboardPage() {
                         trigger={
                             <button
                                 onClick={() => setDateRangeOpen(!dateRangeOpen)}
-                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-300 transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-300 transition-colors btn-press"
                             >
                                 <Calendar className="w-4 h-4 text-gray-500" />
                                 {selectedRange.label}
@@ -867,7 +867,7 @@ export default function DashboardPage() {
                 <button
                     onClick={() => mutate()}
                     disabled={isValidating}
-                    className={`p-2 bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors ${isValidating ? 'animate-spin' : ''}`}
+                    className={`p-2 bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors btn-press ${isValidating ? 'animate-spin' : ''}`}
                 >
                     <RefreshCw className="w-4 h-4" />
                 </button>
@@ -924,8 +924,14 @@ export default function DashboardPage() {
             />
 
             {/* Analytics Cards Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+            >
                 {/* Locations Card */}
+                <motion.div variants={staggerItem} transition={springGentle}>
                 <AnalyticsCard
                     title={t('locations.title')}
                     tabs={[
@@ -985,8 +991,10 @@ export default function DashboardPage() {
                         />
                     ))}
                 </AnalyticsCard>
+                </motion.div>
 
                 {/* Devices Card */}
+                <motion.div variants={staggerItem} transition={springGentle}>
                 <AnalyticsCard
                     title={t('devices.title')}
                     tabs={[
@@ -1037,7 +1045,8 @@ export default function DashboardPage() {
                         />
                     ))}
                 </AnalyticsCard>
-            </div>
+                </motion.div>
+            </motion.div>
 
             {/* Geographic Distribution & Live Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

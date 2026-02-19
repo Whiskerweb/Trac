@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Wallet, X, CreditCard, Building2, Gift, Check, Loader2, ExternalLink } from 'lucide-react'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 interface WalletData {
     payoutMethod: string
@@ -124,7 +125,7 @@ export function WalletButton() {
 
                             {loading ? (
                                 <div className="p-12 flex items-center justify-center">
-                                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                    <TraaactionLoader size={24} className="text-gray-400" />
                                 </div>
                             ) : (
                                 <>

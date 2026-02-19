@@ -40,7 +40,7 @@ export default function PortalKPIRow({ pending, available, paid, primaryColor }:
     return (
         <div className="grid grid-cols-3 gap-3 sm:gap-4">
             {cards.map((card) => (
-                <div key={card.label} className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5">
+                <div key={card.label} className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 card-hover">
                     <div className="flex items-center gap-2 mb-2">
                         <card.icon className="w-4 h-4" style={{ color: card.iconColor }} />
                         <span className="text-[11px] sm:text-xs font-medium text-gray-500">{card.label}</span>

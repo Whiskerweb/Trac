@@ -9,12 +9,9 @@ import {
     CreditCard,
     Search,
     ChevronRight,
-    Loader2,
-    AlertTriangle,
-    CheckCircle2,
-    Clock,
     Zap
 } from 'lucide-react'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 
 interface Seller {
     id: string
@@ -84,25 +81,60 @@ export default function AdminSellersPage() {
 
     if (loading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-500" />
+            <div className="p-8">
+                <div className="mb-8">
+                    <div className="h-7 w-24 bg-neutral-800 rounded skeleton-shimmer mb-2" />
+                    <div className="h-4 w-64 bg-neutral-800/50 rounded skeleton-shimmer" />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 skeleton-shimmer">
+                            <div className="h-8 w-8 bg-neutral-800 rounded-lg mb-3" />
+                            <div className="h-6 w-16 bg-neutral-800 rounded mb-1" />
+                            <div className="h-3 w-24 bg-neutral-800/50 rounded" />
+                        </div>
+                    ))}
+                </div>
+                <div className="space-y-2">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 skeleton-shimmer">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-neutral-800 rounded-full" />
+                                <div className="flex-1">
+                                    <div className="h-4 w-40 bg-neutral-800 rounded mb-2" />
+                                    <div className="h-3 w-56 bg-neutral-800/50 rounded" />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         )
     }
 
     return (
-        <div className="p-8">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="p-8"
+        >
             {/* Header */}
-            <div className="mb-8">
+            <motion.div variants={fadeInUp} transition={springGentle} className="mb-8">
                 <h1 className="text-2xl font-light text-white mb-2">Sellers</h1>
                 <p className="text-sm text-neutral-500">
                     Vue d'ensemble de tous les sellers de la plateforme
                 </p>
-            </div>
+            </motion.div>
 
             {/* Summary Stats */}
             {summary && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <motion.div
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
+                    className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
+                >
                     <StatCard
                         label="Total Sellers"
                         value={summary.totalSellers}
@@ -127,11 +159,11 @@ export default function AdminSellersPage() {
                         icon={CreditCard}
                         color="blue"
                     />
-                </div>
+                </motion.div>
             )}
 
             {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex flex-col md:flex-row gap-4 mb-6">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                     <input
@@ -147,7 +179,7 @@ export default function AdminSellersPage() {
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
-                            className={`px-4 py-2.5 text-sm rounded-lg transition-colors ${
+                            className={`px-4 py-2.5 text-sm rounded-lg transition-colors btn-press ${
                                 filter === f
                                     ? 'bg-violet-500 text-white'
                                     : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
@@ -157,26 +189,32 @@ export default function AdminSellersPage() {
                         </button>
                     ))}
                 </div>
-            </div>
+            </motion.div>
 
             {/* Sellers List */}
-            <div className="space-y-2">
+            <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+                className="space-y-2"
+            >
                 {filteredSellers.length === 0 ? (
                     <div className="text-center py-12 text-neutral-500">
-                        <Users className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                        <motion.div variants={floatVariants} animate="float">
+                            <Users className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                        </motion.div>
                         <p>No seller found</p>
                     </div>
                 ) : (
-                    filteredSellers.map((seller, index) => (
+                    filteredSellers.map((seller) => (
                         <motion.div
                             key={seller.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.02 }}
+                            variants={staggerItem}
+                            transition={springGentle}
                         >
                             <Link
                                 href={`/admin/sellers/${seller.id}`}
-                                className="flex items-center justify-between p-4 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors group"
+                                className="flex items-center justify-between p-4 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors group row-hover"
                             >
                                 <div className="flex items-center gap-4">
                                     {/* Avatar */}
@@ -193,17 +231,17 @@ export default function AdminSellersPage() {
                                                 {seller.name || seller.email}
                                             </span>
                                             {seller.payoutMethod === 'STRIPE_CONNECT' ? (
-                                                <span className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-full flex items-center gap-1">
+                                                <span className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-full flex items-center gap-1 badge-pop">
                                                     <Zap className="w-3 h-3" />
                                                     Stripe
                                                 </span>
                                             ) : (
-                                                <span className="px-2 py-0.5 text-xs bg-violet-500/20 text-violet-400 rounded-full">
+                                                <span className="px-2 py-0.5 text-xs bg-violet-500/20 text-violet-400 rounded-full badge-pop">
                                                     Wallet
                                                 </span>
                                             )}
                                             {seller.status === 'PENDING' && (
-                                                <span className="px-2 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded-full">
+                                                <span className="px-2 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded-full badge-pop">
                                                     Pending
                                                 </span>
                                             )}
@@ -237,8 +275,8 @@ export default function AdminSellersPage() {
                         </motion.div>
                     ))
                 )}
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     )
 }
 
@@ -263,7 +301,11 @@ function StatCard({
     }
 
     return (
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+        <motion.div
+            variants={staggerItem}
+            transition={springGentle}
+            className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 card-hover"
+        >
             <div className="flex items-center gap-2 mb-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colors[color]}`}>
                     <Icon className="w-4 h-4" />
@@ -272,6 +314,6 @@ function StatCard({
             </div>
             <p className="text-2xl font-light text-white">{value}</p>
             {subValue && <p className="text-xs text-neutral-500 mt-1">{subValue}</p>}
-        </div>
+        </motion.div>
     )
 }

@@ -5,8 +5,10 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Users, Briefcase, DollarSign, TrendingUp, UserPlus, ClipboardList, Crown, ChevronRight } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 import { getOrganizationStats } from '@/app/actions/organization-actions'
 import { useOrg } from './layout'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 function OrgCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
@@ -255,7 +257,7 @@ export default function ManageOrgOverview() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                <TraaactionLoader size={20} className="text-gray-400" />
             </div>
         )
     }

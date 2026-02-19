@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 import Link from 'next/link'
 import {
     CreditCard,
@@ -110,25 +111,35 @@ export default function AdminPayoutsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-500" />
+            <div className="p-8 space-y-6">
+                <div className="skeleton-shimmer h-12 w-48 rounded-xl" />
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="skeleton-shimmer h-24 rounded-xl" />
+                    ))}
+                </div>
+                <div className="space-y-2">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="skeleton-shimmer h-16 rounded-xl" />
+                    ))}
+                </div>
             </div>
         )
     }
 
     return (
-        <div className="p-8">
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="p-8">
             {/* Header */}
-            <div className="mb-8">
+            <motion.div variants={fadeInUp} transition={springGentle} className="mb-8">
                 <h1 className="text-2xl font-light text-white mb-2">Payouts</h1>
                 <p className="text-sm text-neutral-500">
                     Vue d'ensemble des commissions et paiements
                 </p>
-            </div>
+            </motion.div>
 
             {/* Summary Stats */}
             {summary && (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
                         <div className="flex items-center gap-2 mb-2">
                             <Clock className="w-4 h-4 text-amber-400" />
@@ -173,14 +184,14 @@ export default function AdminPayoutsPage() {
                         <p className="text-2xl font-light text-white">{summary.totalCommissions}</p>
                         <p className="text-xs text-neutral-500">toutes confondues</p>
                     </div>
-                </div>
+                </motion.div>
             )}
 
             {/* Tabs */}
-            <div className="flex gap-2 mb-6">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex gap-2 mb-6">
                 <button
                     onClick={() => setTab('commissions')}
-                    className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                    className={`btn-press px-4 py-2 text-sm rounded-lg transition-colors ${
                         tab === 'commissions'
                             ? 'bg-violet-500 text-white'
                             : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
@@ -190,7 +201,7 @@ export default function AdminPayoutsPage() {
                 </button>
                 <button
                     onClick={() => setTab('startup-payments')}
-                    className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                    className={`btn-press px-4 py-2 text-sm rounded-lg transition-colors ${
                         tab === 'startup-payments'
                             ? 'bg-violet-500 text-white'
                             : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
@@ -198,18 +209,18 @@ export default function AdminPayoutsPage() {
                 >
                     Paiements Startup
                 </button>
-            </div>
+            </motion.div>
 
             {/* Commissions Tab */}
             {tab === 'commissions' && (
                 <>
                     {/* Status Filter */}
-                    <div className="flex gap-2 mb-4">
+                    <motion.div variants={fadeInUp} transition={springGentle} className="flex gap-2 mb-4">
                         {(['all', 'PENDING', 'PROCEED', 'COMPLETE'] as const).map(s => (
                             <button
                                 key={s}
                                 onClick={() => setStatusFilter(s)}
-                                className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                                className={`btn-press px-3 py-1.5 text-xs rounded-lg transition-colors ${
                                     statusFilter === s
                                         ? 'bg-neutral-700 text-white'
                                         : 'bg-neutral-800 text-neutral-500 hover:text-neutral-400'
@@ -218,20 +229,24 @@ export default function AdminPayoutsPage() {
                                 {s === 'all' ? 'Tous' : s}
                             </button>
                         ))}
-                    </div>
+                    </motion.div>
 
                     {/* Commissions List */}
-                    <div className="space-y-2">
+                    <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-2">
                         {filteredCommissions.length === 0 ? (
-                            <p className="text-neutral-500 text-center py-8">Aucune commission</p>
+                            <motion.div variants={fadeInUp} transition={springGentle} className="text-center py-8">
+                                <motion.div variants={floatVariants} animate="float">
+                                    <CreditCard className="w-8 h-8 mx-auto mb-3 text-neutral-600" />
+                                </motion.div>
+                                <p className="text-neutral-500">Aucune commission</p>
+                            </motion.div>
                         ) : (
-                            filteredCommissions.map((commission, index) => (
+                            filteredCommissions.map((commission) => (
                                 <motion.div
                                     key={commission.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.02 }}
-                                    className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl"
+                                    variants={staggerItem}
+                                    transition={springGentle}
+                                    className="row-hover p-4 bg-neutral-900 border border-neutral-800 rounded-xl"
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
@@ -256,7 +271,7 @@ export default function AdminPayoutsPage() {
                                                     >
                                                         {commission.sellerName || commission.sellerEmail}
                                                     </Link>
-                                                    <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusColor(commission.status)}`}>
+                                                    <span className={`badge-pop px-2 py-0.5 text-xs rounded-full ${getStatusColor(commission.status)}`}>
                                                         {commission.status}
                                                     </span>
                                                 </div>
@@ -284,23 +299,27 @@ export default function AdminPayoutsPage() {
                                 </motion.div>
                             ))
                         )}
-                    </div>
+                    </motion.div>
                 </>
             )}
 
             {/* Startup Payments Tab */}
             {tab === 'startup-payments' && (
-                <div className="space-y-2">
+                <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-2">
                     {startupPayments.length === 0 ? (
-                        <p className="text-neutral-500 text-center py-8">Aucun paiement startup</p>
+                        <motion.div variants={fadeInUp} transition={springGentle} className="text-center py-8">
+                            <motion.div variants={floatVariants} animate="float">
+                                <Building2 className="w-8 h-8 mx-auto mb-3 text-neutral-600" />
+                            </motion.div>
+                            <p className="text-neutral-500">Aucun paiement startup</p>
+                        </motion.div>
                     ) : (
-                        startupPayments.map((payment, index) => (
+                        startupPayments.map((payment) => (
                             <motion.div
                                 key={payment.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.02 }}
-                                className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl"
+                                variants={staggerItem}
+                                transition={springGentle}
+                                className="row-hover p-4 bg-neutral-900 border border-neutral-800 rounded-xl"
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
@@ -310,7 +329,7 @@ export default function AdminPayoutsPage() {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-white">{payment.workspaceName}</span>
-                                                <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusColor(payment.status)}`}>
+                                                <span className={`badge-pop px-2 py-0.5 text-xs rounded-full ${getStatusColor(payment.status)}`}>
                                                     {payment.status}
                                                 </span>
                                             </div>
@@ -332,8 +351,8 @@ export default function AdminPayoutsPage() {
                             </motion.div>
                         ))
                     )}
-                </div>
+                </motion.div>
             )}
-        </div>
+        </motion.div>
     )
 }

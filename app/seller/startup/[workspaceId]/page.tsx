@@ -7,6 +7,7 @@ import {
     FileText, ExternalLink, Loader2, ArrowUpRight, Download
 } from 'lucide-react'
 import { getPublicStartupProfile, type StartupProfileData } from '@/app/actions/startup-profile'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 // =============================================
 // SOCIAL ICONS
@@ -102,7 +103,7 @@ export default function StartupProfileViewPage() {
     if (loading) {
         return (
             <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-slate-300" />
+                <TraaactionLoader size={20} className="text-gray-400" />
             </div>
         )
     }

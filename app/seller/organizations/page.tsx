@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Search, Loader2, ArrowRight, Users, Lock } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 import { getActiveOrganizations } from '@/app/actions/organization-actions'
 
 function VisibilityBadge({ visibility }: { visibility: string }) {
     if (visibility === 'PRIVATE') {
         return (
-            <span className="text-[10px] text-amber-600 uppercase tracking-wider px-2 py-0.5 bg-amber-50 rounded-full font-medium flex items-center gap-1">
+            <span className="text-[10px] text-amber-600 uppercase tracking-wider px-2 py-0.5 bg-amber-50 rounded-full font-medium flex items-center gap-1 badge-pop">
                 <Lock className="w-2.5 h-2.5" /> Private
             </span>
         )
@@ -29,7 +31,7 @@ function MembershipBadge({ status }: { status: string | null }) {
         PENDING: 'Pending',
     }
     return (
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${styles[status] || 'bg-gray-100 text-gray-500'}`}>
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium badge-pop ${styles[status] || 'bg-gray-100 text-gray-500'}`}>
             {labels[status] || status}
         </span>
     )
@@ -38,13 +40,10 @@ function MembershipBadge({ status }: { status: string | null }) {
 function OrgRow({ org, index }: { org: any; index: number }) {
     return (
         <Link href={`/seller/organizations/${org.slug || org.id}`}>
-            <div
-                className="group flex items-center gap-5 px-5 py-4 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200"
-                style={{
-                    animationDelay: `${index * 30}ms`,
-                    opacity: 0,
-                    animation: 'fadeSlideIn 0.4s ease-out forwards'
-                }}
+            <motion.div
+                variants={staggerItem}
+                transition={springGentle}
+                className="group flex items-center gap-5 px-5 py-4 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200 card-hover"
             >
                 {/* Avatar */}
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
@@ -85,7 +84,7 @@ function OrgRow({ org, index }: { org: any; index: number }) {
                 </div>
 
                 <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-violet-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-            </div>
+            </motion.div>
         </Link>
     )
 }
@@ -130,23 +129,21 @@ export default function BrowseOrganizationsPage() {
 
     return (
         <div className="min-h-screen bg-[#FAFAFA]">
-            <style jsx global>{`
-                @keyframes fadeSlideIn {
-                    from { opacity: 0; transform: translateY(12px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-            `}</style>
-
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+            <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer}
+                className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16"
+            >
                 {/* Header */}
-                <header className="text-center mb-12">
+                <motion.header variants={fadeInUp} transition={springGentle} className="text-center mb-12">
                     <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight mb-3">
                         Organizations
                     </h1>
                     <p className="text-gray-500 text-[15px]">
                         Join a team and earn together
                     </p>
-                </header>
+                </motion.header>
 
                 {/* Search */}
                 <div className="max-w-xl mx-auto mb-12">
@@ -178,14 +175,16 @@ export default function BrowseOrganizationsPage() {
 
                 {/* Content */}
                 {loading ? (
-                    <div className="flex items-center justify-center py-32">
-                        <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+                    <div className="space-y-3 py-8">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="skeleton-shimmer h-16 rounded-xl" />
+                        ))}
                     </div>
                 ) : organizations.length === 0 ? (
                     <div className="text-center py-32">
-                        <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <motion.div variants={floatVariants} animate="float" className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                             <Users className="w-7 h-7 text-gray-400" />
-                        </div>
+                        </motion.div>
                         <p className="text-gray-400 text-[15px] mb-2">No organizations found</p>
                         {search && (
                             <button
@@ -198,27 +197,27 @@ export default function BrowseOrganizationsPage() {
                     </div>
                 ) : (
                     <>
-                        <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-6 text-center">
+                        <motion.p variants={fadeInUp} transition={springGentle} className="text-[11px] text-gray-400 uppercase tracking-wider mb-6 text-center">
                             {organizations.length} organization{organizations.length !== 1 ? 's' : ''}
-                        </p>
-                        <div className="space-y-2">
+                        </motion.p>
+                        <motion.div className="space-y-2" variants={staggerContainer} initial="hidden" animate="visible">
                             {organizations.map((org, index) => (
                                 <OrgRow key={org.id} org={org} index={index} />
                             ))}
-                        </div>
+                        </motion.div>
                     </>
                 )}
 
                 {/* Discreet create link */}
-                <div className="text-center mt-16 pb-4">
+                <motion.div variants={fadeInUp} transition={springGentle} className="text-center mt-16 pb-4">
                     <p className="text-xs text-gray-400">
                         Want to lead your own team?{' '}
                         <Link href="/seller/organizations/apply" className="text-gray-500 hover:text-gray-700 underline underline-offset-2">
                             Apply to create an organization
                         </Link>
                     </p>
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
         </div>
     )
 }

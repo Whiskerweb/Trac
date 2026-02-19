@@ -15,6 +15,7 @@ import {
     User,
     ArrowUpRight
 } from 'lucide-react'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 
 interface GiftCardRedemption {
     id: string
@@ -158,29 +159,55 @@ export default function AdminGiftCardsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-500" />
+            <div className="p-8">
+                <div className="mb-8">
+                    <div className="h-7 w-32 bg-neutral-800 rounded skeleton-shimmer mb-2" />
+                    <div className="h-4 w-56 bg-neutral-800/50 rounded skeleton-shimmer" />
+                </div>
+                <div className="flex gap-2 mb-6">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="h-10 w-24 bg-neutral-800 rounded-lg skeleton-shimmer" />
+                    ))}
+                </div>
+                <div className="space-y-3">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 skeleton-shimmer">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-neutral-800 rounded-lg" />
+                                <div className="flex-1">
+                                    <div className="h-4 w-32 bg-neutral-800 rounded mb-2" />
+                                    <div className="h-3 w-48 bg-neutral-800/50 rounded" />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         )
     }
 
     return (
-        <div className="p-8">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="p-8"
+        >
             {/* Header */}
-            <div className="mb-8">
+            <motion.div variants={fadeInUp} transition={springGentle} className="mb-8">
                 <h1 className="text-2xl font-light text-white mb-2">
                     Gift Cards
                 </h1>
                 <p className="text-sm text-neutral-500">
                     Manage sellers gift card requests
                 </p>
-            </div>
+            </motion.div>
 
             {/* Stats */}
             {pendingCount > 0 && (
                 <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    variants={fadeInUp}
+                    transition={springGentle}
                     className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl"
                 >
                     <div className="flex items-center gap-3">
@@ -200,12 +227,12 @@ export default function AdminGiftCardsPage() {
             )}
 
             {/* Filters */}
-            <div className="flex gap-2 mb-6">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex gap-2 mb-6">
                 {(['all', 'PENDING', 'DELIVERED'] as const).map(f => (
                     <button
                         key={f}
                         onClick={() => setFilter(f)}
-                        className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                        className={`px-4 py-2 text-sm rounded-lg transition-colors btn-press ${
                             filter === f
                                 ? 'bg-violet-500 text-white'
                                 : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'
@@ -214,16 +241,23 @@ export default function AdminGiftCardsPage() {
                         {f === 'all' ? 'All' : f === 'PENDING' ? 'Pending' : 'Deliveredes'}
                     </button>
                 ))}
-            </div>
+            </motion.div>
 
             {/* List */}
             {filteredRedemptions.length === 0 ? (
-                <div className="text-center py-16 text-neutral-500">
-                    <Gift className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                <motion.div variants={fadeInUp} transition={springGentle} className="text-center py-16 text-neutral-500">
+                    <motion.div variants={floatVariants} animate="float">
+                        <Gift className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                    </motion.div>
                     <p>Aucune demande</p>
-                </div>
+                </motion.div>
             ) : (
-                <div className="space-y-3">
+                <motion.div
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
+                    className="space-y-3"
+                >
                     <AnimatePresence>
                         {filteredRedemptions.map((redemption) => {
                             const status = STATUS_CONFIG[redemption.status]
@@ -233,10 +267,10 @@ export default function AdminGiftCardsPage() {
                             return (
                                 <motion.div
                                     key={redemption.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
+                                    variants={staggerItem}
+                                    transition={springGentle}
                                     exit={{ opacity: 0, y: -10 }}
-                                    className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden"
+                                    className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden row-hover"
                                 >
                                     {/* Main row */}
                                     <div
@@ -252,7 +286,7 @@ export default function AdminGiftCardsPage() {
                                                     <span className="font-medium text-white">
                                                         {cardInfo?.name || redemption.card_type}
                                                     </span>
-                                                    <span className={`px-2 py-0.5 text-xs rounded-full ${status.color}`}>
+                                                    <span className={`px-2 py-0.5 text-xs rounded-full badge-pop ${status.color}`}>
                                                         {status.label}
                                                     </span>
                                                 </div>
@@ -361,7 +395,7 @@ export default function AdminGiftCardsPage() {
                                                                         markAsDelivered(redemption.id)
                                                                     }}
                                                                     disabled={processingId === redemption.id}
-                                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 disabled:opacity-50 transition-colors"
+                                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 disabled:opacity-50 transition-colors btn-press"
                                                                 >
                                                                     {processingId === redemption.id ? (
                                                                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -376,7 +410,7 @@ export default function AdminGiftCardsPage() {
                                                                         markAsFailed(redemption.id)
                                                                     }}
                                                                     disabled={processingId === redemption.id}
-                                                                    className="px-4 py-2 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/10 disabled:opacity-50 transition-colors"
+                                                                    className="px-4 py-2 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/10 disabled:opacity-50 transition-colors btn-press"
                                                                 >
                                                                     Failed
                                                                 </button>
@@ -396,7 +430,7 @@ export default function AdminGiftCardsPage() {
                                                                     e.stopPropagation()
                                                                     navigator.clipboard.writeText(redemption.gift_card_code!)
                                                                 }}
-                                                                className="p-1 hover:bg-emerald-500/20 rounded"
+                                                                className="p-1 hover:bg-emerald-500/20 rounded btn-press"
                                                             >
                                                                 <Copy className="w-4 h-4 text-emerald-400" />
                                                             </button>
@@ -410,19 +444,19 @@ export default function AdminGiftCardsPage() {
                             )
                         })}
                     </AnimatePresence>
-                </div>
+                </motion.div>
             )}
 
             {/* Automation note */}
-            <div className="mt-12 p-4 bg-neutral-900 rounded-xl border border-neutral-800">
+            <motion.div variants={fadeInUp} transition={springGentle} className="mt-12 p-4 bg-neutral-900 rounded-xl border border-neutral-800">
                 <h3 className="text-sm font-medium text-neutral-300 mb-2">
-                    💡 Automatisation disponible
+                    Automatisation disponible
                 </h3>
                 <p className="text-sm text-neutral-500">
                     Integrate Tremendous, Tango Card or Runa to automate gift card purchase and delivery.
                     The infrastructure is ready for API integration.
                 </p>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     )
 }

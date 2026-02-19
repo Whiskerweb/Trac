@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { MessageSquare, Send, User, CheckCheck, Gift, ExternalLink, Loader2, ArrowLeft, Plus, X, Handshake, Rocket } from 'lucide-react'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 import { getConversations, getMessages, sendMessage, markAsRead, sendMissionInviteCard } from '@/app/actions/messaging'
 import { sendOrgDealProposalCard } from '@/app/actions/organization-actions'
 import MessageCard from '@/components/messages/MessageCard'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 interface Conversation {
     id: string
@@ -37,7 +40,7 @@ interface Message {
 function MessagesLoading() {
     return (
         <div className="h-[calc(100vh-4rem)] bg-[#FAFAFA] flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <TraaactionLoader size={32} className="text-gray-400" />
         </div>
     )
 }
@@ -170,7 +173,7 @@ function QuickActionsPopover({
                 </div>
             ) : dataLoading ? (
                 <div className="p-6 flex items-center justify-center">
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <TraaactionLoader size={20} className="text-gray-400" />
                 </div>
             ) : mode === 'deal' ? (
                 <div className="p-3 space-y-3">
@@ -335,7 +338,7 @@ function MessagesContent() {
     if (loading) {
         return (
             <div className="h-[calc(100vh-4rem)] bg-[#FAFAFA] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <TraaactionLoader size={28} className="text-gray-400" />
             </div>
         )
     }
@@ -362,12 +365,19 @@ function MessagesContent() {
                         </p>
                     </div>
                 ) : (
-                    <div className="flex-1 overflow-y-auto">
+                    <motion.div
+                        variants={staggerContainer}
+                        initial="hidden"
+                        animate="visible"
+                        className="flex-1 overflow-y-auto"
+                    >
                         {conversations.map((convo) => {
                             const displayName = convo.partner_name || convo.partner_email.split('@')[0]
                             return (
-                                <button
+                                <motion.button
                                     key={convo.id}
+                                    variants={staggerItem}
+                                    transition={springGentle}
                                     onClick={() => setSelectedConversation(convo.id)}
                                     className={`w-full p-4 sm:p-6 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 ${
                                         selectedConversation === convo.id ? 'bg-violet-50 border-l-2 border-l-violet-500' : ''
@@ -402,10 +412,10 @@ function MessagesContent() {
                                             </p>
                                         </div>
                                     </div>
-                                </button>
+                                </motion.button>
                             )
                         })}
-                    </div>
+                    </motion.div>
                 )}
             </div>
 
@@ -475,7 +485,13 @@ function MessagesContent() {
                                 // Rich message card (not TEXT)
                                 if (msg.message_type !== 'TEXT') {
                                     return (
-                                        <div key={msg.id} className="flex justify-center py-1">
+                                        <motion.div
+                                            key={msg.id}
+                                            initial={{ opacity: 0, y: 6 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={springGentle}
+                                            className="flex justify-center py-1"
+                                        >
                                             <MessageCard
                                                 messageId={msg.id}
                                                 messageType={msg.message_type}
@@ -484,14 +500,17 @@ function MessagesContent() {
                                                 isOwnMessage={msg.sender_type === 'STARTUP'}
                                                 onAction={handleCardAction}
                                             />
-                                        </div>
+                                        </motion.div>
                                     )
                                 }
 
                                 // Legacy invitation bubble (backward compat)
                                 return (
-                                    <div
+                                    <motion.div
                                         key={msg.id}
+                                        initial={{ opacity: 0, y: 6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={springGentle}
                                         className={`flex ${msg.sender_type === 'STARTUP' ? 'justify-end' : 'justify-start'}`}
                                     >
                                         <div
@@ -521,7 +540,7 @@ function MessagesContent() {
                                                 )}
                                             </div>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 )
                             })}
                             <div ref={messagesEndRef} />
@@ -565,7 +584,7 @@ function MessagesContent() {
                                 <button
                                     onClick={handleSendMessage}
                                     disabled={!newMessage.trim() || sending}
-                                    className="w-10 h-10 bg-violet-500 hover:bg-violet-600 disabled:bg-gray-300 rounded-full flex items-center justify-center transition-colors"
+                                    className="w-10 h-10 bg-violet-500 hover:bg-violet-600 disabled:bg-gray-300 rounded-full flex items-center justify-center transition-colors btn-press"
                                 >
                                     <Send className="w-4 h-4 text-white" />
                                 </button>

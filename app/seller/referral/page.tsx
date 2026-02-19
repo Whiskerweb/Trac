@@ -6,6 +6,7 @@ import { getMyReferralData, getReferralSubTree } from '@/app/actions/sellers'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 
 // =============================================
 // Generation Badge
@@ -20,7 +21,7 @@ function GenerationBadge({ generation }: { generation: number }) {
     }[generation]
     if (!config) return null
     return (
-        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${config.bg} ${config.text}`}>
+        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full badge-pop ${config.bg} ${config.text}`}>
             {config.label}
         </span>
     )
@@ -52,7 +53,7 @@ function ReferralRow({
     return (
         <div
             onClick={canExpand ? onToggle : undefined}
-            className={`flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors ${
+            className={`flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors row-hover ${
                 canExpand ? 'cursor-pointer hover:bg-neutral-50' : ''
             }`}
         >
@@ -314,10 +315,10 @@ export default function ReferralPage() {
     const gen = data.earningsByGeneration
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA]">
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="min-h-screen bg-[#FAFAFA]">
             <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
                 {/* Header */}
-                <header className="mb-10">
+                <motion.header variants={fadeInUp} transition={springGentle} className="mb-10">
                     <h1 className="text-2xl font-semibold text-gray-900 tracking-tight mb-2">{t('title')}</h1>
                     <p className="text-gray-500 text-[15px]">{t('subtitle')}</p>
                     {data.referredBy && (
@@ -328,10 +329,10 @@ export default function ReferralPage() {
                             </span>
                         </div>
                     )}
-                </header>
+                </motion.header>
 
                 {/* Share Link Card */}
-                <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+                <motion.div variants={fadeInUp} transition={springGentle} className="bg-white rounded-xl border border-gray-100 p-5 mb-6 card-hover">
                     <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">{t('yourLink')}</h3>
                     <div className="flex items-center gap-2 mb-3">
                         <div className="flex-1 bg-gray-50 rounded-lg px-4 py-2.5 text-sm text-gray-700 font-mono truncate">
@@ -339,9 +340,9 @@ export default function ReferralPage() {
                         </div>
                         <button
                             onClick={() => copyToClipboard(data.referralLink, 'link')}
-                            className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors btn-press"
                         >
-                            {copied === 'link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copied === 'link' ? <Check className={`w-3.5 h-3.5 copy-success`} /> : <Copy className="w-3.5 h-3.5" />}
                             {copied === 'link' ? t('copied') : t('copy')}
                         </button>
                     </div>
@@ -354,33 +355,33 @@ export default function ReferralPage() {
                             onClick={() => copyToClipboard(data.referralCode, 'code')}
                             className="text-xs text-gray-400 hover:text-gray-600"
                         >
-                            {copied === 'code' ? <Check className="w-3 h-3 inline" /> : <Copy className="w-3 h-3 inline" />}
+                            {copied === 'code' ? <Check className="w-3 h-3 inline copy-success" /> : <Copy className="w-3 h-3 inline" />}
                         </button>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Stats Overview */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-                    <div className="bg-white rounded-xl border border-gray-100 p-4">
+                <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                    <div className="bg-white rounded-xl border border-gray-100 p-4 card-hover">
                         <Users className="w-4 h-4 text-gray-400 mb-2" />
                         <p className="text-xl font-semibold text-gray-900">{data.stats.totalReferred}</p>
                         <p className="text-[11px] text-gray-400">{t('stats.referred')}</p>
                     </div>
-                    <div className="bg-white rounded-xl border border-gray-100 p-4">
+                    <div className="bg-white rounded-xl border border-gray-100 p-4 card-hover">
                         <Coins className="w-4 h-4 text-gray-400 mb-2" />
                         <p className="text-xl font-semibold text-gray-900">{formatAmount(data.stats.totalEarnings)}</p>
                         <p className="text-[11px] text-gray-400">{t('stats.earned')}</p>
                     </div>
-                    <div className="bg-white rounded-xl border border-gray-100 p-4">
+                    <div className="bg-white rounded-xl border border-gray-100 p-4 card-hover">
                         <TrendingUp className="w-4 h-4 text-gray-400 mb-2" />
                         <p className="text-xl font-semibold text-gray-900">{data.stats.totalCommissions}</p>
                         <p className="text-[11px] text-gray-400">{t('stats.commissions')}</p>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Earnings by generation breakdown */}
                 {gen && (
-                    <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+                    <motion.div variants={fadeInUp} transition={springGentle} className="bg-white rounded-xl border border-gray-100 p-5 mb-6 card-hover">
                         <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">{t('generations.title')}</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {[
@@ -391,7 +392,7 @@ export default function ReferralPage() {
                                 <div key={g.key} className="bg-gray-50 rounded-lg p-3">
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-[11px] font-medium text-gray-500">{g.label}</span>
-                                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${g.badgeColor}`}>{g.rate}</span>
+                                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full badge-pop ${g.badgeColor}`}>{g.rate}</span>
                                     </div>
                                     <p className="text-base font-semibold text-gray-900">{formatAmount(g.data.amount)}</p>
                                     <p className="text-[10px] text-gray-400 mt-1">
@@ -400,11 +401,11 @@ export default function ReferralPage() {
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </motion.div>
                 )}
 
                 {/* ============ Referral Tree ============ */}
-                <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+                <motion.div variants={fadeInUp} transition={springGentle} className="bg-white rounded-xl border border-gray-100 p-5 mb-6 card-hover">
                     {/* Header with title + search */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                         <div>
@@ -434,7 +435,7 @@ export default function ReferralPage() {
                     {/* List */}
                     {data.referredSellers.length > 0 ? (
                         <>
-                            <div className="space-y-0.5">
+                            <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-0.5">
                                 {data.referredSellers.map((seller: any) => (
                                     <div key={seller.id}>
                                         <ReferralRow
@@ -461,7 +462,7 @@ export default function ReferralPage() {
                                         />
                                     </div>
                                 ))}
-                            </div>
+                            </motion.div>
 
                             {/* Pagination */}
                             {data.pagination && data.pagination.totalPages > 1 && (
@@ -490,19 +491,23 @@ export default function ReferralPage() {
                         </>
                     ) : debouncedSearch ? (
                         <div className="text-center py-8">
-                            <Search className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+                            <motion.div variants={floatVariants} animate="float" className="inline-block">
+                                <Search className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+                            </motion.div>
                             <p className="text-sm text-gray-400">{t('searchNoResults', { query: debouncedSearch })}</p>
                         </div>
                     ) : (
                         <div className="text-center py-8">
-                            <Share2 className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+                            <motion.div variants={floatVariants} animate="float" className="inline-block">
+                                <Share2 className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+                            </motion.div>
                             <p className="text-sm text-gray-400">{t('noReferrals')}</p>
                         </div>
                     )}
-                </div>
+                </motion.div>
 
                 {/* How it works (compact, at the bottom) */}
-                <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+                <motion.div variants={fadeInUp} transition={springGentle} className="bg-white rounded-xl border border-gray-100 p-5 mb-6 card-hover">
                     <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">{t('howItWorks')}</h3>
                     <div className="grid grid-cols-3 gap-4 text-center">
                         <div>
@@ -522,10 +527,10 @@ export default function ReferralPage() {
                         </div>
                     </div>
                     <p className="text-[11px] text-gray-400 text-center mt-4">{t('disclaimer')}</p>
-                </div>
+                </motion.div>
 
                 {/* CTA footer */}
-                <div className="text-center">
+                <motion.div variants={fadeInUp} transition={springGentle} className="text-center">
                     <Link
                         href="/affiliate"
                         className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
@@ -533,8 +538,8 @@ export default function ReferralPage() {
                         {t('learnMore')}
                         <ExternalLink className="w-3 h-3" />
                     </Link>
-                </div>
+                </motion.div>
             </div>
-        </div>
+        </motion.div>
     )
 }

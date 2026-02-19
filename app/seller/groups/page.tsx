@@ -8,6 +8,7 @@ import { Users, Plus, Copy, Check, ArrowRight, Loader2, LogOut, X, AlertTriangle
 import { getMyGroup, joinGroup, leaveGroup, removeGroupMember, getAvailableMissionsForGroup, enrollGroupInMission, getGroupStats } from '@/app/actions/group-actions'
 import type { GroupStats } from '@/app/actions/group-actions'
 import { useTranslations } from 'next-intl'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 // =============================================
 // HELPERS
@@ -452,7 +453,7 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
 
                             {statsLoading ? (
                                 <div className="flex items-center justify-center py-12">
-                                    <Loader2 className="w-5 h-5 animate-spin text-neutral-300" />
+                                    <TraaactionLoader size={20} className="text-gray-400" />
                                 </div>
                             ) : stats && stats.totalRevenue === 0 && stats.totalLeads === 0 ? (
                                 <div className="text-center py-10">
@@ -545,7 +546,7 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
 
                             {statsLoading ? (
                                 <div className="flex items-center justify-center py-12">
-                                    <Loader2 className="w-5 h-5 animate-spin text-neutral-300" />
+                                    <TraaactionLoader size={20} className="text-gray-400" />
                                 </div>
                             ) : stats && stats.missions.length > 0 ? (
                                 <div className="space-y-3">
@@ -712,7 +713,7 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                                 <div className="overflow-y-auto p-3 flex-1">
                                     {loadingMissions ? (
                                         <div className="flex items-center justify-center py-12">
-                                            <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                                            <TraaactionLoader size={20} className="text-gray-400" />
                                         </div>
                                     ) : availableMissions.length > 0 ? (
                                         <div className="space-y-1">
@@ -829,7 +830,7 @@ export default function GroupsPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex flex-col items-center gap-3"
                 >
-                    <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+                    <TraaactionLoader size={32} className="text-gray-400" />
                     <span className="text-sm text-neutral-500">Loading...</span>
                 </motion.div>
             </div>

@@ -8,6 +8,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { IntegrationTab } from '@/components/dashboard/settings/IntegrationTab'
 import { DomainsTab } from '@/components/dashboard/settings/DomainsTab'
+import { motion } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 
 const LANGUAGES = [
     { code: 'en', name: 'English', flag: '🇬🇧' },
@@ -17,8 +19,9 @@ const LANGUAGES = [
 
 function SettingsLoading() {
     return (
-        <div className="flex items-center justify-center min-h-[400px]">
-            <Loader2 className="w-5 h-5 animate-spin text-slate-300" />
+        <div className="space-y-6 animate-pulse">
+            <div className="h-10 w-64 rounded-lg skeleton-shimmer" />
+            <div className="h-96 rounded-xl skeleton-shimmer" />
         </div>
     )
 }
@@ -159,7 +162,7 @@ function SettingsContent() {
                     <button
                         key={tab.key}
                         onClick={() => switchTab(tab.key)}
-                        className={`px-4 py-2 text-sm font-medium transition-colors ${
+                        className={`btn-press px-4 py-2 text-sm font-medium transition-colors ${
                             currentTab === tab.key
                                 ? 'bg-slate-900 text-white'
                                 : 'text-slate-600 hover:bg-slate-50'
@@ -172,9 +175,14 @@ function SettingsContent() {
 
             {/* Account Tab */}
             {currentTab === 'account' && (
-                <div className="w-full max-w-2xl mx-auto space-y-8">
+                <motion.div
+                    className="w-full max-w-2xl mx-auto space-y-8"
+                    initial="hidden"
+                    animate="visible"
+                    variants={staggerContainer}
+                >
                     {/* Profile Section */}
-                    <section className="bg-white border border-gray-200 rounded-xl p-6">
+                    <motion.section variants={fadeInUp} transition={springGentle} className="bg-white border border-gray-200 rounded-xl p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                             <User className="w-5 h-5 text-gray-500" />
                             {t('profile')}
@@ -192,10 +200,10 @@ function SettingsContent() {
                                 />
                             </div>
                         </div>
-                    </section>
+                    </motion.section>
 
                     {/* Language Section */}
-                    <section className="bg-white border border-gray-200 rounded-xl p-6">
+                    <motion.section variants={fadeInUp} transition={springGentle} className="bg-white border border-gray-200 rounded-xl p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                             <Globe className="w-5 h-5 text-gray-500" />
                             {t('language')}
@@ -234,10 +242,10 @@ function SettingsContent() {
                             )}
                         </div>
                         <p className="text-xs text-gray-500 mt-2">{t('languageHint')}</p>
-                    </section>
+                    </motion.section>
 
                     {/* Password Section */}
-                    <section className="bg-white border border-gray-200 rounded-xl p-6">
+                    <motion.section variants={fadeInUp} transition={springGentle} className="bg-white border border-gray-200 rounded-xl p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                             <Lock className="w-5 h-5 text-gray-500" />
                             {t('password')}
@@ -253,7 +261,7 @@ function SettingsContent() {
                         {!showPasswordForm ? (
                             <button
                                 onClick={() => setShowPasswordForm(true)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                className="btn-press px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                             >
                                 {t('changePassword')}
                             </button>
@@ -298,7 +306,7 @@ function SettingsContent() {
                                     <button
                                         onClick={handleChangePassword}
                                         disabled={savingPassword}
-                                        className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-70 transition-all"
+                                        className="btn-press px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-70 transition-all"
                                     >
                                         {savingPassword ? tCommon('loading') : t('updatePassword')}
                                     </button>
@@ -309,17 +317,17 @@ function SettingsContent() {
                                             setConfirmPassword('')
                                             setPasswordError('')
                                         }}
-                                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                        className="btn-press px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                                     >
                                         {tCommon('cancel')}
                                     </button>
                                 </div>
                             </div>
                         )}
-                    </section>
+                    </motion.section>
 
                     {/* Logout Section */}
-                    <section className="bg-white border border-red-100 rounded-xl p-6">
+                    <motion.section variants={fadeInUp} transition={springGentle} className="bg-white border border-red-100 rounded-xl p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
                             <LogOut className="w-5 h-5 text-gray-500" />
                             {t('logout')}
@@ -328,13 +336,13 @@ function SettingsContent() {
                         <button
                             onClick={handleLogout}
                             disabled={loggingOut}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-70 transition-all flex items-center gap-2"
+                            className="btn-press px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-70 transition-all flex items-center gap-2"
                         >
                             <LogOut className="w-4 h-4" />
                             {loggingOut ? tCommon('loading') : t('logoutButton')}
                         </button>
-                    </section>
-                </div>
+                    </motion.section>
+                </motion.div>
             )}
 
             {/* Integration Tab */}

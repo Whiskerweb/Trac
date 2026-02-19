@@ -3,6 +3,8 @@
 import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, scalePop, buttonTap } from '@/lib/animations'
 import {
     ArrowLeft,
     Check,
@@ -24,6 +26,7 @@ import {
     ExternalLink,
     RefreshCw
 } from 'lucide-react'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 // =============================================
 // TYPES
@@ -487,21 +490,28 @@ function CountrySelector({
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
                         {filterType === 'INCLUDE' ? 'Popular countries' : 'Quick add'}
                     </p>
-                    <div className="flex flex-wrap gap-2">
+                    <motion.div
+                        className="flex flex-wrap gap-2"
+                        variants={staggerContainer}
+                        initial="hidden"
+                        animate="visible"
+                    >
                         {availablePopular.map(country => (
-                            <button
+                            <motion.button
                                 key={country.code}
+                                variants={staggerItem}
+                                transition={springGentle}
                                 onClick={() => toggleCountry(country.code)}
-                                className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 bg-gray-50 hover:bg-gray-100
+                                className="btn-press inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 bg-gray-50 hover:bg-gray-100
                                     rounded-xl text-xs sm:text-sm font-medium text-gray-700 transition-colors border border-gray-100"
                             >
                                 <span>{getFlagEmoji(country.code)}</span>
                                 <span className="hidden xs:inline">{country.name}</span>
                                 <span className="xs:hidden">{country.code}</span>
                                 <Plus className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                            </button>
+                            </motion.button>
                         ))}
-                    </div>
+                    </motion.div>
                 </div>
             )}
 
@@ -565,7 +575,7 @@ function WizardSidebar({
                                 {/* Step indicator */}
                                 <div className={`
                                     w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0
-                                    ${isCompleted && !isActive ? 'bg-gray-900 text-white' : ''}
+                                    ${isCompleted && !isActive ? 'bg-gray-900 text-white badge-pop' : ''}
                                     ${isActive ? 'bg-white text-gray-900' : ''}
                                     ${!isCompleted && !isActive ? 'bg-gray-100 text-gray-400' : ''}
                                 `}>
@@ -643,7 +653,13 @@ function Step1MissionDetails({
     }
 
     return (
-        <div className="space-y-6 sm:space-y-10">
+        <motion.div
+            className="space-y-6 sm:space-y-10"
+            variants={fadeInUp}
+            initial="hidden"
+            animate="visible"
+            transition={springGentle}
+        >
             {/* Header */}
             <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
@@ -729,7 +745,7 @@ function Step1MissionDetails({
                                 hover:border-gray-300 hover:bg-gray-50 transition-all flex flex-col items-center justify-center gap-2 sm:gap-3"
                         >
                             {uploading ? (
-                                <Loader2 className="w-6 sm:w-8 h-6 sm:h-8 text-gray-400 animate-spin" />
+                                <TraaactionLoader size={28} className="text-gray-400" />
                             ) : (
                                 <>
                                     <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-full bg-gray-100 flex items-center justify-center">
@@ -781,7 +797,7 @@ function Step1MissionDetails({
                         placeholder:text-gray-400 transition-all"
                 />
             </div>
-        </div>
+        </motion.div>
     )
 }
 
@@ -799,7 +815,13 @@ function Step2CommissionSetup({
     const atLeastOneEnabled = data.lead.enabled || data.sale.enabled || data.recurring.enabled
 
     return (
-        <div className="space-y-6 sm:space-y-10">
+        <motion.div
+            className="space-y-6 sm:space-y-10"
+            variants={fadeInUp}
+            initial="hidden"
+            animate="visible"
+            transition={springGentle}
+        >
             {/* Header */}
             <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
@@ -811,16 +833,25 @@ function Step2CommissionSetup({
             </div>
 
             {/* Validation warning */}
-            {!atLeastOneEnabled && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 sm:p-4 flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-amber-600 text-sm font-bold">!</span>
-                    </div>
-                    <p className="text-sm text-amber-800">
-                        Enable at least one commission type to continue.
-                    </p>
-                </div>
-            )}
+            <AnimatePresence>
+                {!atLeastOneEnabled && (
+                    <motion.div
+                        variants={fadeInUp}
+                        initial="hidden"
+                        animate="visible"
+                        exit="hidden"
+                        transition={springGentle}
+                        className="bg-amber-50 border border-amber-100 rounded-xl p-3 sm:p-4 flex items-start gap-3"
+                    >
+                        <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="text-amber-600 text-sm font-bold">!</span>
+                        </div>
+                        <p className="text-sm text-amber-800">
+                            Enable at least one commission type to continue.
+                        </p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Commission Cards */}
             <div className="space-y-4">
@@ -880,7 +911,7 @@ function Step2CommissionSetup({
                                     type="button"
                                     onClick={() => onChange({ sale: { ...data.sale, structure: 'FLAT' } })}
                                     className={`
-                                        px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                                        btn-press px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
                                         ${data.sale.structure === 'FLAT'
                                             ? 'bg-gray-900 text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -893,7 +924,7 @@ function Step2CommissionSetup({
                                     type="button"
                                     onClick={() => onChange({ sale: { ...data.sale, structure: 'PERCENTAGE' } })}
                                     className={`
-                                        px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                                        btn-press px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
                                         ${data.sale.structure === 'PERCENTAGE'
                                             ? 'bg-gray-900 text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -949,7 +980,7 @@ function Step2CommissionSetup({
                                     }
                                 })}
                                 className={`
-                                    w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all
+                                    btn-press w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all
                                     ${data.recurring.enabled
                                         ? 'bg-gray-900 text-white'
                                         : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -991,7 +1022,7 @@ function Step2CommissionSetup({
                                                     type="button"
                                                     onClick={() => onChange({ recurring: { ...data.recurring, structure: 'FLAT' } })}
                                                     className={`
-                                                        px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                                                        btn-press px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
                                                         ${data.recurring.structure === 'FLAT'
                                                             ? 'bg-gray-900 text-white'
                                                             : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
@@ -1004,7 +1035,7 @@ function Step2CommissionSetup({
                                                     type="button"
                                                     onClick={() => onChange({ recurring: { ...data.recurring, structure: 'PERCENTAGE' } })}
                                                     className={`
-                                                        px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                                                        btn-press px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all
                                                         ${data.recurring.structure === 'PERCENTAGE'
                                                             ? 'bg-gray-900 text-white'
                                                             : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
@@ -1082,7 +1113,7 @@ function Step2CommissionSetup({
                     </div>
                 </CommissionCard>
             </div>
-        </div>
+        </motion.div>
     )
 }
 
@@ -1167,7 +1198,13 @@ function Step3ResourcesReach({
     }
 
     return (
-        <div className="space-y-6 sm:space-y-10">
+        <motion.div
+            className="space-y-6 sm:space-y-10"
+            variants={fadeInUp}
+            initial="hidden"
+            animate="visible"
+            transition={springGentle}
+        >
             {/* Header */}
             <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
@@ -1254,7 +1291,7 @@ function Step3ResourcesReach({
                                     </p>
                                 </div>
                                 {doc.uploading ? (
-                                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin shrink-0" />
+                                    <TraaactionLoader size={20} className="text-gray-400" />
                                 ) : (
                                     <button
                                         onClick={() => removeDocument(index)}
@@ -1272,7 +1309,7 @@ function Step3ResourcesReach({
                 {documents.length < 10 && (
                     <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full py-3 sm:py-4 border-2 border-dashed border-gray-200 rounded-xl
+                        className="btn-press w-full py-3 sm:py-4 border-2 border-dashed border-gray-200 rounded-xl
                             hover:border-gray-300 hover:bg-gray-50 transition-all
                             flex items-center justify-center gap-2 text-gray-600"
                     >
@@ -1360,7 +1397,7 @@ function Step3ResourcesReach({
                     </div>
                 )}
             </div>
-        </div>
+        </motion.div>
     )
 }
 
@@ -1376,7 +1413,13 @@ function Step4AccessControl({
     onChange: (updates: Partial<WizardDataV2>) => void
 }) {
     return (
-        <div className="space-y-6 sm:space-y-10">
+        <motion.div
+            className="space-y-6 sm:space-y-10"
+            variants={fadeInUp}
+            initial="hidden"
+            animate="visible"
+            transition={springGentle}
+        >
             {/* Header */}
             <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
@@ -1394,7 +1437,7 @@ function Step4AccessControl({
                     type="button"
                     onClick={() => onChange({ visibility: 'PUBLIC' })}
                     className={`
-                        w-full text-left p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
+                        btn-press w-full text-left p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
                         ${data.visibility === 'PUBLIC'
                             ? 'border-gray-900 bg-gray-50'
                             : 'border-gray-100 bg-white hover:border-gray-200'
@@ -1430,7 +1473,7 @@ function Step4AccessControl({
                             </div>
                         </div>
                         {data.visibility === 'PUBLIC' && (
-                            <div className="w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center shrink-0 badge-pop">
                                 <Check className="w-4 h-4 text-white" />
                             </div>
                         )}
@@ -1442,7 +1485,7 @@ function Step4AccessControl({
                     type="button"
                     onClick={() => onChange({ visibility: 'PRIVATE' })}
                     className={`
-                        w-full text-left p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
+                        btn-press w-full text-left p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
                         ${data.visibility === 'PRIVATE'
                             ? 'border-gray-900 bg-gray-50'
                             : 'border-gray-100 bg-white hover:border-gray-200'
@@ -1473,7 +1516,7 @@ function Step4AccessControl({
                             </div>
                         </div>
                         {data.visibility === 'PRIVATE' && (
-                            <div className="w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center shrink-0 badge-pop">
                                 <Check className="w-4 h-4 text-white" />
                             </div>
                         )}
@@ -1485,7 +1528,7 @@ function Step4AccessControl({
                     type="button"
                     onClick={() => onChange({ visibility: 'INVITE_ONLY' })}
                     className={`
-                        w-full text-left p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
+                        btn-press w-full text-left p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
                         ${data.visibility === 'INVITE_ONLY'
                             ? 'border-gray-900 bg-gray-50'
                             : 'border-gray-100 bg-white hover:border-gray-200'
@@ -1520,7 +1563,7 @@ function Step4AccessControl({
                             </div>
                         </div>
                         {data.visibility === 'INVITE_ONLY' && (
-                            <div className="w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center shrink-0 badge-pop">
                                 <Check className="w-4 h-4 text-white" />
                             </div>
                         )}
@@ -1529,30 +1572,39 @@ function Step4AccessControl({
             </div>
 
             {/* Info box for Invite Only */}
-            {data.visibility === 'INVITE_ONLY' && (
-                <div className="bg-gray-50 border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
-                    <div className="flex items-start gap-3 sm:gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-gray-900 text-white flex items-center justify-center shrink-0">
-                            <Mail className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-gray-900">How invite links work</h4>
-                            <p className="text-gray-500 mt-1 text-sm leading-relaxed">
-                                After creating your program, you'll get a unique invite link that you can share with partners.
-                                Find it on your mission's detail page under <span className="font-medium text-gray-700">"Invite Partners"</span>.
-                            </p>
-                            <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 text-sm">
-                                <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg w-full sm:w-auto">
-                                    <LinkIcon className="w-4 h-4 text-gray-400 shrink-0" />
-                                    <span className="text-gray-500 font-mono text-xs truncate">traaaction.com/invite/abc123</span>
+            <AnimatePresence>
+                {data.visibility === 'INVITE_ONLY' && (
+                    <motion.div
+                        variants={fadeInUp}
+                        initial="hidden"
+                        animate="visible"
+                        exit="hidden"
+                        transition={springGentle}
+                        className="bg-gray-50 border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6"
+                    >
+                        <div className="flex items-start gap-3 sm:gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-gray-900 text-white flex items-center justify-center shrink-0">
+                                <Mail className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-gray-900">How invite links work</h4>
+                                <p className="text-gray-500 mt-1 text-sm leading-relaxed">
+                                    After creating your program, you'll get a unique invite link that you can share with partners.
+                                    Find it on your mission's detail page under <span className="font-medium text-gray-700">"Invite Partners"</span>.
+                                </p>
+                                <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 text-sm">
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg w-full sm:w-auto">
+                                        <LinkIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                                        <span className="text-gray-500 font-mono text-xs truncate">traaaction.com/invite/abc123</span>
+                                    </div>
+                                    <span className="text-gray-400 text-xs sm:text-sm">Example link</span>
                                 </div>
-                                <span className="text-gray-400 text-xs sm:text-sm">Example link</span>
                             </div>
                         </div>
-                    </div>
-                </div>
-            )}
-        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     )
 }
 
@@ -1710,7 +1762,7 @@ export default function CreateMissionWizardV2() {
                             {step > 1 && (
                                 <button
                                     onClick={handleBack}
-                                    className="px-4 sm:px-6 py-2.5 sm:py-3 text-gray-600 font-medium rounded-xl hover:bg-gray-100 transition-colors text-sm sm:text-base"
+                                    className="btn-press px-4 sm:px-6 py-2.5 sm:py-3 text-gray-600 font-medium rounded-xl hover:bg-gray-100 transition-colors text-sm sm:text-base"
                                 >
                                     Back
                                 </button>
@@ -1723,7 +1775,7 @@ export default function CreateMissionWizardV2() {
                                     onClick={handleContinue}
                                     disabled={!canContinue()}
                                     className={`
-                                        px-6 sm:px-8 py-2.5 sm:py-3 font-semibold rounded-xl transition-all text-sm sm:text-base
+                                        btn-press px-6 sm:px-8 py-2.5 sm:py-3 font-semibold rounded-xl transition-all text-sm sm:text-base
                                         ${canContinue()
                                             ? 'bg-gray-900 text-white hover:bg-black shadow-lg shadow-gray-900/20'
                                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -1737,7 +1789,7 @@ export default function CreateMissionWizardV2() {
                                     onClick={handleFinish}
                                     disabled={loading || !canContinue()}
                                     className={`
-                                        px-6 sm:px-8 py-2.5 sm:py-3 font-semibold rounded-xl transition-all flex items-center gap-2 text-sm sm:text-base
+                                        btn-press px-6 sm:px-8 py-2.5 sm:py-3 font-semibold rounded-xl transition-all flex items-center gap-2 text-sm sm:text-base
                                         ${canContinue() && !loading
                                             ? 'bg-gray-900 text-white hover:bg-black shadow-lg shadow-gray-900/20'
                                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'

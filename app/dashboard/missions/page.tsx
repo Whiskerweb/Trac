@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
     Plus, Loader2, Target, Users, MousePointer2,
     MoreHorizontal, Archive, Globe, Lock,
@@ -9,6 +10,10 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
+import {
+    fadeInUp, staggerContainer, staggerItem, springGentle,
+    dropdownVariants, floatVariants, buttonTap
+} from '@/lib/animations'
 import { DNSGatekeeper } from '@/components/dashboard/DNSGatekeeper'
 import {
     getMissionsWithFullStats,
@@ -175,7 +180,7 @@ function MissionRow({
         `}>
             {/* Pending Requests Badge */}
             {pendingRequests > 0 && (
-                <div className="absolute -top-2 -right-2 z-10">
+                <div className="absolute -top-2 -right-2 z-10 badge-pop">
                     <Link
                         href={`/dashboard/missions/${mission.id}`}
                         className="flex items-center gap-1 px-2 py-1 bg-amber-500 text-white text-xs font-semibold rounded-full shadow-lg hover:bg-amber-600 transition-colors"
@@ -213,15 +218,15 @@ function MissionRow({
                         {mission.visibility === 'INVITE_ONLY' && mission.invite_code && (
                             <button
                                 onClick={handleCopyInviteLink}
-                                className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-colors"
+                                className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-colors btn-press"
                                 title={t('copyInviteLink')}
                             >
-                                {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                                {copied ? <Check className="w-4 h-4 text-emerald-500 copy-success" /> : <Copy className="w-4 h-4" />}
                             </button>
                         )}
                         <Link
                             href={`/dashboard/missions/${mission.id}`}
-                            className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-colors"
+                            className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-colors btn-press"
                             title={t('viewDetails')}
                         >
                             <Eye className="w-4 h-4" />
@@ -233,21 +238,29 @@ function MissionRow({
                             >
                                 <MoreHorizontal className="w-4 h-4" />
                             </button>
+                            <AnimatePresence>
                             {menuOpen && (
                                 <>
                                     <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                                    <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-20">
+                                    <motion.div
+                                        variants={dropdownVariants}
+                                        initial="hidden"
+                                        animate="visible"
+                                        exit="exit"
+                                        className="absolute right-0 top-full mt-1 w-40 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-20"
+                                    >
                                         <button
                                             onClick={handleArchive}
                                             disabled={loading}
-                                            className="w-full px-3 py-2 text-left text-sm text-neutral-600 hover:bg-neutral-50 flex items-center gap-2"
+                                            className="w-full px-3 py-2 text-left text-sm text-neutral-600 hover:bg-neutral-50 flex items-center gap-2 btn-press"
                                         >
                                             <Archive className="w-4 h-4" />
                                             {t('archive')}
                                         </button>
-                                    </div>
+                                    </motion.div>
                                 </>
                             )}
+                            </AnimatePresence>
                         </div>
                     </div>
                 </div>
@@ -529,10 +542,20 @@ function ActivitySidebar({
 function EmptyState() {
     const t = useTranslations('dashboard.missions')
     return (
-        <div className="bg-white border border-neutral-200 border-dashed rounded-xl p-16 text-center">
-            <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <motion.div
+            variants={fadeInUp}
+            initial="hidden"
+            animate="visible"
+            transition={springGentle}
+            className="bg-white border border-neutral-200 border-dashed rounded-xl p-16 text-center"
+        >
+            <motion.div
+                variants={floatVariants}
+                animate="float"
+                className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-6"
+            >
                 <Target className="w-8 h-8 text-neutral-300" />
-            </div>
+            </motion.div>
             <h3 className="text-xl font-medium text-neutral-900 mb-2">
                 {t('createFirst')}
             </h3>
@@ -541,12 +564,12 @@ function EmptyState() {
             </p>
             <Link
                 href="/dashboard/missions/create"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-medium hover:bg-neutral-800 transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-medium hover:bg-neutral-800 transition-colors btn-press"
             >
                 <Plus className="w-4 h-4" />
                 {t('newMission')}
             </Link>
-        </div>
+        </motion.div>
     )
 }
 
@@ -704,16 +727,36 @@ function MissionsContent() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-32">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+            <div className="space-y-8 animate-pulse">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="h-8 w-48 rounded-lg skeleton-shimmer" />
+                        <div className="h-4 w-64 rounded-lg skeleton-shimmer mt-2" />
+                    </div>
+                    <div className="h-10 w-40 rounded-xl skeleton-shimmer" />
+                </div>
+                <div className="h-24 rounded-xl skeleton-shimmer" />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-4">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="h-40 rounded-xl skeleton-shimmer" />
+                        ))}
+                    </div>
+                    <div className="h-64 rounded-xl skeleton-shimmer" />
+                </div>
             </div>
         )
     }
 
     return (
-        <div className="space-y-8">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="space-y-8"
+        >
             {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-light text-neutral-900 tracking-tight">
                         {t('title')}
@@ -745,7 +788,7 @@ function MissionsContent() {
                     {canCreateMore ? (
                         <Link
                             href="/dashboard/missions/create"
-                            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-medium text-sm hover:bg-neutral-800 transition-colors"
+                            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-medium text-sm hover:bg-neutral-800 transition-colors btn-press"
                         >
                             <Plus className="w-4 h-4" />
                             {t('newMission')}
@@ -757,28 +800,36 @@ function MissionsContent() {
                         </div>
                     )}
                 </div>
-            </div>
+            </motion.div>
 
             {/* Global Stats */}
             {missions.length > 0 && (
-                <GlobalStatsBar stats={globalStats} />
+                <motion.div variants={fadeInUp} transition={springGentle}>
+                    <GlobalStatsBar stats={globalStats} />
+                </motion.div>
             )}
 
             {/* Two Column Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
                 {/* Missions List (2/3) */}
-                <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+                <motion.div
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
+                    className="lg:col-span-2 space-y-3 sm:space-y-4"
+                >
                     {nonArchivedMissions.length === 0 && archivedMissions.length === 0 ? (
                         <EmptyState />
                     ) : (
                         <>
                             {nonArchivedMissions.map((mission) => (
+                                <motion.div key={mission.id} variants={staggerItem} transition={springGentle}>
                                 <MissionRow
-                                    key={mission.id}
                                     mission={mission}
                                     pendingRequests={requestsByMission[mission.id] || 0}
                                     onRefresh={loadData}
                                 />
+                                </motion.div>
                             ))}
 
                             {/* Add Mission Placeholder */}
@@ -795,8 +846,15 @@ function MissionsContent() {
                             )}
 
                             {/* Archives Section */}
+                            <AnimatePresence>
                             {showArchives && archivedMissions.length > 0 && (
-                                <div className="mt-6 space-y-3">
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={springGentle}
+                                    className="mt-6 space-y-3 overflow-hidden"
+                                >
                                     <div className="flex items-center gap-2 mb-2">
                                         <Archive className="w-4 h-4 text-neutral-400" />
                                         <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">
@@ -813,11 +871,12 @@ function MissionsContent() {
                                             onExport={handleExport}
                                         />
                                     ))}
-                                </div>
+                                </motion.div>
                             )}
+                            </AnimatePresence>
                         </>
                     )}
-                </div>
+                </motion.div>
 
                 {/* Activity Sidebar (1/3) */}
                 <div className="lg:col-span-1">
@@ -826,8 +885,8 @@ function MissionsContent() {
                         requests={requests}
                     />
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     )
 }
 

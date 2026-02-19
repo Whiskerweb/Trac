@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Users, Crown, ArrowLeft, Globe, Lock, KeyRound, Share2, Check, ExternalLink } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 import { getOrganizationBySlug, applyToJoinOrg } from '@/app/actions/organization-actions'
 
 function VisibilityBadge({ visibility }: { visibility: string }) {
@@ -15,7 +17,7 @@ function VisibilityBadge({ visibility }: { visibility: string }) {
     const c = config[visibility] || config.PUBLIC
     const Icon = c.icon
     return (
-        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${c.style}`}>
+        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border badge-pop ${c.style}`}>
             <Icon className="w-3 h-3" /> {c.label}
         </span>
     )
@@ -65,8 +67,21 @@ export default function OrganizationDetailPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+                <div className="skeleton-shimmer h-4 w-28 rounded mb-8" />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-8">
+                        <div className="flex items-start gap-4 mb-4">
+                            <div className="skeleton-shimmer w-14 h-14 rounded-2xl" />
+                            <div className="flex-1 space-y-2">
+                                <div className="skeleton-shimmer h-6 w-48 rounded-lg" />
+                                <div className="skeleton-shimmer h-4 w-32 rounded" />
+                            </div>
+                        </div>
+                        <div className="skeleton-shimmer h-24 rounded-xl" />
+                    </div>
+                    <div className="skeleton-shimmer h-48 rounded-2xl" />
+                </div>
             </div>
         )
     }
@@ -83,17 +98,24 @@ export default function OrganizationDetailPage() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="max-w-5xl mx-auto px-4 sm:px-6 py-8"
+        >
             {/* Back */}
-            <Link href="/seller/organizations" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-8">
-                <ArrowLeft className="w-4 h-4" /> Back to browse
-            </Link>
+            <motion.div variants={fadeInUp} transition={springGentle}>
+                <Link href="/seller/organizations" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-8">
+                    <ArrowLeft className="w-4 h-4" /> Back to browse
+                </Link>
+            </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left column */}
                 <div className="lg:col-span-2 space-y-8">
                     {/* Header */}
-                    <div>
+                    <motion.div variants={fadeInUp} transition={springGentle}>
                         <div className="flex items-start gap-4 mb-4">
                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                                 <span className="text-xl font-bold text-white">{org.name.charAt(0)}</span>
@@ -111,29 +133,29 @@ export default function OrganizationDetailPage() {
                         {org.description && (
                             <p className="text-gray-600 text-[15px] leading-relaxed">{org.description}</p>
                         )}
-                    </div>
+                    </motion.div>
 
                     {/* Missions */}
                     {org.Missions && org.Missions.length > 0 && (
-                        <div>
+                        <motion.div variants={fadeInUp} transition={springGentle}>
                             <h2 className="text-lg font-semibold text-gray-900 mb-4">Active Missions</h2>
-                            <div className="space-y-2">
+                            <motion.div className="space-y-2" variants={staggerContainer} initial="hidden" animate="visible">
                                 {org.Missions.map((om: any) => (
-                                    <div key={om.id} className="flex items-center justify-between px-4 py-3 bg-white border border-gray-100 rounded-xl">
+                                    <motion.div key={om.id} variants={staggerItem} transition={springGentle} className="flex items-center justify-between px-4 py-3 bg-white border border-gray-100 rounded-xl card-hover">
                                         <div>
                                             <p className="text-sm font-medium text-gray-900">{om.Mission.title}</p>
                                             <p className="text-xs text-gray-400">{om.Mission.reward}</p>
                                         </div>
-                                        <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">Active</span>
-                                    </div>
+                                        <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium badge-pop">Active</span>
+                                    </motion.div>
                                 ))}
-                            </div>
-                        </div>
+                            </motion.div>
+                        </motion.div>
                     )}
 
                     {/* Members preview */}
                     {org.Members && org.Members.length > 0 && (
-                        <div>
+                        <motion.div variants={fadeInUp} transition={springGentle}>
                             <h2 className="text-lg font-semibold text-gray-900 mb-4">Members ({org._count?.Members || org.Members.length})</h2>
                             <div className="flex flex-wrap gap-2">
                                 {org.Members.slice(0, 12).map((m: any) => (
@@ -150,13 +172,13 @@ export default function OrganizationDetailPage() {
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        </motion.div>
                     )}
                 </div>
 
                 {/* Right column — sticky CTA */}
                 <div className="lg:col-span-1">
-                    <div className="sticky top-8 bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
+                    <motion.div variants={fadeInUp} transition={springGentle} className="sticky top-8 bg-white border border-gray-200 rounded-2xl p-6 space-y-5 card-hover">
                         {/* Stats */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="text-center">
@@ -175,7 +197,7 @@ export default function OrganizationDetailPage() {
                         {isLeader ? (
                             <Link
                                 href={`/seller/manage/${org.id}`}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors btn-press"
                             >
                                 <Crown className="w-4 h-4" /> Manage Organization
                             </Link>
@@ -183,7 +205,7 @@ export default function OrganizationDetailPage() {
                             <div className="space-y-2">
                                 <Link
                                     href={`/seller/manage/${org.id}`}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors btn-press"
                                 >
                                     <Users className="w-4 h-4" /> View Dashboard
                                 </Link>
@@ -208,7 +230,7 @@ export default function OrganizationDetailPage() {
                             <button
                                 onClick={handleJoin}
                                 disabled={joining}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 btn-press"
                             >
                                 {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
                                 {org.visibility === 'PRIVATE' ? 'Request to join' : 'Join organization'}
@@ -219,15 +241,15 @@ export default function OrganizationDetailPage() {
                         {org.slug && (
                             <button
                                 onClick={handleShare}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors btn-press"
                             >
                                 {copied ? <Check className="w-4 h-4 text-green-500" /> : <Share2 className="w-4 h-4" />}
                                 {copied ? 'Copied!' : 'Share link'}
                             </button>
                         )}
-                    </div>
+                    </motion.div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     )
 }

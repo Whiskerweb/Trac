@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ChevronLeft, MapPin, Globe, Calendar, Copy, Check, Loader2, Award, Target, TrendingUp, Youtube, ExternalLink } from 'lucide-react'
 import { getSellerProfile } from '@/app/actions/sellers'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 interface SellerProfile {
     id: string
@@ -142,7 +143,7 @@ export default function SellerProfilePage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <TraaactionLoader size={24} className="text-gray-400" />
             </div>
         )
     }

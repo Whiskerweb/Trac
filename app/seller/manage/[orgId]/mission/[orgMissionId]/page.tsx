@@ -9,6 +9,7 @@ import { getOrgMissionDetail } from '@/app/actions/organization-actions'
 import type { OrgMissionDetail } from '@/app/actions/organization-actions'
 import { getOrCreateConversationForSeller } from '@/app/actions/messaging'
 import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 function OrgCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
@@ -120,7 +121,7 @@ export default function OrgMissionDetailPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                <TraaactionLoader size={20} className="text-gray-400" />
             </div>
         )
     }

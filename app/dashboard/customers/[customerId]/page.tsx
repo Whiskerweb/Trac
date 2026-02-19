@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation'
 import { ChevronLeft, MapPin, Monitor, Globe, Smartphone, Calendar, DollarSign, Link2, ExternalLink, Copy, Check, MousePointer, ShoppingCart, UserPlus, Loader2, User, RefreshCw } from 'lucide-react'
 import { getCustomerWithActivity, CustomerDetailWithActivity, CustomerActivity } from '@/app/actions/customers'
 import { useTranslations } from 'next-intl'
+import { motion } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 
 function Avatar({ name, avatar, size = 'md' }: { name: string | null; avatar: string | null; size?: 'sm' | 'md' | 'lg' }) {
     const initials = name
@@ -98,8 +100,10 @@ export default function CustomerProfilePage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <div className="space-y-6 animate-pulse p-4 sm:p-6">
+                <div className="h-20 rounded-xl skeleton-shimmer" />
+                <div className="h-40 rounded-xl skeleton-shimmer" />
+                <div className="h-64 rounded-xl skeleton-shimmer" />
             </div>
         )
     }
@@ -120,22 +124,24 @@ export default function CustomerProfilePage() {
     }
 
     return (
-        <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-4 sm:space-y-6 p-4 sm:p-6">
             {/* Back Button */}
-            <button
-                onClick={() => router.push('/dashboard/customers')}
-                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors"
-            >
-                <ChevronLeft className="w-4 h-4" />
-                {t('backToCustomers')}
-            </button>
+            <motion.div variants={fadeInUp} transition={springGentle}>
+                <button
+                    onClick={() => router.push('/dashboard/customers')}
+                    className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors btn-press"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                    {t('backToCustomers')}
+                </button>
+            </motion.div>
 
             {/* Main Content */}
             <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
                 {/* Left Column - Sales & Activity */}
                 <div className="flex-1 space-y-4 sm:space-y-6">
                     {/* Customer Header */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                    <motion.div variants={fadeInUp} transition={springGentle} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                         <Avatar name={customer.name} avatar={customer.avatar} size="lg" />
                         <div className="min-w-0 flex-1">
                             <h1 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
@@ -151,11 +157,11 @@ export default function CustomerProfilePage() {
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* Sales Table */}
                     {customer.sales.length > 0 && (
-                        <div>
+                        <motion.div variants={fadeInUp} transition={springGentle}>
                             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">{t('sales')}</h2>
                             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                                 {/* Desktop Table */}
@@ -170,7 +176,7 @@ export default function CustomerProfilePage() {
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
                                             {customer.sales.map((sale) => (
-                                                <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
+                                                <tr key={sale.id} className="row-hover hover:bg-gray-50 transition-colors">
                                                     <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(sale.timestamp)}</td>
                                                     <td className="px-4 py-3 text-sm font-mono text-gray-500">{sale.orderId.slice(0, 20)}...</td>
                                                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatCurrency(sale.amount)}</td>
@@ -201,17 +207,17 @@ export default function CustomerProfilePage() {
                                     {customer.sales.length} {customer.sales.length > 1 ? t('salesPlural') : t('sale')}
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
                     )}
 
                     {/* Lead Events */}
                     {customer.leadEvents.length > 0 && (
-                        <div>
+                        <motion.div variants={fadeInUp} transition={springGentle}>
                             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">{t('leads')}</h2>
                             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                                 <div className="divide-y divide-gray-50">
                                     {customer.leadEvents.map((lead) => (
-                                        <div key={lead.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-50">
+                                        <div key={lead.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 row-hover hover:bg-gray-50">
                                             <div className="flex items-center gap-3">
                                                 <UserPlus className="w-4 h-4 text-blue-500 shrink-0" />
                                                 <span className="text-sm font-medium text-gray-900 break-words">{lead.eventName}</span>
@@ -221,11 +227,11 @@ export default function CustomerProfilePage() {
                                     ))}
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
                     )}
 
                     {/* Activity Timeline */}
-                    <div>
+                    <motion.div variants={fadeInUp} transition={springGentle}>
                         <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">{t('activity')}</h2>
                         {customer.activity.length === 0 ? (
                             <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
@@ -233,16 +239,16 @@ export default function CustomerProfilePage() {
                                 <p className="text-gray-500 text-sm">{t('noActivityRecorded')}</p>
                             </div>
                         ) : (
-                            <div className="space-y-3 sm:space-y-4">
+                            <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-3 sm:space-y-4">
                                 {customer.activity.map((item) => (
-                                    <div key={item.id} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 group bg-white sm:bg-transparent border sm:border-0 border-gray-100 p-3 sm:p-0 rounded-lg">
+                                    <motion.div key={item.id} variants={staggerItem} transition={springGentle} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 group bg-white sm:bg-transparent border sm:border-0 border-gray-100 p-3 sm:p-0 rounded-lg row-hover">
                                         <div className="flex items-start gap-3 flex-1 min-w-0">
                                             <div className="mt-0.5 shrink-0">
                                                 {getActivityIcon(item.type)}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex flex-wrap items-center gap-2">
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getActivityBadgeStyles(item.type)}`}>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium badge-pop ${getActivityBadgeStyles(item.type)}`}>
                                                         {item.type === 'click' ? t('activityTypeClick') : item.type === 'lead' ? t('activityTypeLead') : t('activityTypeSale')}
                                                     </span>
                                                     <span className="text-sm font-medium text-gray-900 break-words">{item.description}</span>
@@ -264,15 +270,15 @@ export default function CustomerProfilePage() {
                                             </div>
                                         </div>
                                         <span className="text-xs text-gray-400 whitespace-nowrap sm:mt-0.5 pl-7 sm:pl-0">{formatDateTime(item.timestamp)}</span>
-                                    </div>
+                                    </motion.div>
                                 ))}
-                            </div>
+                            </motion.div>
                         )}
-                    </div>
+                    </motion.div>
                 </div>
 
                 {/* Right Column - Details */}
-                <div className="w-full lg:w-64 lg:shrink-0">
+                <motion.div variants={fadeInUp} transition={springGentle} className="w-full lg:w-64 lg:shrink-0">
                     <h3 className="text-sm font-semibold text-gray-900 mb-3 sm:mb-4">{t('details')}</h3>
                     <div className="bg-white lg:bg-transparent border lg:border-0 border-gray-100 rounded-xl p-4 lg:p-0 space-y-3 sm:space-y-4">
                         {/* Location */}
@@ -334,7 +340,7 @@ export default function CustomerProfilePage() {
                                             <div key={sub.subscriptionId} className="bg-gray-50 rounded-lg p-2.5 space-y-1.5">
                                                 <div className="flex items-center gap-1.5">
                                                     <RefreshCw className={`w-3.5 h-3.5 ${sub.isActive ? 'text-green-500' : 'text-gray-400'}`} />
-                                                    <span className={`text-xs font-medium ${sub.isActive ? 'text-green-700' : 'text-gray-500'}`}>
+                                                    <span className={`text-xs font-medium badge-pop ${sub.isActive ? 'text-green-700' : 'text-gray-500'}`}>
                                                         {sub.isActive ? t('subscriptionActive') : t('subscriptionEnded')}
                                                     </span>
                                                 </div>
@@ -358,7 +364,7 @@ export default function CustomerProfilePage() {
                                 <code className="text-xs sm:text-sm text-gray-900 font-mono truncate flex-1 max-w-[200px] lg:max-w-[150px]">{customer.externalId}</code>
                                 <button
                                     onClick={() => handleCopy(customer.externalId)}
-                                    className="text-gray-400 hover:text-gray-600 shrink-0"
+                                    className="text-gray-400 hover:text-gray-600 shrink-0 btn-press"
                                 >
                                     {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
                                 </button>
@@ -402,8 +408,8 @@ export default function CustomerProfilePage() {
                             </>
                         )}
                     </div>
-                </div>
+                </motion.div>
             </div>
-        </div>
+        </motion.div>
     )
 }

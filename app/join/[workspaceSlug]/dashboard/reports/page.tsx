@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { MousePointerClick, ShoppingCart, UserPlus, TrendingUp, DollarSign } from 'lucide-react'
 import { usePortalData } from '../layout'
 import { getPortalReports } from '@/app/actions/portal'
+import { staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 
 type Period = '7d' | '30d' | '90d' | 'all'
 
@@ -52,11 +53,16 @@ export default function PortalReportsPage() {
     ]
 
     return (
-        <div className="space-y-5">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="space-y-5"
+        >
             {/* Period selector */}
             <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
+                variants={staggerItem}
+                transition={springGentle}
                 className="flex items-center justify-between"
             >
                 <h1 className="text-lg font-semibold text-gray-900">{t('title')}</h1>
@@ -65,7 +71,7 @@ export default function PortalReportsPage() {
                         <button
                             key={p.key}
                             onClick={() => setPeriod(p.key)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all btn-press ${
                                 period === p.key
                                     ? 'text-white shadow-sm'
                                     : 'text-gray-500 hover:text-gray-700'
@@ -79,16 +85,20 @@ export default function PortalReportsPage() {
             </motion.div>
 
             {loading ? (
-                <div className="flex items-center justify-center py-20">
-                    <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+                <div className="space-y-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="skeleton-shimmer h-20 rounded-2xl" />
+                        ))}
+                    </div>
+                    <div className="skeleton-shimmer h-48 rounded-2xl" />
                 </div>
             ) : reportData ? (
                 <>
                     {/* KPI cards */}
                     <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.05 }}
+                        variants={staggerItem}
+                        transition={springGentle}
                         className="grid grid-cols-2 sm:grid-cols-5 gap-3"
                     >
                         {[
@@ -98,7 +108,7 @@ export default function PortalReportsPage() {
                             { label: t('revenue'), value: `${(reportData.totalRevenue / 100).toFixed(0)}€`, icon: TrendingUp, color: '#3b82f6' },
                             { label: t('commission'), value: `${(reportData.totalCommission / 100).toFixed(0)}€`, icon: DollarSign, color: primaryColor },
                         ].map((kpi) => (
-                            <div key={kpi.label} className="bg-white rounded-2xl border border-gray-100 p-4">
+                            <div key={kpi.label} className="bg-white rounded-2xl border border-gray-100 p-4 card-hover">
                                 <div className="flex items-center gap-2 mb-2">
                                     <kpi.icon className="w-4 h-4" style={{ color: kpi.color }} />
                                     <span className="text-[11px] text-gray-500">{kpi.label}</span>
@@ -111,10 +121,9 @@ export default function PortalReportsPage() {
                     {/* Simple bar chart */}
                     {reportData.timeseries.length > 0 && (
                         <motion.div
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.08 }}
-                            className="bg-white rounded-2xl border border-gray-100 p-5"
+                            variants={staggerItem}
+                            transition={springGentle}
+                            className="bg-white rounded-2xl border border-gray-100 card-hover p-5"
                         >
                             <p className="text-sm font-semibold text-gray-900 mb-4">{t('commission')}</p>
                             <div className="flex items-end gap-[2px] h-32">
@@ -145,6 +154,6 @@ export default function PortalReportsPage() {
                     )}
                 </>
             ) : null}
-        </div>
+        </motion.div>
     )
 }

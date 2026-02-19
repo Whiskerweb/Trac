@@ -6,6 +6,7 @@ import { Building2, Users, Loader2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 interface UserRoles {
     hasWorkspace: boolean
@@ -78,7 +79,7 @@ export default function AuthChoicePage() {
     if (loading) {
         return (
             <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                <TraaactionLoader size={20} className="text-gray-400" />
             </div>
         )
     }
@@ -160,7 +161,7 @@ export default function AuthChoicePage() {
 
                             {selecting === 'startup' && (
                                 <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center">
-                                    <Loader2 className="w-5 h-5 animate-spin text-neutral-900" />
+                                    <TraaactionLoader size={20} className="text-gray-400" />
                                 </div>
                             )}
                         </motion.button>
@@ -197,7 +198,7 @@ export default function AuthChoicePage() {
 
                             {selecting === 'seller' && (
                                 <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center">
-                                    <Loader2 className="w-5 h-5 animate-spin text-neutral-900" />
+                                    <TraaactionLoader size={20} className="text-gray-400" />
                                 </div>
                             )}
                         </motion.button>

@@ -5,6 +5,7 @@ import { Loader2, Search, Clock, Check, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, buttonTap } from '@/lib/animations'
 import {
     getWorkspaceCommissions,
     getCommissionDetail,
@@ -71,7 +72,7 @@ function TypeBadge({ type }: { type: 'SALE' | 'LEAD' | 'RECURRING' | null }) {
         RECURRING: 'bg-blue-50 text-blue-700',
     }
     return (
-        <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide ${styles[type] || 'bg-gray-50 text-gray-700'}`}>
+        <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide badge-pop ${styles[type] || 'bg-gray-50 text-gray-700'}`}>
             {t(type.toLowerCase() as 'sale' | 'lead' | 'recurring').toUpperCase()}
         </span>
     )
@@ -117,7 +118,7 @@ function CommissionCard({
 
     return (
         <div
-            className="p-3.5 rounded-lg border border-transparent bg-gray-50/80 hover:border-gray-200 hover:bg-white hover:shadow-sm cursor-pointer transition-all active:scale-[0.99] relative"
+            className="p-3.5 rounded-lg border border-transparent bg-gray-50/80 hover:border-gray-200 hover:bg-white hover:shadow-sm cursor-pointer transition-all active:scale-[0.99] relative row-hover"
             onClick={onClick}
         >
             <div className="flex items-center justify-between mb-2.5">
@@ -153,7 +154,7 @@ function CommissionCard({
                 <div className="flex items-center gap-1.5">
                     <TypeBadge type={commission.rewardType} />
                     {commission.isPortalExclusive && (
-                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-purple-50 text-purple-600">
+                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-purple-50 text-purple-600 badge-pop">
                             Portal
                         </span>
                     )}
@@ -321,8 +322,19 @@ function Drawer({
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto p-6">
                     {loading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                        <div className="space-y-4 animate-pulse">
+                            <div className="flex items-center gap-3.5">
+                                <div className="w-12 h-12 rounded-full skeleton-shimmer" />
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-4 w-32 rounded skeleton-shimmer" />
+                                    <div className="h-3 w-48 rounded skeleton-shimmer" />
+                                </div>
+                            </div>
+                            <div className="h-16 rounded-lg skeleton-shimmer" />
+                            <div className="grid grid-cols-2 gap-2">
+                                {[1,2,3,4].map(i => <div key={i} className="h-16 rounded-lg skeleton-shimmer" />)}
+                            </div>
+                            <div className="h-20 rounded-lg skeleton-shimmer" />
                         </div>
                     ) : detail ? (
                         <>
@@ -355,7 +367,7 @@ function Drawer({
                                         <div className="flex items-center gap-2">
                                             <div className="text-sm font-semibold">{detail.mission.title}</div>
                                             {detail.mission.isPortalExclusive && (
-                                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600">
+                                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 badge-pop">
                                                     Portal
                                                 </span>
                                             )}
@@ -449,7 +461,7 @@ function Drawer({
                                     </div>
                                     <div className="h-1 rounded-full bg-black/5 overflow-hidden">
                                         <div
-                                            className="h-full rounded-full bg-amber-500"
+                                            className="h-full rounded-full bg-amber-500 progress-fill"
                                             style={{
                                                 width: `${Math.min(100, Math.round(
                                                     ((Date.now() - new Date(detail.createdAt).getTime()) / (1000 * 60 * 60 * 24)) /
@@ -680,8 +692,11 @@ function PipelineContent() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <div className="space-y-6 animate-pulse p-4 sm:p-6 lg:p-8">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[1,2,3,4].map(i => <div key={i} className="h-24 rounded-xl skeleton-shimmer" />)}
+                </div>
+                <div className="h-96 rounded-xl skeleton-shimmer" />
             </div>
         )
     }
@@ -697,26 +712,32 @@ function PipelineContent() {
             </div>
 
             {/* KPI Row */}
-            <div className="flex gap-3 mb-5 flex-wrap sm:flex-nowrap">
-                <KpiCard
-                    dotColor="#D97706"
-                    label={t('pending')}
-                    value={formatCurrency(stats.pending)}
-                    sub={`${pending.length} commission${pending.length > 1 ? 's' : ''}`}
-                />
-                <KpiCard
-                    dotColor="#2563EB"
-                    label={t('proceed')}
-                    value={formatCurrency(stats.proceed)}
-                    sub={`${proceed.length} commission${proceed.length > 1 ? 's' : ''}`}
-                />
-                <KpiCard
-                    dotColor="#059669"
-                    label={t('complete')}
-                    value={formatCurrency(stats.complete)}
-                    sub={`${complete.length} commission${complete.length > 1 ? 's' : ''}`}
-                />
-            </div>
+            <motion.div className="flex gap-3 mb-5 flex-wrap sm:flex-nowrap" variants={staggerContainer} initial="hidden" animate="visible">
+                <motion.div className="flex-1 min-w-0" variants={staggerItem} transition={springGentle}>
+                    <KpiCard
+                        dotColor="#D97706"
+                        label={t('pending')}
+                        value={formatCurrency(stats.pending)}
+                        sub={`${pending.length} commission${pending.length > 1 ? 's' : ''}`}
+                    />
+                </motion.div>
+                <motion.div className="flex-1 min-w-0" variants={staggerItem} transition={springGentle}>
+                    <KpiCard
+                        dotColor="#2563EB"
+                        label={t('proceed')}
+                        value={formatCurrency(stats.proceed)}
+                        sub={`${proceed.length} commission${proceed.length > 1 ? 's' : ''}`}
+                    />
+                </motion.div>
+                <motion.div className="flex-1 min-w-0" variants={staggerItem} transition={springGentle}>
+                    <KpiCard
+                        dotColor="#059669"
+                        label={t('complete')}
+                        value={formatCurrency(stats.complete)}
+                        sub={`${complete.length} commission${complete.length > 1 ? 's' : ''}`}
+                    />
+                </motion.div>
+            </motion.div>
 
             {/* Filter Bar + Search */}
             <div className="flex items-center gap-3 mb-4 flex-wrap">
@@ -883,8 +904,11 @@ export default function PipelinePage() {
     return (
         <Suspense
             fallback={
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <div className="space-y-6 animate-pulse p-4 sm:p-6 lg:p-8">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[1,2,3,4].map(i => <div key={i} className="h-24 rounded-xl skeleton-shimmer" />)}
+                    </div>
+                    <div className="h-96 rounded-xl skeleton-shimmer" />
                 </div>
             }
         >

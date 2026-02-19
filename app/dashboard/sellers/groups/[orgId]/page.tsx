@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { motion } from 'framer-motion'
 import {
     Loader2, ChevronLeft, Users, Target, Send, X, AlertTriangle, Ban, Check,
     Info, DollarSign, ShoppingCart, Trophy, BarChart3, MessageSquare, Lightbulb
 } from 'lucide-react'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 import { getActiveOrganizationsForStartup, proposeOrgMission, cancelOrgMission, getOrgStatsForStartup } from '@/app/actions/organization-actions'
 import { getWorkspaceMissions } from '@/app/actions/missions'
 import { initializeConversation } from '@/app/actions/messaging'
@@ -40,7 +42,7 @@ function OrgStatusBadge({ status }: { status: string }) {
     }
     const c = config[status] || config.PENDING
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${c.bg} ${c.text}`}>
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider badge-pop ${c.bg} ${c.text}`}>
             {c.label}
         </span>
     )
@@ -55,7 +57,7 @@ function DealStatusBadge({ status }: { status: string }) {
         CANCELLED: 'bg-gray-100 text-gray-500 border-gray-200',
     }
     return (
-        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${styles[status] || 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border badge-pop ${styles[status] || 'bg-gray-100 text-gray-500 border-gray-200'}`}>
             {status}
         </span>
     )
@@ -289,8 +291,18 @@ export default function OrgDetailPage() {
     // ---- Loading state ----
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-32">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+            <div className="space-y-8 pb-20">
+                <div className="h-6 w-28 rounded-lg skeleton-shimmer" />
+                <div className="h-48 w-full rounded-3xl skeleton-shimmer" />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="h-28 rounded-2xl skeleton-shimmer" />
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 h-64 rounded-2xl skeleton-shimmer" />
+                    <div className="h-64 rounded-2xl skeleton-shimmer" />
+                </div>
             </div>
         )
     }
@@ -327,7 +339,12 @@ export default function OrgDetailPage() {
 
     return (
         <div className="relative min-h-screen">
-            <div className="relative space-y-8 pb-20">
+            <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+                className="relative space-y-8 pb-20"
+            >
                 {/* Back button — Editorial style */}
                 <button
                     onClick={() => router.push('/dashboard/sellers?view=orgs')}
@@ -340,7 +357,7 @@ export default function OrgDetailPage() {
                 </button>
 
                 {/* ═══════════ HERO HEADER ═══════════ */}
-                <div className="relative">
+                <motion.div variants={fadeInUp} transition={springGentle} className="relative">
                     <div className="absolute inset-0 bg-gradient-to-b from-slate-50/50 to-transparent rounded-3xl" />
                     <div className="relative border border-slate-200/60 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-sm">
                         {/* Accent line */}
@@ -382,7 +399,7 @@ export default function OrgDetailPage() {
                                                         }
                                                     }}
                                                     disabled={messagingLeader}
-                                                    className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors disabled:opacity-50"
+                                                    className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors disabled:opacity-50 btn-press"
                                                 >
                                                     {messagingLeader ? (
                                                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -395,7 +412,7 @@ export default function OrgDetailPage() {
                                             {availableMissions.length > 0 && (
                                                 <button
                                                     onClick={() => setShowPropose(true)}
-                                                    className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-black transition-colors"
+                                                    className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-black transition-colors btn-press"
                                                 >
                                                     <Send className="w-4 h-4" /> {t('proposeMission')}
                                                 </button>
@@ -438,11 +455,11 @@ export default function OrgDetailPage() {
                             </div>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* ═══════════ KPI STATS GRID ═══════════ */}
                 {stats && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <StatCard
                             label={t('revenue')}
                             value={formatCurrency(stats.totalRevenue)}
@@ -468,7 +485,7 @@ export default function OrgDetailPage() {
                             tooltip={t('tooltip.activeMissions')}
                             delay="150ms"
                         />
-                    </div>
+                    </motion.div>
                 )}
 
                 {/* Cancel error banner */}
@@ -486,7 +503,7 @@ export default function OrgDetailPage() {
                 )}
 
                 {/* ═══════════ 2-COLUMN LAYOUT ═══════════ */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* ──── Main (col-span-2) ──── */}
                     <div className="lg:col-span-2 space-y-6">
 
@@ -672,7 +689,7 @@ export default function OrgDetailPage() {
                                     {stats.topSellers.map((seller: any, index: number) => {
                                         const rank = index + 1
                                         return (
-                                            <div key={seller.sellerId} className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
+                                            <div key={seller.sellerId} className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-slate-50 transition-colors row-hover">
                                                 <div className="w-6 flex items-center justify-center">
                                                     {rank <= 3 ? (
                                                         <Trophy className={`w-4 h-4 ${getTrophyColor(rank)}`} />
@@ -731,7 +748,7 @@ export default function OrgDetailPage() {
                             </ol>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* ═══════════ PROPOSE MODAL ═══════════ */}
                 {showPropose && (
@@ -834,7 +851,7 @@ export default function OrgDetailPage() {
                             <button
                                 onClick={handlePropose}
                                 disabled={proposing || !selectedMission || !totalReward || (isPercentageDeal && orgSharePreview <= 0)}
-                                className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 btn-press"
                             >
                                 {proposing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                                 {proposing ? t('sendingProposal') : t('sendProposal')}
@@ -842,7 +859,7 @@ export default function OrgDetailPage() {
                         </div>
                     </div>
                 )}
-            </div>
+            </motion.div>
         </div>
     )
 }

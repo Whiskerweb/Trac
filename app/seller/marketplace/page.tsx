@@ -3,7 +3,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Search, Loader2, ArrowRight, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { getMarketplaceMissions } from '@/app/actions/marketplace-actions'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 
 // =============================================
 // TYPES
@@ -101,12 +103,7 @@ function ProgramRow({ mission, index }: { mission: Mission; index: number }) {
     return (
         <Link href={`/seller/marketplace/${mission.id}`}>
             <div
-                className="group flex items-center gap-5 px-5 py-4 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200"
-                style={{
-                    animationDelay: `${index * 30}ms`,
-                    opacity: 0,
-                    animation: 'fadeSlideIn 0.4s ease-out forwards'
-                }}
+                className="group flex items-center gap-5 px-5 py-4 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200 card-hover"
             >
                 {/* Logo */}
                 {mission.startup.logo_url ? (
@@ -252,33 +249,24 @@ export default function SellerMarketplacePage() {
 
     return (
         <div className="min-h-screen bg-[#FAFAFA]">
-            {/* CSS Animations */}
-            <style jsx global>{`
-                @keyframes fadeSlideIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(12px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-            `}</style>
-
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+            <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer}
+                className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16"
+            >
                 {/* Header - Minimal */}
-                <header className="text-center mb-12">
+                <motion.header variants={fadeInUp} transition={springGentle} className="text-center mb-12">
                     <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight mb-3">
                         Programs
                     </h1>
                     <p className="text-gray-500 text-[15px]">
                         Find the program that suits you
                     </p>
-                </header>
+                </motion.header>
 
                 {/* Search - Spotlight inspired */}
-                <div className="max-w-xl mx-auto mb-12">
+                <motion.div variants={fadeInUp} transition={springGentle} className="max-w-xl mx-auto mb-12">
                     <div
                         className={`relative transition-all duration-300 ${
                             searchFocused
@@ -312,7 +300,7 @@ export default function SellerMarketplacePage() {
                             </kbd>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Categories - Subtle pills with expand */}
                 <nav className="flex items-center justify-center gap-1.5 mb-12 flex-wrap">
@@ -322,7 +310,7 @@ export default function SellerMarketplacePage() {
                             key={cat.id}
                             onClick={() => setSelectedCategory(cat.id)}
                             className={`
-                                px-3 py-1.5 rounded-full text-xs sm:text-[13px] font-medium transition-all duration-200
+                                px-3 py-1.5 rounded-full text-xs sm:text-[13px] font-medium transition-all duration-200 btn-press
                                 ${selectedCategory === cat.id
                                     ? 'bg-gray-900 text-white'
                                     : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
@@ -339,7 +327,7 @@ export default function SellerMarketplacePage() {
                             key={cat.id}
                             onClick={() => setSelectedCategory(cat.id)}
                             className={`
-                                px-3 py-1.5 rounded-full text-xs sm:text-[13px] font-medium transition-all duration-200
+                                px-3 py-1.5 rounded-full text-xs sm:text-[13px] font-medium transition-all duration-200 btn-press
                                 ${selectedCategory === cat.id
                                     ? 'bg-gray-900 text-white'
                                     : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
@@ -374,8 +362,18 @@ export default function SellerMarketplacePage() {
 
                     if (loading) {
                         return (
-                            <div className="flex items-center justify-center py-32">
-                                <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+                            <div className="space-y-2 py-4">
+                                {[1, 2, 3, 4, 5].map(i => (
+                                    <div key={i} className="flex items-center gap-5 px-5 py-4 bg-white rounded-xl border border-gray-100">
+                                        <div className="w-10 h-10 rounded-lg skeleton-shimmer flex-shrink-0" />
+                                        <div className="flex-1">
+                                            <div className="h-4 w-36 rounded skeleton-shimmer mb-2" />
+                                            <div className="h-3 w-48 rounded skeleton-shimmer" />
+                                        </div>
+                                        <div className="hidden md:block h-8 w-16 rounded-lg skeleton-shimmer" />
+                                        <div className="hidden sm:block h-6 w-12 rounded skeleton-shimmer" />
+                                    </div>
+                                ))}
                             </div>
                         )
                     }
@@ -407,24 +405,25 @@ export default function SellerMarketplacePage() {
                     return (
                         <>
                             {/* Results count - Very subtle */}
-                            <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-6 text-center">
+                            <motion.p variants={fadeInUp} transition={springGentle} className="text-[11px] text-gray-400 uppercase tracking-wider mb-6 text-center">
                                 {availableMissions.length} program{availableMissions.length !== 1 ? 's' : ''} available
-                            </p>
+                            </motion.p>
 
                             {/* List */}
-                            <div className="space-y-2">
+                            <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-2">
                                 {availableMissions.map((mission, index) => (
-                                    <ProgramRow
-                                        key={mission.id}
-                                        mission={mission}
-                                        index={index}
-                                    />
+                                    <motion.div key={mission.id} variants={staggerItem}>
+                                        <ProgramRow
+                                            mission={mission}
+                                            index={index}
+                                        />
+                                    </motion.div>
                                 ))}
-                            </div>
+                            </motion.div>
                         </>
                     )
                 })()}
-            </div>
+            </motion.div>
         </div>
     )
 }

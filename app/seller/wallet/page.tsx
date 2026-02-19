@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { ArrowUpRight, Loader2, Gift, Zap, X, AlertTriangle, CreditCard, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 
 interface Commission {
     id: string
@@ -151,31 +152,48 @@ export default function SellerWalletPage() {
 
     if (loading) {
         return (
-            <div className="min-h-[80vh] flex items-center justify-center">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center gap-3"
-                >
-                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
-                    <span className="text-xs text-neutral-400 tracking-wide">Loading</span>
-                </motion.div>
+            <div className="max-w-2xl mx-auto py-8">
+                <div className="text-center mb-16">
+                    <div className="h-4 w-24 rounded skeleton-shimmer mx-auto mb-4" />
+                    <div className="h-16 w-64 rounded-xl skeleton-shimmer mx-auto mb-4" />
+                </div>
+                <div className="grid grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-12">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="bg-white p-6 text-center">
+                            <div className="h-8 w-20 rounded skeleton-shimmer mx-auto mb-2" />
+                            <div className="h-3 w-16 rounded skeleton-shimmer mx-auto" />
+                        </div>
+                    ))}
+                </div>
+                <div className="space-y-1">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="flex items-center justify-between py-4 px-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-2 h-2 rounded-full skeleton-shimmer" />
+                                <div>
+                                    <div className="h-4 w-20 rounded skeleton-shimmer mb-1" />
+                                    <div className="h-3 w-16 rounded skeleton-shimmer" />
+                                </div>
+                            </div>
+                            <div className="h-4 w-24 rounded skeleton-shimmer" />
+                        </div>
+                    ))}
+                </div>
             </div>
         )
     }
 
     return (
         <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
             className="max-w-2xl mx-auto py-8"
         >
             {/* Hero Balance */}
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.5 }}
+                variants={fadeInUp}
+                transition={springGentle}
                 className="text-center mb-16"
             >
                 <p className="text-xs uppercase tracking-[0.2em] text-neutral-400 mb-4">
@@ -217,9 +235,8 @@ export default function SellerWalletPage() {
             {/* Action Card - Platform Mode */}
             {!isStripeMode && (
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
+                    variants={fadeInUp}
+                    transition={springGentle}
                     className="mb-12"
                 >
                     <Link
@@ -244,20 +261,19 @@ export default function SellerWalletPage() {
 
             {/* Stats Grid */}
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
+                variants={fadeInUp}
+                transition={springGentle}
                 className="grid grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-12"
             >
-                <div className="bg-white p-6 text-center">
+                <div className="bg-white p-6 text-center card-hover">
                     <p className="text-2xl font-light text-neutral-900">{formatCurrency(totalEarned)}</p>
                     <p className="text-xs text-neutral-400 mt-1">Total earned</p>
                 </div>
-                <div className="bg-white p-6 text-center">
+                <div className="bg-white p-6 text-center card-hover">
                     <p className="text-2xl font-light text-neutral-900">{formatCurrency(wallet.pending)}</p>
                     <p className="text-xs text-neutral-400 mt-1">Pending</p>
                 </div>
-                <div className="bg-white p-6 text-center">
+                <div className="bg-white p-6 text-center card-hover">
                     <p className="text-2xl font-light text-neutral-900">{formatCurrency(wallet.paid_total)}</p>
                     <p className="text-xs text-neutral-400 mt-1">Paid out</p>
                 </div>
@@ -265,9 +281,8 @@ export default function SellerWalletPage() {
 
             {/* Commission History */}
             <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
+                variants={fadeInUp}
+                transition={springGentle}
             >
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xs uppercase tracking-[0.15em] text-neutral-400">History</h2>
@@ -276,6 +291,9 @@ export default function SellerWalletPage() {
 
                 {wallet.commissions.length === 0 ? (
                     <div className="text-center py-16">
+                        <motion.div variants={floatVariants} animate="float" className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <Zap className="w-5 h-5 text-neutral-400" />
+                        </motion.div>
                         <p className="text-neutral-400 text-sm">No commissions</p>
                         <p className="text-neutral-300 text-xs mt-1">Share your links to get started</p>
                     </div>
@@ -290,7 +308,7 @@ export default function SellerWalletPage() {
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: 0.05 * index }}
-                                            className="group flex items-center justify-between py-4 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors cursor-pointer"
+                                            className="group flex items-center justify-between py-4 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors cursor-pointer row-hover"
                                         >
                                             <div className="flex items-center gap-4">
                                                 <div className={`w-1.5 h-1.5 rounded-full ${
@@ -340,9 +358,8 @@ export default function SellerWalletPage() {
 
             {/* How it works - collapsed by default */}
             <motion.details
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
+                variants={fadeInUp}
+                transition={springGentle}
                 className="mt-12 group"
             >
                 <summary className="text-xs uppercase tracking-[0.15em] text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors list-none flex items-center gap-2">
@@ -359,14 +376,13 @@ export default function SellerWalletPage() {
             {/* Connect Stripe CTA - Platform Mode */}
             {!isStripeMode && (
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
+                    variants={fadeInUp}
+                    transition={springGentle}
                     className="mt-12"
                 >
                     <button
                         onClick={() => setShowStripeModal(true)}
-                        className="group w-full bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 text-left"
+                        className="group w-full bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 text-left btn-press"
                     >
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
@@ -463,7 +479,7 @@ export default function SellerWalletPage() {
                                 <button
                                     onClick={handleConnectStripe}
                                     disabled={connectingStripe}
-                                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-neutral-900 text-white hover:bg-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-neutral-900 text-white hover:bg-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2 btn-press"
                                 >
                                     {connectingStripe ? (
                                         <>

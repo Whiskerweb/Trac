@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ChevronLeft, Globe, Loader2, ExternalLink, MapPin, Briefcase, TrendingUp, Target, BarChart3, MessageSquare } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { ChevronLeft, Globe, ExternalLink, MapPin, Briefcase, TrendingUp, Target, BarChart3, MessageSquare, Loader2 } from 'lucide-react'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 import { getSellerProfile } from '@/app/actions/sellers'
 import { initializeConversation } from '@/app/actions/messaging'
 
@@ -86,7 +88,7 @@ function StatusBadge({ status }: { status: SellerProfile['status'] }) {
     const { bg, text, label } = config[status]
 
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${bg} ${text}`}>
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider badge-pop ${bg} ${text}`}>
             {label}
         </span>
     )
@@ -198,8 +200,21 @@ export default function SellerProfilePage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-32">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+            <div className="space-y-8 pb-20">
+                <div className="h-6 w-28 rounded-lg skeleton-shimmer" />
+                <div className="h-48 w-full rounded-3xl skeleton-shimmer" />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="h-28 rounded-2xl skeleton-shimmer" />
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="h-40 rounded-2xl skeleton-shimmer" />
+                        <div className="h-32 rounded-2xl skeleton-shimmer" />
+                    </div>
+                    <div className="h-48 rounded-2xl skeleton-shimmer" />
+                </div>
             </div>
         )
     }
@@ -220,7 +235,12 @@ export default function SellerProfilePage() {
             {/* Subtle grid background */}
             <div className="fixed inset-0 bg-grid-small-black opacity-[0.015] pointer-events-none" />
 
-            <div className="relative space-y-8 pb-20">
+            <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+                className="relative space-y-8 pb-20"
+            >
                 {/* Back button - Editorial style */}
                 <button
                     onClick={() => router.push('/dashboard/sellers')}
@@ -233,7 +253,7 @@ export default function SellerProfilePage() {
                 </button>
 
                 {/* Hero Header - Editorial Layout */}
-                <div className="relative">
+                <motion.div variants={fadeInUp} transition={springGentle} className="relative">
                     <div className="absolute inset-0 bg-gradient-to-b from-slate-50/50 to-transparent rounded-3xl" />
                     <div className="relative border border-slate-200/60 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-sm">
                         {/* Accent line */}
@@ -266,7 +286,7 @@ export default function SellerProfilePage() {
                                         <button
                                             onClick={handleMessage}
                                             disabled={messagingLoading}
-                                            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-black transition-colors disabled:opacity-50 w-full sm:w-auto justify-center"
+                                            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-black transition-colors disabled:opacity-50 w-full sm:w-auto justify-center btn-press"
                                         >
                                             {messagingLoading ? (
                                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -312,10 +332,10 @@ export default function SellerProfilePage() {
                             </div>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Stats Grid - Data Luxury */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard
                         label="Clicks"
                         value={formatNumber(seller.globalStats.totalClicks)}
@@ -337,10 +357,10 @@ export default function SellerProfilePage() {
                         value={`${seller.globalStats.conversionRate}%`}
                         delay="150ms"
                     />
-                </div>
+                </motion.div>
 
                 {/* Content Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* About */}
@@ -490,8 +510,8 @@ export default function SellerProfilePage() {
                             </ContentCard>
                         )}
                     </div>
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
         </div>
     )
 }
@@ -545,7 +565,7 @@ function SocialLink({ href, label }: { href: string; label: string }) {
             href={fullHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center justify-between px-3 py-2 hover:bg-slate-50 rounded-lg transition-all duration-200"
+            className="group flex items-center justify-between px-3 py-2 hover:bg-slate-50 rounded-lg transition-all duration-200 row-hover"
         >
             <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900">
                 {label}

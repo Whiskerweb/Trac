@@ -8,6 +8,8 @@ import {
     FileText, ExternalLink, Image as ImageIcon, Check
 } from 'lucide-react'
 import { getStartupProfile, updateStartupProfile } from '@/app/actions/startup-profile'
+import { motion } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 
 // =============================================
 // CONSTANTS
@@ -173,14 +175,14 @@ function FileUpload({ label, currentUrl, accept, type, onUpload, onRemove }: {
                     )}
                     <button
                         onClick={onRemove}
-                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className="btn-press p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     >
                         <X className="w-4 h-4" />
                     </button>
                     <button
                         onClick={() => inputRef.current?.click()}
                         disabled={uploading}
-                        className="px-3 py-2 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:border-slate-900 hover:text-slate-900 transition-colors disabled:opacity-50"
+                        className="btn-press px-3 py-2 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:border-slate-900 hover:text-slate-900 transition-colors disabled:opacity-50"
                     >
                         {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Change'}
                     </button>
@@ -189,7 +191,7 @@ function FileUpload({ label, currentUrl, accept, type, onUpload, onRemove }: {
                 <button
                     onClick={() => inputRef.current?.click()}
                     disabled={uploading}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-4 border-2 border-dashed border-slate-200 rounded-xl text-sm text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50"
+                    className="btn-press w-full flex items-center justify-center gap-2 px-4 py-4 border-2 border-dashed border-slate-200 rounded-xl text-sm text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50"
                 >
                     {uploading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -371,8 +373,13 @@ export default function StartupProfilePage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-32">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+            <div className="space-y-6 animate-pulse max-w-4xl">
+                <div className="h-8 w-48 rounded-lg skeleton-shimmer" />
+                <div className="h-40 rounded-2xl skeleton-shimmer" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="h-64 rounded-2xl skeleton-shimmer" />
+                    <div className="h-64 rounded-2xl skeleton-shimmer" />
+                </div>
             </div>
         )
     }
@@ -381,12 +388,12 @@ export default function StartupProfilePage() {
         <div className="relative min-h-screen">
             <div className="fixed inset-0 bg-grid-small-black opacity-[0.015] pointer-events-none" />
 
-            <div className="relative space-y-8 pb-20 max-w-4xl">
+            <motion.div className="relative space-y-8 pb-20 max-w-4xl" initial="hidden" animate="visible" variants={staggerContainer}>
                 {/* Back + Header */}
-                <div>
+                <motion.div variants={fadeInUp} transition={springGentle}>
                     <button
                         onClick={() => router.push('/dashboard')}
-                        className="group flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-slate-900 transition-all duration-300 mb-4"
+                        className="btn-press group flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-slate-900 transition-all duration-300 mb-4"
                     >
                         <div className="w-6 h-6 border border-slate-200 rounded-md flex items-center justify-center group-hover:border-slate-900 group-hover:bg-slate-900 transition-all duration-300">
                             <ChevronLeft className="w-3.5 h-3.5 group-hover:text-white transition-colors" />
@@ -399,7 +406,7 @@ export default function StartupProfilePage() {
                     <p className="text-sm text-slate-400 mt-1">
                         Configure your startup's public profile
                     </p>
-                </div>
+                </motion.div>
 
                 {/* Error / Success messages */}
                 {error && (
@@ -409,7 +416,7 @@ export default function StartupProfilePage() {
                 )}
 
                 {/* Logo + Name Hero */}
-                <div className="relative border border-slate-200/60 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-sm">
+                <motion.div variants={fadeInUp} transition={springGentle} className="relative border border-slate-200/60 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-sm">
                     <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-slate-900 to-transparent" />
                     <div className="p-8">
                         <div className="flex items-start gap-6">
@@ -470,10 +477,10 @@ export default function StartupProfilePage() {
                             </div>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Two column layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Left Column */}
                     <div className="space-y-6">
                         {/* Company Info */}
@@ -583,9 +590,9 @@ export default function StartupProfilePage() {
                             </div>
                         </SectionCard>
                     </div>
-                </div>
+                </motion.div>
 
-            </div>
+            </motion.div>
 
             {/* Floating Save Button - appears on changes */}
             <div
@@ -598,7 +605,7 @@ export default function StartupProfilePage() {
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transition-all duration-300 ${
+                    className={`btn-press flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transition-all duration-300 ${
                         saved
                             ? 'bg-green-600 text-white scale-105'
                             : 'bg-slate-900 text-white hover:bg-black hover:scale-105'

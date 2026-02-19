@@ -5,6 +5,7 @@ import { useParams, usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, LayoutDashboard, Users, Briefcase, DollarSign, Settings, ArrowLeft, Crown } from 'lucide-react'
 import { getOrganizationDetail } from '@/app/actions/organization-actions'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 interface OrgContextType {
     org: any
@@ -57,7 +58,7 @@ export default function ManageOrgLayout({ children }: { children: React.ReactNod
         return (
             <div className="bg-[#FAFAFA] min-h-screen">
                 <div className="flex items-center justify-center min-h-[400px]">
-                    <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+                    <TraaactionLoader size={24} className="text-gray-400" />
                 </div>
             </div>
         )

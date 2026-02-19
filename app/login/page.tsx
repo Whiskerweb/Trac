@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Building2, Users, Loader2, Eye, EyeOff, Mail, CheckCircle2, KeyRound } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useTranslations } from 'next-intl'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 type UserType = 'startup' | 'seller' | null
 type Mode = 'login' | 'signup'
@@ -230,7 +231,7 @@ export default function LoginPage() {
     if (!mounted) {
         return (
             <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                <TraaactionLoader size={20} className="text-gray-400" />
             </div>
         )
     }
@@ -349,7 +350,7 @@ export default function LoginPage() {
                                     className="w-full h-12 bg-neutral-900 hover:bg-neutral-800 disabled:bg-neutral-400 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
                                 >
                                     {resetLoading ? (
-                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <TraaactionLoader size={20} className="text-gray-400" />
                                     ) : (
                                         <>
                                             {t('forgotPassword.submit')}
@@ -488,7 +489,7 @@ export default function LoginPage() {
                                 className="w-full h-12 bg-neutral-900 hover:bg-neutral-800 disabled:bg-neutral-400 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
                             >
                                 {resendLoading ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <TraaactionLoader size={20} className="text-gray-400" />
                                 ) : (
                                     t('emailConfirmation.resend')
                                 )}
@@ -627,7 +628,7 @@ export default function LoginPage() {
                                 className="w-full h-12 bg-white border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 disabled:opacity-50 text-neutral-700 font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-3"
                             >
                                 {googleLoading ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <TraaactionLoader size={20} className="text-gray-400" />
                                 ) : (
                                     <>
                                         <GoogleIcon className="w-5 h-5" />
@@ -780,7 +781,7 @@ export default function LoginPage() {
                                                 transition={{ duration: 0.15 }}
                                                 className="flex items-center justify-center"
                                             >
-                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                <TraaactionLoader size={20} className="text-gray-400" />
                                             </motion.span>
                                         ) : (
                                             <motion.span

@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect } from 'react'
 import { Upload, Check, ChevronRight, Loader2, AlertCircle, X, FileText, Briefcase, MapPin, Sparkles, Globe, Youtube, User } from 'lucide-react'
 import { getMySellerProfile, updateMySellerProfile, type MySellerProfileData } from '@/app/actions/sellers'
 import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 const INDUSTRY_INTERESTS = [
     'AI', 'SaaS', 'Sales', 'E-commerce', 'Developer tools',
@@ -68,10 +70,9 @@ function ProfileCard({ children, className = '', id }: { children: React.ReactNo
     return (
         <motion.div
             id={id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className={`bg-white rounded-2xl border border-neutral-200/60 shadow-sm ${className}`}
+            variants={fadeInUp}
+            transition={springGentle}
+            className={`bg-white rounded-2xl border border-neutral-200/60 shadow-sm card-hover ${className}`}
         >
             {children}
         </motion.div>
@@ -333,27 +334,33 @@ export default function ProfilePage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex flex-col items-center gap-3"
-                >
-                    <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
-                    <span className="text-sm text-neutral-500">Loading profile...</span>
-                </motion.div>
+            <div className="min-h-screen bg-[#FAFAFA]">
+                <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+                    <div className="space-y-6">
+                        <div>
+                            <div className="h-7 w-32 rounded-lg skeleton-shimmer" />
+                            <div className="h-4 w-64 rounded-lg skeleton-shimmer mt-2" />
+                        </div>
+                        <div className="h-40 rounded-2xl skeleton-shimmer" />
+                        <div className="h-56 rounded-2xl skeleton-shimmer" />
+                        <div className="h-48 rounded-2xl skeleton-shimmer" />
+                        <div className="h-32 rounded-2xl skeleton-shimmer" />
+                        <div className="h-48 rounded-2xl skeleton-shimmer" />
+                        <div className="h-40 rounded-2xl skeleton-shimmer" />
+                    </div>
+                </div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA]">
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="min-h-screen bg-[#FAFAFA]">
             <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
 
                 {/* Header */}
                 <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    variants={fadeInUp}
+                    transition={springGentle}
                     className="mb-8"
                 >
                     <h1 className="text-[28px] font-semibold text-neutral-900 tracking-tight">
@@ -405,8 +412,8 @@ export default function ProfilePage() {
                                                 <circle cx="24" cy="24" r="20" strokeWidth="4" className="fill-none stroke-neutral-100" />
                                                 <circle
                                                     cx="24" cy="24" r="20" strokeWidth="4" strokeLinecap="round"
-                                                    className="fill-none stroke-neutral-900"
-                                                    style={{ strokeDasharray: `${(completedTasks.length / PROFILE_TASKS.length) * 125.6} 125.6`, transition: 'stroke-dasharray 0.5s ease-out' }}
+                                                    className="fill-none stroke-neutral-900 progress-fill"
+                                                    style={{ strokeDasharray: `${(completedTasks.length / PROFILE_TASKS.length) * 125.6} 125.6` }}
                                                 />
                                             </svg>
                                             <div className="absolute inset-0 flex items-center justify-center">
@@ -490,7 +497,7 @@ export default function ProfilePage() {
                                             <span className="text-neutral-500 text-2xl font-medium">{fullName ? fullName[0].toUpperCase() : 'S'}</span>
                                         </div>
                                     )}
-                                    <label className="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-xl border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 cursor-pointer shadow-sm transition-colors">
+                                    <label className="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-xl border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 cursor-pointer shadow-sm transition-colors btn-press">
                                         <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" className="hidden"
                                             onChange={(e) => { const file = e.target.files?.[0]; if (file) handleAvatarUpload(file) }}
                                             disabled={uploadingAvatar}
@@ -520,7 +527,7 @@ export default function ProfilePage() {
                                             key={type}
                                             type="button"
                                             onClick={() => setProfileType(type)}
-                                            className={`h-11 rounded-xl text-[14px] font-medium transition-all ${
+                                            className={`h-11 rounded-xl text-[14px] font-medium transition-all btn-press ${
                                                 profileType === type
                                                     ? 'bg-neutral-900 text-white'
                                                     : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
@@ -597,21 +604,22 @@ export default function ProfilePage() {
                             <h2 className="text-[15px] font-semibold text-neutral-900 mb-1">Industry interests</h2>
                             <p className="text-[13px] text-neutral-500 mb-4">Select industries you're passionate about <span className="text-red-500">*</span></p>
 
-                            <div className="flex flex-wrap gap-2">
+                            <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="flex flex-wrap gap-2">
                                 {INDUSTRY_INTERESTS.map((industry) => (
-                                    <button
+                                    <motion.button
                                         key={industry}
+                                        variants={staggerItem}
                                         onClick={() => toggleIndustry(industry)}
-                                        className={`px-4 py-2 rounded-xl text-[13px] font-medium transition-all ${
+                                        className={`px-4 py-2 rounded-xl text-[13px] font-medium transition-all btn-press ${
                                             selectedIndustries.includes(industry)
                                                 ? 'bg-neutral-900 text-white'
                                                 : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
                                         }`}
                                     >
                                         {industry}
-                                    </button>
+                                    </motion.button>
                                 ))}
-                            </div>
+                            </motion.div>
                         </div>
                     </ProfileCard>
 
@@ -723,10 +731,10 @@ export default function ProfilePage() {
                                         </div>
                                     </div>
                                 ) : (
-                                    <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-neutral-200 rounded-xl cursor-pointer hover:bg-neutral-50 hover:border-neutral-300 transition-all">
+                                    <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-neutral-200 rounded-xl cursor-pointer hover:bg-neutral-50 hover:border-neutral-300 transition-all btn-press">
                                         <input type="file" accept="application/pdf" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleCvUpload(file) }} disabled={uploadingCv} />
                                         {uploadingCv ? (
-                                            <Loader2 className="w-6 h-6 text-neutral-400 animate-spin" />
+                                            <TraaactionLoader size={24} className="text-gray-400" />
                                         ) : (
                                             <>
                                                 <Upload className="w-6 h-6 text-neutral-400 mb-2" />
@@ -752,7 +760,7 @@ export default function ProfilePage() {
                             <button
                                 onClick={handleSave}
                                 disabled={saving}
-                                className={`h-12 px-6 rounded-2xl text-[14px] font-semibold shadow-lg transition-all flex items-center gap-2 ${
+                                className={`h-12 px-6 rounded-2xl text-[14px] font-semibold shadow-lg transition-all flex items-center gap-2 btn-press ${
                                     saveSuccess
                                         ? 'bg-emerald-500 text-white'
                                         : 'bg-neutral-900 text-white hover:bg-neutral-800'
@@ -770,6 +778,6 @@ export default function ProfilePage() {
                     )}
                 </AnimatePresence>
             </div>
-        </div>
+        </motion.div>
     )
 }

@@ -24,6 +24,7 @@ import {
     Image as ImageIcon,
     File
 } from 'lucide-react'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 
 interface Attachment {
     name: string
@@ -180,9 +181,14 @@ export default function AdminFeedbackPage() {
     }
 
     return (
-        <div className="min-h-screen bg-neutral-950 p-6">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="min-h-screen bg-neutral-950 p-6"
+        >
             {/* Header */}
-            <div className="mb-8">
+            <motion.div variants={fadeInUp} transition={springGentle} className="mb-8">
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         <h1 className="text-2xl font-semibold text-white">Feedback</h1>
@@ -192,7 +198,7 @@ export default function AdminFeedbackPage() {
                     </div>
                     <button
                         onClick={fetchFeedback}
-                        className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-400 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-lg transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-400 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-lg transition-colors btn-press"
                     >
                         <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                         Refresh
@@ -239,22 +245,22 @@ export default function AdminFeedbackPage() {
                     {(statusFilter || userTypeFilter) && (
                         <button
                             onClick={() => { setStatusFilter(''); setUserTypeFilter(''); setPage(1) }}
-                            className="text-sm text-neutral-500 hover:text-neutral-300"
+                            className="text-sm text-neutral-500 hover:text-neutral-300 btn-press"
                         >
                             Clear
                         </button>
                     )}
                 </div>
-            </div>
+            </motion.div>
 
             {/* Content */}
-            <div>
+            <motion.div variants={fadeInUp} transition={springGentle}>
                 {error ? (
                     <div className="text-center py-12">
                         <p className="text-red-400">{error}</p>
                         <button
                             onClick={fetchFeedback}
-                            className="mt-4 text-sm text-neutral-500 hover:text-white"
+                            className="mt-4 text-sm text-neutral-500 hover:text-white btn-press"
                         >
                             Try again
                         </button>
@@ -262,41 +268,48 @@ export default function AdminFeedbackPage() {
                 ) : isLoading ? (
                     <div className="space-y-4">
                         {[...Array(5)].map((_, i) => (
-                            <div key={i} className="bg-neutral-900 rounded-xl p-5 animate-pulse border border-neutral-800">
-                                <div className="h-4 bg-neutral-800 rounded w-1/4 mb-3" />
-                                <div className="h-3 bg-neutral-800/50 rounded w-3/4" />
+                            <div key={i} className="bg-neutral-900 rounded-xl p-5 border border-neutral-800">
+                                <div className="h-4 bg-neutral-800 rounded w-1/4 mb-3 skeleton-shimmer" />
+                                <div className="h-3 bg-neutral-800/50 rounded w-3/4 skeleton-shimmer" />
                             </div>
                         ))}
                     </div>
                 ) : feedback.length === 0 ? (
                     <div className="text-center py-16">
-                        <MessageSquare className="w-12 h-12 text-neutral-700 mx-auto mb-4" />
+                        <motion.div variants={floatVariants} animate="float">
+                            <MessageSquare className="w-12 h-12 text-neutral-700 mx-auto mb-4" />
+                        </motion.div>
                         <h3 className="text-lg font-medium text-white mb-1">No feedback yet</h3>
                         <p className="text-sm text-neutral-500">Feedback from users will appear here</p>
                     </div>
                 ) : (
                     <>
                         {/* Feedback list */}
-                        <div className="space-y-3">
+                        <motion.div
+                            variants={staggerContainer}
+                            initial="hidden"
+                            animate="visible"
+                            className="space-y-3"
+                        >
                             {feedback.map((item) => {
                                 const StatusIcon = statusIcons[item.status]
                                 return (
                                     <motion.div
                                         key={item.id}
-                                        initial={{ opacity: 0, y: 8 }}
-                                        animate={{ opacity: 1, y: 0 }}
+                                        variants={staggerItem}
+                                        transition={springGentle}
                                         onClick={() => setSelectedFeedback(item)}
-                                        className="bg-neutral-900 rounded-xl p-5 border border-neutral-800 hover:border-neutral-700 cursor-pointer transition-all"
+                                        className="bg-neutral-900 rounded-xl p-5 border border-neutral-800 hover:border-neutral-700 cursor-pointer transition-all row-hover"
                                     >
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="flex-1 min-w-0">
                                                 {/* Header */}
                                                 <div className="flex items-center gap-3 mb-2">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full border ${statusColors[item.status]}`}>
+                                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full border badge-pop ${statusColors[item.status]}`}>
                                                         <StatusIcon className="w-3 h-3" />
                                                         {item.status}
                                                     </span>
-                                                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${item.user_type === 'STARTUP' ? 'bg-violet-500/20 text-violet-400 border-violet-500/30' : 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'}`}>
+                                                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full border badge-pop ${item.user_type === 'STARTUP' ? 'bg-violet-500/20 text-violet-400 border-violet-500/30' : 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'}`}>
                                                         {item.user_type}
                                                     </span>
                                                     <span className="text-xs text-neutral-500 flex items-center gap-1">
@@ -355,7 +368,7 @@ export default function AdminFeedbackPage() {
                                     </motion.div>
                                 )
                             })}
-                        </div>
+                        </motion.div>
 
                         {/* Pagination */}
                         {pagination && pagination.totalPages > 1 && (
@@ -363,7 +376,7 @@ export default function AdminFeedbackPage() {
                                 <button
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={page === 1}
-                                    className="p-2 text-neutral-500 hover:text-white disabled:opacity-50"
+                                    className="p-2 text-neutral-500 hover:text-white disabled:opacity-50 btn-press"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
@@ -373,7 +386,7 @@ export default function AdminFeedbackPage() {
                                 <button
                                     onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
                                     disabled={page === pagination.totalPages}
-                                    className="p-2 text-neutral-500 hover:text-white disabled:opacity-50"
+                                    className="p-2 text-neutral-500 hover:text-white disabled:opacity-50 btn-press"
                                 >
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
@@ -381,7 +394,7 @@ export default function AdminFeedbackPage() {
                         )}
                     </>
                 )}
-            </div>
+            </motion.div>
 
             {/* Detail modal */}
             <AnimatePresence>
@@ -406,10 +419,10 @@ export default function AdminFeedbackPage() {
                                 <div className="flex items-start justify-between mb-6">
                                     <div>
                                         <div className="flex items-center gap-2 mb-2">
-                                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full border ${statusColors[selectedFeedback.status]}`}>
+                                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full border badge-pop ${statusColors[selectedFeedback.status]}`}>
                                                 {selectedFeedback.status}
                                             </span>
-                                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${selectedFeedback.user_type === 'STARTUP' ? 'bg-violet-500/20 text-violet-400 border-violet-500/30' : 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'}`}>
+                                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full border badge-pop ${selectedFeedback.user_type === 'STARTUP' ? 'bg-violet-500/20 text-violet-400 border-violet-500/30' : 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'}`}>
                                                 {selectedFeedback.user_type}
                                             </span>
                                         </div>
@@ -422,7 +435,7 @@ export default function AdminFeedbackPage() {
                                     </div>
                                     <button
                                         onClick={() => setSelectedFeedback(null)}
-                                        className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors"
+                                        className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors btn-press"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -449,7 +462,7 @@ export default function AdminFeedbackPage() {
                                                     <button
                                                         key={i}
                                                         onClick={() => openAttachment(att)}
-                                                        className="w-full flex items-center gap-3 p-3 bg-neutral-800/50 rounded-lg border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 transition-all text-left group"
+                                                        className="w-full flex items-center gap-3 p-3 bg-neutral-800/50 rounded-lg border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 transition-all text-left group btn-press"
                                                     >
                                                         <div className="w-10 h-10 bg-neutral-700 rounded-lg flex items-center justify-center">
                                                             <FileIcon className="w-5 h-5 text-neutral-400" />
@@ -535,7 +548,7 @@ export default function AdminFeedbackPage() {
                                                 <button
                                                     key={status}
                                                     onClick={() => updateFeedbackStatus(selectedFeedback.id, status)}
-                                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors border ${
+                                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors border btn-press ${
                                                         isActive
                                                             ? statusColors[status]
                                                             : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:text-white hover:border-neutral-600'
@@ -553,6 +566,6 @@ export default function AdminFeedbackPage() {
                     </>
                 )}
             </AnimatePresence>
-        </div>
+        </motion.div>
     )
 }

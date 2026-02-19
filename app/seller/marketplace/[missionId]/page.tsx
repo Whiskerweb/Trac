@@ -9,6 +9,8 @@ import {
     FileText, Youtube, Link as LinkIcon, Copy, CheckCircle2,
     Send, Sparkles
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 import { getMissionDetailForMarketplace } from '@/app/actions/marketplace-actions'
 import { joinMission, joinMissionWithGroup } from '@/app/actions/marketplace'
 import { getMyGroup } from '@/app/actions/group-actions'
@@ -187,8 +189,25 @@ export default function MissionDetailPage() {
     // Loading state
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+            <div className="min-h-screen bg-[#FAFAFA]">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+                    <div className="skeleton-shimmer h-4 w-24 rounded-lg mb-10" />
+                    <div className="flex items-start gap-6 mb-12">
+                        <div className="skeleton-shimmer w-20 h-20 rounded-2xl" />
+                        <div className="flex-1 space-y-3">
+                            <div className="skeleton-shimmer h-3 w-20 rounded" />
+                            <div className="skeleton-shimmer h-6 w-48 rounded-lg" />
+                            <div className="skeleton-shimmer h-4 w-32 rounded" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-8">
+                            <div className="skeleton-shimmer h-40 rounded-2xl" />
+                            <div className="skeleton-shimmer h-32 rounded-2xl" />
+                        </div>
+                        <div className="skeleton-shimmer h-64 rounded-2xl" />
+                    </div>
+                </div>
             </div>
         )
     }
@@ -217,19 +236,26 @@ export default function MissionDetailPage() {
 
     return (
         <div className="min-h-screen bg-[#FAFAFA]">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+            <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer}
+                className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12"
+            >
 
                 {/* Back button */}
-                <Link
-                    href="/seller/marketplace"
-                    className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-10 group"
-                >
-                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-                    Marketplace
-                </Link>
+                <motion.div variants={fadeInUp} transition={springGentle}>
+                    <Link
+                        href="/seller/marketplace"
+                        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-10 group"
+                    >
+                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                        Marketplace
+                    </Link>
+                </motion.div>
 
                 {/* Header section */}
-                <header className="mb-12">
+                <motion.header variants={fadeInUp} transition={springGentle} className="mb-12">
                     <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                         {/* Startup Logo */}
                         {startup.logo_url ? (
@@ -267,13 +293,13 @@ export default function MissionDetailPage() {
 
                         {/* Visibility badge */}
                         {isPrivate && (
-                            <span className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full">
+                            <span className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full badge-pop">
                                 <Lock className="w-3 h-3" />
                                 Private
                             </span>
                         )}
                     </div>
-                </header>
+                </motion.header>
 
                 {/* Main content grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -283,7 +309,7 @@ export default function MissionDetailPage() {
 
                         {/* Startup description */}
                         {startup.description && (
-                            <section className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100">
+                            <motion.section variants={fadeInUp} transition={springGentle} className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100 card-hover">
                                 <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
                                     About {startup.name}
                                 </h2>
@@ -323,11 +349,11 @@ export default function MissionDetailPage() {
                                         </span>
                                     )}
                                 </div>
-                            </section>
+                            </motion.section>
                         )}
 
                         {/* Mission description */}
-                        <section className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100">
+                        <motion.section variants={fadeInUp} transition={springGentle} className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100 card-hover">
                             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
                                 The mission
                             </h2>
@@ -347,10 +373,10 @@ export default function MissionDetailPage() {
                                     View the product
                                 </a>
                             </div>
-                        </section>
+                        </motion.section>
 
                         {/* Resources section */}
-                        <section className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100">
+                        <motion.section variants={fadeInUp} transition={springGentle} className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100 card-hover">
                             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
                                 Resources
                             </h2>
@@ -372,14 +398,16 @@ export default function MissionDetailPage() {
                                     No resources available
                                 </p>
                             ) : (
-                                <div className="space-y-2">
+                                <motion.div className="space-y-2" variants={staggerContainer} initial="hidden" animate="visible">
                                     {resources.map((resource) => (
-                                        <a
+                                        <motion.a
                                             key={resource.id}
+                                            variants={staggerItem}
+                                            transition={springGentle}
                                             href={resource.url || '#'}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors group"
+                                            className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors group card-hover"
                                         >
                                             <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 group-hover:bg-violet-100 group-hover:text-violet-600 transition-colors">
                                                 <ResourceIcon type={resource.type} />
@@ -395,11 +423,11 @@ export default function MissionDetailPage() {
                                                 )}
                                             </div>
                                             <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
-                                        </a>
+                                        </motion.a>
                                     ))}
-                                </div>
+                                </motion.div>
                             )}
-                        </section>
+                        </motion.section>
                     </div>
 
                     {/* Right column - Sticky CTA */}
@@ -407,39 +435,39 @@ export default function MissionDetailPage() {
                         <div className="lg:sticky lg:top-8 space-y-6">
 
                             {/* Commission card */}
-                            <div className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100">
+                            <motion.div variants={fadeInUp} transition={springGentle} className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100 card-hover">
                                 <div className="mb-6">
                                     <p className="text-xs text-gray-400 uppercase tracking-wider mb-4 text-center">
                                         {hasMultipleCommissions(mission) ? 'Commissions' : 'Commission'}
                                     </p>
 
                                     {hasMultipleCommissions(mission) ? (
-                                        <div className="space-y-3">
+                                        <motion.div className="space-y-3" variants={staggerContainer} initial="hidden" animate="visible">
                                             {mission.lead_enabled && mission.lead_reward_amount && (
-                                                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-xl">
+                                                <motion.div variants={staggerItem} transition={springGentle} className="flex items-center justify-between p-3 bg-purple-50 rounded-xl">
                                                     <span className="text-sm text-purple-700 font-medium">Lead</span>
                                                     <span className="text-lg font-semibold text-purple-900">
                                                         {mission.lead_reward_amount}€
                                                     </span>
-                                                </div>
+                                                </motion.div>
                                             )}
                                             {mission.sale_enabled && mission.sale_reward_amount && (
-                                                <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl">
+                                                <motion.div variants={staggerItem} transition={springGentle} className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl">
                                                     <span className="text-sm text-emerald-700 font-medium">Sale</span>
                                                     <span className="text-lg font-semibold text-emerald-900">
                                                         {formatRewardAmount(mission.sale_reward_amount, mission.sale_reward_structure)}
                                                     </span>
-                                                </div>
+                                                </motion.div>
                                             )}
                                             {mission.recurring_enabled && mission.recurring_reward_amount && (
-                                                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
+                                                <motion.div variants={staggerItem} transition={springGentle} className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
                                                     <span className="text-sm text-blue-700 font-medium">Recurring</span>
                                                     <span className="text-lg font-semibold text-blue-900">
                                                         {formatRewardAmount(mission.recurring_reward_amount, mission.recurring_reward_structure)}
                                                     </span>
-                                                </div>
+                                                </motion.div>
                                             )}
-                                        </div>
+                                        </motion.div>
                                     ) : (
                                         <div className="text-center">
                                             <p className="text-3xl font-semibold text-gray-900 tracking-tight">
@@ -486,7 +514,7 @@ export default function MissionDetailPage() {
                                                     </div>
                                                     <button
                                                         onClick={copyLink}
-                                                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all ${
+                                                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all btn-press ${
                                                             copied
                                                                 ? 'bg-emerald-50 text-emerald-600'
                                                                 : 'bg-gray-900 text-white hover:bg-black'
@@ -554,7 +582,7 @@ export default function MissionDetailPage() {
                                                         <button
                                                             type="button"
                                                             onClick={() => setJoinAsGroup(!joinAsGroup)}
-                                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors btn-press ${
                                                                 joinAsGroup ? 'bg-violet-600' : 'bg-gray-300'
                                                             }`}
                                                         >
@@ -570,7 +598,7 @@ export default function MissionDetailPage() {
                                             <button
                                                 onClick={handleJoin}
                                                 disabled={joining}
-                                                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed btn-press ${
                                                     joinAsGroup
                                                         ? 'bg-violet-600 text-white hover:bg-violet-700'
                                                         : 'bg-gray-900 text-white hover:bg-black'
@@ -604,10 +632,10 @@ export default function MissionDetailPage() {
                                         </>
                                     )}
                                 </div>
-                            </div>
+                            </motion.div>
 
                             {/* Quick links */}
-                            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100">
+                            <motion.div variants={fadeInUp} transition={springGentle} className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 card-hover">
                                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                                     Quick links
                                 </p>
@@ -655,11 +683,11 @@ export default function MissionDetailPage() {
                                         Product
                                     </a>
                                 </div>
-                            </div>
+                            </motion.div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
     )
 }

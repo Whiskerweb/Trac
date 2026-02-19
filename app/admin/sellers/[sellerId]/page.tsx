@@ -16,9 +16,9 @@ import {
     Clock,
     TrendingUp,
     ExternalLink,
-    Loader2,
     Copy
 } from 'lucide-react'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 
 interface SellerDetail {
     id: string
@@ -173,8 +173,46 @@ export default function AdminSellerDetailPage() {
 
     if (loading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-500" />
+            <div className="p-8">
+                <div className="h-4 w-32 bg-neutral-800 rounded skeleton-shimmer mb-6" />
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="w-16 h-16 bg-neutral-800 rounded-full skeleton-shimmer" />
+                    <div>
+                        <div className="h-7 w-48 bg-neutral-800 rounded skeleton-shimmer mb-2" />
+                        <div className="h-4 w-64 bg-neutral-800/50 rounded skeleton-shimmer mb-2" />
+                        <div className="flex gap-2">
+                            <div className="h-6 w-24 bg-neutral-800 rounded-full skeleton-shimmer" />
+                            <div className="h-6 w-20 bg-neutral-800 rounded-full skeleton-shimmer" />
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 mb-8 skeleton-shimmer">
+                    <div className="grid grid-cols-4 gap-4">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i}>
+                                <div className="h-3 w-20 bg-neutral-800 rounded mb-2" />
+                                <div className="h-6 w-24 bg-neutral-800 rounded" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="flex gap-2 mb-6">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="h-10 w-32 bg-neutral-800 rounded-lg skeleton-shimmer" />
+                    ))}
+                </div>
+                <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 skeleton-shimmer">
+                            <div className="h-4 w-full bg-neutral-800 rounded mb-3" />
+                            <div className="grid grid-cols-4 gap-4">
+                                {[...Array(4)].map((_, j) => (
+                                    <div key={j} className="h-10 bg-neutral-800/50 rounded" />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         )
     }
@@ -188,18 +226,25 @@ export default function AdminSellerDetailPage() {
     }
 
     return (
-        <div className="p-8">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="p-8"
+        >
             {/* Back link */}
-            <Link
-                href="/admin/sellers"
-                className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white mb-6"
-            >
-                <ArrowLeft className="w-4 h-4" />
-                Back to sellers
-            </Link>
+            <motion.div variants={fadeInUp} transition={springGentle}>
+                <Link
+                    href="/admin/sellers"
+                    className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white mb-6 btn-press"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to sellers
+                </Link>
+            </motion.div>
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
                 <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-neutral-800 rounded-full flex items-center justify-center">
                         <span className="text-2xl font-light text-neutral-400">
@@ -213,17 +258,17 @@ export default function AdminSellerDetailPage() {
                         <p className="text-neutral-500">{seller.email}</p>
                         <div className="flex items-center gap-2 mt-2">
                             {seller.payoutMethod === 'STRIPE_CONNECT' ? (
-                                <span className="px-2 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded-full flex items-center gap-1">
+                                <span className="px-2 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded-full flex items-center gap-1 badge-pop">
                                     <Zap className="w-3 h-3" />
                                     Stripe Connect
                                 </span>
                             ) : (
-                                <span className="px-2 py-1 text-xs bg-violet-500/20 text-violet-400 rounded-full flex items-center gap-1">
+                                <span className="px-2 py-1 text-xs bg-violet-500/20 text-violet-400 rounded-full flex items-center gap-1 badge-pop">
                                     <Wallet className="w-3 h-3" />
                                     Platform Wallet
                                 </span>
                             )}
-                            <span className={`px-2 py-1 text-xs rounded-full ${
+                            <span className={`px-2 py-1 text-xs rounded-full badge-pop ${
                                 seller.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400' :
                                 seller.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' :
                                 'bg-red-500/20 text-red-400'
@@ -245,14 +290,14 @@ export default function AdminSellerDetailPage() {
                         <p className="text-xs text-neutral-500">Commissions</p>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Balance Card (for PLATFORM sellers) */}
             {seller.payoutMethod === 'PLATFORM' && (
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`p-6 rounded-xl mb-8 ${
+                    variants={fadeInUp}
+                    transition={springGentle}
+                    className={`p-6 rounded-xl mb-8 card-hover ${
                         seller.balance.hasDiscrepancy
                             ? 'bg-red-500/10 border border-red-500/30'
                             : 'bg-neutral-900 border border-neutral-800'
@@ -264,7 +309,7 @@ export default function AdminSellerDetailPage() {
                             Wallet Balance
                         </h2>
                         {seller.balance.hasDiscrepancy && (
-                            <span className="flex items-center gap-1 text-sm text-red-400">
+                            <span className="flex items-center gap-1 text-sm text-red-400 badge-pop">
                                 <AlertTriangle className="w-4 h-4" />
                                 Discrepancy detected
                             </span>
@@ -296,35 +341,42 @@ export default function AdminSellerDetailPage() {
 
             {/* Startups worked with */}
             {startups.length > 0 && (
-                <div className="mb-8">
+                <motion.div variants={fadeInUp} transition={springGentle} className="mb-8">
                     <h2 className="text-sm font-medium text-neutral-400 mb-4 flex items-center gap-2">
                         <Building2 className="w-4 h-4" />
                         Startups ({startups.length})
                     </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <motion.div
+                        variants={staggerContainer}
+                        initial="hidden"
+                        animate="visible"
+                        className="grid grid-cols-1 md:grid-cols-3 gap-3"
+                    >
                         {startups.map(startup => (
-                            <div
+                            <motion.div
                                 key={startup.id}
-                                className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl"
+                                variants={staggerItem}
+                                transition={springGentle}
+                                className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl card-hover"
                             >
                                 <p className="font-medium text-white mb-1">{startup.name}</p>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-neutral-500">{startup.commissions} commissions</span>
                                     <span className="text-emerald-400">{formatCurrency(startup.earned)}</span>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))}
-                    </div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
 
             {/* Tabs */}
-            <div className="flex gap-2 mb-6">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex gap-2 mb-6">
                 {(['commissions', 'ledger', 'giftcards'] as const).map(tab => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                        className={`px-4 py-2 text-sm rounded-lg transition-colors btn-press ${
                             activeTab === tab
                                 ? 'bg-violet-500 text-white'
                                 : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
@@ -335,24 +387,29 @@ export default function AdminSellerDetailPage() {
                          `Gift Cards (${giftCards.length})`}
                     </button>
                 ))}
-            </div>
+            </motion.div>
 
             {/* Content */}
             {activeTab === 'commissions' && (
-                <div className="space-y-2">
+                <motion.div
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
+                    className="space-y-2"
+                >
                     {commissions.length === 0 ? (
                         <p className="text-neutral-500 text-center py-8">Aucune commission</p>
                     ) : (
                         commissions.map(commission => (
                             <motion.div
                                 key={commission.id}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl"
+                                variants={staggerItem}
+                                transition={springGentle}
+                                className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl row-hover"
                             >
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-3">
-                                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(commission.status)}`}>
+                                        <span className={`px-2 py-1 text-xs rounded-full badge-pop ${getStatusColor(commission.status)}`}>
                                             {commission.status}
                                         </span>
                                         {commission.startup && (
@@ -361,7 +418,7 @@ export default function AdminSellerDetailPage() {
                                             </span>
                                         )}
                                         {commission.recurringMonth && (
-                                            <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded">
+                                            <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded badge-pop">
                                                 Recurring #{commission.recurringMonth}
                                             </span>
                                         )}
@@ -399,18 +456,25 @@ export default function AdminSellerDetailPage() {
                             </motion.div>
                         ))
                     )}
-                </div>
+                </motion.div>
             )}
 
             {activeTab === 'ledger' && (
-                <div className="space-y-2">
+                <motion.div
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
+                    className="space-y-2"
+                >
                     {ledger.length === 0 ? (
                         <p className="text-neutral-500 text-center py-8">No ledger entries</p>
                     ) : (
                         ledger.map(entry => (
-                            <div
+                            <motion.div
                                 key={entry.id}
-                                className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl flex items-center justify-between"
+                                variants={staggerItem}
+                                transition={springGentle}
+                                className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl flex items-center justify-between row-hover"
                             >
                                 <div className="flex items-center gap-4">
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -437,21 +501,28 @@ export default function AdminSellerDetailPage() {
                                         Solde: {formatCurrency(entry.balanceAfter)}
                                     </p>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))
                     )}
-                </div>
+                </motion.div>
             )}
 
             {activeTab === 'giftcards' && (
-                <div className="space-y-2">
+                <motion.div
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
+                    className="space-y-2"
+                >
                     {giftCards.length === 0 ? (
                         <p className="text-neutral-500 text-center py-8">Aucune demande de gift card</p>
                     ) : (
                         giftCards.map(gc => (
-                            <div
+                            <motion.div
                                 key={gc.id}
-                                className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl flex items-center justify-between"
+                                variants={staggerItem}
+                                transition={springGentle}
+                                className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl flex items-center justify-between row-hover"
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center">
@@ -463,18 +534,18 @@ export default function AdminSellerDetailPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(gc.status)}`}>
+                                    <span className={`px-2 py-1 text-xs rounded-full badge-pop ${getStatusColor(gc.status)}`}>
                                         {gc.status}
                                     </span>
                                     <span className="text-lg font-medium text-white">
                                         {formatCurrency(gc.amount)}
                                     </span>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))
                     )}
-                </div>
+                </motion.div>
             )}
-        </div>
+        </motion.div>
     )
 }

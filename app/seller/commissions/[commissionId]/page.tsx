@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Loader2, ChevronRight, Users, Building2, Share2, Repeat } from 'lucide-react'
 import { getMyCommissionDetail } from '@/app/actions/sellers'
 import { useTranslations } from 'next-intl'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 const formatCurrency = (cents: number) =>
     new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -42,7 +43,7 @@ export default function CommissionDetailPage() {
         return (
             <div className="min-h-[80vh] flex items-center justify-center">
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                    <TraaactionLoader size={20} className="text-gray-400" />
                     <span className="text-xs text-neutral-400 tracking-wide">Loading</span>
                 </motion.div>
             </div>

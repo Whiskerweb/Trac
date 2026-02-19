@@ -8,6 +8,7 @@ import { Copy, Check, Search, Users, ChevronLeft, ChevronRight } from 'lucide-re
 import { usePortalData } from '../layout'
 import { getPortalReferrals } from '@/app/actions/portal'
 import { portalPath } from '@/components/portal/portal-utils'
+import { staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 
 interface ReferralSeller {
     id: string
@@ -82,10 +83,15 @@ export default function PortalReferralsPage() {
     }
 
     return (
-        <div className="space-y-5">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="space-y-5"
+        >
             {/* Referral Link */}
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <motion.div variants={staggerItem} transition={springGentle}>
+                <div className="bg-white rounded-2xl border border-gray-100 card-hover p-5">
                     <p className="text-sm font-semibold text-gray-900 mb-3">{t('yourLink')}</p>
                     <div className="flex items-center gap-2">
                         <div className="flex-1 bg-gray-50 rounded-xl px-4 py-3 overflow-hidden">
@@ -93,7 +99,7 @@ export default function PortalReferralsPage() {
                         </div>
                         <button
                             onClick={handleCopy}
-                            className="flex items-center gap-1.5 px-4 py-3 text-white rounded-xl text-xs font-semibold transition-all hover:opacity-90 flex-shrink-0"
+                            className="flex items-center gap-1.5 px-4 py-3 text-white rounded-xl text-xs font-semibold transition-all hover:opacity-90 btn-press flex-shrink-0"
                             style={{ backgroundColor: primaryColor }}
                         >
                             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -106,28 +112,27 @@ export default function PortalReferralsPage() {
             {/* Stats Row */}
             {stats && (
                 <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 }}
+                    variants={staggerItem}
+                    transition={springGentle}
                     className="grid grid-cols-2 sm:grid-cols-4 gap-3"
                 >
-                    <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
+                    <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center card-hover">
                         <p className="text-2xl font-bold text-gray-900">{stats.totalReferred}</p>
                         <p className="text-[11px] text-gray-500 mt-0.5">{t('totalReferred')}</p>
                     </div>
-                    <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
+                    <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center card-hover">
                         <p className="text-2xl font-bold text-gray-900">{(stats.totalEarnings / 100).toFixed(0)}&euro;</p>
                         <p className="text-[11px] text-gray-500 mt-0.5">{t('totalEarnings')}</p>
                     </div>
                     {gen1Pct && (
-                        <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
+                        <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center card-hover">
                             <p className="text-lg font-bold" style={{ color: primaryColor }}>{gen1Pct}</p>
                             <p className="text-[11px] text-gray-500 mt-0.5">{t('gen1')}</p>
                             <p className="text-xs font-semibold text-gray-700 mt-1">{(stats.genStats.gen1.amount / 100).toFixed(0)}&euro;</p>
                         </div>
                     )}
                     {(gen2Pct || gen3Pct) && (
-                        <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
+                        <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center card-hover">
                             <p className="text-lg font-bold" style={{ color: primaryColor }}>
                                 {[gen2Pct, gen3Pct].filter(Boolean).join(' / ')}
                             </p>
@@ -142,10 +147,9 @@ export default function PortalReferralsPage() {
 
             {/* Referred sellers list */}
             <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.08 }}
-                className="bg-white rounded-2xl border border-gray-100 p-5"
+                variants={staggerItem}
+                transition={springGentle}
+                className="bg-white rounded-2xl border border-gray-100 card-hover p-5"
             >
                 {/* Search */}
                 <div className="flex items-center gap-3 mb-4">
@@ -162,19 +166,23 @@ export default function PortalReferralsPage() {
                 </div>
 
                 {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+                    <div className="space-y-3 py-4">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="skeleton-shimmer h-12 rounded-xl" />
+                        ))}
                     </div>
                 ) : referrals.length === 0 ? (
                     <div className="text-center py-12">
-                        <Users className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+                        <motion.div variants={floatVariants} animate="float">
+                            <Users className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+                        </motion.div>
                         <p className="text-sm text-gray-500">{t('noReferrals')}</p>
                     </div>
                 ) : (
                     <>
                         <div className="space-y-1">
                             {referrals.map((r) => (
-                                <div key={r.id} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-50/50 transition-colors">
+                                <div key={r.id} className="flex items-center gap-3 px-3 py-3 rounded-xl row-hover transition-colors">
                                     <div
                                         className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                                         style={{ backgroundColor: primaryColor }}
@@ -199,7 +207,7 @@ export default function PortalReferralsPage() {
                                 <button
                                     onClick={() => loadReferrals(page - 1, search)}
                                     disabled={page <= 1}
-                                    className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors"
+                                    className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors btn-press"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
@@ -207,7 +215,7 @@ export default function PortalReferralsPage() {
                                 <button
                                     onClick={() => loadReferrals(page + 1, search)}
                                     disabled={page >= totalPages}
-                                    className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors"
+                                    className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors btn-press"
                                 >
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
@@ -216,6 +224,6 @@ export default function PortalReferralsPage() {
                     </>
                 )}
             </motion.div>
-        </div>
+        </motion.div>
     )
 }

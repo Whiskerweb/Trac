@@ -12,6 +12,7 @@ import {
     getOnboardingStatus
 } from '@/app/actions/seller-onboarding'
 import { createGlobalSeller } from '@/app/actions/sellers'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 const STEPS = [
     { number: 1, label: 'Profile' },
@@ -274,7 +275,7 @@ export default function SellerOnboardingPage() {
                     animate={{ opacity: 1 }}
                     className="flex flex-col items-center gap-4"
                 >
-                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                    <TraaactionLoader size={20} className="text-gray-400" />
                     <span className="text-xs text-neutral-400 tracking-wide">Loading</span>
                 </motion.div>
             </div>

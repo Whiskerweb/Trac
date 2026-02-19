@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 import Link from 'next/link'
 import {
     Users,
@@ -81,25 +82,29 @@ export default function AdminUsersPage() {
 
     if (loading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-500" />
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+                <div className="space-y-3 w-full max-w-2xl px-8">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="skeleton-shimmer h-16 rounded-xl" />
+                    ))}
+                </div>
             </div>
         )
     }
 
     return (
-        <div className="p-8">
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="p-8">
             {/* Header */}
-            <div className="mb-8">
+            <motion.div variants={fadeInUp} transition={springGentle} className="mb-8">
                 <h1 className="text-2xl font-light text-white mb-2">Users</h1>
                 <p className="text-sm text-neutral-500">
                     Tous les utilisateurs — Sellers, Startups, ou les deux
                 </p>
-            </div>
+            </motion.div>
 
             {/* Summary Stats */}
             {summary && (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                     <StatCard
                         label="Total Users"
                         value={summary.total}
@@ -129,11 +134,11 @@ export default function AdminUsersPage() {
                         icon={UserX}
                         color="orange"
                     />
-                </div>
+                </motion.div>
             )}
 
             {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex flex-col md:flex-row gap-4 mb-6">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                     <input
@@ -155,7 +160,7 @@ export default function AdminUsersPage() {
                         <button
                             key={f.key}
                             onClick={() => setFilter(f.key)}
-                            className={`px-4 py-2.5 text-sm rounded-lg transition-colors ${
+                            className={`btn-press px-4 py-2.5 text-sm rounded-lg transition-colors ${
                                 filter === f.key
                                     ? 'bg-violet-500 text-white'
                                     : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
@@ -165,29 +170,30 @@ export default function AdminUsersPage() {
                         </button>
                     ))}
                 </div>
-            </div>
+            </motion.div>
 
             {/* Count */}
-            <p className="text-xs text-neutral-500 mb-4">{filteredUsers.length} utilisateur{filteredUsers.length > 1 ? 's' : ''}</p>
+            <motion.p variants={fadeInUp} transition={springGentle} className="text-xs text-neutral-500 mb-4">{filteredUsers.length} utilisateur{filteredUsers.length > 1 ? 's' : ''}</motion.p>
 
             {/* Users List */}
-            <div className="space-y-2">
+            <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-2">
                 {filteredUsers.length === 0 ? (
-                    <div className="text-center py-12 text-neutral-500">
-                        <Users className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                    <motion.div variants={fadeInUp} transition={springGentle} className="text-center py-12 text-neutral-500">
+                        <motion.div variants={floatVariants} animate="float">
+                            <Users className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                        </motion.div>
                         <p>Aucun utilisateur trouvé</p>
-                    </div>
+                    </motion.div>
                 ) : (
-                    filteredUsers.map((user, index) => (
+                    filteredUsers.map((user) => (
                         <motion.div
                             key={user.userId}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: Math.min(index * 0.015, 0.5) }}
+                            variants={staggerItem}
+                            transition={springGentle}
                         >
                             <Link
                                 href={`/admin/users/${user.userId}`}
-                                className="flex items-center justify-between p-4 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors group"
+                                className="row-hover flex items-center justify-between p-4 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors group"
                             >
                                 <div className="flex items-center gap-4">
                                     {/* Avatar */}
@@ -205,7 +211,7 @@ export default function AdminUsersPage() {
                                             </span>
                                             <RoleBadge role={user.role} />
                                             {user.sellerStatus && user.sellerStatus !== 'APPROVED' && (
-                                                <span className="px-2 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded-full">
+                                                <span className="badge-pop px-2 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded-full">
                                                     {user.sellerStatus}
                                                 </span>
                                             )}
@@ -234,8 +240,8 @@ export default function AdminUsersPage() {
                         </motion.div>
                     ))
                 )}
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     )
 }
 
@@ -243,28 +249,28 @@ function RoleBadge({ role }: { role: string }) {
     switch (role) {
         case 'SELLER':
             return (
-                <span className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-full flex items-center gap-1">
+                <span className="badge-pop px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-full flex items-center gap-1">
                     <UserCheck className="w-3 h-3" />
                     Seller
                 </span>
             )
         case 'STARTUP':
             return (
-                <span className="px-2 py-0.5 text-xs bg-violet-500/20 text-violet-400 rounded-full flex items-center gap-1">
+                <span className="badge-pop px-2 py-0.5 text-xs bg-violet-500/20 text-violet-400 rounded-full flex items-center gap-1">
                     <Building2 className="w-3 h-3" />
                     Startup
                 </span>
             )
         case 'BOTH':
             return (
-                <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded-full flex items-center gap-1">
+                <span className="badge-pop px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded-full flex items-center gap-1">
                     <Layers className="w-3 h-3" />
                     Both
                 </span>
             )
         default:
             return (
-                <span className="px-2 py-0.5 text-xs bg-neutral-700 text-neutral-400 rounded-full">
+                <span className="badge-pop px-2 py-0.5 text-xs bg-neutral-700 text-neutral-400 rounded-full">
                     No role
                 </span>
             )

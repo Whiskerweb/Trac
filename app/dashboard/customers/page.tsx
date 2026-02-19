@@ -2,8 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { Loader2, Search, Users, Info, UserPlus, Calendar, Activity, Clock } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import {
+    fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants
+} from '@/lib/animations'
 import { getWorkspaceCustomers, CustomerWithDetails } from '@/app/actions/customers'
 
 function Avatar({ name, avatar, size = 'md' }: { name: string | null; avatar: string | null; size?: 'sm' | 'md' }) {
@@ -103,16 +107,37 @@ export default function CustomersPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <div className="space-y-4 sm:space-y-6 animate-pulse">
+                <div className="flex items-center justify-between px-4 sm:px-0">
+                    <div className="h-7 w-40 rounded-lg skeleton-shimmer" />
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4 sm:p-5 bg-white border border-gray-200 rounded-xl">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i}>
+                            <div className="h-4 w-24 rounded skeleton-shimmer mb-2" />
+                            <div className="h-8 w-16 rounded skeleton-shimmer" />
+                        </div>
+                    ))}
+                </div>
+                <div className="h-10 w-full max-w-sm rounded-lg skeleton-shimmer" />
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    {[1, 2, 3, 4, 5].map(i => (
+                        <div key={i} className="h-16 border-b border-gray-50 skeleton-shimmer" />
+                    ))}
+                </div>
             </div>
         )
     }
 
     return (
-        <div className="space-y-4 sm:space-y-6">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="space-y-4 sm:space-y-6"
+        >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 sm:px-0">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex items-center justify-between px-4 sm:px-0">
                 <div className="flex items-center gap-2">
                     <h1 className="text-lg sm:text-xl font-semibold text-gray-900">{t('title')}</h1>
                     <div className="group relative">
@@ -122,10 +147,10 @@ export default function CustomersPage() {
                         </div>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4 sm:p-5 bg-white border border-gray-200 rounded-xl">
+            <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4 sm:p-5 bg-white border border-gray-200 rounded-xl">
                 <div>
                     <p className="text-xs sm:text-sm text-gray-500">{t('totalCustomers')}</p>
                     <p className="text-xl sm:text-2xl font-semibold text-gray-900">{stats.total}</p>
@@ -144,10 +169,10 @@ export default function CustomersPage() {
                         {stats.total > 0 ? Math.round((stats.withReferrer / stats.total) * 100) : 0}%
                     </p>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-4 sm:px-0">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-4 sm:px-0">
                 <div className="relative flex-1 sm:max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -163,7 +188,7 @@ export default function CustomersPage() {
                         <button
                             key={filter}
                             onClick={() => setFilterReferrer(filter)}
-                            className={`flex-1 sm:flex-none px-3 py-2 text-sm font-medium transition-colors ${
+                            className={`flex-1 sm:flex-none px-3 py-2 text-sm font-medium transition-colors btn-press ${
                                 filterReferrer === filter
                                     ? 'bg-gray-900 text-white'
                                     : 'bg-white text-gray-600 hover:bg-gray-50'
@@ -173,10 +198,10 @@ export default function CustomersPage() {
                         </button>
                     ))}
                 </div>
-            </div>
+            </motion.div>
 
             {/* Table/Cards */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <motion.div variants={fadeInUp} transition={springGentle} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 {/* Desktop Table Header */}
                 <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="col-span-4">{t('customer')}</div>
@@ -188,7 +213,9 @@ export default function CustomersPage() {
 
                 {filteredCustomers.length === 0 ? (
                     <div className="px-4 sm:px-6 py-12 text-center">
-                        <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                        <motion.div variants={floatVariants} animate="float" className="inline-block">
+                            <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                        </motion.div>
                         <p className="text-gray-900 font-medium">
                             {customers.length === 0 ? t('noCustomers') : t('noResults')}
                         </p>
@@ -200,14 +227,16 @@ export default function CustomersPage() {
                         </p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-gray-50">
+                    <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="divide-y divide-gray-50">
                         {filteredCustomers.map((customer) => {
                             const lastActivity = getLastActivity(customer)
                             return (
-                                <div
+                                <motion.div
                                     key={customer.id}
+                                    variants={staggerItem}
+                                    transition={springGentle}
                                     onClick={() => router.push(`/dashboard/customers/${customer.id}`)}
-                                    className="hover:bg-gray-50 cursor-pointer transition-colors group"
+                                    className="hover:bg-gray-50 cursor-pointer transition-colors group row-hover"
                                 >
                                     {/* Desktop Table Row */}
                                     <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 items-center">
@@ -356,12 +385,12 @@ export default function CustomersPage() {
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </motion.div>
                             )
                         })}
-                    </div>
+                    </motion.div>
                 )}
-            </div>
+            </motion.div>
 
             {/* Footer info */}
             {filteredCustomers.length > 0 && (
@@ -369,6 +398,6 @@ export default function CustomersPage() {
                     {filteredCustomers.length === 1 ? t('displayed', { count: filteredCustomers.length }) : t('displayedPlural', { count: filteredCustomers.length })}
                 </p>
             )}
-        </div>
+        </motion.div>
     )
 }

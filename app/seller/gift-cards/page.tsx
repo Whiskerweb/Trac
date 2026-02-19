@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { Loader2, Check, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 type CardType = 'amazon' | 'itunes' | 'steam' | 'paypal_gift' | 'fnac' | 'google_play' | 'netflix' | 'spotify'
 
@@ -148,30 +150,35 @@ export default function GiftCardsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-[80vh] flex items-center justify-center">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center gap-3"
-                >
-                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
-                    <span className="text-xs text-neutral-400 tracking-wide">Loading</span>
-                </motion.div>
+            <div className="max-w-xl mx-auto py-8">
+                <div className="space-y-6">
+                    <div className="h-4 w-24 rounded skeleton-shimmer" />
+                    <div className="text-center space-y-3">
+                        <div className="h-3 w-32 mx-auto rounded skeleton-shimmer" />
+                        <div className="h-12 w-48 mx-auto rounded-lg skeleton-shimmer" />
+                    </div>
+                    <div className="h-3 w-28 rounded skeleton-shimmer" />
+                    <div className="grid grid-cols-2 gap-3">
+                        {Array.from({ length: 8 }).map((_, i) => (
+                            <div key={i} className="h-24 rounded-2xl skeleton-shimmer" />
+                        ))}
+                    </div>
+                </div>
             </div>
         )
     }
 
     return (
         <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
             className="max-w-xl mx-auto py-8"
         >
             {/* Back link */}
             <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
+                variants={fadeInUp}
+                transition={springGentle}
                 className="mb-8"
             >
                 <Link
@@ -185,9 +192,8 @@ export default function GiftCardsPage() {
 
             {/* Balance */}
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
+                variants={fadeInUp}
+                transition={springGentle}
                 className="text-center mb-12"
             >
                 <p className="text-xs uppercase tracking-[0.2em] text-neutral-400 mb-3">
@@ -206,25 +212,24 @@ export default function GiftCardsPage() {
                 {!selectedCard ? (
                     <motion.div
                         key="selection"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
+                        initial="hidden"
+                        animate="visible"
                         exit={{ opacity: 0 }}
+                        variants={staggerContainer}
                     >
                         <p className="text-xs uppercase tracking-[0.15em] text-neutral-400 mb-6">
                             Choose a card
                         </p>
                         <div className="grid grid-cols-2 gap-3">
-                            {GIFT_CARDS.map((card, index) => {
+                            {GIFT_CARDS.map((card) => {
                                 const canAfford = balance >= card.minAmount
                                 return (
                                     <motion.button
                                         key={card.type}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.05 * index }}
+                                        variants={staggerItem}
                                         onClick={() => canAfford && setSelectedCard(card)}
                                         disabled={!canAfford}
-                                        className={`group relative p-5 rounded-2xl text-left transition-all duration-300 ${
+                                        className={`group relative p-5 rounded-2xl text-left transition-all duration-300 card-hover ${
                                             canAfford
                                                 ? 'bg-white hover:shadow-lg hover:shadow-neutral-200/60 cursor-pointer'
                                                 : 'bg-neutral-50 opacity-40 cursor-not-allowed'
@@ -358,10 +363,10 @@ export default function GiftCardsPage() {
                         <button
                             onClick={handleRedeem}
                             disabled={submitting || !amount || parseFloat(amount) < selectedCard.minAmount / 100}
-                            className="w-full py-4 bg-neutral-900 text-white rounded-xl font-medium transition-all hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed"
+                            className="w-full py-4 bg-neutral-900 text-white rounded-xl font-medium transition-all hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed btn-press"
                         >
                             {submitting ? (
-                                <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                                <TraaactionLoader size={20} className="text-gray-400" />
                             ) : (
                                 'Confirm'
                             )}
@@ -405,7 +410,7 @@ export default function GiftCardsPage() {
                                         >
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${
+                                                    <div className={`w-1.5 h-1.5 rounded-full badge-pop ${
                                                         r.status === 'DELIVERED' ? 'bg-green-500' :
                                                         r.status === 'FAILED' ? 'bg-red-400' :
                                                         'bg-amber-400'

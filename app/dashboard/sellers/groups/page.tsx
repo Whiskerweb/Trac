@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Search, Users, Building2, ChevronRight, Send } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Search, Users, Building2, ChevronRight, Send } from 'lucide-react'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 import { getActiveOrganizationsForStartup } from '@/app/actions/organization-actions'
 
 function StatusBadge({ status }: { status: string }) {
@@ -42,22 +44,36 @@ export default function OrganizationsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <div className="space-y-6">
+                <div className="space-y-2">
+                    <div className="h-7 w-48 rounded-lg skeleton-shimmer" />
+                    <div className="h-4 w-72 rounded-lg skeleton-shimmer" />
+                </div>
+                <div className="h-10 w-full rounded-xl skeleton-shimmer" />
+                <div className="space-y-3">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="h-20 w-full rounded-xl skeleton-shimmer" />
+                    ))}
+                </div>
             </div>
         )
     }
 
     return (
-        <div className="space-y-6">
+        <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="space-y-6"
+        >
             {/* Header */}
-            <div>
+            <motion.div variants={fadeInUp} transition={springGentle}>
                 <h1 className="text-2xl font-bold text-gray-900">Organizations</h1>
                 <p className="text-gray-500 mt-1">Browse and propose missions to seller organizations</p>
-            </div>
+            </motion.div>
 
             {/* Search */}
-            <div className="relative">
+            <motion.div variants={fadeInUp} transition={springGentle} className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                     type="text"
@@ -66,24 +82,30 @@ export default function OrganizationsPage() {
                     onChange={e => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
                 />
-            </div>
+            </motion.div>
 
             {/* List */}
             {filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
-                    <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+                <motion.div variants={fadeInUp} transition={springGentle} className="flex flex-col items-center justify-center min-h-[300px] text-center">
+                    <motion.div
+                        variants={floatVariants}
+                        animate="float"
+                        className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mb-4"
+                    >
                         <Building2 className="w-7 h-7 text-gray-400" />
-                    </div>
+                    </motion.div>
                     <p className="text-gray-900 font-medium mb-1">No organizations yet</p>
                     <p className="text-gray-500 text-sm">Organizations will appear here once sellers create them and they are approved.</p>
-                </div>
+                </motion.div>
             ) : (
-                <div className="space-y-3">
+                <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
                     {filtered.map(org => (
-                        <div
+                        <motion.div
                             key={org.id}
+                            variants={staggerItem}
+                            transition={springGentle}
                             onClick={() => router.push(`/dashboard/sellers/groups/${org.id}`)}
-                            className="bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors cursor-pointer"
+                            className="bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors cursor-pointer card-hover"
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -113,10 +135,10 @@ export default function OrganizationsPage() {
                             {org.description && (
                                 <p className="text-sm text-gray-500 mt-2 line-clamp-2">{org.description}</p>
                             )}
-                        </div>
+                        </motion.div>
                     ))}
-                </div>
+                </motion.div>
             )}
-        </div>
+        </motion.div>
     )
 }

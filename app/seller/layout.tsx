@@ -32,6 +32,7 @@ import { getMySellerProfile } from '@/app/actions/sellers'
 import { getMyOrganizations } from '@/app/actions/organization-actions'
 import { getUnreadCount } from '@/app/actions/messaging'
 import { getOnboardingStatus } from '@/app/actions/seller-onboarding'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 // ==========================================
 // DESIGN SYSTEM - TRAAACTION SELLER
@@ -201,7 +202,7 @@ export default function SellerLayout({
     if (!sellerVerified) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                <TraaactionLoader size={20} className="text-gray-400" />
             </div>
         )
     }

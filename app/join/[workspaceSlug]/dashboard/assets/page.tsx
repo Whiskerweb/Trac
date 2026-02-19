@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { FileText, Youtube, Link2, Type, ExternalLink, FolderOpen } from 'lucide-react'
 import { usePortalData } from '../layout'
 import { getPortalAssets } from '@/app/actions/portal'
+import { staggerContainer, staggerItem, fadeInUp, springGentle, floatVariants } from '@/lib/animations'
 
 interface MissionAsset {
     missionId: string
@@ -52,36 +53,44 @@ export default function PortalAssetsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-20">
-                <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+            <div className="space-y-5 py-4">
+                <div className="skeleton-shimmer h-8 w-40 rounded-lg" />
+                {[...Array(3)].map((_, i) => (
+                    <div key={i} className="skeleton-shimmer h-24 rounded-2xl" />
+                ))}
             </div>
         )
     }
 
     return (
-        <div className="space-y-5">
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="space-y-5"
+        >
+            <motion.div variants={staggerItem} transition={springGentle}>
                 <h1 className="text-lg font-semibold text-gray-900 mb-1">{t('title')}</h1>
             </motion.div>
 
             {missions.length === 0 ? (
                 <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 }}
+                    variants={staggerItem}
+                    transition={springGentle}
                     className="bg-white rounded-2xl border border-gray-100 p-12 text-center"
                 >
-                    <FolderOpen className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                    <motion.div variants={floatVariants} animate="float">
+                        <FolderOpen className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                    </motion.div>
                     <p className="text-sm text-gray-500">{t('empty')}</p>
                 </motion.div>
             ) : (
-                missions.map((mission, mi) => (
+                missions.map((mission) => (
                     <motion.div
                         key={mission.missionId}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.05 * (mi + 1) }}
-                        className="bg-white rounded-2xl border border-gray-100 p-5"
+                        variants={staggerItem}
+                        transition={springGentle}
+                        className="bg-white rounded-2xl border border-gray-100 card-hover p-5"
                     >
                         <p className="text-sm font-semibold text-gray-900 mb-3">{mission.missionTitle}</p>
                         <div className="space-y-1.5">
@@ -93,7 +102,7 @@ export default function PortalAssetsPage() {
                                         href={c.url || '#'}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 transition-colors group"
+                                        className="flex items-center gap-3 px-3 py-3 rounded-xl row-hover transition-colors group"
                                     >
                                         <div
                                             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -117,6 +126,6 @@ export default function PortalAssetsPage() {
                     </motion.div>
                 ))
             )}
-        </div>
+        </motion.div>
     )
 }

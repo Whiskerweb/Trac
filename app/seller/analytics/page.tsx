@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MousePointer, ShoppingCart, DollarSign, Wallet, Filter, RefreshCw, TrendingUp, Loader2 } from 'lucide-react'
 import { useSellerAnalytics as usePartnerAnalytics } from '@/lib/hooks/useSellerAnalytics'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 // Use explicit locale to avoid hydration mismatch
 function formatNumber(num: number): string {
@@ -44,7 +45,7 @@ export default function AnalyticsPage() {
     if (loading) {
         return (
             <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                <TraaactionLoader size={32} className="text-gray-400" />
             </div>
         )
     }

@@ -9,6 +9,7 @@ import {
 import Link from 'next/link'
 import { getAllMissions, joinMission } from '@/app/actions/marketplace'
 import { ActivityLog } from '@/components/ActivityLog'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 interface AffiliateStats {
     clicks: number
@@ -229,7 +230,7 @@ function MissionCard({
                     >
                         {joining ? (
                             <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <TraaactionLoader size={20} className="text-gray-400" />
                                 Inscription...
                             </>
                         ) : (
@@ -294,7 +295,7 @@ export default function MarketplacePage() {
                 {/* Content */}
                 {loading ? (
                     <div className="flex items-center justify-center py-20">
-                        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+                        <TraaactionLoader size={32} className="text-gray-400" />
                     </div>
                 ) : missions.length === 0 ? (
                     <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-16 text-center">

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { ChevronDown, CreditCard, Loader2 } from 'lucide-react'
 import { getPortalCommissions } from '@/app/actions/portal'
 import PortalCommissionTable from './PortalCommissionTable'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 interface RecentCommission {
     id: string
@@ -110,7 +111,7 @@ export default function PortalEarningsSection({
                     <>
                         {loadingMore ? (
                             <div className="flex items-center justify-center py-8">
-                                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                                <TraaactionLoader size={20} className="text-gray-400" />
                             </div>
                         ) : (
                             <PortalCommissionTable

@@ -18,6 +18,8 @@ import {
     type EnrichedProgramRequest
 } from '@/app/actions/marketplace-actions'
 import { useTranslations } from 'next-intl'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, buttonTap } from '@/lib/animations'
 
 // =============================================
 // PAGINATION CONFIG
@@ -77,7 +79,7 @@ function StatusBadge({ status }: { status: string }) {
         ARCHIVED: 'bg-orange-50 text-orange-700',
     }
     return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium badge-pop ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
             {t(status as 'ACTIVE' | 'DRAFT' | 'ARCHIVED')}
         </span>
     )
@@ -92,7 +94,7 @@ function ParticipantStatusBadge({ status }: { status: string }) {
         ARCHIVED: 'bg-gray-100 text-gray-500',
     }
     return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium badge-pop ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
             {t(status as 'APPROVED' | 'PENDING' | 'REJECTED' | 'ARCHIVED')}
         </span>
     )
@@ -346,8 +348,10 @@ export default function MissionDetailPage({
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <div className="space-y-6 animate-pulse p-4 sm:p-6">
+                <div className="h-20 rounded-xl skeleton-shimmer" />
+                <div className="h-40 rounded-xl skeleton-shimmer" />
+                <div className="h-64 rounded-xl skeleton-shimmer" />
             </div>
         )
     }
@@ -381,18 +385,20 @@ export default function MissionDetailPage({
     const totalRevenue = activeEnrollments.reduce((sum, e) => sum + (e.stats?.revenue || 0), 0)
 
     return (
-        <div className="space-y-4 sm:space-y-6">
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-4 sm:space-y-6">
             {/* Back Button */}
-            <button
-                onClick={() => router.push('/dashboard/missions')}
-                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors"
-            >
-                <ChevronLeft className="w-4 h-4" />
-                {t('backToMissions')}
-            </button>
+            <motion.div variants={fadeInUp} transition={springGentle}>
+                <button
+                    onClick={() => router.push('/dashboard/missions')}
+                    className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors btn-press"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                    {t('backToMissions')}
+                </button>
+            </motion.div>
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start gap-4 sm:justify-between">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex flex-col sm:flex-row items-start gap-4 sm:justify-between">
                 <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
                         <Target className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
@@ -412,15 +418,15 @@ export default function MissionDetailPage({
                     <span className="px-3 py-1.5 bg-green-50 text-green-700 font-semibold rounded-lg text-sm flex-1 sm:flex-initial text-center">
                         {mission.reward}
                     </span>
-                    <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 btn-press">
                         <MoreHorizontal className="w-4 h-4 text-gray-500" />
                     </button>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Invite Link Card - Only for INVITE_ONLY missions */}
             {mission.visibility === 'INVITE_ONLY' && mission.invite_url && (
-                <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100 rounded-xl p-4 sm:p-5">
+                <motion.div variants={fadeInUp} transition={springGentle} className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100 rounded-xl p-4 sm:p-5">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div className="flex items-start sm:items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
@@ -439,7 +445,7 @@ export default function MissionDetailPage({
                             </code>
                             <button
                                 onClick={() => handleCopyLink(mission.invite_url!)}
-                                className="flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium w-full sm:w-auto"
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium w-full sm:w-auto btn-press"
                             >
                                 {copied ? (
                                     <>
@@ -455,11 +461,11 @@ export default function MissionDetailPage({
                             </button>
                         </div>
                     </div>
-                </div>
+                </motion.div>
             )}
 
             {/* Stats Bar */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 p-4 sm:p-5 bg-white border border-gray-200 rounded-xl">
+            <motion.div variants={fadeInUp} transition={springGentle} className="grid grid-cols-2 lg:grid-cols-5 gap-4 p-4 sm:p-5 bg-white border border-gray-200 rounded-xl">
                 <div className="flex flex-col">
                     <p className="text-xs sm:text-sm text-gray-500">{t('participants')}</p>
                     <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{totalParticipants}</p>
@@ -480,11 +486,11 @@ export default function MissionDetailPage({
                     <p className="text-xs sm:text-sm text-gray-500">{t('revenue')}</p>
                     <p className="text-xl sm:text-2xl font-semibold text-green-600 mt-1">€{(totalRevenue / 100).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Pending Requests Section - Compact Table Design */}
             {mission.visibility === 'PRIVATE' && pendingRequests.length > 0 && (
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <motion.div variants={fadeInUp} transition={springGentle} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                     {/* Header with search and bulk actions */}
                     <div className="px-3 sm:px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
@@ -516,14 +522,14 @@ export default function MissionDetailPage({
                                 <button
                                     onClick={handleBulkApprove}
                                     disabled={processingRequest !== null}
-                                    className="px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors disabled:opacity-50 flex-1 sm:flex-initial"
+                                    className="px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors disabled:opacity-50 flex-1 sm:flex-initial btn-press"
                                 >
                                     {t('approveAll')}
                                 </button>
                                 <button
                                     onClick={handleBulkReject}
                                     disabled={processingRequest !== null}
-                                    className="px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors disabled:opacity-50 flex-1 sm:flex-initial"
+                                    className="px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors disabled:opacity-50 flex-1 sm:flex-initial btn-press"
                                 >
                                     {t('rejectAll')}
                                 </button>
@@ -553,7 +559,7 @@ export default function MissionDetailPage({
                         {paginatedRequests.map((request) => (
                             <div key={request.id}>
                                 {/* Desktop Row */}
-                                <div className="hidden lg:grid grid-cols-[32px_1fr_100px_80px_80px_140px] gap-2 px-4 py-2.5 items-center hover:bg-gray-50 transition-colors">
+                                <div className="hidden lg:grid grid-cols-[32px_1fr_100px_80px_80px_140px] gap-2 px-4 py-2.5 items-center hover:bg-gray-50 transition-colors row-hover">
                                     {/* Checkbox */}
                                     <div className="flex items-center justify-center">
                                         <input
@@ -609,7 +615,7 @@ export default function MissionDetailPage({
                                         <button
                                             onClick={() => handleApprove(request.id)}
                                             disabled={processingRequest === request.id}
-                                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50 btn-press"
                                             title="Accepter"
                                         >
                                             {processingRequest === request.id ? (
@@ -621,7 +627,7 @@ export default function MissionDetailPage({
                                         <button
                                             onClick={() => handleReject(request.id)}
                                             disabled={processingRequest === request.id}
-                                            className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                                            className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50 btn-press"
                                             title="Refuser"
                                         >
                                             <XCircle className="w-4 h-4" />
@@ -695,7 +701,7 @@ export default function MissionDetailPage({
                                                 <button
                                                     onClick={() => handleApprove(request.id)}
                                                     disabled={processingRequest === request.id}
-                                                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors disabled:opacity-50"
+                                                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors disabled:opacity-50 btn-press"
                                                 >
                                                     {processingRequest === request.id ? (
                                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -709,7 +715,7 @@ export default function MissionDetailPage({
                                                 <button
                                                     onClick={() => handleReject(request.id)}
                                                     disabled={processingRequest === request.id}
-                                                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors disabled:opacity-50"
+                                                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors disabled:opacity-50 btn-press"
                                                 >
                                                     <XCircle className="w-3.5 h-3.5" />
                                                     Reject
@@ -732,22 +738,32 @@ export default function MissionDetailPage({
                                 </div>
 
                                 {/* Expanded Details */}
-                                {expandedRequest === request.id && (request.message || request.seller_bio) && (
-                                    <div className="px-3 lg:px-4 pb-3 lg:pl-14 space-y-2 bg-gray-50/50">
-                                        {request.message && (
-                                            <div className="text-xs">
-                                                <span className="text-gray-400">Message : </span>
-                                                <span className="text-gray-600 italic">&ldquo;{request.message}&rdquo;</span>
+                                <AnimatePresence>
+                                    {expandedRequest === request.id && (request.message || request.seller_bio) && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            transition={springGentle}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="px-3 lg:px-4 pb-3 lg:pl-14 space-y-2 bg-gray-50/50">
+                                                {request.message && (
+                                                    <div className="text-xs">
+                                                        <span className="text-gray-400">Message : </span>
+                                                        <span className="text-gray-600 italic">&ldquo;{request.message}&rdquo;</span>
+                                                    </div>
+                                                )}
+                                                {request.seller_bio && (
+                                                    <div className="text-xs">
+                                                        <span className="text-gray-400">Bio : </span>
+                                                        <span className="text-gray-600">{request.seller_bio}</span>
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                        {request.seller_bio && (
-                                            <div className="text-xs">
-                                                <span className="text-gray-400">Bio : </span>
-                                                <span className="text-gray-600">{request.seller_bio}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         ))}
                     </div>
@@ -801,11 +817,11 @@ export default function MissionDetailPage({
                             </div>
                         </div>
                     )}
-                </div>
+                </motion.div>
             )}
 
             {/* Main Content */}
-            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex flex-col lg:flex-row gap-4 sm:gap-6">
                 {/* Left - Participants Table */}
                 <div className="flex-1">
                     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -844,9 +860,9 @@ export default function MissionDetailPage({
                                 </div>
 
                                 {/* Table Rows - Desktop */}
-                                <div className="hidden lg:block divide-y divide-gray-50">
+                                <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="hidden lg:block divide-y divide-gray-50">
                                     {sortedEnrollments.map((enrollment, index) => (
-                                        <div key={enrollment.id} className="flex items-center px-5 py-2.5 hover:bg-gray-50/50 transition-colors">
+                                        <motion.div key={enrollment.id} variants={staggerItem} transition={springGentle} className="flex items-center px-5 py-2.5 hover:bg-gray-50/50 transition-colors row-hover">
                                             {/* Seller */}
                                             <div className="flex-1 min-w-0 flex items-center gap-2.5">
                                                 <div className="relative shrink-0">
@@ -894,9 +910,9 @@ export default function MissionDetailPage({
                                                     </button>
                                                 )}
                                             </div>
-                                        </div>
+                                        </motion.div>
                                     ))}
-                                </div>
+                                </motion.div>
 
                                 {/* Mobile Cards */}
                                 <div className="lg:hidden divide-y divide-gray-50">
@@ -1000,22 +1016,22 @@ export default function MissionDetailPage({
                     <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
                         <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('actionsSection')}</h3>
                         <div className="space-y-2">
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                            <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors btn-press">
                                 <Edit className="w-4 h-4" />
                                 Edit
                             </button>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                            <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors btn-press">
                                 <Archive className="w-4 h-4" />
                                 Archiver
                             </button>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors btn-press">
                                 <Trash2 className="w-4 h-4" />
                                 Delete
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     )
 }

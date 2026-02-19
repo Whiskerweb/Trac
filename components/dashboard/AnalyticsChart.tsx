@@ -12,6 +12,7 @@ import {
     ResponsiveContainer,
 } from 'recharts'
 import { TrendingUp, Flag, Check, Loader2 } from 'lucide-react'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 /**
  * Analytics Chart with Funnel & Timeline Views
@@ -382,7 +383,7 @@ export function AnalyticsChart({
                     <div className="p-6 pt-12 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
                         {loadingTimeseries && (
                             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 rounded-b-xl">
-                                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                                <TraaactionLoader size={20} className="text-gray-400" />
                             </div>
                         )}
                         <ResponsiveContainer width="100%" height={220}>

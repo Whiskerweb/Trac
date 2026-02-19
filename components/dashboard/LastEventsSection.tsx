@@ -5,6 +5,7 @@ import { Users, ShoppingCart, Award, UserPlus, Loader2 } from 'lucide-react'
 import { getLastEvents, DashboardEvent } from '@/app/actions/dashboard'
 import { formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 // Event type icons and colors
 const eventConfig = {
@@ -87,7 +88,7 @@ export function LastEventsSection() {
     if (loading) {
         return (
             <div className="p-12 flex justify-center text-gray-400">
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <TraaactionLoader size={24} className="text-gray-400" />
             </div>
         )
     }

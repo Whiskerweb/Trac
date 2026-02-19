@@ -7,15 +7,16 @@ import { logout } from '@/app/login/actions'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, springGentle, modalOverlayVariants, modalContentVariants } from '@/lib/animations'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 // Reusable card component
 function SettingsCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
         <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className={`bg-white rounded-2xl border border-neutral-200/60 shadow-sm ${className}`}
+            variants={fadeInUp}
+            transition={springGentle}
+            className={`bg-white rounded-2xl border border-neutral-200/60 shadow-sm card-hover ${className}`}
         >
             {children}
         </motion.div>
@@ -170,27 +171,31 @@ export default function SettingsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex flex-col items-center gap-3"
-                >
-                    <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
-                    <span className="text-sm text-neutral-500">Loading settings...</span>
-                </motion.div>
+            <div className="min-h-screen bg-[#FAFAFA]">
+                <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+                    <div className="space-y-6">
+                        <div>
+                            <div className="h-7 w-40 rounded-lg skeleton-shimmer" />
+                            <div className="h-4 w-72 rounded-lg skeleton-shimmer mt-2" />
+                        </div>
+                        <div className="h-48 rounded-2xl skeleton-shimmer" />
+                        <div className="h-56 rounded-2xl skeleton-shimmer" />
+                        <div className="h-28 rounded-2xl skeleton-shimmer" />
+                        <div className="h-28 rounded-2xl skeleton-shimmer" />
+                    </div>
+                </div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA]">
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="min-h-screen bg-[#FAFAFA]">
             <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
 
                 {/* Header */}
                 <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    variants={fadeInUp}
+                    transition={springGentle}
                     className="mb-8"
                 >
                     <div className="flex items-center gap-3 mb-2">
@@ -239,7 +244,7 @@ export default function SettingsPage() {
                                 <div>
                                     <label className="block text-[13px] font-medium text-neutral-700 mb-2">Password</label>
                                     {!showPasswordForm ? (
-                                        <button onClick={() => setShowPasswordForm(true)} className="h-11 px-5 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-[14px] font-medium text-neutral-700 transition-colors">
+                                        <button onClick={() => setShowPasswordForm(true)} className="h-11 px-5 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-[14px] font-medium text-neutral-700 transition-colors btn-press">
                                             Change password
                                         </button>
                                     ) : (
@@ -258,11 +263,11 @@ export default function SettingsPage() {
                                                 </button>
                                             </div>
                                             <div className="flex gap-2 pt-1">
-                                                <button onClick={handleChangePassword} disabled={savingPassword} className="h-10 px-4 bg-neutral-900 text-white rounded-xl text-[13px] font-medium hover:bg-neutral-800 disabled:opacity-70 transition-colors flex items-center gap-2">
+                                                <button onClick={handleChangePassword} disabled={savingPassword} className="h-10 px-4 bg-neutral-900 text-white rounded-xl text-[13px] font-medium hover:bg-neutral-800 disabled:opacity-70 transition-colors flex items-center gap-2 btn-press">
                                                     {savingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
                                                     Update
                                                 </button>
-                                                <button onClick={() => { setShowPasswordForm(false); setNewPassword(''); setConfirmPassword(''); setPasswordError('') }} className="h-10 px-4 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-[13px] font-medium text-neutral-700 transition-colors">
+                                                <button onClick={() => { setShowPasswordForm(false); setNewPassword(''); setConfirmPassword(''); setPasswordError('') }} className="h-10 px-4 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-[13px] font-medium text-neutral-700 transition-colors btn-press">
                                                     Cancel
                                                 </button>
                                             </div>
@@ -282,7 +287,7 @@ export default function SettingsPage() {
 
                             {loadingStripe ? (
                                 <div className="flex items-center gap-3 py-6">
-                                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                                    <TraaactionLoader size={20} className="text-gray-400" />
                                     <span className="text-[14px] text-neutral-500">Loading...</span>
                                 </div>
                             ) : stripeAccount?.connected ? (
@@ -297,23 +302,23 @@ export default function SettingsPage() {
                                                 <p className="text-[13px] text-neutral-500">{stripeAccount.email || 'Connected'}</p>
                                             </div>
                                         </div>
-                                        <span className={`px-2.5 py-1 rounded-full text-[12px] font-medium ${stripeAccount.payoutsEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                        <span className={`px-2.5 py-1 rounded-full text-[12px] font-medium badge-pop ${stripeAccount.payoutsEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                             {stripeAccount.payoutsEnabled ? 'Active' : 'Pending'}
                                         </span>
                                     </div>
 
                                     <div className="flex flex-wrap gap-2">
                                         {!stripeAccount.payoutsEnabled && (
-                                            <button onClick={() => handleStripeAction('onboarding')} disabled={stripeAction === 'connecting'} className="h-10 px-4 bg-neutral-900 text-white rounded-xl text-[13px] font-medium hover:bg-neutral-800 disabled:opacity-70 transition-colors flex items-center gap-2">
+                                            <button onClick={() => handleStripeAction('onboarding')} disabled={stripeAction === 'connecting'} className="h-10 px-4 bg-neutral-900 text-white rounded-xl text-[13px] font-medium hover:bg-neutral-800 disabled:opacity-70 transition-colors flex items-center gap-2 btn-press">
                                                 {stripeAction === 'connecting' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                                                 Complete setup
                                             </button>
                                         )}
-                                        <button onClick={() => handleStripeAction('dashboard')} disabled={stripeAction === 'dashboard'} className="h-10 px-4 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-[13px] font-medium text-neutral-700 transition-colors flex items-center gap-2">
+                                        <button onClick={() => handleStripeAction('dashboard')} disabled={stripeAction === 'dashboard'} className="h-10 px-4 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-[13px] font-medium text-neutral-700 transition-colors flex items-center gap-2 btn-press">
                                             {stripeAction === 'dashboard' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
                                             Dashboard
                                         </button>
-                                        <button onClick={() => setShowDisconnectModal(true)} className="h-10 px-4 text-red-600 hover:bg-red-50 rounded-xl text-[13px] font-medium transition-colors flex items-center gap-2">
+                                        <button onClick={() => setShowDisconnectModal(true)} className="h-10 px-4 text-red-600 hover:bg-red-50 rounded-xl text-[13px] font-medium transition-colors flex items-center gap-2 btn-press">
                                             <Unlink className="w-4 h-4" />
                                             Disconnect
                                         </button>
@@ -338,7 +343,7 @@ export default function SettingsPage() {
                                             </li>
                                         ))}
                                     </ul>
-                                    <button onClick={() => handleStripeAction('connect')} disabled={stripeAction === 'connecting'} className="w-full h-11 bg-white text-neutral-900 rounded-xl text-[14px] font-semibold hover:bg-neutral-100 disabled:opacity-70 transition-colors flex items-center justify-center gap-2">
+                                    <button onClick={() => handleStripeAction('connect')} disabled={stripeAction === 'connecting'} className="w-full h-11 bg-white text-neutral-900 rounded-xl text-[14px] font-semibold hover:bg-neutral-100 disabled:opacity-70 transition-colors flex items-center justify-center gap-2 btn-press">
                                         {stripeAction === 'connecting' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
                                         {stripeAction === 'connecting' ? 'Connecting...' : 'Connect Stripe'}
                                     </button>
@@ -353,7 +358,7 @@ export default function SettingsPage() {
                             <h2 className="text-[15px] font-semibold text-neutral-900 mb-1">Sign out</h2>
                             <p className="text-[13px] text-neutral-500 mb-4">Sign out of your account on this device</p>
                             <form action={logout}>
-                                <button type="submit" className="h-10 px-4 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-[13px] font-medium text-neutral-700 transition-colors flex items-center gap-2">
+                                <button type="submit" className="h-10 px-4 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-[13px] font-medium text-neutral-700 transition-colors flex items-center gap-2 btn-press">
                                     <LogOut className="w-4 h-4" />
                                     Sign out
                                 </button>
@@ -366,7 +371,7 @@ export default function SettingsPage() {
                         <div className="p-6">
                             <h2 className="text-[15px] font-semibold text-red-600 mb-1">Danger zone</h2>
                             <p className="text-[13px] text-neutral-500 mb-4">Irreversible actions</p>
-                            <button onClick={() => setShowDeleteModal(true)} className="h-10 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[13px] font-medium transition-colors">
+                            <button onClick={() => setShowDeleteModal(true)} className="h-10 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[13px] font-medium transition-colors btn-press">
                                 Delete account
                             </button>
                         </div>
@@ -377,16 +382,18 @@ export default function SettingsPage() {
                 <AnimatePresence>
                     {showDeleteModal && (
                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                            variants={modalOverlayVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
                             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
                             onClick={() => !deleting && setShowDeleteModal(false)}
                         >
                             <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
+                                variants={modalContentVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
                                 onClick={(e) => e.stopPropagation()}
                                 className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl"
                             >
@@ -419,16 +426,18 @@ export default function SettingsPage() {
                 <AnimatePresence>
                     {showDisconnectModal && (
                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                            variants={modalOverlayVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
                             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
                             onClick={() => stripeAction !== 'disconnecting' && setShowDisconnectModal(false)}
                         >
                             <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
+                                variants={modalContentVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
                                 onClick={(e) => e.stopPropagation()}
                                 className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl"
                             >
@@ -454,6 +463,6 @@ export default function SettingsPage() {
                     )}
                 </AnimatePresence>
             </div>
-        </div>
+        </motion.div>
     )
 }

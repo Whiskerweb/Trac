@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { usePortalData } from './layout'
 import PortalKPIRow from '@/components/portal/PortalKPIRow'
 import PortalProgramCard from '@/components/portal/PortalProgramCard'
+import { staggerContainer, staggerItem, fadeInUp, springGentle } from '@/lib/animations'
 
 const statusDot: Record<string, string> = {
     PENDING: '#f59e0b',
@@ -33,9 +34,14 @@ export default function PortalDashboardPage() {
     }
 
     return (
-        <div className="space-y-5">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="space-y-5"
+        >
             {/* KPI Row */}
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+            <motion.div variants={staggerItem} transition={springGentle}>
                 <PortalKPIRow
                     pending={data.balance.pending}
                     available={data.balance.available}
@@ -45,11 +51,7 @@ export default function PortalDashboardPage() {
             </motion.div>
 
             {/* My Programs — Accordion */}
-            <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
-            >
+            <motion.div variants={staggerItem} transition={springGentle}>
                 <p className="text-sm font-semibold text-gray-900 mb-3">{t('myPrograms')}</p>
 
                 {data.enrollments.length === 0 ? (
@@ -57,40 +59,45 @@ export default function PortalDashboardPage() {
                         <p className="text-sm text-gray-500">{t('noStats')}</p>
                     </div>
                 ) : (
-                    <div className="space-y-2">
+                    <motion.div
+                        initial="hidden"
+                        animate="visible"
+                        variants={staggerContainer}
+                        className="space-y-2"
+                    >
                         {data.enrollments.map((enrollment) => (
-                            <PortalProgramCard
-                                key={enrollment.id}
-                                missionTitle={enrollment.missionTitle}
-                                missionDescription={enrollment.missionDescription}
-                                linkUrl={enrollment.linkUrl}
-                                stats={enrollment.stats}
-                                sale_enabled={enrollment.sale_enabled}
-                                sale_reward_amount={enrollment.sale_reward_amount}
-                                sale_reward_structure={enrollment.sale_reward_structure}
-                                lead_enabled={enrollment.lead_enabled}
-                                lead_reward_amount={enrollment.lead_reward_amount}
-                                recurring_enabled={enrollment.recurring_enabled}
-                                recurring_reward_amount={enrollment.recurring_reward_amount}
-                                recurring_reward_structure={enrollment.recurring_reward_structure}
-                                recurring_duration_months={enrollment.recurring_duration_months}
-                                contents={enrollment.contents}
-                                primaryColor={primaryColor}
-                                expanded={expandedId === enrollment.id}
-                                onToggle={() => setExpandedId(expandedId === enrollment.id ? null : enrollment.id)}
-                            />
+                            <motion.div key={enrollment.id} variants={staggerItem} transition={springGentle}>
+                                <PortalProgramCard
+                                    missionTitle={enrollment.missionTitle}
+                                    missionDescription={enrollment.missionDescription}
+                                    linkUrl={enrollment.linkUrl}
+                                    stats={enrollment.stats}
+                                    sale_enabled={enrollment.sale_enabled}
+                                    sale_reward_amount={enrollment.sale_reward_amount}
+                                    sale_reward_structure={enrollment.sale_reward_structure}
+                                    lead_enabled={enrollment.lead_enabled}
+                                    lead_reward_amount={enrollment.lead_reward_amount}
+                                    recurring_enabled={enrollment.recurring_enabled}
+                                    recurring_reward_amount={enrollment.recurring_reward_amount}
+                                    recurring_reward_structure={enrollment.recurring_reward_structure}
+                                    recurring_duration_months={enrollment.recurring_duration_months}
+                                    contents={enrollment.contents}
+                                    primaryColor={primaryColor}
+                                    expanded={expandedId === enrollment.id}
+                                    onToggle={() => setExpandedId(expandedId === enrollment.id ? null : enrollment.id)}
+                                />
+                            </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
                 )}
             </motion.div>
 
             {/* Recent Earnings (inline, last 5) */}
             {data.recentCommissions.length > 0 && (
                 <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.08 }}
-                    className="bg-white rounded-2xl border border-gray-100 p-5"
+                    variants={staggerItem}
+                    transition={springGentle}
+                    className="bg-white rounded-2xl border border-gray-100 card-hover p-5"
                 >
                     <p className="text-sm font-semibold text-gray-900 mb-3">{t('earnings')}</p>
                     <div className="space-y-1">
@@ -103,7 +110,7 @@ export default function PortalDashboardPage() {
                             }
 
                             return (
-                                <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50/50 transition-colors">
+                                <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg row-hover transition-colors">
                                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
                                     <div className="flex-1 min-w-0">
                                         <span className="text-xs font-medium text-gray-700">
@@ -113,7 +120,7 @@ export default function PortalDashboardPage() {
                                     </div>
                                     <div className="text-right flex-shrink-0">
                                         {c.status === 'PENDING' && daysLeft > 0 ? (
-                                            <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
+                                            <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full badge-pop">
                                                 {tComm('availableIn', { days: daysLeft })}
                                             </span>
                                         ) : (
@@ -128,6 +135,6 @@ export default function PortalDashboardPage() {
                     </div>
                 </motion.div>
             )}
-        </div>
+        </motion.div>
     )
 }

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, AlertTriangle } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle } from '@/lib/animations'
 import { applyToCreateOrg } from '@/app/actions/organization-actions'
 import { getMyStripeAccountInfo } from '@/app/actions/sellers'
 import { useTranslations } from 'next-intl'
@@ -57,8 +59,15 @@ export default function ApplyCreateOrgPage() {
     // Loading state
     if (stripeReady === null) {
         return (
-            <div className="flex items-center justify-center py-32">
-                <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
+                <div className="skeleton-shimmer h-4 w-28 rounded mb-8" />
+                <div className="skeleton-shimmer h-7 w-56 rounded-lg mb-2" />
+                <div className="skeleton-shimmer h-4 w-72 rounded mb-8" />
+                <div className="space-y-6">
+                    <div className="skeleton-shimmer h-12 rounded-xl" />
+                    <div className="skeleton-shimmer h-28 rounded-xl" />
+                    <div className="skeleton-shimmer h-28 rounded-xl" />
+                </div>
             </div>
         )
     }
@@ -99,26 +108,35 @@ export default function ApplyCreateOrgPage() {
     }
 
     return (
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
-            <Link href="/seller/organizations" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-8">
-                <ArrowLeft className="w-4 h-4" /> Back to browse
-            </Link>
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="max-w-2xl mx-auto px-4 sm:px-6 py-10"
+        >
+            <motion.div variants={fadeInUp} transition={springGentle}>
+                <Link href="/seller/organizations" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-8">
+                    <ArrowLeft className="w-4 h-4" /> Back to browse
+                </Link>
+            </motion.div>
 
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Create an Organization</h1>
-            <p className="text-gray-500 text-sm mb-8">
-                Build a team of sellers and earn together on shared missions.
-            </p>
+            <motion.div variants={fadeInUp} transition={springGentle}>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Create an Organization</h1>
+                <p className="text-gray-500 text-sm mb-8">
+                    Build a team of sellers and earn together on shared missions.
+                </p>
+            </motion.div>
 
             {/* Warning */}
-            <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl mb-8">
+            <motion.div variants={fadeInUp} transition={springGentle} className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl mb-8">
                 <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div>
                     <p className="text-sm font-medium text-amber-800">Application reviewed by admins</p>
                     <p className="text-xs text-amber-600 mt-0.5">Your organization will be reviewed and approved by our team before it becomes active.</p>
                 </div>
-            </div>
+            </motion.div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <motion.form variants={fadeInUp} transition={springGentle} onSubmit={handleSubmit} className="space-y-6">
                 {/* Name */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Organization Name <span className="text-red-500">*</span></label>
@@ -167,7 +185,7 @@ export default function ApplyCreateOrgPage() {
                                 key={option}
                                 type="button"
                                 onClick={() => setEstimatedAudience(estimatedAudience === option ? '' : option)}
-                                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+                                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all btn-press ${
                                     estimatedAudience === option
                                         ? 'bg-gray-900 text-white border-gray-900'
                                         : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
@@ -186,12 +204,12 @@ export default function ApplyCreateOrgPage() {
                 <button
                     type="submit"
                     disabled={!canSubmit || submitting}
-                    className="w-full px-4 py-3 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full px-4 py-3 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 btn-press"
                 >
                     {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                     Submit Application
                 </button>
-            </form>
-        </div>
+            </motion.form>
+        </motion.div>
     )
 }

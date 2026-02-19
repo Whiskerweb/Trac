@@ -105,7 +105,7 @@ export function BulkActionBar({
             <div className="relative">
                 <button
                     onClick={() => setActiveDropdown(activeDropdown === 'folder' ? null : 'folder')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 transition-colors"
+                    className="btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 transition-colors"
                 >
                     <Folder className="w-3.5 h-3.5" /> {t('bulk.moveToFolder')}
                 </button>
@@ -144,7 +144,7 @@ export function BulkActionBar({
             <div className="relative">
                 <button
                     onClick={() => setActiveDropdown(activeDropdown === 'campaign' ? null : 'campaign')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 transition-colors"
+                    className="btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 transition-colors"
                 >
                     <Target className="w-3.5 h-3.5" /> {t('bulk.setCampaign')}
                 </button>
@@ -178,7 +178,7 @@ export function BulkActionBar({
                 <div className="relative">
                     <button
                         onClick={() => setActiveDropdown(activeDropdown === 'tags' ? null : 'tags')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 transition-colors"
+                        className="btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 transition-colors"
                     >
                         <Tag className="w-3.5 h-3.5" /> {t('bulk.addTags')}
                     </button>
@@ -203,7 +203,7 @@ export function BulkActionBar({
             <div className="relative">
                 <button
                     onClick={() => setActiveDropdown(activeDropdown === 'delete' ? null : 'delete')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 hover:bg-red-500 transition-colors"
+                    className="btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 hover:bg-red-500 transition-colors"
                 >
                     <Trash2 className="w-3.5 h-3.5" /> {t('bulk.delete')}
                 </button>
@@ -214,13 +214,13 @@ export function BulkActionBar({
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setActiveDropdown(null)}
-                                className="flex-1 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                                className="btn-press flex-1 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
                             >
                                 {t('bulk.cancel')}
                             </button>
                             <button
                                 onClick={handleDelete}
-                                className="flex-1 py-1.5 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-500"
+                                className="btn-press flex-1 py-1.5 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-500"
                             >
                                 {t('bulk.confirmDeleteBtn')}
                             </button>

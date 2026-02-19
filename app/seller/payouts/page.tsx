@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Zap, ArrowRight, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
 
 interface Commission {
     id: string
@@ -128,31 +129,49 @@ export default function PayoutsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-[80vh] flex items-center justify-center">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center gap-3"
-                >
-                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
-                    <span className="text-xs text-neutral-400 tracking-wide">Loading</span>
-                </motion.div>
+            <div className="max-w-2xl mx-auto py-8">
+                <div className="text-center mb-16">
+                    <div className="h-4 w-20 rounded skeleton-shimmer mx-auto mb-4" />
+                    <div className="h-16 w-56 rounded-xl skeleton-shimmer mx-auto" />
+                </div>
+                <div className="grid grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-12">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="bg-white p-6 text-center">
+                            <div className="h-8 w-20 rounded skeleton-shimmer mx-auto mb-2" />
+                            <div className="h-3 w-16 rounded skeleton-shimmer mx-auto" />
+                        </div>
+                    ))}
+                </div>
+                <div className="h-24 rounded-2xl skeleton-shimmer mb-12" />
+                <div className="space-y-1">
+                    {[1, 2, 3, 4, 5].map(i => (
+                        <div key={i} className="flex items-center justify-between py-4 px-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-2 h-2 rounded-full skeleton-shimmer" />
+                                <div>
+                                    <div className="h-4 w-20 rounded skeleton-shimmer mb-1" />
+                                    <div className="h-3 w-16 rounded skeleton-shimmer" />
+                                </div>
+                            </div>
+                            <div className="h-4 w-24 rounded skeleton-shimmer" />
+                        </div>
+                    ))}
+                </div>
             </div>
         )
     }
 
     return (
         <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
             className="max-w-2xl mx-auto py-8"
         >
             {/* Hero - Total Earned */}
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.5 }}
+                variants={fadeInUp}
+                transition={springGentle}
                 className="text-center mb-16"
             >
                 <p className="text-xs uppercase tracking-[0.2em] text-neutral-400 mb-4">
@@ -171,7 +190,7 @@ export default function PayoutsPage() {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.3 }}
-                        className="inline-flex items-center gap-1.5 mt-6 px-3 py-1.5 bg-neutral-900 text-white text-xs rounded-full"
+                        className="inline-flex items-center gap-1.5 mt-6 px-3 py-1.5 bg-neutral-900 text-white text-xs rounded-full badge-pop"
                     >
                         <Zap className="w-3 h-3" />
                         <span>Automatic payouts</span>
@@ -181,9 +200,8 @@ export default function PayoutsPage() {
 
             {/* Stats Grid */}
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
+                variants={fadeInUp}
+                transition={springGentle}
                 className="grid grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-12"
             >
                 <div className="bg-white p-6 text-center">
@@ -208,9 +226,8 @@ export default function PayoutsPage() {
 
             {/* Flow Explanation */}
             <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
+                variants={fadeInUp}
+                transition={springGentle}
                 className="mb-12"
             >
                 <div className="flex items-center justify-center gap-3 text-xs text-neutral-400">
@@ -233,10 +250,9 @@ export default function PayoutsPage() {
 
             {/* Payout Method Info */}
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-                className="bg-white rounded-2xl p-6 mb-12"
+                variants={fadeInUp}
+                transition={springGentle}
+                className="bg-white rounded-2xl p-6 mb-12 card-hover"
             >
                 {isStripeMode ? (
                     <div className="text-center">
@@ -265,9 +281,8 @@ export default function PayoutsPage() {
 
             {/* Commission Timeline */}
             <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
+                variants={fadeInUp}
+                transition={springGentle}
             >
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xs uppercase tracking-[0.15em] text-neutral-400">
@@ -280,6 +295,9 @@ export default function PayoutsPage() {
 
                 {wallet.commissions.length === 0 ? (
                     <div className="text-center py-16">
+                        <motion.div variants={floatVariants} animate="float" className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <Zap className="w-5 h-5 text-neutral-400" />
+                        </motion.div>
                         <p className="text-neutral-400 text-sm">No commissions</p>
                         <p className="text-neutral-300 text-xs mt-1">
                             Sales attributed to your links will appear here
@@ -298,7 +316,7 @@ export default function PayoutsPage() {
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: 0.05 * index }}
-                                            className="group flex items-center justify-between py-4 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors cursor-pointer"
+                                            className="group flex items-center justify-between py-4 px-4 -mx-4 rounded-xl hover:bg-neutral-50 transition-colors cursor-pointer row-hover"
                                         >
                                             <div className="flex items-center gap-4">
                                                 <div className={`w-2 h-2 rounded-full ${statusInfo.color}`} />
@@ -344,9 +362,8 @@ export default function PayoutsPage() {
 
             {/* How it works - Collapsible */}
             <motion.details
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
+                variants={fadeInUp}
+                transition={springGentle}
                 className="mt-12 group"
             >
                 <summary className="text-xs uppercase tracking-[0.15em] text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors list-none flex items-center gap-2">
@@ -374,9 +391,8 @@ export default function PayoutsPage() {
             {/* Settings Link */}
             {!isStripeMode && (
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.6 }}
+                    variants={fadeInUp}
+                    transition={springGentle}
                     className="mt-12 text-center"
                 >
                     <Link

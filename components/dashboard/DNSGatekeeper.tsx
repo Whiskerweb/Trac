@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { getWorkspaceDNSStatus } from '@/app/actions/domains'
 import Link from 'next/link'
 import { ShieldAlert, ArrowRight, Loader2 } from 'lucide-react'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 export function DNSGatekeeper({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true)
@@ -27,7 +28,7 @@ export function DNSGatekeeper({ children }: { children: React.ReactNode }) {
                     {children}
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-20">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                    <TraaactionLoader size={32} className="text-gray-400" />
                 </div>
             </div>
         )

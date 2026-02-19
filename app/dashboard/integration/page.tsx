@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import { getOrCreateApiKey, regenerateApiKey } from '@/app/actions/settings'
 import { getVerifiedDomainForWorkspace } from '@/app/actions/domains'
 import { WebhookManager } from '@/components/WebhookManager'
+import { TraaactionLoader } from '@/components/ui/TraaactionLoader'
 
 // =============================================
 // COMPONENTS
@@ -294,7 +295,7 @@ Add webhook in Traaaction dashboard for Stripe events:
     if (loading) {
         return (
             <div className="flex justify-center items-center py-32">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-300" />
+                <TraaactionLoader size={20} className="text-gray-400" />
             </div>
         )
     }
