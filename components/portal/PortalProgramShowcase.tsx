@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { DollarSign, Users, RefreshCw } from 'lucide-react'
+import { DollarSign, Users, RefreshCw, UserPlus } from 'lucide-react'
 
 interface PortalProgramShowcaseProps {
     title: string
@@ -15,6 +15,10 @@ interface PortalProgramShowcaseProps {
     recurring_reward_amount: number | null
     recurring_reward_structure: string | null
     recurring_duration_months: number | null
+    referral_enabled: boolean
+    referral_gen1_rate: number | null
+    referral_gen2_rate: number | null
+    referral_gen3_rate: number | null
     primaryColor: string
 }
 
@@ -30,6 +34,7 @@ export default function PortalProgramShowcase({
     lead_enabled, lead_reward_amount,
     recurring_enabled, recurring_reward_amount, recurring_reward_structure,
     recurring_duration_months,
+    referral_enabled, referral_gen1_rate, referral_gen2_rate, referral_gen3_rate,
     primaryColor,
 }: PortalProgramShowcaseProps) {
     const t = useTranslations('portal')
@@ -45,6 +50,15 @@ export default function PortalProgramShowcase({
         const val = formatReward(recurring_reward_amount, recurring_reward_structure) || ''
         const suffix = recurring_duration_months ? ` / ${recurring_duration_months}mo` : ''
         rewards.push({ icon: RefreshCw, label: t('recurringCommission'), value: val + suffix })
+    }
+    if (referral_enabled && referral_gen1_rate) {
+        rewards.push({ icon: UserPlus, label: t('referralGen1'), value: `${referral_gen1_rate / 100}%` })
+        if (referral_gen2_rate) {
+            rewards.push({ icon: UserPlus, label: t('referralGen2'), value: `${referral_gen2_rate / 100}%` })
+        }
+        if (referral_gen3_rate) {
+            rewards.push({ icon: UserPlus, label: t('referralGen3'), value: `${referral_gen3_rate / 100}%` })
+        }
     }
 
     return (

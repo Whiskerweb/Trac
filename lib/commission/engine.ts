@@ -1618,7 +1618,7 @@ export async function createReferralCommissions(sourceCommission: {
  * Create portal referral commissions for the ancestors of a seller in a workspace's referral tree.
  * Uses PortalReferral table (per-workspace) instead of Seller.referred_by (global).
  *
- * - Rates configured per workspace (portal_referral_gen1/2/3_rate in basis points)
+ * - Rates configured per mission (referral_gen1/2/3_rate in basis points)
  * - Paid by startup (startup_payment_status: UNPAID), not Traaaction
  * - Platform fee: 0 (no Traaaction cut on portal referrals)
  * - Idempotent via sale_id = "{original}:pref:gen{N}:{referrerId}"
@@ -1640,35 +1640,53 @@ export async function createPortalReferralCommissions(sourceCommission: {
     recurring_month?: number | null
     recurring_max?: number | null
     ht_amount: number
+    link_id?: string | null
 }): Promise<void> {
     try {
         const { seller_id, program_id, ht_amount } = sourceCommission
 
         if (ht_amount <= 0) return
 
-        // Load workspace portal referral config
-        const workspace = await prisma.workspace.findUnique({
-            where: { id: program_id },
+        // Find the mission via link_id → MissionEnrollment → Mission
+        let linkId = sourceCommission.link_id
+        if (!linkId) {
+            // Fallback: look up link_id from the source commission in DB
+            const sourceComm = await prisma.commission.findUnique({
+                where: { id: sourceCommission.id },
+                select: { link_id: true }
+            })
+            linkId = sourceComm?.link_id || null
+        }
+        if (!linkId) return
+
+        // ShortLink → MissionEnrollment (1:1 via link_id) → mission_id
+        const enrollment = await prisma.missionEnrollment.findUnique({
+            where: { link_id: linkId },
+            select: { mission_id: true }
+        })
+        if (!enrollment?.mission_id) return
+
+        const mission = await prisma.mission.findUnique({
+            where: { id: enrollment.mission_id },
             select: {
-                portal_referral_enabled: true,
-                portal_referral_gen1_rate: true,
-                portal_referral_gen2_rate: true,
-                portal_referral_gen3_rate: true,
+                referral_enabled: true,
+                referral_gen1_rate: true,
+                referral_gen2_rate: true,
+                referral_gen3_rate: true,
             }
         })
+        if (!mission?.referral_enabled) return
 
-        if (!workspace?.portal_referral_enabled) return
-
-        // Build dynamic rates array (only generations with non-null rates)
+        // Build dynamic rates array from mission (only generations with non-null rates)
         const rates: { generation: number; rate: number }[] = []
-        if (workspace.portal_referral_gen1_rate != null && workspace.portal_referral_gen1_rate > 0) {
-            rates.push({ generation: 1, rate: workspace.portal_referral_gen1_rate / 10000 }) // basis points → decimal
+        if (mission.referral_gen1_rate != null && mission.referral_gen1_rate > 0) {
+            rates.push({ generation: 1, rate: mission.referral_gen1_rate / 10000 }) // basis points → decimal
         }
-        if (workspace.portal_referral_gen2_rate != null && workspace.portal_referral_gen2_rate > 0) {
-            rates.push({ generation: 2, rate: workspace.portal_referral_gen2_rate / 10000 })
+        if (mission.referral_gen2_rate != null && mission.referral_gen2_rate > 0) {
+            rates.push({ generation: 2, rate: mission.referral_gen2_rate / 10000 })
         }
-        if (workspace.portal_referral_gen3_rate != null && workspace.portal_referral_gen3_rate > 0) {
-            rates.push({ generation: 3, rate: workspace.portal_referral_gen3_rate / 10000 })
+        if (mission.referral_gen3_rate != null && mission.referral_gen3_rate > 0) {
+            rates.push({ generation: 3, rate: mission.referral_gen3_rate / 10000 })
         }
 
         if (rates.length === 0) return

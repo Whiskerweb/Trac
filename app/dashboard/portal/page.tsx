@@ -14,7 +14,7 @@ import {
     getPortalSettings, togglePortal, updatePortalBranding,
     getPortalOverview, createPortalMission, updatePortalMission,
     deletePortalMission, getPortalAnalytics, updatePortalSubdomain,
-    getPortalSellers, getPortalReferralSettings, updatePortalReferralSettings
+    getPortalSellers,
 } from '@/app/actions/portal-settings'
 
 interface PortalMission {
@@ -33,6 +33,10 @@ interface PortalMission {
     recurring_reward_amount: number | null
     recurring_reward_structure: string | null
     recurring_duration_months: number | null
+    referral_enabled: boolean
+    referral_gen1_rate: number | null
+    referral_gen2_rate: number | null
+    referral_gen3_rate: number | null
     Contents: { id: string; type: string; url: string | null; title: string; description: string | null }[]
 }
 
@@ -69,6 +73,7 @@ interface MissionFormData {
     sale: { enabled: boolean; structure: 'FLAT' | 'PERCENTAGE'; amount: number }
     lead: { enabled: boolean; amount: number }
     recurring: { enabled: boolean; structure: 'FLAT' | 'PERCENTAGE'; amount: number; duration: number | null }
+    referral: { enabled: boolean; generations: number; gen1Rate: string; gen2Rate: string; gen3Rate: string }
     resources: { title: string; url: string; type: 'LINK' | 'PDF' | 'YOUTUBE' | 'TEXT' }[]
 }
 
@@ -77,6 +82,7 @@ const EMPTY_FORM: MissionFormData = {
     sale: { enabled: true, structure: 'PERCENTAGE', amount: 0 },
     lead: { enabled: false, amount: 0 },
     recurring: { enabled: false, structure: 'PERCENTAGE', amount: 0, duration: null },
+    referral: { enabled: false, generations: 1, gen1Rate: '', gen2Rate: '', gen3Rate: '' },
     resources: [],
 }
 
@@ -118,21 +124,11 @@ export default function PortalManagementPage() {
     const [savingMission, setSavingMission] = useState(false)
     const [deletingMission, setDeletingMission] = useState<string | null>(null)
 
-    // Referral program
-    const [referralEnabled, setReferralEnabled] = useState(false)
-    const [referralGenerations, setReferralGenerations] = useState(1)
-    const [referralGen1, setReferralGen1] = useState('')
-    const [referralGen2, setReferralGen2] = useState('')
-    const [referralGen3, setReferralGen3] = useState('')
-    const [savingReferral, setSavingReferral] = useState(false)
-    const [referralSaved, setReferralSaved] = useState(false)
-
     const loadData = useCallback(async () => {
-        const [settingsResult, overviewResult, sellersResult, referralResult] = await Promise.all([
+        const [settingsResult, overviewResult, sellersResult] = await Promise.all([
             getPortalSettings(),
             getPortalOverview(),
             getPortalSellers(),
-            getPortalReferralSettings(),
         ])
 
         if (settingsResult.success && settingsResult.data) {
@@ -150,16 +146,6 @@ export default function PortalManagementPage() {
 
         if (sellersResult.success && sellersResult.data) {
             setPortalSellers(sellersResult.data as unknown as PortalSeller[])
-        }
-
-        if (referralResult.success && referralResult.data) {
-            const rd = referralResult.data
-            setReferralEnabled(rd.enabled)
-            const gens = rd.gen3Rate ? 3 : rd.gen2Rate ? 2 : 1
-            setReferralGenerations(gens)
-            setReferralGen1(rd.gen1Rate ? String(rd.gen1Rate / 100) : '')
-            setReferralGen2(rd.gen2Rate ? String(rd.gen2Rate / 100) : '')
-            setReferralGen3(rd.gen3Rate ? String(rd.gen3Rate / 100) : '')
         }
 
         setLoading(false)
@@ -193,25 +179,6 @@ export default function PortalManagementPage() {
         }
     }
 
-    const handleSaveReferral = async () => {
-        setSavingReferral(true)
-        const gen1Rate = referralGen1 ? Math.round(parseFloat(referralGen1) * 100) : null
-        const gen2Rate = referralGenerations >= 2 && referralGen2 ? Math.round(parseFloat(referralGen2) * 100) : null
-        const gen3Rate = referralGenerations >= 3 && referralGen3 ? Math.round(parseFloat(referralGen3) * 100) : null
-
-        const result = await updatePortalReferralSettings({
-            enabled: referralEnabled,
-            gen1Rate,
-            gen2Rate,
-            gen3Rate,
-        })
-        setSavingReferral(false)
-        if (result.success) {
-            setReferralSaved(true)
-            setTimeout(() => setReferralSaved(false), 2000)
-        }
-    }
-
     // Mission form handlers
     const openCreateMission = () => {
         setMissionForm(EMPTY_FORM)
@@ -220,6 +187,7 @@ export default function PortalManagementPage() {
     }
 
     const openEditMission = (mission: PortalMission) => {
+        const gens = mission.referral_gen3_rate ? 3 : mission.referral_gen2_rate ? 2 : 1
         setMissionForm({
             title: mission.title,
             description: mission.description,
@@ -236,6 +204,13 @@ export default function PortalManagementPage() {
                 amount: mission.recurring_reward_amount || 0,
                 duration: mission.recurring_duration_months,
             },
+            referral: {
+                enabled: mission.referral_enabled,
+                generations: gens,
+                gen1Rate: mission.referral_gen1_rate ? String(mission.referral_gen1_rate / 100) : '',
+                gen2Rate: mission.referral_gen2_rate ? String(mission.referral_gen2_rate / 100) : '',
+                gen3Rate: mission.referral_gen3_rate ? String(mission.referral_gen3_rate / 100) : '',
+            },
             resources: mission.Contents.map(c => ({
                 title: c.title,
                 url: c.url || c.description || '',
@@ -248,11 +223,20 @@ export default function PortalManagementPage() {
 
     const handleSaveMission = async () => {
         setSavingMission(true)
+        const formWithReferral = {
+            ...missionForm,
+            referral: missionForm.referral.enabled ? {
+                enabled: true,
+                gen1Rate: missionForm.referral.gen1Rate ? Math.round(parseFloat(missionForm.referral.gen1Rate) * 100) : null,
+                gen2Rate: missionForm.referral.generations >= 2 && missionForm.referral.gen2Rate ? Math.round(parseFloat(missionForm.referral.gen2Rate) * 100) : null,
+                gen3Rate: missionForm.referral.generations >= 3 && missionForm.referral.gen3Rate ? Math.round(parseFloat(missionForm.referral.gen3Rate) * 100) : null,
+            } : { enabled: false, gen1Rate: null, gen2Rate: null, gen3Rate: null },
+        }
         let result
         if (editingMission) {
-            result = await updatePortalMission(editingMission, missionForm)
+            result = await updatePortalMission(editingMission, formWithReferral)
         } else {
-            result = await createPortalMission(missionForm)
+            result = await createPortalMission(formWithReferral)
         }
         setSavingMission(false)
         if (result.success) {
@@ -585,137 +569,6 @@ export default function PortalManagementPage() {
 
                 {settings.portal_enabled && (
                     <>
-                        {/* Referral Program */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.03 }}
-                            className="bg-white rounded-2xl border border-gray-200 p-6"
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h2 className="text-sm font-semibold text-gray-900">{t('referralProgram')}</h2>
-                                    <p className="text-xs text-gray-500 mt-0.5">{t('referralDescription')}</p>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        setReferralEnabled(!referralEnabled)
-                                    }}
-                                    className="flex-shrink-0 btn-press"
-                                >
-                                    {referralEnabled ? (
-                                        <ToggleRight className="w-8 h-8 text-emerald-500" />
-                                    ) : (
-                                        <ToggleLeft className="w-8 h-8 text-gray-300" />
-                                    )}
-                                </button>
-                            </div>
-
-                            {referralEnabled && (
-                                <div className="space-y-4">
-                                    {/* Number of generations */}
-                                    <div>
-                                        <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider block mb-2">{t('generations')}</label>
-                                        <div className="flex gap-2">
-                                            {[1, 2, 3].map(n => (
-                                                <button
-                                                    key={n}
-                                                    onClick={() => {
-                                                        setReferralGenerations(n)
-                                                        if (n < 2) setReferralGen2('')
-                                                        if (n < 3) setReferralGen3('')
-                                                    }}
-                                                    className={`px-4 py-2 rounded-xl text-xs font-medium transition-colors ${
-                                                        referralGenerations === n
-                                                            ? 'bg-gray-900 text-white'
-                                                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                                                    }`}
-                                                >
-                                                    {n} gen{n > 1 ? 's' : ''}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Rate inputs */}
-                                    <div className="space-y-2">
-                                        <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider block">{t('rate')}</label>
-
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xs font-medium text-gray-600 w-12">Gen 1</span>
-                                            <div className="relative flex-1 max-w-[140px]">
-                                                <input
-                                                    type="number"
-                                                    step="0.1"
-                                                    min="0.01"
-                                                    max="50"
-                                                    value={referralGen1}
-                                                    onChange={(e) => setReferralGen1(e.target.value)}
-                                                    placeholder="5"
-                                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm pr-8 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
-                                                />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
-                                            </div>
-                                        </div>
-
-                                        {referralGenerations >= 2 && (
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-xs font-medium text-gray-600 w-12">Gen 2</span>
-                                                <div className="relative flex-1 max-w-[140px]">
-                                                    <input
-                                                        type="number"
-                                                        step="0.1"
-                                                        min="0.01"
-                                                        max="50"
-                                                        value={referralGen2}
-                                                        onChange={(e) => setReferralGen2(e.target.value)}
-                                                        placeholder="3"
-                                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm pr-8 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
-                                                    />
-                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {referralGenerations >= 3 && (
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-xs font-medium text-gray-600 w-12">Gen 3</span>
-                                                <div className="relative flex-1 max-w-[140px]">
-                                                    <input
-                                                        type="number"
-                                                        step="0.1"
-                                                        min="0.01"
-                                                        max="50"
-                                                        value={referralGen3}
-                                                        onChange={(e) => setReferralGen3(e.target.value)}
-                                                        placeholder="2"
-                                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm pr-8 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
-                                                    />
-                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Save */}
-                                    <div className="flex justify-end">
-                                        <button
-                                            onClick={handleSaveReferral}
-                                            disabled={savingReferral || !referralGen1}
-                                            className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
-                                        >
-                                            {savingReferral ? (
-                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                            ) : referralSaved ? (
-                                                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                            ) : null}
-                                            {referralSaved ? t('saved') : t('save')}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </motion.div>
-
                         {/* Section 2: Missions */}
                         <motion.div
                             initial={{ opacity: 0, y: 8 }}
@@ -775,6 +628,11 @@ export default function PortalManagementPage() {
                                                     {mission.recurring_enabled && (
                                                         <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
                                                             <RefreshCw className="w-3 h-3" />Recurring
+                                                        </span>
+                                                    )}
+                                                    {mission.referral_enabled && (
+                                                        <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                                                            <Users className="w-3 h-3" />Referral
                                                         </span>
                                                     )}
                                                 </div>
@@ -937,6 +795,104 @@ export default function PortalManagementPage() {
                                                                     className="w-20 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs"
                                                                     placeholder="Months"
                                                                 />
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Referral */}
+                                                    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                                                        <div className="flex items-center gap-3">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={missionForm.referral.enabled}
+                                                                onChange={(e) => setMissionForm(prev => ({ ...prev, referral: { ...prev.referral, enabled: e.target.checked } }))}
+                                                                className="rounded accent-purple-600"
+                                                            />
+                                                            <Users className="w-3.5 h-3.5 text-gray-400" />
+                                                            <span className="text-xs font-medium text-gray-700 w-16">Referral</span>
+                                                            {missionForm.referral.enabled && (
+                                                                <div className="flex items-center gap-2">
+                                                                    {[1, 2, 3].map(n => (
+                                                                        <button
+                                                                            key={n}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setMissionForm(prev => ({
+                                                                                    ...prev,
+                                                                                    referral: {
+                                                                                        ...prev.referral,
+                                                                                        generations: n,
+                                                                                        gen2Rate: n < 2 ? '' : prev.referral.gen2Rate,
+                                                                                        gen3Rate: n < 3 ? '' : prev.referral.gen3Rate,
+                                                                                    }
+                                                                                }))
+                                                                            }}
+                                                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                                                                                missionForm.referral.generations === n
+                                                                                    ? 'bg-gray-900 text-white'
+                                                                                    : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100'
+                                                                            }`}
+                                                                        >
+                                                                            {n} gen{n > 1 ? 's' : ''}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {missionForm.referral.enabled && (
+                                                            <div className="mt-2 space-y-1.5 pl-[calc(1rem+3.5px+0.75rem+3.5px+0.75rem)]">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[11px] font-medium text-gray-500 w-10">Gen 1</span>
+                                                                    <div className="relative">
+                                                                        <input
+                                                                            type="number"
+                                                                            step="0.1"
+                                                                            min="0.01"
+                                                                            max="50"
+                                                                            value={missionForm.referral.gen1Rate}
+                                                                            onChange={(e) => setMissionForm(prev => ({ ...prev, referral: { ...prev.referral, gen1Rate: e.target.value } }))}
+                                                                            placeholder="5"
+                                                                            className="w-20 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs pr-6"
+                                                                        />
+                                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-gray-400">%</span>
+                                                                    </div>
+                                                                </div>
+                                                                {missionForm.referral.generations >= 2 && (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[11px] font-medium text-gray-500 w-10">Gen 2</span>
+                                                                        <div className="relative">
+                                                                            <input
+                                                                                type="number"
+                                                                                step="0.1"
+                                                                                min="0.01"
+                                                                                max="50"
+                                                                                value={missionForm.referral.gen2Rate}
+                                                                                onChange={(e) => setMissionForm(prev => ({ ...prev, referral: { ...prev.referral, gen2Rate: e.target.value } }))}
+                                                                                placeholder="3"
+                                                                                className="w-20 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs pr-6"
+                                                                            />
+                                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-gray-400">%</span>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                {missionForm.referral.generations >= 3 && (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[11px] font-medium text-gray-500 w-10">Gen 3</span>
+                                                                        <div className="relative">
+                                                                            <input
+                                                                                type="number"
+                                                                                step="0.1"
+                                                                                min="0.01"
+                                                                                max="50"
+                                                                                value={missionForm.referral.gen3Rate}
+                                                                                onChange={(e) => setMissionForm(prev => ({ ...prev, referral: { ...prev.referral, gen3Rate: e.target.value } }))}
+                                                                                placeholder="2"
+                                                                                className="w-20 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs pr-6"
+                                                                            />
+                                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-gray-400">%</span>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>

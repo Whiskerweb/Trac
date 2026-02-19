@@ -36,6 +36,10 @@ interface EnrollmentData {
     recurring_reward_amount: number | null
     recurring_reward_structure: string | null
     recurring_duration_months: number | null
+    referral_enabled: boolean
+    referral_gen1_rate: number | null
+    referral_gen2_rate: number | null
+    referral_gen3_rate: number | null
     company_name: string | null
     logo_url: string | null
     stats: EnrollmentStats

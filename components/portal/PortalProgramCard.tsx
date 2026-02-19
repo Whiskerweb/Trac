@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     ChevronDown, Copy, Check, MousePointerClick,
-    DollarSign, Users, RefreshCw, FileText, ExternalLink
+    DollarSign, Users, RefreshCw, FileText, ExternalLink, UserPlus
 } from 'lucide-react'
 
 interface EnrollmentStats {
@@ -37,6 +37,10 @@ interface PortalProgramCardProps {
     recurring_reward_amount: number | null
     recurring_reward_structure: string | null
     recurring_duration_months: number | null
+    referral_enabled: boolean
+    referral_gen1_rate: number | null
+    referral_gen2_rate: number | null
+    referral_gen3_rate: number | null
     contents: Content[]
     primaryColor: string
     expanded: boolean
@@ -55,6 +59,7 @@ export default function PortalProgramCard({
     lead_enabled, lead_reward_amount,
     recurring_enabled, recurring_reward_amount, recurring_reward_structure,
     recurring_duration_months,
+    referral_enabled, referral_gen1_rate, referral_gen2_rate, referral_gen3_rate,
     contents, primaryColor, expanded, onToggle,
 }: PortalProgramCardProps) {
     const t = useTranslations('portal')
@@ -95,6 +100,30 @@ export default function PortalProgramCard({
                 ? tHome('recurringFor', { months: recurring_duration_months })
                 : tHome('recurringLifetime'),
         })
+    }
+    if (referral_enabled && referral_gen1_rate) {
+        rewards.push({
+            icon: UserPlus,
+            label: tHome('perReferralGen1'),
+            value: `${referral_gen1_rate / 100}%`,
+            detail: tHome('perReferralGen1Detail'),
+        })
+        if (referral_gen2_rate) {
+            rewards.push({
+                icon: UserPlus,
+                label: tHome('perReferralGen2'),
+                value: `${referral_gen2_rate / 100}%`,
+                detail: tHome('perReferralGen2Detail'),
+            })
+        }
+        if (referral_gen3_rate) {
+            rewards.push({
+                icon: UserPlus,
+                label: tHome('perReferralGen3'),
+                value: `${referral_gen3_rate / 100}%`,
+                detail: tHome('perReferralGen3Detail'),
+            })
+        }
     }
 
     return (

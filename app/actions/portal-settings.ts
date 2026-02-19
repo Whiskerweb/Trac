@@ -51,6 +51,10 @@ export async function getPortalSettings() {
                         recurring_reward_amount: true,
                         recurring_reward_structure: true,
                         recurring_duration_months: true,
+                        referral_enabled: true,
+                        referral_gen1_rate: true,
+                        referral_gen2_rate: true,
+                        referral_gen3_rate: true,
                         Contents: {
                             orderBy: { order: 'asc' },
                             select: {
@@ -336,6 +340,7 @@ export async function createPortalMission(data: {
     sale: { enabled: boolean; structure: 'FLAT' | 'PERCENTAGE'; amount: number }
     lead: { enabled: boolean; amount: number }
     recurring: { enabled: boolean; structure: 'FLAT' | 'PERCENTAGE'; amount: number; duration: number | null }
+    referral?: { enabled: boolean; gen1Rate: number | null; gen2Rate: number | null; gen3Rate: number | null }
     resources: { title: string; url: string; type: 'LINK' | 'PDF' | 'YOUTUBE' | 'TEXT' }[]
 }) {
     const ws = await getActiveWorkspaceForUser()
@@ -381,6 +386,11 @@ export async function createPortalMission(data: {
                 recurring_reward_amount: data.recurring.enabled ? data.recurring.amount : null,
                 recurring_reward_structure: data.recurring.enabled ? data.recurring.structure : null,
                 recurring_duration_months: data.recurring.enabled ? data.recurring.duration : null,
+
+                referral_enabled: data.referral?.enabled || false,
+                referral_gen1_rate: data.referral?.enabled ? data.referral.gen1Rate : null,
+                referral_gen2_rate: data.referral?.enabled ? data.referral.gen2Rate : null,
+                referral_gen3_rate: data.referral?.enabled ? data.referral.gen3Rate : null,
             },
         })
 
@@ -416,6 +426,7 @@ export async function updatePortalMission(missionId: string, data: {
     sale: { enabled: boolean; structure: 'FLAT' | 'PERCENTAGE'; amount: number }
     lead: { enabled: boolean; amount: number }
     recurring: { enabled: boolean; structure: 'FLAT' | 'PERCENTAGE'; amount: number; duration: number | null }
+    referral?: { enabled: boolean; gen1Rate: number | null; gen2Rate: number | null; gen3Rate: number | null }
     resources: { title: string; url: string; type: 'LINK' | 'PDF' | 'YOUTUBE' | 'TEXT' }[]
 }) {
     const ws = await getActiveWorkspaceForUser()
@@ -457,6 +468,11 @@ export async function updatePortalMission(missionId: string, data: {
                 recurring_reward_amount: data.recurring.enabled ? data.recurring.amount : null,
                 recurring_reward_structure: data.recurring.enabled ? data.recurring.structure : null,
                 recurring_duration_months: data.recurring.enabled ? data.recurring.duration : null,
+
+                referral_enabled: data.referral?.enabled || false,
+                referral_gen1_rate: data.referral?.enabled ? data.referral.gen1Rate : null,
+                referral_gen2_rate: data.referral?.enabled ? data.referral.gen2Rate : null,
+                referral_gen3_rate: data.referral?.enabled ? data.referral.gen3Rate : null,
             },
         })
 

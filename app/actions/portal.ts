@@ -115,6 +115,10 @@ export async function getPortalData(workspaceSlug: string) {
                 recurring_reward_amount: true,
                 recurring_reward_structure: true,
                 recurring_duration_months: true,
+                referral_enabled: true,
+                referral_gen1_rate: true,
+                referral_gen2_rate: true,
+                referral_gen3_rate: true,
             },
         })
 
@@ -338,6 +342,7 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
                         lead_enabled: true, lead_reward_amount: true,
                         recurring_enabled: true, recurring_reward_amount: true, recurring_reward_structure: true,
                         recurring_duration_months: true,
+                        referral_enabled: true, referral_gen1_rate: true, referral_gen2_rate: true, referral_gen3_rate: true,
                         company_name: true, logo_url: true,
                         Contents: {
                             orderBy: { order: 'asc' },
@@ -390,6 +395,7 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
                                 lead_enabled: true, lead_reward_amount: true,
                                 recurring_enabled: true, recurring_reward_amount: true, recurring_reward_structure: true,
                                 recurring_duration_months: true,
+                                referral_enabled: true, referral_gen1_rate: true, referral_gen2_rate: true, referral_gen3_rate: true,
                                 company_name: true, logo_url: true,
                                 Contents: {
                                     orderBy: { order: 'asc' },
@@ -425,6 +431,7 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
                 lead_enabled: true, lead_reward_amount: true,
                 recurring_enabled: true, recurring_reward_amount: true, recurring_reward_structure: true,
                 recurring_duration_months: true,
+                referral_enabled: true, referral_gen1_rate: true, referral_gen2_rate: true, referral_gen3_rate: true,
             },
         })
 
@@ -528,6 +535,10 @@ export async function getPortalFullDashboard(workspaceSlug: string) {
                     recurring_reward_amount: e.Mission.recurring_reward_amount,
                     recurring_reward_structure: e.Mission.recurring_reward_structure,
                     recurring_duration_months: e.Mission.recurring_duration_months,
+                    referral_enabled: e.Mission.referral_enabled,
+                    referral_gen1_rate: e.Mission.referral_gen1_rate,
+                    referral_gen2_rate: e.Mission.referral_gen2_rate,
+                    referral_gen3_rate: e.Mission.referral_gen3_rate,
                     company_name: e.Mission.company_name,
                     logo_url: e.Mission.logo_url,
                     stats: enrollmentStats[i],

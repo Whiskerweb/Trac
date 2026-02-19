@@ -94,6 +94,16 @@ model Mission {
   /// Unique code for INVITE_ONLY missions (allows joining via /invite/[code])
   invite_code String? @unique
 
+  // === PORTAL REFERRAL PER MISSION ===
+  /// Enable referral commissions for this mission
+  referral_enabled       Boolean             @default(false)
+  /// Referral gen1 rate in basis points (500 = 5.00%)
+  referral_gen1_rate     Int?
+  /// Referral gen2 rate in basis points
+  referral_gen2_rate     Int?
+  /// Referral gen3 rate in basis points
+  referral_gen3_rate     Int?
+
   /// Whether this mission is visible on the hosted affiliate portal
   portal_visible     Boolean             @default(true)
   /// If true, this mission is only accessible via the portal (hidden from marketplace)

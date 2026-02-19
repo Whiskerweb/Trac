@@ -81,6 +81,10 @@ export default function PortalDashboardPage() {
                                     recurring_reward_amount={enrollment.recurring_reward_amount}
                                     recurring_reward_structure={enrollment.recurring_reward_structure}
                                     recurring_duration_months={enrollment.recurring_duration_months}
+                                    referral_enabled={enrollment.referral_enabled}
+                                    referral_gen1_rate={enrollment.referral_gen1_rate}
+                                    referral_gen2_rate={enrollment.referral_gen2_rate}
+                                    referral_gen3_rate={enrollment.referral_gen3_rate}
                                     contents={enrollment.contents}
                                     primaryColor={primaryColor}
                                     expanded={expandedId === enrollment.id}

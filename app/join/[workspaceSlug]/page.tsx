@@ -27,6 +27,10 @@ interface MissionCard {
     recurring_reward_amount: number | null
     recurring_reward_structure: string | null
     recurring_duration_months: number | null
+    referral_enabled: boolean
+    referral_gen1_rate: number | null
+    referral_gen2_rate: number | null
+    referral_gen3_rate: number | null
 }
 
 interface PortalProfile {
@@ -237,6 +241,10 @@ export default function PortalPage() {
                                     recurring_reward_amount={missions[0].recurring_reward_amount}
                                     recurring_reward_structure={missions[0].recurring_reward_structure}
                                     recurring_duration_months={missions[0].recurring_duration_months}
+                                    referral_enabled={missions[0].referral_enabled}
+                                    referral_gen1_rate={missions[0].referral_gen1_rate}
+                                    referral_gen2_rate={missions[0].referral_gen2_rate}
+                                    referral_gen3_rate={missions[0].referral_gen3_rate}
                                     primaryColor={primaryColor}
                                 />
                             </motion.div>
@@ -265,6 +273,10 @@ export default function PortalPage() {
                                                 recurring_reward_amount={mission.recurring_reward_amount}
                                                 recurring_reward_structure={mission.recurring_reward_structure}
                                                 recurring_duration_months={mission.recurring_duration_months}
+                                                referral_enabled={mission.referral_enabled}
+                                                referral_gen1_rate={mission.referral_gen1_rate}
+                                                referral_gen2_rate={mission.referral_gen2_rate}
+                                                referral_gen3_rate={mission.referral_gen3_rate}
                                                 primaryColor={primaryColor}
                                             />
                                         </motion.div>
