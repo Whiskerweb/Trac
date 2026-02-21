@@ -38,7 +38,7 @@ function LeaderOverview({ orgId, stats }: { orgId: string; stats: any }) {
     return (
         <div className="space-y-8">
             {/* Stats Grid */}
-            <OrgCard className="p-6">
+            <OrgCard className="p-4 sm:p-6">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {statCards.map(card => {
                         const Icon = card.icon
@@ -47,7 +47,7 @@ function LeaderOverview({ orgId, stats }: { orgId: string; stats: any }) {
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${card.color}`}>
                                     <Icon className="w-5 h-5" />
                                 </div>
-                                <p className="text-2xl font-semibold text-neutral-900">{card.value}</p>
+                                <p className="text-xl sm:text-2xl font-semibold text-neutral-900">{card.value}</p>
                                 <p className="text-[12px] text-neutral-400 mt-0.5">{card.label}</p>
                             </div>
                         )
@@ -67,9 +67,9 @@ function LeaderOverview({ orgId, stats }: { orgId: string; stats: any }) {
             )}
 
             {/* Quick Actions */}
-            <OrgCard className="p-6">
+            <OrgCard className="p-4 sm:p-6">
                 <h2 className="text-[15px] font-semibold text-neutral-900 mb-4">Quick Actions</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <Link
                         href={`/seller/manage/${orgId}/members`}
                         className="flex items-center gap-3 p-4 rounded-xl hover:bg-neutral-50/80 transition-colors"
@@ -128,20 +128,20 @@ function MemberDashboard({ org, stats }: { org: any; stats: any }) {
             )}
 
             {/* Stats */}
-            <OrgCard className="p-6">
+            <OrgCard className="p-4 sm:p-6">
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-blue-600 bg-blue-50">
                             <Users className="w-5 h-5" />
                         </div>
-                        <p className="text-2xl font-semibold text-neutral-900">{stats?.memberCount || activeMembers.length}</p>
+                        <p className="text-xl sm:text-2xl font-semibold text-neutral-900">{stats?.memberCount || activeMembers.length}</p>
                         <p className="text-[12px] text-neutral-400 mt-0.5">Active Members</p>
                     </div>
                     <div>
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-purple-600 bg-purple-50">
                             <Briefcase className="w-5 h-5" />
                         </div>
-                        <p className="text-2xl font-semibold text-neutral-900">{stats?.missionCount || acceptedMissions.length}</p>
+                        <p className="text-xl sm:text-2xl font-semibold text-neutral-900">{stats?.missionCount || acceptedMissions.length}</p>
                         <p className="text-[12px] text-neutral-400 mt-0.5">Active Missions</p>
                     </div>
                 </div>

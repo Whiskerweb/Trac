@@ -127,7 +127,7 @@ function SubReferralList({
     loadingSubSet: Set<string>
 }) {
     const t = useTranslations('sellerReferral')
-    const indent = generation === 1 ? 'pl-8' : 'pl-16'
+    const indent = generation === 1 ? 'pl-4 sm:pl-8' : 'pl-8 sm:pl-16'
 
     return (
         <AnimatePresence>
@@ -509,7 +509,7 @@ export default function ReferralPage() {
                 {/* How it works (compact, at the bottom) */}
                 <motion.div variants={fadeInUp} transition={springGentle} className="bg-white rounded-xl border border-gray-100 p-5 mb-6 card-hover">
                     <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">{t('howItWorks')}</h3>
-                    <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                         <div>
                             <div className="text-lg font-semibold text-violet-600 mb-1">5%</div>
                             <p className="text-[11px] text-gray-500">{t('gen1')}</p>

@@ -253,7 +253,7 @@ function LeaderMissionsView({ org, proposals, reload, setProposals }: {
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="space-y-2 min-w-0">
                                             <StartupCard mission={p.Mission} />
-                                            <div className="pl-12">
+                                            <div className="pl-0 sm:pl-12">
                                                 <p className="text-[14px] font-semibold text-neutral-900">{p.Mission?.title}</p>
                                                 {p.Mission?.description && (
                                                     <p className="text-[12px] text-neutral-400 line-clamp-1 mt-0.5">{p.Mission.description}</p>
@@ -280,7 +280,7 @@ function LeaderMissionsView({ org, proposals, reload, setProposals }: {
                                     </div>
 
                                     {/* Leader cut input + preview */}
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
                                         <div className="flex-1">
                                             <label className="text-[12px] text-neutral-500 mb-1 block">Your cut</label>
                                             <input
@@ -376,13 +376,13 @@ function LeaderMissionsView({ org, proposals, reload, setProposals }: {
                                     </div>
 
                                     {/* Deal split */}
-                                    <div className="pl-12">
+                                    <div className="pl-0 sm:pl-12">
                                         <DealRow totalReward={m.total_reward} leaderReward={m.leader_reward} memberReward={m.member_reward} />
                                     </div>
 
                                     {/* Stats row */}
                                     {stats && stats.count > 0 && (
-                                        <div className="pl-12 flex items-center gap-4 text-xs mt-2">
+                                        <div className="pl-0 sm:pl-12 flex items-center gap-4 text-xs mt-2 flex-wrap">
                                             <span className="flex items-center gap-1 text-neutral-500">
                                                 <TrendingUp className="w-3 h-3" />
                                                 {stats.count} sale{stats.count > 1 ? 's' : ''}
@@ -401,7 +401,7 @@ function LeaderMissionsView({ org, proposals, reload, setProposals }: {
                                     )}
 
                                     {/* Accepted date */}
-                                    <p className="text-[12px] text-neutral-300 pl-12 mt-2">
+                                    <p className="text-[12px] text-neutral-300 pl-0 sm:pl-12 mt-2">
                                         Accepted {m.accepted_at ? new Date(m.accepted_at).toLocaleDateString() : ''}
                                     </p>
                                 </Link>

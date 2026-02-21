@@ -134,9 +134,9 @@ export default function PayoutsPage() {
                     <div className="h-4 w-20 rounded skeleton-shimmer mx-auto mb-4" />
                     <div className="h-16 w-56 rounded-xl skeleton-shimmer mx-auto" />
                 </div>
-                <div className="grid grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-12">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-12">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="bg-white p-6 text-center">
+                        <div key={i} className="bg-white p-4 sm:p-6 text-center">
                             <div className="h-8 w-20 rounded skeleton-shimmer mx-auto mb-2" />
                             <div className="h-3 w-16 rounded skeleton-shimmer mx-auto" />
                         </div>
@@ -178,7 +178,7 @@ export default function PayoutsPage() {
                     Total earned
                 </p>
                 <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-6xl md:text-7xl font-extralight tracking-tight text-neutral-900">
+                    <span className="text-4xl sm:text-6xl md:text-7xl font-extralight tracking-tight text-neutral-900">
                         {formatCurrency(totalEarned)}
                     </span>
                     <span className="text-2xl font-light text-neutral-300">EUR</span>
@@ -202,21 +202,21 @@ export default function PayoutsPage() {
             <motion.div
                 variants={fadeInUp}
                 transition={springGentle}
-                className="grid grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-12"
+                className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden mb-12"
             >
-                <div className="bg-white p-6 text-center">
+                <div className="bg-white p-4 sm:p-6 text-center">
                     <p className="text-2xl font-light text-neutral-900 tabular-nums">
                         {formatCurrency(wallet.pending)}
                     </p>
                     <p className="text-xs text-neutral-400 mt-1">Pending</p>
                 </div>
-                <div className="bg-white p-6 text-center">
+                <div className="bg-white p-4 sm:p-6 text-center">
                     <p className="text-2xl font-light text-emerald-600 tabular-nums">
                         {formatCurrency(wallet.due)}
                     </p>
                     <p className="text-xs text-neutral-400 mt-1">Available</p>
                 </div>
-                <div className="bg-white p-6 text-center">
+                <div className="bg-white p-4 sm:p-6 text-center">
                     <p className="text-2xl font-light text-neutral-900 tabular-nums">
                         {formatCurrency(wallet.paid_total)}
                     </p>
@@ -230,7 +230,7 @@ export default function PayoutsPage() {
                 transition={springGentle}
                 className="mb-12"
             >
-                <div className="flex items-center justify-center gap-3 text-xs text-neutral-400">
+                <div className="flex items-center justify-center gap-3 text-xs text-neutral-400 flex-wrap">
                     <span className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                         {pendingCount} pending

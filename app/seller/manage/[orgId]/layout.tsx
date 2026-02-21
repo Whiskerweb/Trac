@@ -85,8 +85,8 @@ export default function ManageOrgLayout({ children }: { children: React.ReactNod
                         <Link href="/seller/organizations/my" className="inline-flex items-center gap-1.5 text-[13px] text-neutral-400 hover:text-neutral-600 mb-4 transition-colors">
                             <ArrowLeft className="w-4 h-4" /> My Organizations
                         </Link>
-                        <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                                 isLeader
                                     ? 'bg-gradient-to-br from-amber-400 to-orange-500'
                                     : 'bg-gradient-to-br from-violet-500 to-purple-600'
@@ -96,8 +96,8 @@ export default function ManageOrgLayout({ children }: { children: React.ReactNod
                                     : <span className="text-lg font-bold text-white">{org.name.charAt(0)}</span>
                                 }
                             </div>
-                            <div>
-                                <h1 className="text-[22px] font-semibold text-neutral-900 tracking-tight">{org.name}</h1>
+                            <div className="min-w-0">
+                                <h1 className="text-lg sm:text-[22px] font-semibold text-neutral-900 tracking-tight truncate">{org.name}</h1>
                                 <p className="text-[13px] text-neutral-500">
                                     {isLeader ? 'Organization Management' : 'Member Dashboard'}
                                 </p>
@@ -120,7 +120,7 @@ export default function ManageOrgLayout({ children }: { children: React.ReactNod
                                 <Link
                                     key={tab.href}
                                     href={href}
-                                    className={`flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium rounded-t-lg whitespace-nowrap transition-colors ${
+                                    className={`flex items-center gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 text-[13px] font-medium rounded-t-lg whitespace-nowrap transition-colors ${
                                         isActive
                                             ? 'text-neutral-900 bg-neutral-100 border-b-2 border-neutral-900'
                                             : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50/80'

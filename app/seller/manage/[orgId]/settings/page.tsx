@@ -122,11 +122,11 @@ export default function ManageOrgSettings() {
                 {org.slug && (
                     <div>
                         <label className="block text-[13px] font-medium text-neutral-400 mb-2">Public Page</label>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                             <div className="flex-1 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-[14px] text-neutral-600 truncate">
                                 {typeof window !== 'undefined' ? `${window.location.origin}/org/${org.slug}` : `/org/${org.slug}`}
                             </div>
-                            <button onClick={copyShareLink} className="px-3 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
+                            <button onClick={copyShareLink} className="px-3 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors flex-shrink-0">
                                 {copiedShare ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-neutral-400" />}
                             </button>
                         </div>
@@ -137,11 +137,11 @@ export default function ManageOrgSettings() {
                 {org.invite_code && (
                     <div>
                         <label className="block text-[13px] font-medium text-neutral-400 mb-2">Invite Link (auto-join)</label>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                             <div className="flex-1 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-[14px] text-neutral-600 truncate">
                                 {typeof window !== 'undefined' ? `${window.location.origin}/org/join/${org.invite_code}` : `/org/join/${org.invite_code}`}
                             </div>
-                            <button onClick={copyInviteCode} className="px-3 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
+                            <button onClick={copyInviteCode} className="px-3 py-2.5 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors flex-shrink-0">
                                 {copiedInvite ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-neutral-400" />}
                             </button>
                         </div>

@@ -158,7 +158,7 @@ export default function GiftCardsPage() {
                         <div className="h-12 w-48 mx-auto rounded-lg skeleton-shimmer" />
                     </div>
                     <div className="h-3 w-28 rounded skeleton-shimmer" />
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {Array.from({ length: 8 }).map((_, i) => (
                             <div key={i} className="h-24 rounded-2xl skeleton-shimmer" />
                         ))}
@@ -200,7 +200,7 @@ export default function GiftCardsPage() {
                     Available balance
                 </p>
                 <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-5xl font-extralight tracking-tight text-neutral-900">
+                    <span className="text-3xl sm:text-5xl font-extralight tracking-tight text-neutral-900">
                         {formatCurrency(balance)}
                     </span>
                     <span className="text-lg font-light text-neutral-300">EUR</span>
@@ -220,7 +220,7 @@ export default function GiftCardsPage() {
                         <p className="text-xs uppercase tracking-[0.15em] text-neutral-400 mb-6">
                             Choose a card
                         </p>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {GIFT_CARDS.map((card) => {
                                 const canAfford = balance >= card.minAmount
                                 return (
@@ -324,7 +324,7 @@ export default function GiftCardsPage() {
                         </div>
 
                         {/* Quick amounts */}
-                        <div className="flex gap-2 mb-6">
+                        <div className="flex flex-wrap gap-2 mb-6">
                             {[10, 25, 50, 100].map((val) => {
                                 const cents = val * 100
                                 const canSelect = balance >= cents && cents >= selectedCard.minAmount

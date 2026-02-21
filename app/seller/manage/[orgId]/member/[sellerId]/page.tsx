@@ -118,7 +118,7 @@ export default function OrgMemberProfilePage() {
             <div className="space-y-4">
                 {/* Hero Card */}
                 <OrgCard className="p-6">
-                    <div className="flex items-start gap-5">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5">
                         {profile.avatarUrl ? (
                             <img
                                 src={profile.avatarUrl}

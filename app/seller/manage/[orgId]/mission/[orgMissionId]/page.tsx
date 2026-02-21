@@ -181,7 +181,7 @@ export default function OrgMissionDetailPage() {
                 {/* Mission Header Card */}
                 <OrgCard>
                     <div className="p-6">
-                        <div className="flex items-center gap-4 mb-4">
+                        <div className="flex items-center gap-2 sm:gap-4 mb-4">
                             {mission.logoUrl ? (
                                 <img src={mission.logoUrl} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" alt="" />
                             ) : (
@@ -192,7 +192,7 @@ export default function OrgMissionDetailPage() {
                                 </div>
                             )}
                             <div className="min-w-0">
-                                <h2 className="text-[20px] font-semibold tracking-tight text-neutral-900 truncate">{mission.title}</h2>
+                                <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-neutral-900 truncate">{mission.title}</h2>
                                 <p className="text-[14px] text-neutral-500">{mission.companyName}</p>
                             </div>
                         </div>
@@ -228,7 +228,7 @@ export default function OrgMissionDetailPage() {
                                     Your affiliate link
                                 </p>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                                 <code className="flex-1 text-xs sm:text-sm text-neutral-700 bg-neutral-50 px-4 py-2.5 rounded-xl font-mono truncate">
                                     {myLinkUrl}
                                 </code>
@@ -260,7 +260,7 @@ export default function OrgMissionDetailPage() {
                 {/* Startup Card */}
                 {mission.workspaceId && (
                     <OrgCard className="p-6">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                             <div className="flex items-center gap-3.5">
                                 {mission.logoUrl ? (
                                     <img src={mission.logoUrl} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="" />
@@ -276,28 +276,26 @@ export default function OrgMissionDetailPage() {
                                     <p className="text-[12px] text-neutral-400">Startup</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={async () => {
-                                        if (messagingLoading || !mission.workspaceId) return
-                                        setMessagingLoading(true)
-                                        const result = await getOrCreateConversationForSeller(mission.workspaceId)
-                                        setMessagingLoading(false)
-                                        if (result.success && result.conversationId) {
-                                            router.push(`/seller/messages?conversation=${result.conversationId}`)
-                                        }
-                                    }}
-                                    disabled={messagingLoading}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50"
-                                >
-                                    {messagingLoading ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    ) : (
-                                        <MessageSquare className="w-3.5 h-3.5" />
-                                    )}
-                                    Message
-                                </button>
-                            </div>
+                            <button
+                                onClick={async () => {
+                                    if (messagingLoading || !mission.workspaceId) return
+                                    setMessagingLoading(true)
+                                    const result = await getOrCreateConversationForSeller(mission.workspaceId)
+                                    setMessagingLoading(false)
+                                    if (result.success && result.conversationId) {
+                                        router.push(`/seller/messages?conversation=${result.conversationId}`)
+                                    }
+                                }}
+                                disabled={messagingLoading}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50 self-start"
+                            >
+                                {messagingLoading ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <MessageSquare className="w-3.5 h-3.5" />
+                                )}
+                                Message
+                            </button>
                         </div>
                     </OrgCard>
                 )}
@@ -355,7 +353,7 @@ export default function OrgMissionDetailPage() {
                                                 )}
                                                 <span className="text-[14px] text-neutral-700 truncate">{member.name}</span>
                                             </div>
-                                            <div className="flex items-center gap-4 flex-shrink-0 ml-3">
+                                            <div className="hidden sm:flex items-center gap-4 flex-shrink-0 ml-3">
                                                 <span className="text-[13px] text-neutral-400 tabular-nums">
                                                     {member.clicks} clicks &middot; {member.salesCount} sales
                                                 </span>

@@ -194,7 +194,7 @@ export default function ManageOrgMembers() {
     return (
         <div className="space-y-10">
             {/* ── Stats ── */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <StatPill icon={Users} label="Total" value={totalMembers} color="bg-neutral-100 text-neutral-600" />
                 <StatPill icon={UserCheck} label="Active" value={activeMembers.length} color="bg-emerald-50 text-emerald-600" />
                 <StatPill icon={Clock} label="Pending" value={pendingMembers.length} color="bg-amber-50 text-amber-600" />
@@ -216,7 +216,7 @@ export default function ManageOrgMembers() {
                         <p className="text-[12px] text-neutral-400">Send an email invitation to join your organization</p>
                     </div>
                 </div>
-                <form onSubmit={handleInvite} className="flex gap-3">
+                <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-3">
                     <div className="flex-1 relative group">
                         <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within:text-neutral-500 transition-colors" />
                         <input
@@ -346,7 +346,7 @@ export default function ManageOrgMembers() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search members..."
-                                className="pl-8.5 pr-3 py-1.5 text-xs bg-neutral-50 border border-neutral-200 rounded-lg w-48 focus:outline-none focus:ring-1 focus:ring-neutral-900/5 focus:border-neutral-300 transition-all placeholder:text-neutral-300"
+                                className="pl-8.5 pr-3 py-1.5 text-xs bg-neutral-50 border border-neutral-200 rounded-lg w-full sm:w-48 focus:outline-none focus:ring-1 focus:ring-neutral-900/5 focus:border-neutral-300 transition-all placeholder:text-neutral-300"
                                 style={{ paddingLeft: '2rem' }}
                             />
                         </div>

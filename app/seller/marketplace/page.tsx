@@ -103,7 +103,7 @@ function ProgramRow({ mission, index }: { mission: Mission; index: number }) {
     return (
         <Link href={`/seller/marketplace/${mission.id}`}>
             <div
-                className="group flex items-center gap-5 px-5 py-4 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200 card-hover"
+                className="group flex items-center gap-3 sm:gap-5 px-3 sm:px-5 py-4 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200 card-hover"
             >
                 {/* Logo */}
                 {mission.startup.logo_url ? (
@@ -256,7 +256,7 @@ export default function SellerMarketplacePage() {
                 className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16"
             >
                 {/* Header - Minimal */}
-                <motion.header variants={fadeInUp} transition={springGentle} className="text-center mb-12">
+                <motion.header variants={fadeInUp} transition={springGentle} className="text-center mb-8 sm:mb-12">
                     <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight mb-3">
                         Programs
                     </h1>
@@ -266,7 +266,7 @@ export default function SellerMarketplacePage() {
                 </motion.header>
 
                 {/* Search - Spotlight inspired */}
-                <motion.div variants={fadeInUp} transition={springGentle} className="max-w-xl mx-auto mb-12">
+                <motion.div variants={fadeInUp} transition={springGentle} className="max-w-xl mx-auto mb-8 sm:mb-12">
                     <div
                         className={`relative transition-all duration-300 ${
                             searchFocused
@@ -293,7 +293,7 @@ export default function SellerMarketplacePage() {
                                 onFocus={() => setSearchFocused(true)}
                                 onBlur={() => setSearchFocused(false)}
                                 placeholder="Search..."
-                                className="w-full pl-14 pr-20 py-4 bg-transparent text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none rounded-2xl"
+                                className="w-full pl-12 sm:pl-14 pr-4 sm:pr-20 py-3 sm:py-4 bg-transparent text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none rounded-2xl"
                             />
                             <kbd className="absolute right-4 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-2 py-1 text-[11px] text-gray-400 bg-gray-50 rounded-lg font-medium">
                                 <span className="text-xs">⌘</span>K
@@ -303,7 +303,7 @@ export default function SellerMarketplacePage() {
                 </motion.div>
 
                 {/* Categories - Subtle pills with expand */}
-                <nav className="flex items-center justify-center gap-1.5 mb-12 flex-wrap">
+                <nav className="flex items-center justify-center gap-1.5 mb-8 sm:mb-12 flex-wrap">
                     {/* Main categories - always visible */}
                     {MAIN_CATEGORIES.map((cat) => (
                         <button
@@ -364,7 +364,7 @@ export default function SellerMarketplacePage() {
                         return (
                             <div className="space-y-2 py-4">
                                 {[1, 2, 3, 4, 5].map(i => (
-                                    <div key={i} className="flex items-center gap-5 px-5 py-4 bg-white rounded-xl border border-gray-100">
+                                    <div key={i} className="flex items-center gap-3 sm:gap-5 px-3 sm:px-5 py-4 bg-white rounded-xl border border-gray-100">
                                         <div className="w-10 h-10 rounded-lg skeleton-shimmer flex-shrink-0" />
                                         <div className="flex-1">
                                             <div className="h-4 w-36 rounded skeleton-shimmer mb-2" />

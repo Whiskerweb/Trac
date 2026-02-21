@@ -69,7 +69,7 @@ export default function AnalyticsPage() {
 
     return (
         <div className="min-h-screen bg-[#FAFAFA]">
-            <div className="max-w-6xl mx-auto px-8 py-10">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-5 gap-4 mb-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
                     {STAT_CARDS.map((card) => {
                         let value: string | number = 0
                         switch (card.key) {
@@ -139,8 +139,8 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Events Table */}
-                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <table className="w-full">
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden overflow-x-auto">
+                    <table className="w-full min-w-[600px]">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">

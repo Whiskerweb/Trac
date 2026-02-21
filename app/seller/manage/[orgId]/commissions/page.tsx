@@ -65,37 +65,39 @@ export default function ManageOrgCommissions() {
             transition={{ duration: 0.3 }}
             className="bg-white rounded-2xl border border-neutral-200/60 shadow-sm overflow-hidden"
         >
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
                 <thead>
                     <tr className="border-b border-neutral-100">
-                        <th className="text-left px-5 py-3 text-[12px] font-medium text-neutral-400 uppercase tracking-wider bg-neutral-50/50">Member</th>
-                        <th className="text-left px-5 py-3 text-[12px] font-medium text-neutral-400 uppercase tracking-wider bg-neutral-50/50">Mission</th>
-                        <th className="text-right px-5 py-3 text-[12px] font-medium text-neutral-400 uppercase tracking-wider bg-neutral-50/50">Amount</th>
-                        <th className="text-center px-5 py-3 text-[12px] font-medium text-neutral-400 uppercase tracking-wider bg-neutral-50/50">Status</th>
-                        <th className="text-right px-5 py-3 text-[12px] font-medium text-neutral-400 uppercase tracking-wider bg-neutral-50/50">Date</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-[12px] font-medium text-neutral-400 uppercase tracking-wider bg-neutral-50/50">Member</th>
+                        <th className="text-left px-3 sm:px-5 py-3 text-[12px] font-medium text-neutral-400 uppercase tracking-wider bg-neutral-50/50 hidden sm:table-cell">Mission</th>
+                        <th className="text-right px-3 sm:px-5 py-3 text-[12px] font-medium text-neutral-400 uppercase tracking-wider bg-neutral-50/50">Amount</th>
+                        <th className="text-center px-3 sm:px-5 py-3 text-[12px] font-medium text-neutral-400 uppercase tracking-wider bg-neutral-50/50">Status</th>
+                        <th className="text-right px-3 sm:px-5 py-3 text-[12px] font-medium text-neutral-400 uppercase tracking-wider bg-neutral-50/50 hidden sm:table-cell">Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     {commissions.map((c: any) => (
                         <tr key={c.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors">
-                            <td className="px-5 py-3">
+                            <td className="px-3 sm:px-5 py-3">
                                 <p className="text-[14px] font-medium text-neutral-900">{c.Seller?.name || 'Unknown'}</p>
                                 <p className="text-[12px] text-neutral-400">{c.Seller?.email}</p>
                             </td>
-                            <td className="px-5 py-3 text-[14px] text-neutral-600">{c.missionTitle || '-'}</td>
-                            <td className="px-5 py-3 text-right text-[14px] font-semibold text-neutral-900">
+                            <td className="px-3 sm:px-5 py-3 text-[14px] text-neutral-600 hidden sm:table-cell">{c.missionTitle || '-'}</td>
+                            <td className="px-3 sm:px-5 py-3 text-right text-[14px] font-semibold text-neutral-900">
                                 {(c.commission_amount / 100).toFixed(2)}€
                             </td>
-                            <td className="px-5 py-3 text-center">
+                            <td className="px-3 sm:px-5 py-3 text-center">
                                 <CommissionStatusBadge status={c.status} />
                             </td>
-                            <td className="px-5 py-3 text-right text-[12px] text-neutral-400">
+                            <td className="px-3 sm:px-5 py-3 text-right text-[12px] text-neutral-400 hidden sm:table-cell">
                                 {new Date(c.created_at).toLocaleDateString()}
                             </td>
                         </tr>
                     ))}
                 </tbody>
             </table>
+            </div>
         </motion.div>
     )
 }
