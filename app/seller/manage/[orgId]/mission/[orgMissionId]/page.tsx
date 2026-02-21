@@ -287,7 +287,7 @@ export default function OrgMissionDetailPage() {
                                     }
                                 }}
                                 disabled={messagingLoading}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50 self-start"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50 w-full sm:w-auto justify-center sm:justify-start"
                             >
                                 {messagingLoading ? (
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -341,7 +341,7 @@ export default function OrgMissionDetailPage() {
                                             transition={{ delay: 0.04 * index }}
                                             className="flex items-center justify-between py-3 px-3 -mx-3 rounded-xl hover:bg-neutral-50/80 transition-colors group"
                                         >
-                                            <div className="flex items-center gap-3 min-w-0">
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
                                                 {member.avatarUrl ? (
                                                     <img src={member.avatarUrl} className="w-8 h-8 rounded-full object-cover flex-shrink-0" alt="" />
                                                 ) : (
@@ -351,7 +351,10 @@ export default function OrgMissionDetailPage() {
                                                         </span>
                                                     </div>
                                                 )}
-                                                <span className="text-[14px] text-neutral-700 truncate">{member.name}</span>
+                                                <div className="min-w-0">
+                                                    <span className="text-[14px] text-neutral-700 truncate block">{member.name}</span>
+                                                    <span className="sm:hidden text-[13px] font-medium text-neutral-900 tabular-nums">{formatCurrency(member.revenue)}</span>
+                                                </div>
                                             </div>
                                             <div className="hidden sm:flex items-center gap-4 flex-shrink-0 ml-3">
                                                 <span className="text-[13px] text-neutral-400 tabular-nums">
@@ -362,6 +365,7 @@ export default function OrgMissionDetailPage() {
                                                 </span>
                                                 <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-400" />
                                             </div>
+                                            <ChevronRight className="w-4 h-4 text-neutral-300 sm:hidden flex-shrink-0 ml-1" />
                                         </motion.div>
                                     </Link>
                                 ))}

@@ -80,23 +80,30 @@ export function OrganizationsTab() {
                             onClick={() => router.push(`/dashboard/sellers/groups/${org.id}`)}
                             className="bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors cursor-pointer"
                         >
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+                            <div className="flex items-start sm:items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
                                         {org.logo_url ? (
                                             <img src={org.logo_url} alt={org.name} className="w-10 h-10 rounded-xl object-cover" />
                                         ) : (
                                             <Users className="w-5 h-5 text-gray-500" />
                                         )}
                                     </div>
-                                    <div>
-                                        <p className="font-medium text-gray-900">{org.name}</p>
+                                    <div className="min-w-0">
+                                        <p className="font-medium text-gray-900 truncate">{org.name}</p>
                                         <p className="text-xs text-gray-500">Led by {org.Leader?.name || org.Leader?.email} · {org._count?.Members || 0} members · {org._count?.Missions || 0} missions</p>
+                                        {org.Missions?.length > 0 && (
+                                            <div className="flex gap-1 flex-wrap mt-1.5 sm:hidden">
+                                                {org.Missions.map((m: any) => (
+                                                    <StatusBadge key={m.id} status={m.status} />
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-shrink-0">
                                     {org.Missions?.length > 0 && (
-                                        <div className="flex gap-1">
+                                        <div className="hidden sm:flex gap-1">
                                             {org.Missions.map((m: any) => (
                                                 <StatusBadge key={m.id} status={m.status} />
                                             ))}

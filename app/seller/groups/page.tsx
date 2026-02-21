@@ -370,8 +370,8 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                         <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center">
                             <Users className="w-5 h-5 text-neutral-600" />
                         </div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-[28px] font-semibold text-neutral-900 tracking-tight">
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <h1 className="text-xl sm:text-[28px] font-semibold text-neutral-900 tracking-tight">
                                 {currentGroup.name}
                             </h1>
                             <span className={`px-2.5 py-1 rounded-full text-[12px] font-medium ${
@@ -394,7 +394,7 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                         <GroupCard>
                             <div className="p-6">
                                 <h2 className="text-[15px] font-semibold text-neutral-900 mb-4">{t('inviteLink')}</h2>
-                                <div className="flex items-center gap-3">
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                                     <div className="flex-1 h-11 px-4 bg-neutral-50 rounded-xl flex items-center overflow-hidden">
                                         <p className="text-[13px] text-neutral-500 font-mono truncate">
                                             {origin}/seller/groups/join/{currentGroup.invite_code}
@@ -402,7 +402,7 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                                     </div>
                                     <button
                                         onClick={copyInviteLink}
-                                        className="h-10 px-4 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-[13px] font-medium text-neutral-700 transition-colors flex items-center gap-2 flex-shrink-0"
+                                        className="h-10 px-4 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-[13px] font-medium text-neutral-700 transition-colors flex items-center justify-center gap-2 flex-shrink-0"
                                     >
                                         {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                                         {copied ? t('copied') : t('copyLink')}
@@ -414,34 +414,34 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
 
                     {/* Stats Grid */}
                     <GroupCard>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-neutral-200/60">
-                            <div className="p-5 text-center">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-neutral-200/60">
+                            <div className="p-4 sm:p-5 text-center">
                                 {statsLoading ? (
                                     <div className="h-8 flex items-center justify-center"><Loader2 className="w-4 h-4 animate-spin text-neutral-300" /></div>
                                 ) : (
-                                    <p className="text-2xl font-semibold text-neutral-900 tabular-nums">{formatCurrency(stats?.totalRevenue || 0)}</p>
+                                    <p className="text-lg sm:text-2xl font-semibold text-neutral-900 tabular-nums">{formatCurrency(stats?.totalRevenue || 0)}</p>
                                 )}
-                                <p className="text-[13px] text-neutral-500 mt-1">{t('stats.totalRevenue')}</p>
+                                <p className="text-[12px] sm:text-[13px] text-neutral-500 mt-1">{t('stats.totalRevenue')}</p>
                             </div>
-                            <div className="p-5 text-center">
+                            <div className="p-4 sm:p-5 text-center">
                                 {statsLoading ? (
                                     <div className="h-8 flex items-center justify-center"><Loader2 className="w-4 h-4 animate-spin text-neutral-300" /></div>
                                 ) : (
-                                    <p className="text-2xl font-semibold text-neutral-900 tabular-nums">{stats?.totalSales || 0}</p>
+                                    <p className="text-lg sm:text-2xl font-semibold text-neutral-900 tabular-nums">{stats?.totalSales || 0}</p>
                                 )}
-                                <p className="text-[13px] text-neutral-500 mt-1">{t('stats.totalSales')}</p>
+                                <p className="text-[12px] sm:text-[13px] text-neutral-500 mt-1">{t('stats.totalSales')}</p>
                             </div>
-                            <div className="p-5 text-center">
+                            <div className="p-4 sm:p-5 text-center">
                                 {statsLoading ? (
                                     <div className="h-8 flex items-center justify-center"><Loader2 className="w-4 h-4 animate-spin text-neutral-300" /></div>
                                 ) : (
-                                    <p className="text-2xl font-semibold text-neutral-900 tabular-nums">{stats?.totalLeads || 0}</p>
+                                    <p className="text-lg sm:text-2xl font-semibold text-neutral-900 tabular-nums">{stats?.totalLeads || 0}</p>
                                 )}
-                                <p className="text-[13px] text-neutral-500 mt-1">{t('stats.leads')}</p>
+                                <p className="text-[12px] sm:text-[13px] text-neutral-500 mt-1">{t('stats.leads')}</p>
                             </div>
-                            <div className="p-5 text-center">
-                                <p className="text-2xl font-semibold text-neutral-900 tabular-nums">{memberCount}<span className="text-neutral-300 font-normal">/{currentGroup.max_members}</span></p>
-                                <p className="text-[13px] text-neutral-500 mt-1">{t('members')}</p>
+                            <div className="p-4 sm:p-5 text-center">
+                                <p className="text-lg sm:text-2xl font-semibold text-neutral-900 tabular-nums">{memberCount}<span className="text-neutral-300 font-normal">/{currentGroup.max_members}</span></p>
+                                <p className="text-[12px] sm:text-[13px] text-neutral-500 mt-1">{t('members')}</p>
                             </div>
                         </div>
                     </GroupCard>
@@ -560,7 +560,7 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                                             onClick={() => router.push(`/seller/groups/mission/${mission.missionId}`)}
                                         >
                                             <div className="flex items-center justify-between p-4">
-                                                <div className="flex items-center gap-3 min-w-0">
+                                                <div className="flex items-center gap-3 min-w-0 flex-1">
                                                     {mission.logoUrl ? (
                                                         <img src={mission.logoUrl} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" alt="" />
                                                     ) : (
@@ -573,9 +573,10 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                                                     <div className="min-w-0">
                                                         <p className="text-[14px] text-neutral-700 truncate">{mission.missionTitle}</p>
                                                         <p className="text-[12px] text-neutral-400">{mission.companyName} · {mission.reward}</p>
+                                                        <p className="sm:hidden text-[13px] font-medium text-neutral-900 tabular-nums mt-0.5">{formatCurrency(mission.tinybirdRevenue)}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                                                <div className="hidden sm:flex items-center gap-3 flex-shrink-0 ml-3">
                                                     <div className="text-right">
                                                         <div className="flex items-center gap-3 text-[13px] text-neutral-500 tabular-nums">
                                                             <span>{mission.clicks} {t('stats.clicks')}</span>
@@ -585,6 +586,7 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                                                     </div>
                                                     <ChevronRight className="w-4 h-4 text-neutral-300" />
                                                 </div>
+                                                <ChevronRight className="w-4 h-4 text-neutral-300 sm:hidden flex-shrink-0 ml-2" />
                                             </div>
 
                                             {mission.memberBreakdown.length > 0 && (
@@ -604,7 +606,7 @@ function GroupDashboard({ group: initialGroup, sellerId, isCreator, t }: {
                                                                 <span className="text-[13px] text-neutral-600 truncate">{mb.name}</span>
                                                             </div>
                                                             <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-                                                                <span className="text-[12px] text-neutral-400 tabular-nums">
+                                                                <span className="hidden sm:inline text-[12px] text-neutral-400 tabular-nums">
                                                                     {mb.clicks} {t('stats.clicks')} · {mb.salesCount} {t('stats.sales')} · {mb.leadsCount} {t('stats.leads')}
                                                                 </span>
                                                                 <span className="text-[13px] font-medium text-neutral-700 tabular-nums">

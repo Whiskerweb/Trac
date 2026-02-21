@@ -350,7 +350,7 @@ export default function PortalManagementPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={springGentle}
-                className="flex items-center justify-between mb-8"
+                className="flex items-center justify-between flex-wrap gap-2 mb-8"
             >
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
@@ -368,7 +368,7 @@ export default function PortalManagementPage() {
 
             {/* Overview Stats */}
             {stats && settings.portal_enabled && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-3 gap-4 mb-6">
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
                     <div className="bg-white rounded-2xl border border-gray-200 p-4 text-center">
                         <Users className="w-5 h-5 text-purple-500 mx-auto mb-2" />
                         <p className="text-2xl font-bold text-gray-900">{stats.totalAffiliates}</p>
@@ -393,7 +393,7 @@ export default function PortalManagementPage() {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.03 }}
-                    className="bg-white rounded-2xl border border-gray-200 p-6 mb-6"
+                    className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6"
                 >
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
@@ -450,7 +450,7 @@ export default function PortalManagementPage() {
                 <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl border border-gray-200 p-6"
+                    className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6"
                 >
                     {/* Toggle */}
                     <div className="flex items-center justify-between mb-5">
@@ -508,7 +508,7 @@ export default function PortalManagementPage() {
                                     <Palette className="w-4 h-4 text-gray-400" />
                                     <label className="text-xs font-medium text-gray-700">{t('brandColor')}</label>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 flex-wrap">
                                     <input
                                         type="color"
                                         value={primaryColor}
@@ -525,7 +525,7 @@ export default function PortalManagementPage() {
                                         className="w-28 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300"
                                     />
                                     <div
-                                        className="flex-1 h-10 rounded-xl flex items-center justify-center text-white text-xs font-semibold"
+                                        className="flex-1 min-w-[120px] h-10 rounded-xl flex items-center justify-center text-white text-xs font-semibold"
                                         style={{ backgroundColor: primaryColor }}
                                     >
                                         {t('previewButton')}
@@ -574,7 +574,7 @@ export default function PortalManagementPage() {
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.05 }}
-                            className="bg-white rounded-2xl border border-gray-200 p-6"
+                            className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6"
                         >
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-sm font-semibold text-gray-900">{t('missions')}</h2>
@@ -710,7 +710,7 @@ export default function PortalManagementPage() {
                                                 <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-2">{t('commissionConfig')}</p>
                                                 <div className="space-y-2">
                                                     {/* Sale */}
-                                                    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
+                                                    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 flex-wrap">
                                                         <input
                                                             type="checkbox"
                                                             checked={missionForm.sale.enabled}
@@ -741,7 +741,7 @@ export default function PortalManagementPage() {
                                                     </div>
 
                                                     {/* Lead */}
-                                                    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
+                                                    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 flex-wrap">
                                                         <input
                                                             type="checkbox"
                                                             checked={missionForm.lead.enabled}
@@ -762,7 +762,7 @@ export default function PortalManagementPage() {
                                                     </div>
 
                                                     {/* Recurring */}
-                                                    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
+                                                    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 flex-wrap">
                                                         <input
                                                             type="checkbox"
                                                             checked={missionForm.recurring.enabled}
@@ -840,7 +840,7 @@ export default function PortalManagementPage() {
                                                             )}
                                                         </div>
                                                         {missionForm.referral.enabled && (
-                                                            <div className="mt-2 space-y-1.5 pl-[calc(1rem+3.5px+0.75rem+3.5px+0.75rem)]">
+                                                            <div className="mt-2 space-y-1.5 pl-6 sm:pl-[calc(1rem+3.5px+0.75rem+3.5px+0.75rem)]">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="text-[11px] font-medium text-gray-500 w-10">Gen 1</span>
                                                                     <div className="relative">
@@ -911,7 +911,7 @@ export default function PortalManagementPage() {
                                                     </button>
                                                 </div>
                                                 {missionForm.resources.map((r, i) => (
-                                                    <div key={i} className="flex items-center gap-2 mb-2">
+                                                    <div key={i} className="flex items-center gap-2 mb-2 flex-wrap">
                                                         <select
                                                             value={r.type}
                                                             onChange={(e) => {
@@ -983,13 +983,13 @@ export default function PortalManagementPage() {
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.08 }}
-                            className="bg-white rounded-2xl border border-gray-200 p-6"
+                            className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6"
                         >
                             <h2 className="text-sm font-semibold text-gray-900 mb-1">{t('portalUrl')}</h2>
                             <p className="text-xs text-gray-500 mb-4">{t('primaryUrlDesc')}</p>
 
                             {/* Subdomain editor */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                 <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex-1">
                                     <span className="text-sm text-gray-400 pl-4 flex-shrink-0">https://</span>
                                     <input
@@ -1000,14 +1000,14 @@ export default function PortalManagementPage() {
                                             setSubdomainError('')
                                         }}
                                         placeholder={settings.slug}
-                                        className="w-28 px-1 py-3 bg-transparent text-sm font-semibold text-gray-900 focus:outline-none"
+                                        className="flex-1 min-w-0 px-1 py-3 bg-transparent text-sm font-semibold text-gray-900 focus:outline-none"
                                     />
                                     <span className="text-sm text-gray-400 pr-4 flex-shrink-0">.traaaction.com</span>
                                 </div>
                                 <button
                                     onClick={handleSaveSubdomain}
                                     disabled={savingSubdomain}
-                                    className="flex items-center gap-1.5 px-4 py-3 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors btn-press"
+                                    className="flex items-center justify-center gap-1.5 px-4 py-3 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors btn-press flex-shrink-0"
                                 >
                                     {savingSubdomain ? (
                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1043,7 +1043,7 @@ export default function PortalManagementPage() {
                             )}
 
                             {/* Preview + Embed */}
-                            <div className="flex items-center gap-3 mt-4">
+                            <div className="flex items-center gap-3 mt-4 flex-wrap">
                                 <a
                                     href={subdomainUrl}
                                     target="_blank"

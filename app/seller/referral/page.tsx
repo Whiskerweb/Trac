@@ -64,7 +64,7 @@ function ReferralRow({
 
             {/* Info */}
             <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-medium text-gray-900 truncate">{seller.name || seller.email}</p>
                     <GenerationBadge generation={generation} />
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
@@ -127,7 +127,7 @@ function SubReferralList({
     loadingSubSet: Set<string>
 }) {
     const t = useTranslations('sellerReferral')
-    const indent = generation === 1 ? 'pl-4 sm:pl-8' : 'pl-8 sm:pl-16'
+    const indent = generation === 1 ? 'pl-4 sm:pl-8' : 'pl-4 sm:pl-12'
 
     return (
         <AnimatePresence>
@@ -343,7 +343,7 @@ export default function ReferralPage() {
                             className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors btn-press"
                         >
                             {copied === 'link' ? <Check className={`w-3.5 h-3.5 copy-success`} /> : <Copy className="w-3.5 h-3.5" />}
-                            {copied === 'link' ? t('copied') : t('copy')}
+                            <span className="hidden sm:inline">{copied === 'link' ? t('copied') : t('copy')}</span>
                         </button>
                     </div>
                     <div className="flex items-center gap-3">

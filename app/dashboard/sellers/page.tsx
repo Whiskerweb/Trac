@@ -348,7 +348,7 @@ function SellersContent() {
                     </div>
 
                     {/* Tab Toggle */}
-                    <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white">
+                    <div className="flex items-center border border-slate-200 rounded-lg overflow-x-auto bg-white">
                         {([
                             { key: 'all', label: t('viewAll') },
                             { key: 'my', label: t('viewMy') },
@@ -358,7 +358,7 @@ function SellersContent() {
                             <button
                                 key={tab.key}
                                 onClick={() => switchView(tab.key)}
-                                className={`px-4 py-2 text-sm font-medium transition-colors btn-press ${
+                                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors btn-press flex-shrink-0 ${
                                     currentView === tab.key
                                         ? 'bg-slate-900 text-white'
                                         : 'text-slate-600 hover:bg-slate-50'
@@ -564,22 +564,22 @@ function SellersContent() {
                 {currentView === 'my' && (
                     <>
                         {/* Stats Cards */}
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-5 bg-white border border-slate-200 rounded-xl">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4 sm:p-5 bg-white border border-slate-200 rounded-xl">
                             <div>
-                                <p className="text-sm text-slate-500">{tApp('totalSellers')}</p>
-                                <p className="text-2xl font-semibold text-slate-900">{myStats.total}</p>
+                                <p className="text-xs sm:text-sm text-slate-500">{tApp('totalSellers')}</p>
+                                <p className="text-xl sm:text-2xl font-semibold text-slate-900">{myStats.total}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-slate-500">{tApp('active')}</p>
-                                <p className="text-2xl font-semibold text-green-600">{myStats.active}</p>
+                                <p className="text-xs sm:text-sm text-slate-500">{tApp('active')}</p>
+                                <p className="text-xl sm:text-2xl font-semibold text-green-600">{myStats.active}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-slate-500">{tApp('totalClicks')}</p>
-                                <p className="text-2xl font-semibold text-slate-900">{formatNumber(myStats.totalClicks)}</p>
+                                <p className="text-xs sm:text-sm text-slate-500">{tApp('totalClicks')}</p>
+                                <p className="text-xl sm:text-2xl font-semibold text-slate-900">{formatNumber(myStats.totalClicks)}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-slate-500">{tApp('commissionsPaid')}</p>
-                                <p className="text-2xl font-semibold text-slate-900">{formatCurrency(myStats.totalCommissions / 100)}</p>
+                                <p className="text-xs sm:text-sm text-slate-500">{tApp('commissionsPaid')}</p>
+                                <p className="text-xl sm:text-2xl font-semibold text-slate-900">{formatCurrency(myStats.totalCommissions / 100)}</p>
                             </div>
                         </div>
 
