@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Copy, Check, Loader2, Eye, EyeOff, ChevronDown, RefreshCw } from 'lucide-react'
+import { Copy, Check, Eye, EyeOff, ChevronDown, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { getOrCreateApiKey, regenerateApiKey } from '@/app/actions/settings'
@@ -465,7 +465,7 @@ Add webhook in Traaaction dashboard for Stripe events:
                         {step1Description}
                     </p>
 
-                    <CodeBlock code={rewritesConfig} filename={rewritesFilename} />
+                    <CodeBlock key={framework} code={rewritesConfig} filename={rewritesFilename} />
                 </Section>
 
                 <Section id="step-2" number={2} title={t('step2.title')}>
@@ -473,7 +473,7 @@ Add webhook in Traaaction dashboard for Stripe events:
                         {t('step2.description')}
                     </p>
 
-                    <CodeBlock code={scriptTag} filename={scriptFilename} />
+                    <CodeBlock key={framework} code={scriptTag} filename={scriptFilename} />
 
                     <p className="text-xs text-neutral-400 mt-3 sm:mt-4">
                         {t('step2.avoidBlocked')}
@@ -485,7 +485,7 @@ Add webhook in Traaaction dashboard for Stripe events:
                         {t('step3.description')}
                     </p>
 
-                    <CodeBlock code={trackSignup} filename={trackSignupFilename} />
+                    <CodeBlock key={framework} code={trackSignup} filename={trackSignupFilename} />
 
                     <div className="mt-4 sm:mt-6 space-y-3 text-xs text-neutral-500">
                         <p>
@@ -502,7 +502,7 @@ Add webhook in Traaaction dashboard for Stripe events:
                         {t('step4.description')}
                     </p>
 
-                    <CodeBlock code={stripeMetadata} filename={stripeMetadataFilename} />
+                    <CodeBlock key={framework} code={stripeMetadata} filename={stripeMetadataFilename} />
 
                     <div className="mt-4 sm:mt-6 p-3 bg-amber-50 border border-amber-100 rounded-lg">
                         <p className="text-xs sm:text-sm text-amber-800 font-medium">{t('step4.subscriptionNote')}</p>

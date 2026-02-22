@@ -1075,8 +1075,7 @@
                 "title": "Configurar rewrites",
                 "description": "Añade estos rewrites a tu configuración Next.js. Esto redirecciona las solicitudes de tracking a través de tu dominio para evitar bloqueadores de anuncios.",
                 "descriptionDjango": "Añade una vista proxy a tu configuración de URLs de Django. Esto enruta las solicitudes de tracking a través de tu dominio para evitar bloqueadores de anuncios.",
-                "descriptionOther": "Configura tu reverse proxy para reenviar las solicitudes de tracking a través de tu dominio.",
-                "otherFrameworks": "Para otros frameworks, configura reglas de proxy equivalentes."
+                "descriptionOther": "Configura tu reverse proxy para reenviar las solicitudes de tracking a través de tu dominio."
             },
             "step2": {
                 "title": "Añadir el script de tracking",

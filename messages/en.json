@@ -1075,8 +1075,7 @@
                 "title": "Configure rewrites",
                 "description": "Add these rewrites to your Next.js config. This proxies tracking requests through your domain to avoid ad blockers.",
                 "descriptionDjango": "Add a proxy view to your Django URLs config. This routes tracking requests through your domain to avoid ad blockers.",
-                "descriptionOther": "Configure your reverse proxy to forward tracking requests through your domain.",
-                "otherFrameworks": "For other frameworks, configure equivalent proxy rules."
+                "descriptionOther": "Configure your reverse proxy to forward tracking requests through your domain."
             },
             "step2": {
                 "title": "Add the tracking script",
