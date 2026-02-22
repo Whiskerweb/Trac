@@ -514,6 +514,8 @@ model Seller {
   Referrer            Seller?              @relation("SellerReferral", fields: [referred_by], references: [id], onDelete: SetNull)
   Referrals           Seller[]             @relation("SellerReferral")
   PortalSourceWorkspace Workspace?         @relation("PortalSourceSellers", fields: [portal_source_workspace_id], references: [id], onDelete: SetNull)
+  /// Token for 1-click email unsubscribe
+  unsubscribe_token  String?  @unique
   PortalReferralsAsReferrer  PortalReferral[] @relation("PortalReferralsAsReferrer")
   PortalReferralsAsReferred  PortalReferral[] @relation("PortalReferralsAsReferred")
 
@@ -1387,4 +1389,35 @@ model PortalReferral {
 
   @@unique([workspace_id, referred_seller_id])
   @@index([workspace_id, referrer_seller_id])
+}
+
+/// Email notification preferences per user per category (RGPD compliant)
+model NotificationPreference {
+  id           String    @id @default(cuid())
+  user_id      String
+  category     String
+  enabled      Boolean   @default(true)
+  updated_at   DateTime  @updatedAt
+  /// RGPD: timestamp of explicit consent (for marketing categories)
+  consented_at DateTime?
+
+  @@unique([user_id, category])
+  @@index([user_id])
+}
+
+/// Log of all email notifications sent (audit trail)
+model NotificationLog {
+  id         String   @id @default(cuid())
+  user_id    String
+  to_email   String
+  category   String
+  subject    String
+  resend_id  String?
+  status     String   @default("sent")
+  error      String?
+  metadata   Json?
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@index([created_at])
 }
