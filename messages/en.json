@@ -1065,9 +1065,17 @@
             "copiedToClipboard": "Copied to clipboard",
             "copyAsMarkdown": "Copy as Markdown for AI assistants",
             "loading": "Loading...",
+            "frameworkSelector": {
+                "label": "Framework",
+                "nextjs": "Next.js",
+                "django": "Django",
+                "other": "Other"
+            },
             "step1": {
                 "title": "Configure rewrites",
                 "description": "Add these rewrites to your Next.js config. This proxies tracking requests through your domain to avoid ad blockers.",
+                "descriptionDjango": "Add a proxy view to your Django URLs config. This routes tracking requests through your domain to avoid ad blockers.",
+                "descriptionOther": "Configure your reverse proxy to forward tracking requests through your domain.",
                 "otherFrameworks": "For other frameworks, configure equivalent proxy rules."
             },
             "step2": {

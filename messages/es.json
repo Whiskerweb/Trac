@@ -1065,9 +1065,17 @@
             "copiedToClipboard": "Copiado al portapapeles",
             "copyAsMarkdown": "Copiar como Markdown para asistentes IA",
             "loading": "Cargando...",
+            "frameworkSelector": {
+                "label": "Framework",
+                "nextjs": "Next.js",
+                "django": "Django",
+                "other": "Otro"
+            },
             "step1": {
                 "title": "Configurar rewrites",
                 "description": "Añade estos rewrites a tu configuración Next.js. Esto redirecciona las solicitudes de tracking a través de tu dominio para evitar bloqueadores de anuncios.",
+                "descriptionDjango": "Añade una vista proxy a tu configuración de URLs de Django. Esto enruta las solicitudes de tracking a través de tu dominio para evitar bloqueadores de anuncios.",
+                "descriptionOther": "Configura tu reverse proxy para reenviar las solicitudes de tracking a través de tu dominio.",
                 "otherFrameworks": "Para otros frameworks, configura reglas de proxy equivalentes."
             },
             "step2": {

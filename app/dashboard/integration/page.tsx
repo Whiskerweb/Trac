@@ -90,6 +90,8 @@ function Section({
     )
 }
 
+type Framework = 'nextjs' | 'django' | 'other'
+
 // =============================================
 // MAIN PAGE
 // =============================================
@@ -102,6 +104,7 @@ export default function IntegrationPage() {
     const [customDomain, setCustomDomain] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [aiCopied, setAiCopied] = useState(false)
+    const [framework, setFramework] = useState<Framework>('nextjs')
 
     useEffect(() => {
         async function init() {
@@ -125,12 +128,14 @@ export default function IntegrationPage() {
 
     // Use custom domain if available, otherwise use main domain
     const trackingDomain = customDomain || 'traaaction.com'
+    const pk = publicKey || 'pk_...'
 
     // =============================================
     // CODE SNIPPETS
     // =============================================
 
-    const rewritesConfig = `// next.config.js - Add these rewrites
+    // Step 1 — Proxy / Rewrites
+    const rewritesConfigNextjs = `// next.config.js - Add these rewrites
 module.exports = {
   async rewrites() {
     return [
@@ -140,6 +145,45 @@ module.exports = {
   },
 };`
 
+    const rewritesConfigDjango = `# urls.py
+from django.urls import re_path
+from . import views
+
+urlpatterns = [
+    re_path(r'^_trac/script\\.js$', views.trac_script_proxy),
+    re_path(r'^_trac/api/(?P<path>.+)$', views.trac_api_proxy),
+]
+
+# views.py
+import httpx
+from django.http import HttpResponse
+
+def trac_script_proxy(request):
+    r = httpx.get('https://${trackingDomain}/trac.js')
+    return HttpResponse(r.content, content_type='application/javascript')
+
+def trac_api_proxy(request, path):
+    url = 'https://${trackingDomain}/api/' + path
+    r = httpx.request(request.method, url,
+        content=request.body,
+        headers={'Content-Type': 'application/json'})
+    return HttpResponse(r.content, status=r.status_code)`
+
+    const rewritesConfigOther = `# nginx.conf
+location /_trac/script.js {
+    proxy_pass https://${trackingDomain}/trac.js;
+    proxy_ssl_server_name on;
+}
+
+location /_trac/api/ {
+    proxy_pass https://${trackingDomain}/api/;
+    proxy_ssl_server_name on;
+}`
+
+    const rewritesConfig = framework === 'nextjs' ? rewritesConfigNextjs : framework === 'django' ? rewritesConfigDjango : rewritesConfigOther
+    const rewritesFilename = framework === 'nextjs' ? 'next.config.js' : framework === 'django' ? 'urls.py + views.py' : 'nginx.conf'
+
+    // Step 2 — Script tag (same HTML, different filename)
     const scriptTag = `<!-- Add in your HTML <head> -->
 <script
   src="/_trac/script.js"
@@ -148,7 +192,10 @@ module.exports = {
   data-domains='{"refer":"${customDomain || 'yourdomain.com'}"}'
 ></script>`
 
-    const trackSignup = `// Backend (Next.js API or Server Action)
+    const scriptFilename = framework === 'nextjs' ? 'app/layout.tsx' : framework === 'django' ? 'templates/base.html' : 'index.html'
+
+    // Step 3 — Track signup
+    const trackSignupNextjs = `// Backend (Next.js API or Server Action)
 // Get clickId from trac_id cookie
 const clickId = cookies().get('trac_id')?.value;
 
@@ -156,7 +203,7 @@ await fetch('/_trac/api/track/lead', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'x-publishable-key': '${publicKey || 'pk_...'}'
+    'x-publishable-key': '${pk}'
   },
   body: JSON.stringify({
     eventName: 'sign_up',
@@ -167,7 +214,44 @@ await fetch('/_trac/api/track/lead', {
   })
 });`
 
-    const stripeMetadata = `// Backend - Stripe Checkout creation
+    const trackSignupDjango = `# views.py - signup handler
+import requests
+
+click_id = request.COOKIES.get('trac_id', '')
+
+requests.post('/_trac/api/track/lead',
+    headers={
+        'Content-Type': 'application/json',
+        'x-publishable-key': '${pk}'
+    },
+    json={
+        'eventName': 'sign_up',
+        'customerExternalId': str(user.id),
+        'clickId': click_id,
+        'customerEmail': user.email,
+        'customerName': user.get_full_name()
+    }
+)`
+
+    const trackSignupOther = `# Get trac_id from your HTTP request cookies
+# CLICK_ID = <value of trac_id cookie>
+
+curl -X POST "https://yourdomain.com/_trac/api/track/lead" \\
+  -H "Content-Type: application/json" \\
+  -H "x-publishable-key: ${pk}" \\
+  -d '{
+    "eventName": "sign_up",
+    "customerExternalId": "<user-id>",
+    "clickId": "<trac_id cookie value>",
+    "customerEmail": "<user@email.com>",
+    "customerName": "<Full Name>"
+  }'`
+
+    const trackSignup = framework === 'nextjs' ? trackSignupNextjs : framework === 'django' ? trackSignupDjango : trackSignupOther
+    const trackSignupFilename = framework === 'nextjs' ? 'signup handler' : framework === 'django' ? 'views.py' : 'shell'
+
+    // Step 4 — Stripe metadata
+    const stripeMetadataNextjs = `// Backend - Stripe Checkout creation
 
 // One-time payment
 const session = await stripe.checkout.sessions.create({
@@ -189,90 +273,88 @@ const session = await stripe.checkout.sessions.create({
   }
 });`
 
-    // AI Markdown export
-    const aiMarkdown = `# Traaaction Integration Guide
+    const stripeMetadataDjango = `import stripe
+
+click_id = request.COOKIES.get('trac_id', '')
+
+# One-time payment
+session = stripe.checkout.Session.create(
+    line_items=[...],
+    mode='payment',
+    metadata={
+        'tracCustomerExternalId': str(user.id),
+        'tracClickId': click_id
+    }
+)
+
+# Subscription (recurring)
+session = stripe.checkout.Session.create(
+    line_items=[...],
+    mode='subscription',
+    metadata={
+        'tracCustomerExternalId': str(user.id),
+        'tracClickId': click_id
+    }
+)`
+
+    const stripeMetadataOther = `# Add these metadata fields to your Stripe Checkout Session:
+
+metadata = {
+    "tracCustomerExternalId": "<user-id>",   # Same ID as in track signup
+    "tracClickId": "<trac_id cookie value>"  # Optional if lead already tracked
+}
+
+# For subscriptions:  mode = "subscription"
+# For one-time payments: mode = "payment"`
+
+    const stripeMetadata = framework === 'nextjs' ? stripeMetadataNextjs : framework === 'django' ? stripeMetadataDjango : stripeMetadataOther
+    const stripeMetadataFilename = framework === 'nextjs' ? 'checkout handler' : framework === 'django' ? 'views.py' : 'checkout handler'
+
+    // =============================================
+    // AI MARKDOWN EXPORT
+    // =============================================
+
+    const frameworkLabel = framework === 'nextjs' ? 'Next.js' : framework === 'django' ? 'Django' : 'Generic'
+    const step1Lang = framework === 'nextjs' ? 'javascript' : framework === 'django' ? 'python' : 'nginx'
+    const step3Lang = framework === 'nextjs' ? 'typescript' : framework === 'django' ? 'python' : 'bash'
+    const step4Lang = framework === 'nextjs' ? 'typescript' : framework === 'django' ? 'python' : 'text'
+
+    const aiMarkdown = `# Traaaction Integration Guide (${frameworkLabel})
 
 ## Configuration
-- Public Key: \`${publicKey || 'pk_...'}\`
+- Public Key: \`${pk}\`
 - Tracking Domain: \`${trackingDomain}\`
 
-## Step 1: Configure Rewrites (First-Party Tracking)
+## Step 1: Configure Proxy (First-Party Tracking)
 
-Add these rewrites to proxy tracking requests through your domain:
+Add these rules to proxy tracking requests through your domain:
 
-\`\`\`javascript
-// next.config.js
-module.exports = {
-  async rewrites() {
-    return [
-      { source: "/_trac/script.js", destination: "https://${trackingDomain}/trac.js" },
-      { source: "/_trac/api/:path*", destination: "https://${trackingDomain}/api/:path*" },
-    ];
-  },
-};
+\`\`\`${step1Lang}
+${rewritesConfig}
 \`\`\`
 
 ## Step 2: Add Tracking Script
 
-Add to your HTML \`<head>\`:
+Add to your HTML \`<head>\` (${scriptFilename}):
 
 \`\`\`html
-<script
-  src="/_trac/script.js"
-  defer
-  data-api-host="/_trac"
-  data-domains='{"refer":"${customDomain || 'yourdomain.com'}"}'
-></script>
+${scriptTag}
 \`\`\`
 
 ## Step 3: Track Signups
 
-After creating a user, track the lead:
+After creating a user, track the lead (${trackSignupFilename}):
 
-\`\`\`typescript
-// Get clickId from trac_id cookie
-const clickId = cookies().get('trac_id')?.value;
-
-await fetch('/_trac/api/track/lead', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'x-publishable-key': '${publicKey || 'pk_...'}'
-  },
-  body: JSON.stringify({
-    eventName: 'sign_up',
-    customerExternalId: user.id,  // Required - unique user ID
-    clickId,                       // Seller attribution
-    customerEmail: user.email,
-    customerName: user.name
-  })
-});
+\`\`\`${step3Lang}
+${trackSignup}
 \`\`\`
 
 ## Step 4: Stripe Metadata
 
-Add tracking metadata to your checkout session:
+Add tracking metadata to your checkout session (${stripeMetadataFilename}):
 
-\`\`\`typescript
-// One-time payment
-const session = await stripe.checkout.sessions.create({
-  line_items: [...],
-  mode: 'payment',
-  metadata: {
-    tracCustomerExternalId: user.id,  // Same ID as trackLead
-    tracClickId: clickId              // Optional if lead already created
-  }
-});
-
-// Subscription (recurring)
-const session = await stripe.checkout.sessions.create({
-  line_items: [...],
-  mode: 'subscription',              // Required for recurring commissions
-  metadata: {
-    tracCustomerExternalId: user.id,
-    tracClickId: clickId
-  }
-});
+\`\`\`${step4Lang}
+${stripeMetadata}
 \`\`\`
 
 > **Important:** Use \`mode: 'subscription'\` for recurring products.
@@ -300,10 +382,22 @@ Add webhook in Traaaction dashboard for Stripe events:
         )
     }
 
+    const frameworkOptions: { id: Framework; label: string }[] = [
+        { id: 'nextjs', label: t('frameworkSelector.nextjs') },
+        { id: 'django', label: t('frameworkSelector.django') },
+        { id: 'other', label: t('frameworkSelector.other') },
+    ]
+
+    const step1Description = framework === 'django'
+        ? t('step1.descriptionDjango')
+        : framework === 'other'
+            ? t('step1.descriptionOther')
+            : t('step1.description')
+
     return (
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
             {/* Header */}
-            <header className="mb-8 sm:mb-12">
+            <header className="mb-6 sm:mb-8">
                 <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900 tracking-tight mb-2">
                     {t('title')}
                 </h1>
@@ -311,6 +405,26 @@ Add webhook in Traaaction dashboard for Stripe events:
                     {t('subtitle')}
                 </p>
             </header>
+
+            {/* Framework Selector */}
+            <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-neutral-200">
+                <p className="text-xs text-neutral-400 uppercase tracking-wide mb-3">{t('frameworkSelector.label')}</p>
+                <div className="flex gap-2 flex-wrap">
+                    {frameworkOptions.map(({ id, label }) => (
+                        <button
+                            key={id}
+                            onClick={() => setFramework(id)}
+                            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                                framework === id
+                                    ? 'bg-neutral-900 text-white'
+                                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900'
+                            }`}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            </div>
 
             {/* Domain Status */}
             {!customDomain && (
@@ -348,14 +462,10 @@ Add webhook in Traaaction dashboard for Stripe events:
             <div className="mb-8 sm:mb-12">
                 <Section id="step-1" number={1} title={t('step1.title')} defaultOpen>
                     <p className="text-sm text-neutral-600 mb-4 sm:mb-6 leading-relaxed">
-                        {t('step1.description')}
+                        {step1Description}
                     </p>
 
-                    <CodeBlock code={rewritesConfig} filename="next.config.js" />
-
-                    <p className="text-xs text-neutral-400 mt-3 sm:mt-4">
-                        {t('step1.otherFrameworks')}
-                    </p>
+                    <CodeBlock code={rewritesConfig} filename={rewritesFilename} />
                 </Section>
 
                 <Section id="step-2" number={2} title={t('step2.title')}>
@@ -363,7 +473,7 @@ Add webhook in Traaaction dashboard for Stripe events:
                         {t('step2.description')}
                     </p>
 
-                    <CodeBlock code={scriptTag} filename="app/layout.tsx" />
+                    <CodeBlock code={scriptTag} filename={scriptFilename} />
 
                     <p className="text-xs text-neutral-400 mt-3 sm:mt-4">
                         {t('step2.avoidBlocked')}
@@ -375,7 +485,7 @@ Add webhook in Traaaction dashboard for Stripe events:
                         {t('step3.description')}
                     </p>
 
-                    <CodeBlock code={trackSignup} filename="signup handler" />
+                    <CodeBlock code={trackSignup} filename={trackSignupFilename} />
 
                     <div className="mt-4 sm:mt-6 space-y-3 text-xs text-neutral-500">
                         <p>
@@ -392,7 +502,7 @@ Add webhook in Traaaction dashboard for Stripe events:
                         {t('step4.description')}
                     </p>
 
-                    <CodeBlock code={stripeMetadata} filename="checkout handler" />
+                    <CodeBlock code={stripeMetadata} filename={stripeMetadataFilename} />
 
                     <div className="mt-4 sm:mt-6 p-3 bg-amber-50 border border-amber-100 rounded-lg">
                         <p className="text-xs sm:text-sm text-amber-800 font-medium">{t('step4.subscriptionNote')}</p>
