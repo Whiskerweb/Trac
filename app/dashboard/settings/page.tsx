@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { User, Mail, Globe, ChevronDown, Check, Lock, LogOut, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { User, Mail, Globe, ChevronDown, Check, Lock, LogOut, Eye, EyeOff, Loader2, Bell } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { setLocale } from '@/app/actions/locale'
+import { getMyNotificationPreferences, updateNotificationPreference } from '@/app/actions/notification-preferences'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { IntegrationTab } from '@/components/dashboard/settings/IntegrationTab'
@@ -41,8 +42,8 @@ function SettingsContent() {
     const searchParams = useSearchParams()
 
     const tabParam = searchParams.get('tab')
-    const currentTab = (['account', 'integration', 'domains'] as const).includes(tabParam as any)
-        ? tabParam as 'account' | 'integration' | 'domains'
+    const currentTab = (['account', 'integration', 'domains', 'notifications'] as const).includes(tabParam as any)
+        ? tabParam as 'account' | 'integration' | 'domains' | 'notifications'
         : 'account'
 
     // Profile Data
@@ -64,6 +65,10 @@ function SettingsContent() {
     // Logout
     const [loggingOut, setLoggingOut] = useState(false)
 
+    // Notification preferences
+    const [notifPrefs, setNotifPrefs] = useState<Array<{ category: string; label: string; enabled: boolean; recipient: string }>>([])
+    const [togglingNotif, setTogglingNotif] = useState<string | null>(null)
+
     useEffect(() => {
         const load = async () => {
             const auth = await fetch('/api/auth/me').then(r => r.json())
@@ -78,6 +83,16 @@ function SettingsContent() {
                 ?.split('=')[1] as 'en' | 'fr' | 'es' | undefined
             if (localeCookie && ['en', 'fr', 'es'].includes(localeCookie)) {
                 setCurrentLocale(localeCookie)
+            }
+
+            // Load notification preferences
+            try {
+                const result = await getMyNotificationPreferences()
+                if (result.success && result.data) {
+                    setNotifPrefs(result.data.filter(p => p.recipient === 'startup' || p.recipient === 'both'))
+                }
+            } catch (err) {
+                console.error('Error loading notification preferences:', err)
             }
         }
         load()
@@ -138,7 +153,20 @@ function SettingsContent() {
         }
     }
 
-    const switchTab = (tab: 'account' | 'integration' | 'domains') => {
+    async function handleToggleNotif(category: string, enabled: boolean) {
+        setTogglingNotif(category)
+        try {
+            const result = await updateNotificationPreference(category, enabled)
+            if (result.success) {
+                setNotifPrefs(prev => prev.map(p => p.category === category ? { ...p, enabled } : p))
+            }
+        } catch (err) {
+            console.error('Error toggling notification:', err)
+        }
+        setTogglingNotif(null)
+    }
+
+    const switchTab = (tab: 'account' | 'integration' | 'domains' | 'notifications') => {
         if (tab === 'account') {
             router.replace('/dashboard/settings')
         } else {
@@ -150,6 +178,7 @@ function SettingsContent() {
         { key: 'account' as const, label: t('tabs.account') },
         { key: 'integration' as const, label: t('tabs.integration') },
         { key: 'domains' as const, label: t('tabs.domains') },
+        { key: 'notifications' as const, label: t('tabs.notifications') },
     ]
 
     return (
@@ -350,6 +379,42 @@ function SettingsContent() {
 
             {/* Domains Tab */}
             {currentTab === 'domains' && <DomainsTab />}
+
+            {/* Notifications Tab */}
+            {currentTab === 'notifications' && (
+                <motion.div
+                    className="w-full max-w-2xl mx-auto"
+                    initial="hidden"
+                    animate="visible"
+                    variants={staggerContainer}
+                >
+                    <motion.section variants={fadeInUp} transition={springGentle} className="bg-white border border-gray-200 rounded-xl p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                            <Bell className="w-5 h-5 text-gray-500" />
+                            {t('notifications.title')}
+                        </h2>
+                        <p className="text-sm text-gray-500 mb-6">{t('notifications.description')}</p>
+
+                        <div className="space-y-4">
+                            {notifPrefs.map(pref => (
+                                <div key={pref.category} className="flex items-center justify-between py-2">
+                                    <span className="text-sm text-gray-700">{pref.label}</span>
+                                    <button
+                                        onClick={() => handleToggleNotif(pref.category, !pref.enabled)}
+                                        disabled={togglingNotif === pref.category}
+                                        className={`relative w-11 h-6 rounded-full transition-colors ${pref.enabled ? 'bg-gray-900' : 'bg-gray-200'} ${togglingNotif === pref.category ? 'opacity-50' : ''}`}
+                                    >
+                                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${pref.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                                    </button>
+                                </div>
+                            ))}
+                            {notifPrefs.length === 0 && (
+                                <p className="text-sm text-gray-400">Loading preferences...</p>
+                            )}
+                        </div>
+                    </motion.section>
+                </motion.div>
+            )}
         </div>
     )
 }

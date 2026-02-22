@@ -214,6 +214,7 @@ interface SendEmailOptions {
     subject: string
     html: string
     text?: string
+    headers?: Record<string, string>
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<EmailResult> {

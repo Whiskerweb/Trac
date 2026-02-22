@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { nanoid } from 'nanoid'
 import { revalidatePath } from 'next/cache'
 import { IS_MOCK_MODE } from '@/lib/config/constants'
+import { notifyAsync } from '@/lib/notifications'
 import { MOCK_ENROLLMENTS, MOCK_GLOBAL_STATS } from '@/lib/mock/data'
 
 // =============================================
@@ -894,6 +895,16 @@ export async function joinMission(missionId: string, options?: { portalBypass?: 
                 console.error('[Marketplace] Failed to send enrollment request card:', e)
             }
 
+            // Notify startup of enrollment request (fire-and-forget)
+            notifyAsync({
+                category: 'enrollment_request',
+                workspaceId: mission.workspace_id,
+                data: {
+                    sellerName: user.email || 'A seller',
+                    missionTitle: mission.title,
+                },
+            })
+
             revalidatePath('/seller')
             revalidatePath('/seller/marketplace')
 
@@ -1041,7 +1052,17 @@ export async function joinMission(missionId: string, options?: { portalBypass?: 
             : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
         const linkUrl = `${baseUrl}/s/${fullSlug}`
 
-        // 9. Force refresh of Seller pages to show new program
+        // 9. Notify startup of new enrollment (fire-and-forget)
+        notifyAsync({
+            category: 'new_enrollment',
+            workspaceId: mission.workspace_id,
+            data: {
+                sellerName: sellerWithProfile?.name || sellerWithProfile?.email || 'A seller',
+                missionTitle: mission.title,
+            },
+        })
+
+        // 10. Force refresh of Seller pages to show new program
         revalidatePath('/seller')
         revalidatePath('/seller/marketplace')
 

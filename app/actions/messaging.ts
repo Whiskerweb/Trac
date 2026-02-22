@@ -6,6 +6,7 @@ import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 import { getCurrentUser } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import type { MessageType, MessageActionStatus, Prisma } from '@/lib/generated/prisma/client'
+import { notifyAsync } from '@/lib/notifications'
 
 // =============================================
 // MESSAGING SYSTEM - SERVER ACTIONS
@@ -265,8 +266,39 @@ export async function sendMessage(
             }
         })
 
-        // TODO: Send email notification (implement later)
-        // await sendMessageNotificationEmail(conversation, message)
+        // Email notification for new message
+        if (senderType === 'STARTUP' && conversation.Seller?.user_id) {
+            // Startup sent → notify seller
+            notifyAsync({
+                category: 'new_message',
+                userId: conversation.Seller.user_id,
+                email: conversation.Seller.email,
+                sellerId: conversation.Seller.id,
+                data: {
+                    senderName: conversation.Workspace?.name || 'A startup',
+                    messagePreview: content.trim(),
+                    recipientType: 'seller',
+                },
+            })
+        } else if (senderType === 'SELLER' && conversation.Workspace?.owner_id) {
+            // Seller sent → notify startup owner
+            const ownerSeller = await prisma.seller.findFirst({
+                where: { user_id: conversation.Workspace.owner_id },
+                select: { email: true },
+            })
+            if (ownerSeller?.email) {
+                notifyAsync({
+                    category: 'new_message',
+                    userId: conversation.Workspace.owner_id,
+                    email: ownerSeller.email,
+                    data: {
+                        senderName: conversation.Seller?.name || conversation.Seller?.email || 'A seller',
+                        messagePreview: content.trim(),
+                        recipientType: 'startup',
+                    },
+                })
+            }
+        }
 
         revalidatePath('/dashboard/messages')
         revalidatePath('/seller/messages')

@@ -83,6 +83,7 @@ components/
 
 lib/
 ├── commission/engine.ts  # Moteur commissions (CRITIQUE — voir section 7)
+├── notifications/        # Email notification system (index, categories, preferences, sender, locale, templates/)
 ├── stripe-connect.ts     # Setup Stripe Connect
 ├── payout-service.ts     # Orchestration payouts + getSellerWallet()
 ├── admin.ts              # Admin email whitelist
@@ -116,6 +117,8 @@ Seller → SellerProfile, SellerBalance, Commission, GiftCardRedemption
 Organization → OrganizationMember[], OrganizationMission[]
 SellerGroup → SellerGroupMember[], GroupMission[]
 Feedback (standalone) → user feedback avec attachments
+NotificationPreference → user_id + category (email notification opt-in/out)
+NotificationLog → audit trail of all sent/skipped/failed notification emails
 Workspace → MarketingCampaign[], MarketingFolder[]
 MarketingCampaign → ShortLink[] (campaign_id FK, onDelete: SetNull)
 MarketingFolder → ShortLink[] (folder_id FK, onDelete: SetNull), Children[] (self-relation)
@@ -494,6 +497,17 @@ Responsabilites:
 - [x] **Independent** : fully separate from Traaaction's global referral system (`Seller.referred_by`, `REFERRAL_RATES`)
 - [x] **Clawback** : automatic via existing `referral_source_commission_id` cascade
 - [x] **I18n** : ~5 new keys (referralProgram, referralDescription, etc.) in FR/EN/ES
+
+### Email Notifications System (Fevrier 2026)
+- [x] **Schema** : `NotificationPreference` (user_id + category, @@unique), `NotificationLog` (audit trail), `unsubscribe_token` on Seller
+- [x] **Architecture** : `lib/notifications/` — `index.ts` (notify/notifyAsync), `categories.ts`, `preferences.ts`, `sender.ts`, `locale.ts`
+- [x] **Templates** : 9 email templates (commission-earned, commission-matured, payout-processed, enrollment-status, new-message, clawback, new-enrollment, enrollment-request, commissions-ready) — HTML inline styles, i18n FR/EN/ES, base layout with Traaaction branding
+- [x] **Integration** : `notifyAsync()` fire-and-forget in commission engine (createCommission, createOrgCommissions, createGroupCommissions, matureCommissions), messaging (sendMessage replaces TODO), marketplace (joinMission, approveProgramRequest, rejectProgramRequest), payouts (confirmStartupPayment), webhook (charge.refunded clawback)
+- [x] **Preferences UI** : Seller settings (new section with toggles), Startup settings (new "Notifications" tab)
+- [x] **Unsubscribe** : `/api/notifications/unsubscribe?token=xxx&category=yyy` — 1-click from email, `List-Unsubscribe` header
+- [x] **Anti-spam** : 5-min dedup for new_message, aggregated emails for commission_matured (1 per seller) and commissions_ready (1 per workspace)
+- [x] **RGPD** : `consented_at` timestamp, `exportNotificationData()`, `deleteNotificationData()`, transactional emails (no consent needed)
+- [x] **I18n** : `notifications` tab + description keys in FR/EN/ES
 
 ---
 

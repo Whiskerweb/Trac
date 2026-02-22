@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { createClient } from '@/utils/supabase/server'
 import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 import { MissionVisibility, RequestStatus } from '@/lib/generated/prisma/client'
+import { notifyAsync } from '@/lib/notifications'
 
 // =============================================
 // PARTNER MARKETPLACE - Server Actions
@@ -703,6 +704,13 @@ export async function approveProgramRequest(requestId: string): Promise<{
             console.error('[Marketplace] Failed to sync enrollment card:', e)
         }
 
+        // Notify seller that enrollment was approved (fire-and-forget)
+        notifyAsync({
+            category: 'enrollment_status',
+            sellerId: request.Seller.id,
+            data: { missionTitle: request.Mission.title, status: 'approved' },
+        })
+
         return {
             success: true,
             enrollment: {
@@ -730,7 +738,7 @@ export async function rejectProgramRequest(requestId: string) {
             },
             include: {
                 Seller: { select: { id: true } },
-                Mission: { select: { workspace_id: true } },
+                Mission: { select: { workspace_id: true, title: true } },
             }
         })
 
@@ -748,6 +756,13 @@ export async function rejectProgramRequest(requestId: string) {
         } catch (e) {
             console.error('[Marketplace] Failed to sync enrollment card:', e)
         }
+
+        // Notify seller that enrollment was rejected (fire-and-forget)
+        notifyAsync({
+            category: 'enrollment_status',
+            sellerId: request.Seller.id,
+            data: { missionTitle: request.Mission.title, status: 'rejected' },
+        })
 
         return { success: true }
 

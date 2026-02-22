@@ -6,6 +6,7 @@ import { getActiveWorkspaceForUser } from '@/lib/workspace-context'
 import { revalidatePath } from 'next/cache'
 import { updateSellerBalance } from '@/lib/commission/engine'
 import { recordLedgerEntry } from '@/lib/payout-service'
+import { notifyAsync } from '@/lib/notifications'
 
 // =============================================
 // GET UNPAID COMMISSIONS FOR STARTUP
@@ -495,6 +496,26 @@ export async function confirmStartupPayment(paymentId: string, stripePaymentId: 
             await updateSellerBalance(sellerId)
         }
         console.log(`[Payouts] ✅ Recalculated balances for ${allSellerIds.length} sellers`)
+
+        // Notify sellers of successful payouts (fire-and-forget)
+        for (const [sellerId, data] of Object.entries(commissionsBySeller)) {
+            const sellerCommIds = data.commissions.map(c => c.id)
+            const paidIds = sellerCommIds.filter(id => successfulCommissionIds.includes(id))
+            if (paidIds.length > 0) {
+                const paidAmount = data.commissions
+                    .filter(c => paidIds.includes(c.id))
+                    .reduce((sum, c) => sum + c.commission_amount, 0)
+                notifyAsync({
+                    category: 'payout_processed',
+                    sellerId,
+                    data: {
+                        amountCents: paidAmount,
+                        currency: data.commissions[0]?.currency || 'EUR',
+                        payoutMethod: data.seller.payout_method || 'PLATFORM',
+                    },
+                })
+            }
+        }
 
         console.log(`[Payouts] ✅ Payment ${paymentId} confirmed: ${successfulCommissionIds.length} succeeded, ${failedCommissionIds.length} failed`)
 

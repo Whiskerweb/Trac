@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Check, Loader2, Settings, LogOut, Eye, EyeOff, AlertTriangle, X, CreditCard, ExternalLink, Unlink, RefreshCw, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { Check, Loader2, Settings, LogOut, Eye, EyeOff, AlertTriangle, X, CreditCard, ExternalLink, Unlink, RefreshCw, AlertCircle, CheckCircle, Clock, Bell } from 'lucide-react'
 import { getMySellerProfile, getMyStripeAccountInfo, getStripeAccountLink, disconnectStripeAccount, createNewStripeAccount, type StripeAccountInfo } from '@/app/actions/sellers'
+import { getMyNotificationPreferences, updateNotificationPreference } from '@/app/actions/notification-preferences'
 import { logout } from '@/app/login/actions'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -44,6 +45,8 @@ export default function SettingsPage() {
     const [stripeAction, setStripeAction] = useState<'connecting' | 'disconnecting' | 'dashboard' | null>(null)
     const [showDisconnectModal, setShowDisconnectModal] = useState(false)
     const [email, setEmail] = useState('')
+    const [notifPrefs, setNotifPrefs] = useState<Array<{ category: string; label: string; enabled: boolean; recipient: string }>>([])
+    const [togglingNotif, setTogglingNotif] = useState<string | null>(null)
 
     useEffect(() => {
         async function loadProfile() {
@@ -62,7 +65,32 @@ export default function SettingsPage() {
         }
         loadProfile()
         loadStripeInfo()
+        loadNotificationPrefs()
     }, [])
+
+    async function loadNotificationPrefs() {
+        try {
+            const result = await getMyNotificationPreferences()
+            if (result.success && result.data) {
+                setNotifPrefs(result.data.filter(p => p.recipient === 'seller' || p.recipient === 'both'))
+            }
+        } catch (err) {
+            console.error('Error loading notification preferences:', err)
+        }
+    }
+
+    async function handleToggleNotif(category: string, enabled: boolean) {
+        setTogglingNotif(category)
+        try {
+            const result = await updateNotificationPreference(category, enabled)
+            if (result.success) {
+                setNotifPrefs(prev => prev.map(p => p.category === category ? { ...p, enabled } : p))
+            }
+        } catch (err) {
+            console.error('Error toggling notification:', err)
+        }
+        setTogglingNotif(null)
+    }
 
     async function loadStripeInfo() {
         setLoadingStripe(true)
@@ -349,6 +377,35 @@ export default function SettingsPage() {
                                     </button>
                                 </div>
                             )}
+                        </div>
+                    </SettingsCard>
+
+                    {/* Notifications */}
+                    <SettingsCard>
+                        <div className="p-6">
+                            <div className="flex items-center gap-3 mb-1">
+                                <Bell className="w-4 h-4 text-neutral-500" />
+                                <h2 className="text-[15px] font-semibold text-neutral-900">Email notifications</h2>
+                            </div>
+                            <p className="text-[13px] text-neutral-500 mb-6">Choose which email notifications you receive</p>
+
+                            <div className="space-y-4">
+                                {notifPrefs.map(pref => (
+                                    <div key={pref.category} className="flex items-center justify-between">
+                                        <span className="text-[14px] text-neutral-700">{pref.label}</span>
+                                        <button
+                                            onClick={() => handleToggleNotif(pref.category, !pref.enabled)}
+                                            disabled={togglingNotif === pref.category}
+                                            className={`relative w-11 h-6 rounded-full transition-colors ${pref.enabled ? 'bg-neutral-900' : 'bg-neutral-200'} ${togglingNotif === pref.category ? 'opacity-50' : ''}`}
+                                        >
+                                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${pref.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                                        </button>
+                                    </div>
+                                ))}
+                                {notifPrefs.length === 0 && (
+                                    <p className="text-[13px] text-neutral-400">Loading preferences...</p>
+                                )}
+                            </div>
                         </div>
                     </SettingsCard>
 

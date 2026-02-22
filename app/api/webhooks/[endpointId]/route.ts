@@ -6,6 +6,7 @@ import { recordSaleToTinybird, recordSaleItemsToTinybird } from '@/lib/analytics
 import { createCommission, createOrgCommissions, createGroupCommissions, findSellerForSale, handleClawback, getMissionCommissionConfig, getOrgMissionConfig, getGroupConfig, countRecurringCommissions, updateSellerBalance } from '@/lib/commission/engine'
 import { CommissionSource } from '@/lib/generated/prisma/client'
 import { sanitizeClickId, sanitizeUUID } from '@/lib/sql-sanitize'
+import { notifyAsync } from '@/lib/notifications'
 
 export const dynamic = 'force-dynamic'
 
@@ -1063,6 +1064,12 @@ export async function POST(
 
                     let clawbackDone = false
 
+                    // Pre-fetch commission for notification (before clawback deletes it)
+                    let clawbackSellerId: string | null = null
+                    let clawbackAmount = 0
+                    let clawbackCurrency = 'EUR'
+                    let clawbackMissionTitle = 'Mission'
+
                     // Strategy 1: Find via checkout session (one-time payments + first subscription month)
                     if (charge.payment_intent) {
                         const paymentIntentId = typeof charge.payment_intent === 'string'
@@ -1076,6 +1083,18 @@ export async function POST(
 
                         if (sessions.data.length > 0) {
                             const sessionId = sessions.data[0].id
+                            // Capture commission info before deletion for notification
+                            const commBefore = await prisma.commission.findUnique({
+                                where: { sale_id: sessionId },
+                                select: { seller_id: true, commission_amount: true, currency: true, program_id: true },
+                            })
+                            if (commBefore) {
+                                clawbackSellerId = commBefore.seller_id
+                                clawbackAmount = commBefore.commission_amount
+                                clawbackCurrency = commBefore.currency
+                                const m = await prisma.mission.findFirst({ where: { workspace_id: commBefore.program_id }, select: { title: true } })
+                                clawbackMissionTitle = m?.title || 'Mission'
+                            }
                             await handleClawback({
                                 saleId: sessionId,
                                 reason: refundReason,
@@ -1095,6 +1114,18 @@ export async function POST(
                             ? chargeInvoice
                             : chargeInvoice.id
 
+                        // Capture commission info before deletion for notification
+                        const commBefore2 = await prisma.commission.findUnique({
+                            where: { sale_id: invoiceId },
+                            select: { seller_id: true, commission_amount: true, currency: true, program_id: true },
+                        })
+                        if (commBefore2) {
+                            clawbackSellerId = commBefore2.seller_id
+                            clawbackAmount = commBefore2.commission_amount
+                            clawbackCurrency = commBefore2.currency
+                            const m2 = await prisma.mission.findFirst({ where: { workspace_id: commBefore2.program_id }, select: { title: true } })
+                            clawbackMissionTitle = m2?.title || 'Mission'
+                        }
                         await handleClawback({
                             saleId: invoiceId,
                             reason: refundReason,
@@ -1107,6 +1138,19 @@ export async function POST(
 
                     if (!clawbackDone) {
                         console.log(`[Webhook] ⚠️ No commission found to clawback for charge ${charge.id}`)
+                    }
+
+                    // Notify seller of clawback (fire-and-forget)
+                    if (clawbackDone && clawbackSellerId) {
+                        notifyAsync({
+                            category: 'clawback',
+                            sellerId: clawbackSellerId,
+                            data: {
+                                amountCents: clawbackAmount,
+                                currency: clawbackCurrency,
+                                missionTitle: clawbackMissionTitle,
+                            },
+                        })
                     }
 
                     // Record processed event for idempotency

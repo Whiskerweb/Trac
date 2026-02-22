@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { CommissionType, CommissionStatus, CommissionSource } from '@/lib/generated/prisma/client'
+import { notifyAsync } from '@/lib/notifications'
 
 // =============================================
 // COMMISSION ENGINE (Traaaction Style)
@@ -241,6 +242,22 @@ export async function createCommission(params: {
             recurring_month: recurringMonth,
             recurring_max: recurringMax,
             ht_amount: htAmount,
+        })
+
+        // Notify seller of new commission (fire-and-forget)
+        const mission = await prisma.mission.findFirst({
+            where: { workspace_id: programId },
+            select: { title: true },
+        })
+        notifyAsync({
+            category: 'commission_earned',
+            sellerId: partnerId,
+            data: {
+                amountCents: sellerReceives,
+                currency: currency.toUpperCase(),
+                missionTitle: mission?.title || 'Mission',
+                commissionSource,
+            },
         })
 
         return { success: true, commission: { ...result, platform_fee: traaactionFee } }
@@ -631,6 +648,11 @@ export async function matureCommissions(): Promise<{ matured: number; errors: nu
     let matured = 0
     let errors = 0
 
+    // Track matured commissions per seller for aggregated notification
+    const maturedBySeller: Record<string, { count: number; totalCents: number; currency: string }> = {}
+    // Track matured commissions per workspace for startup notification
+    const maturedByWorkspace: Record<string, { count: number; totalCents: number; currency: string }> = {}
+
     try {
         // Find all PENDING commissions where hold period has passed
         const pendingCommissions = await prisma.commission.findMany({
@@ -656,12 +678,41 @@ export async function matureCommissions(): Promise<{ matured: number; errors: nu
                     // Update partner balance
                     await updateSellerBalance(commission.seller_id)
 
+                    // Aggregate for notifications
+                    const sid = commission.seller_id
+                    if (!maturedBySeller[sid]) maturedBySeller[sid] = { count: 0, totalCents: 0, currency: commission.currency }
+                    maturedBySeller[sid].count++
+                    maturedBySeller[sid].totalCents += commission.commission_amount
+
+                    const wid = commission.program_id
+                    if (!maturedByWorkspace[wid]) maturedByWorkspace[wid] = { count: 0, totalCents: 0, currency: commission.currency }
+                    maturedByWorkspace[wid].count++
+                    maturedByWorkspace[wid].totalCents += commission.commission_amount
+
                     matured++
                     console.log(`[Commission] ⏰ Matured: ${commission.id} (${holdDays} days hold)`)
                 }
             } catch (err) {
                 errors++
                 console.error(`[Commission] ❌ Failed to mature ${commission.id}:`, err)
+            }
+        }
+
+        // Send aggregated notifications (1 email per seller, 1 per workspace)
+        if (matured > 0) {
+            for (const [sellerId, data] of Object.entries(maturedBySeller)) {
+                notifyAsync({
+                    category: 'commission_matured',
+                    sellerId,
+                    data: { count: data.count, totalCents: data.totalCents, currency: data.currency },
+                })
+            }
+            for (const [workspaceId, data] of Object.entries(maturedByWorkspace)) {
+                notifyAsync({
+                    category: 'commissions_ready',
+                    workspaceId,
+                    data: { count: data.count, totalCents: data.totalCents, currency: data.currency },
+                })
             }
         }
 
@@ -1267,6 +1318,23 @@ export async function createOrgCommissions(params: {
             ht_amount: htAmount,
         })
 
+        // Notify org member and leader of new commissions (fire-and-forget)
+        const orgMission = await prisma.mission.findFirst({
+            where: { workspace_id: programId },
+            select: { title: true },
+        })
+        const orgMissionTitle = orgMission?.title || 'Mission'
+        notifyAsync({
+            category: 'commission_earned',
+            sellerId: memberId,
+            data: { amountCents: memberAmount, currency: currency.toUpperCase(), missionTitle: orgMissionTitle, commissionSource },
+        })
+        notifyAsync({
+            category: 'commission_earned',
+            sellerId: leaderId,
+            data: { amountCents: leaderAmount, currency: currency.toUpperCase(), missionTitle: orgMissionTitle, commissionSource },
+        })
+
         return {
             success: true,
             memberCommission: { id: memberResult.id, commission_amount: memberAmount, platform_fee: platformFee },
@@ -1467,6 +1535,17 @@ export async function createGroupCommissions(params: {
             recurring_month: recurringMonth,
             recurring_max: recurringMax,
             ht_amount: htAmount,
+        })
+
+        // Notify group creator of new commission (fire-and-forget)
+        const groupMission = await prisma.mission.findFirst({
+            where: { workspace_id: programId },
+            select: { title: true },
+        })
+        notifyAsync({
+            category: 'commission_earned',
+            sellerId: creatorId,
+            data: { amountCents: totalCommission, currency: currency.toUpperCase(), missionTitle: groupMission?.title || 'Mission', commissionSource },
         })
 
         return {

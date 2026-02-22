@@ -1145,7 +1145,12 @@
                 "account": "Cuenta",
                 "portal": "Portal",
                 "integration": "Integración",
-                "domains": "Dominios"
+                "domains": "Dominios",
+                "notifications": "Notificaciones"
+            },
+            "notifications": {
+                "title": "Notificaciones por email",
+                "description": "Elige qué notificaciones por email deseas recibir."
             },
             "profile": "Perfil",
             "fullName": "Nombre completo",
