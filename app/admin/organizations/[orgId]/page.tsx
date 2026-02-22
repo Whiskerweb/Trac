@@ -8,9 +8,9 @@ import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } 
 import {
     Loader2, ArrowLeft, Users, Crown, Target, Check, Ban, RotateCcw,
     ExternalLink, Globe, Lock, KeyRound, Calendar, CreditCard, Wallet,
-    Zap, MessageSquare, Copy, Mail, MapPin, User, Link2, Clock
+    Zap, MessageSquare, Copy, Mail, MapPin, User, Link2, Clock, Trash2
 } from 'lucide-react'
-import { getOrgAdminDetail, approveOrg, suspendOrg, reactivateOrg, rejectOrg } from '@/app/actions/admin-org-actions'
+import { getOrgAdminDetail, approveOrg, suspendOrg, reactivateOrg, rejectOrg, adminDeleteOrg } from '@/app/actions/admin-org-actions'
 
 function StatusBadge({ status, size = 'sm' }: { status: string; size?: 'sm' | 'md' }) {
     const styles: Record<string, string> = {
@@ -94,13 +94,23 @@ export default function AdminOrgDetailPage() {
 
     useEffect(() => { loadData() }, [loadData])
 
-    const handleAction = async (action: 'approve' | 'suspend' | 'reactivate' | 'reject') => {
+    const handleAction = async (action: 'approve' | 'suspend' | 'reactivate' | 'reject' | 'delete') => {
         if (action === 'reject' && !confirm('Reject and delete this organization? The leader will be notified.')) return
         if (action === 'suspend' && !confirm('Suspend this organization?')) return
+        if (action === 'delete' && !confirm('Permanently delete this organization? This will remove all members and mission associations. This action is irreversible.')) return
 
         if (action === 'approve') await approveOrg(orgId)
         else if (action === 'suspend') await suspendOrg(orgId)
         else if (action === 'reactivate') await reactivateOrg(orgId)
+        else if (action === 'delete') {
+            const result = await adminDeleteOrg(orgId)
+            if (!result.success) {
+                alert(result.error || 'Failed to delete organization')
+                return
+            }
+            router.push('/admin/organizations')
+            return
+        }
         else {
             await rejectOrg(orgId)
             router.push('/admin/organizations')
@@ -232,6 +242,12 @@ export default function AdminOrgDetailPage() {
                             <RotateCcw className="w-4 h-4" /> Reactivate
                         </button>
                     )}
+                    <button
+                        onClick={() => handleAction('delete')}
+                        className="btn-press px-4 py-2 bg-red-500/10 text-red-400 rounded-xl text-sm font-medium hover:bg-red-500/20 transition-colors flex items-center gap-1.5"
+                    >
+                        <Trash2 className="w-4 h-4" /> Delete
+                    </button>
                 </div>
             </motion.div>
 

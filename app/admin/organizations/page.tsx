@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fadeInUp, staggerContainer, staggerItem, springGentle, floatVariants } from '@/lib/animations'
-import { Loader2, Building2, Users, Check, Ban, ChevronRight, RotateCcw, Globe, Lock, KeyRound, MessageSquare } from 'lucide-react'
-import { getAllOrgs, approveOrg, suspendOrg, reactivateOrg, rejectOrg } from '@/app/actions/admin-org-actions'
+import { Loader2, Building2, Users, Check, Ban, ChevronRight, RotateCcw, Globe, Lock, KeyRound, MessageSquare, Trash2, AlertTriangle, X } from 'lucide-react'
+import { getAllOrgs, approveOrg, suspendOrg, reactivateOrg, rejectOrg, adminDeleteOrg } from '@/app/actions/admin-org-actions'
 
 function StatusBadge({ status }: { status: string }) {
     const styles: Record<string, string> = {
@@ -20,11 +20,82 @@ function StatusBadge({ status }: { status: string }) {
     )
 }
 
+function ConfirmDeleteModal({
+    open,
+    onClose,
+    onConfirm,
+    name,
+    loading,
+}: {
+    open: boolean
+    onClose: () => void
+    onConfirm: () => void
+    name: string
+    loading: boolean
+}) {
+    return (
+        <AnimatePresence>
+            {open && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                    onClick={() => !loading && onClose()}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl"
+                    >
+                        <div className="p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                                </div>
+                                <div>
+                                    <h2 className="text-[15px] font-semibold text-white">Delete Organization</h2>
+                                    <p className="text-xs text-neutral-400">This action is irreversible</p>
+                                </div>
+                            </div>
+                            <p className="text-sm text-neutral-300 mb-6">
+                                Are you sure you want to permanently delete <span className="font-semibold text-white">{name}</span>?
+                                This will remove all members and mission associations.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={onClose}
+                                    disabled={loading}
+                                    className="flex-1 h-11 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-sm font-medium text-neutral-300 transition-colors disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={onConfirm}
+                                    disabled={loading}
+                                    className="flex-1 h-11 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    )
+}
+
 export default function AdminOrganizationsPage() {
     const router = useRouter()
     const [loading, setLoading] = useState(true)
     const [organizations, setOrganizations] = useState<any[]>([])
     const [filter, setFilter] = useState<'all' | 'PENDING' | 'ACTIVE' | 'SUSPENDED'>('all')
+    const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+    const [deleting, setDeleting] = useState(false)
 
     const loadData = useCallback(async () => {
         setLoading(true)
@@ -56,6 +127,19 @@ export default function AdminOrganizationsPage() {
     const handleReject = async (orgId: string) => {
         await rejectOrg(orgId)
         loadData()
+    }
+
+    const handleDelete = async () => {
+        if (!deleteTarget) return
+        setDeleting(true)
+        const result = await adminDeleteOrg(deleteTarget.id)
+        setDeleting(false)
+        if (result.success) {
+            setDeleteTarget(null)
+            loadData()
+        } else {
+            alert(result.error || 'Failed to delete organization')
+        }
     }
 
     return (
@@ -165,6 +249,14 @@ export default function AdminOrganizationsPage() {
                                     )}
 
                                     <button
+                                        onClick={() => setDeleteTarget({ id: org.id, name: org.name })}
+                                        className="btn-press p-1.5 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors"
+                                        title="Delete organization"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+
+                                    <button
                                         onClick={() => router.push(`/admin/organizations/${org.id}`)}
                                         className="btn-press p-1.5 text-gray-400 hover:text-white"
                                     >
@@ -191,6 +283,14 @@ export default function AdminOrganizationsPage() {
                     ))}
                 </motion.div>
             )}
+
+            <ConfirmDeleteModal
+                open={!!deleteTarget}
+                onClose={() => setDeleteTarget(null)}
+                onConfirm={handleDelete}
+                name={deleteTarget?.name || ''}
+                loading={deleting}
+            />
         </motion.div>
     )
 }

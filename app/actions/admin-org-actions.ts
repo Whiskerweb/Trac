@@ -202,6 +202,39 @@ export async function rejectOrg(orgId: string) {
 }
 
 /**
+ * Hard delete an organization (any status) — admin only
+ * CASCADE handles: Members, OrganizationMissions
+ */
+export async function adminDeleteOrg(orgId: string) {
+    try {
+        await requireAdminUser()
+
+        const org = await prisma.organization.findUnique({
+            where: { id: orgId },
+            include: { Leader: { select: { id: true, name: true } } }
+        })
+        if (!org) return { success: false, error: 'Organization not found' }
+
+        // Clear organization_id on exclusive missions (don't delete the missions)
+        await prisma.mission.updateMany({
+            where: { organization_id: orgId },
+            data: { organization_id: null }
+        })
+
+        // Hard delete (CASCADE: Members + OrgMissions)
+        await prisma.organization.delete({
+            where: { id: orgId },
+        })
+
+        console.log(`[Admin] Deleted org ${orgId} (${org.name})`)
+        return { success: true }
+    } catch (error) {
+        console.error('[Admin Org] Failed to delete org:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+}
+
+/**
  * Get full admin detail of an organization
  */
 export async function getOrgAdminDetail(orgId: string) {
